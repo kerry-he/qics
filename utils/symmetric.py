@@ -9,8 +9,8 @@ def mat_dim(len):
     assert side * (side + 1) == 2 * len
     return side
 
-def mat_to_vec(mat):
-    rt2 = math.sqrt(2)
+def mat_to_vec(mat, rt2=None):
+    rt2 = math.sqrt(2) if (rt2 is None) else rt2
     n = np.size(mat, 0)
     assert n == np.size(mat, 1)
 

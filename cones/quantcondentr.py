@@ -1,4 +1,5 @@
 import numpy as np
+import math
 from utils import symmetric as sym
 
 class QuantCondEntropy():
@@ -105,24 +106,110 @@ class QuantCondEntropy():
 
         for j in range(p):
             Ht = dirs[0, j]
-            HX = sym.vec_to_mat(dirs[1:, j])
-            HY = sym.p_tr(HX, 0, (self.n, self.m))
+            Hx = sym.vec_to_mat(dirs[1:, j])
+            Hy = sym.p_tr(Hx, 0, (self.n, self.m))
 
-            UxHxUx = self.Ux.T @ HX @ self.Ux
-            UyHyUy = self.Uy.T @ HY @ self.Uy
+            UxHxUx = self.Ux.T @ Hx @ self.Ux
+            UyHyUy = self.Uy.T @ Hy @ self.Uy
 
             # Hessian product of conditional entropy
             D2PhiH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
             D2PhiH -= np.kron(np.eye(self.n), self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T)
 
             # Hessian product of barrier function
-            out[0, j] = (Ht - sym.inner(self.DPhi, HX)) * self.zi * self.zi
-            temp = -self.DPhi * out[0, j] + D2PhiH * self.zi + self.inv_X @ HX @ self.inv_X
+            out[0, j] = (Ht - sym.inner(self.DPhi, Hx)) * self.zi * self.zi
+            temp = -self.DPhi * out[0, j] + D2PhiH * self.zi + self.inv_X @ Hx @ self.inv_X
             out[1:, [j]] = sym.mat_to_vec(temp)
 
-            print(temp)
-
         return out
+    
+    def update_invhessprod_aux(self):
+        assert ~self.invhess_aux_updated
+        assert self.grad_updated
+        assert self.hess_aux_updated
+
+        irt2 = math.sqrt(0.5)
+
+        D1x_inv = 1 / np.outer(self.Dx, self.Dx)
+        self.D1x_comb_inv = 1 / (self.D1x_log*self.z + D1x_inv)
+
+        UxK = np.empty((self.vnm, self.vn))
+        Hy_inv = np.empty((self.vn, self.vn))
+
+        k = 0
+        for j in range(self.m):
+            for i in range(j + 1):
+                UxK_k = np.zeros((self.nm, self.nm))
+
+                # Build UxK matrix
+                for l in range(self.n):
+                    lhs = self.Ux[self.m*l + i, :]
+                    rhs = self.Ux[self.m*l + j, :]
+                    UxK_k += np.outer(lhs, rhs)
+
+
+                    print(lhs)
+                    print(rhs)
+                    print(np.outer(lhs, rhs))
+
+                if i != j:
+                    UxK_k = UxK_k + UxK_k.T
+                    UxK_k *= irt2
+
+                UxK[:, [k]] = sym.mat_to_vec(UxK_k)
+
+                # Build Hyy^-1 matrix
+                lhs = self.Uy[i, :]
+                rhs = self.Uy[j, :]
+                UyH_k = np.outer(lhs, rhs)
+
+                if i != j:
+                    UyH_k = UyH_k + UyH_k.T
+                    UyH_k *= irt2
+
+                temp = self.Uy @ (UyH_k * self.z / self.D1y_log) @ self.Uy.T
+                Hy_inv[:, [k]] = sym.mat_to_vec(temp)
+
+                k += 1
+
+        temp = sym.mat_to_vec(self.D1x_comb_inv, 1.0)
+        UxK_temp = UxK * temp
+        KHxK = UxK.T @ UxK_temp
+        self.Hy_KHxK = Hy_inv - KHxK
+
+        self.invhess_aux_updated = True
+
+        return
+
+    def invhess_prod(self, dirs):
+        assert self.grad_updated
+        if ~self.hess_aux_updated:
+            self.update_hessprod_aux()
+        if ~self.invhess_aux_updated:
+            self.update_invhessprod_aux()
+
+        p = np.size(dirs, 1)
+        out = np.empty((self.dim, p))
+
+        for j in range(p):
+            Ht = dirs[0, j]
+            Hx = sym.vec_to_mat(dirs[1:, j])
+
+            Wx = Hx + Ht * self.DPhi
+
+            UxWxUx = self.Ux.T @ Wx @ self.Ux
+            Hxx_inv_x = self.Ux @ (self.D1x_comb_inv * UxWxUx) @ self.Ux.T
+            rhs_y = -sym.p_tr(Hxx_inv_x, 0, (self.n, self.m))
+            H_inv_g_y = np.linalg.solve(self.Hy_KHxK, sym.mat_to_vec(rhs_y))
+            temp = np.kron(np.eye(self.n), sym.vec_to_mat(H_inv_g_y))
+            temp = self.Ux.T @ temp @ self.Ux
+            H_inv_w_x = Hxx_inv_x - self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.T
+
+            out[0, j] = Ht * self.z * self.z + sym.inner(H_inv_w_x, self.DPhi)
+            out[1:, [j]] = sym.mat_to_vec(H_inv_w_x)
+
+        return out        
+
 
 
 def D1_log(D, log_D):

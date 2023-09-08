@@ -16,7 +16,7 @@ A = np.random.rand(nm, nm)
 X = A * A.T + np.eye(nm)
 
 point = np.zeros((K.dim, 1))
-point[0] = 1
+point[0] = 0.86
 point[1:] = sym.mat_to_vec(X)
 
 K.get_point(point)
@@ -36,6 +36,8 @@ H[0] = np.random.rand() - 0.5
 H[1:] = sym.mat_to_vec(HX)
 
 print("Ht: ", H[0])
-print(HX)
+print("Hx: ", HX)
 
-print(K.hess_prod(H))
+prod = K.hess_prod(H)
+print("prod: ", prod)
+print("inv: ", K.invhess_prod(prod).T)
