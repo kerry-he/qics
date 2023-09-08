@@ -131,7 +131,7 @@ class QuantCondEntropy():
         irt2 = math.sqrt(0.5)
 
         D1x_inv = 1 / np.outer(self.Dx, self.Dx)
-        self.D1x_comb_inv = 1 / (self.D1x_log*self.z + D1x_inv)
+        self.D1x_comb_inv = 1 / (self.D1x_log*self.zi + D1x_inv)
 
         UxK = np.empty((self.vnm, self.vn))
         Hy_inv = np.empty((self.vn, self.vn))
@@ -146,11 +146,6 @@ class QuantCondEntropy():
                     lhs = self.Ux[self.m*l + i, :]
                     rhs = self.Ux[self.m*l + j, :]
                     UxK_k += np.outer(lhs, rhs)
-
-
-                    print(lhs)
-                    print(rhs)
-                    print(np.outer(lhs, rhs))
 
                 if i != j:
                     UxK_k = UxK_k + UxK_k.T
