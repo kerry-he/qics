@@ -19,6 +19,7 @@ class QuantCondEntropy():
         self.grad_updated           = False
         self.hess_aux_updated       = False
         self.invhess_aux_updated    = False
+        self.dder3_aux_updated      = False
 
         return
         
@@ -37,6 +38,7 @@ class QuantCondEntropy():
         self.grad_updated           = False
         self.hess_aux_updated       = False
         self.invhess_aux_updated    = False
+        self.dder3_aux_updated      = False
 
         return
     
@@ -203,7 +205,56 @@ class QuantCondEntropy():
             out[0, j] = Ht * self.z * self.z + sym.inner(H_inv_w_x, self.DPhi)
             out[1:, [j]] = sym.mat_to_vec(H_inv_w_x)
 
-        return out        
+        return out
+    
+    def update_dder3_aux(self):
+        assert ~self.dder3_aux_updated
+        assert self.hess_aux_updated
+
+        self.D2x_log = D2_log(self.Dx, self.D1x_log)
+        self.D2y_log = D2_log(self.Dy, self.D1y_log)
+
+        self.dder3_aux_updated = True
+
+        return
+
+    def dder3(self, dirs):
+        assert self.grad_updated
+        if ~self.hess_aux_updated:
+            self.update_hessprod_aux()
+        if ~self.dder3_aux_updated:
+            self.update_dder3_aux()
+
+        Ht = dirs[0]
+        Hx = sym.vec_to_mat(dirs[1:])
+        Hy = sym.p_tr(Hx, 0, (self.n, self.m))
+
+        UxHxUx = self.Ux.T @ Hx @ self.Ux
+        UyHyUy = self.Uy.T @ Hy @ self.Uy
+
+        # Quantum conditional entropy oracles
+        D2PhiH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
+        D2PhiH -= np.kron(np.eye(self.n), self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T)
+
+        D3PhiHH = scnd_frechet(self.D2x_log, self.Ux, UxHxUx)
+        D3PhiHH -= np.kron(np.eye(self.n), scnd_frechet(self.D2y_log, self.Uy, UyHyUy))
+
+        # Third derivative of barrier
+        DPhiH = sym.inner(self.DPhi, Hx)
+        D2PhiHH = sym.inner(D2PhiH, Hx)
+        chi = Ht - DPhiH
+
+        dder3 = np.empty((self.dim, 1))
+        dder3[0] = -2 * (self.zi**3) * (chi**2) - (self.zi**2) * D2PhiHH
+
+        temp = -dder3[0] * self.DPhi
+        temp -= 2 * (self.zi**2) * chi * D2PhiH
+        temp += self.zi * D3PhiHH
+        temp -= 2 * self.inv_X @ Hx @ self.inv_X @ Hx @ self.inv_X
+        dder3[1:] = sym.mat_to_vec(temp)
+
+        return dder3
+
 
 
 
@@ -226,3 +277,46 @@ def D1_log(D, log_D):
         D1[j, j] = np.reciprocal(D[j])
 
     return D1
+
+def D2_log(D, D1):
+    eps = np.finfo(np.float64).eps
+    rteps = np.sqrt(eps)
+
+    n = np.size(D)
+    D2 = np.zeros((n, n, n))
+
+    for k in range(n):
+        for j in range(k + 1):
+            for i in range(j + 1):
+                d_jk = D[j] - D[k]
+                if abs(d_jk) < rteps:
+                    d_ij = D[i] - D[j]
+                    if abs(d_ij) < rteps:
+                        t = ((3 / (D[i] + D[j] + D[k]))**2) / -2
+                    else:
+                        t = (D1[i, j] - D1[j, k]) / d_ij
+                else:
+                    t = (D1[i, j] - D1[i, k]) / d_jk
+
+                D2[i, j, k] = t
+                D2[i, k, j] = t
+                D2[j, i, k] = t
+                D2[j, k, i] = t
+                D2[k, i, j] = t
+                D2[k, j, i] = t
+
+    return D2
+
+def scnd_frechet(D2, U, UHU):
+    n = np.size(U, 0)
+    out = np.empty((n, n))
+
+    D2_UHU = D2 * UHU
+
+    for k in range(n):
+        out[:, k] = D2_UHU[:, :, k] @ UHU[k, :].T
+    
+    out *= 2
+    out = U @ out @ U.T
+
+    return out
