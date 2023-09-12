@@ -82,8 +82,6 @@ class QuantCondEntropy():
         self.grad[0] = self.zi
         self.grad[1:] = sym.mat_to_vec(self.zi * self.DPhi - self.inv_X)
 
-        print(self.zi * self.DPhi - self.inv_X)
-
         self.grad_updated = True
         return self.grad
     
