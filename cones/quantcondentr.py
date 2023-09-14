@@ -26,7 +26,16 @@ class QuantCondEntropy():
     def get_nu(self):
         return 1 + self.nm
     
-    def get_point(self, point):
+    def set_init_point(self):
+        point = np.empty((self.dim, 1))
+        point[0] = 0.
+        point[1:] = sym.mat_to_vec(np.eye(self.nm))
+
+        self.set_point(point)
+
+        return point
+    
+    def set_point(self, point):
         assert np.size(point) == self.dim
         self.point = point
 

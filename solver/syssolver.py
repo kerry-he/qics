@@ -10,7 +10,7 @@ from utils import point
 
 class SysSolver():
     def __init__(self, model):
-        sol = point.Point(model)
+        self.sol = point.Point(model)
         return
     
     def update_lhs(self, model):

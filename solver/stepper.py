@@ -4,7 +4,7 @@ from utils.point import Point
 
 class Stepper():
     def __init__(self, syssolver, model):
-        self.syssolver = syssolver(model)
+        self.syssolver = syssolver
         self.cent_count = 2
 
         self.rhs = Point(model)
@@ -39,22 +39,26 @@ class Stepper():
 
         while True:
             next_point.vec[:] = point.vec + dir.vec * alpha
-            mu = np.dot(next_point.x, next_point.z) / model.nu
+            mu = np.dot(next_point.x[:, 0], next_point.z[:, 0]) / model.nu
+            if mu < 0:
+                alpha *= beta
+                continue
+
             rtmu = math.sqrt(mu)
-            irtmu = math.inv(rtmu)
+            irtmu = np.reciprocal(rtmu)
             total_prox = 0.
 
             # Check feasibility
             in_prox = False
             for (k, cone_k) in enumerate(model.cones):
-                cone_k.get_point(next_point.x_views[k] * irtmu)
+                cone_k.set_point(next_point.x_views[k] * irtmu)
 
                 in_prox = False
-                if cone_k.is_feas():
+                if cone_k.get_feas():
                     grad_k = cone_k.get_grad()
                     psi = next_point.z_views[k] + rtmu * grad_k
                     prod = cone_k.invhess_prod(psi)
-                    total_prox += np.dot(prod, psi)
+                    total_prox += np.dot(prod[:, 0], psi[:, 0])
 
                     in_prox = (total_prox < (eta*mu)**2)
                 if not in_prox:
@@ -81,7 +85,7 @@ class Stepper():
 
     def update_rhs_pred(self, model, point):
         self.rhs.x[:] = model.c - model.A.T @ point.y - point.z
-        self.rhs.y[:] = model.v - model.A @ point.x
+        self.rhs.y[:] = model.b - model.A @ point.x
 
         for (rhs_z_k, z_k) in zip(self.rhs.z_views, point.z_views):
             rhs_z_k[:] = -z_k

@@ -20,7 +20,7 @@ def build_cone_idxs(n, cones):
     prev_idx = 0
     for (i, cone) in enumerate(cones):
         dim = cone.dim
-        cone_idxs.append(range(prev_idx, prev_idx + dim))
+        cone_idxs.append(slice(prev_idx, prev_idx + dim))
         prev_idx += dim
     assert prev_idx == n
     return cone_idxs

@@ -6,11 +6,11 @@ class Point():
 
         self.vec = np.empty((n + p + n, 1))
 
-        self.x = self.vec[:n].view()
-        self.y = self.vec[n : n + p].view()
-        self.z = self.vec[n + p:].view()
+        self.x = self.vec[:n]
+        self.y = self.vec[n : n + p]
+        self.z = self.vec[n + p:]
 
-        self.x_views = [self.x[idxs].view() for idxs in model.cone_idxs]
-        self.z_views = [self.z[idxs].view() for idxs in model.cone_idxs]
+        self.x_views = [self.x[idxs] for idxs in model.cone_idxs]
+        self.z_views = [self.z[idxs] for idxs in model.cone_idxs]
 
         return

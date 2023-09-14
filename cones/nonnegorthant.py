@@ -9,7 +9,12 @@ class NonNegOrthant():
     def get_nu(self):
         return self.dim
     
-    def get_point(self, point):
+    def set_init_point(self):
+        point = np.ones((self.dim, 1))
+        self.set_point(point)
+        return point
+    
+    def set_point(self, point):
         assert np.size(point) == self.dim
         self.point = point
         return
