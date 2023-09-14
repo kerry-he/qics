@@ -50,22 +50,35 @@ def vec_to_mat(vec):
     return mat
 
 def p_tr(mat, sys, dim):
-    (n, m) = dim
-    assert n * m == np.size(mat, 0)
+    (n0, n1) = dim
+    assert n0 * n1 == np.size(mat, 0)
     assert sys == 0 or sys == 1
 
     if sys == 1:
-        out = np.empty((n, n))
-        for j in range(n):
+        out = np.empty((n0, n0))
+        for j in range(n0):
             for i in range(j + 1):
-                out[i, j] = np.trace( mat[i*m : (i+1)*m, j*m : (j+1)*m] )
+                out[i, j] = np.trace( mat[i*n1 : (i+1)*n1, j*n1 : (j+1)*n1] )
                 out[j, i] = out[i, j]
     else:
-        out = np.zeros((m, m))
-        for i in range(n):
-            out += mat[i*m : (i+1)*m, i*m : (i+1)*m]
+        out = np.zeros((n1, n1))
+        for i in range(n0):
+            out += mat[i*n1 : (i+1)*n1, i*n1 : (i+1)*n1]
 
     return out
+
+def i_kr(mat, sys, dim):
+    (n0, n1) = dim
+    assert sys == 0 or sys == 1
+
+    if sys == 1:
+        assert np.size(mat, 0) == n0
+        out = np.kron(mat, np.eye(n1))
+    else:
+        assert np.size(mat, 0) == n1
+        out = np.kron(np.eye(n0), mat)
+
+    return out 
 
 def inner(x, y):
     return (x * y).sum()

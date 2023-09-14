@@ -3,33 +3,36 @@ import math
 from utils import symmetric as sym
 
 class QuantCondEntropy():
-    def __init__(self, n, m):
+    def __init__(self, n0, n1, sys):
         # Dimension properties
-        self.n  = n          # Dimension of system 1
-        self.m  = m          # Dimension of system 2
-        self.nm = n * m      # Total dimension of bipartite system
+        self.n0 = n0          # Dimension of system 0
+        self.n1 = n1          # Dimension of system 1
+        self.N  = n0 * n1     # Total dimension of bipartite system
 
-        self.vn  = sym.vec_dim(n)           # Dimension of vectorized system 1
-        self.vnm = sym.vec_dim(self.nm)     # Dimension of vectorized bipartite system
+        self.sys   = sys                       # System being traced out
+        self.n_sys = n0 if (sys == 0) else n1  # Dimension of this system
 
-        self.dim = 1 + self.vnm     # Dimension of the cone
+        self.vn = sym.vec_dim(self.n_sys)      # Dimension of vectorized system being traced out
+        self.vN = sym.vec_dim(self.N)          # Dimension of vectorized bipartite system
+
+        self.dim = 1 + self.vN                 # Dimension of the cone
 
         # Update flags
-        self.feas_updated           = False
-        self.grad_updated           = False
-        self.hess_aux_updated       = False
-        self.invhess_aux_updated    = False
-        self.dder3_aux_updated      = False
+        self.feas_updated        = False
+        self.grad_updated        = False
+        self.hess_aux_updated    = False
+        self.invhess_aux_updated = False
+        self.dder3_aux_updated   = False
 
         return
         
     def get_nu(self):
-        return 1 + self.nm
+        return 1 + self.N
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
         point[0] = 0.
-        point[1:] = sym.mat_to_vec(np.eye(self.nm))
+        point[1:] = sym.mat_to_vec(np.eye(self.N))
 
         self.set_point(point)
 
@@ -41,13 +44,13 @@ class QuantCondEntropy():
 
         self.t = point[0]
         self.X = sym.vec_to_mat(point[1:])
-        self.Y = sym.p_tr(self.X, 0, (self.n, self.m))
+        self.Y = sym.p_tr(self.X, self.sys, (self.n0, self.n1))
 
-        self.feas_updated           = False
-        self.grad_updated           = False
-        self.hess_aux_updated       = False
-        self.invhess_aux_updated    = False
-        self.dder3_aux_updated      = False
+        self.feas_updated        = False
+        self.grad_updated        = False
+        self.hess_aux_updated    = False
+        self.invhess_aux_updated = False
+        self.dder3_aux_updated   = False
 
         return
     
@@ -69,7 +72,7 @@ class QuantCondEntropy():
 
         self.log_X = (self.Ux * self.log_Dx) @ self.Ux.T
         self.log_Y = (self.Uy * self.log_Dy) @ self.Uy.T
-        self.log_XY = self.log_X - np.kron(np.eye(self.n), self.log_Y)
+        self.log_XY = self.log_X - sym.i_kr(self.log_Y, self.sys, (self.n0, self.n1))
         self.z = self.t - sym.inner(self.X, self.log_XY)
 
         self.feas = (self.z > 0)
@@ -87,8 +90,8 @@ class QuantCondEntropy():
         self.zi = np.reciprocal(self.z)
         self.DPhi = self.log_XY
 
-        self.grad = np.empty((self.dim, 1))
-        self.grad[0] = self.zi
+        self.grad     = np.empty((self.dim, 1))
+        self.grad[0]  = self.zi
         self.grad[1:] = sym.mat_to_vec(self.zi * self.DPhi - self.inv_X)
 
         self.grad_updated = True
@@ -116,14 +119,14 @@ class QuantCondEntropy():
         for j in range(p):
             Ht = dirs[0, j]
             Hx = sym.vec_to_mat(dirs[1:, j])
-            Hy = sym.p_tr(Hx, 0, (self.n, self.m))
+            Hy = sym.p_tr(Hx, self.sys, (self.n0, self.n1))
 
             UxHxUx = self.Ux.T @ Hx @ self.Ux
             UyHyUy = self.Uy.T @ Hy @ self.Uy
 
             # Hessian product of conditional entropy
             D2PhiH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
-            D2PhiH -= np.kron(np.eye(self.n), self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T)
+            D2PhiH -= sym.i_kr(self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T, self.sys, (self.n0, self.n1))
 
             # Hessian product of barrier function
             out[0, j] = (Ht - sym.inner(self.DPhi, Hx)) * self.zi * self.zi
@@ -142,19 +145,25 @@ class QuantCondEntropy():
         D1x_inv = 1 / np.outer(self.Dx, self.Dx)
         self.D1x_comb_inv = 1 / (self.D1x_log*self.zi + D1x_inv)
 
-        UxK = np.empty((self.vnm, self.vn))
+        UxK = np.empty((self.vN, self.vn))
         Hy_inv = np.empty((self.vn, self.vn))
 
         k = 0
-        for j in range(self.m):
+        for j in range(self.n_sys):
             for i in range(j + 1):
-                UxK_k = np.zeros((self.nm, self.nm))
+                UxK_k = np.zeros((self.N, self.N))
 
                 # Build UxK matrix
-                for l in range(self.n):
-                    lhs = self.Ux[self.m*l + i, :]
-                    rhs = self.Ux[self.m*l + j, :]
-                    UxK_k += np.outer(lhs, rhs)
+                if self.sys == 1:
+                    for l in range(self.n0):
+                        lhs = self.Ux[self.n1*l + i, :]
+                        rhs = self.Ux[self.n1*l + j, :]
+                        UxK_k += np.outer(lhs, rhs)
+                else:
+                    for l in range(self.n1):
+                        lhs = self.Ux[self.n1*i + l, :]
+                        rhs = self.Ux[self.n1*j + l, :]
+                        UxK_k += np.outer(lhs, rhs)
 
                 if i != j:
                     UxK_k = UxK_k + UxK_k.T
@@ -203,9 +212,10 @@ class QuantCondEntropy():
 
             UxWxUx = self.Ux.T @ Wx @ self.Ux
             Hxx_inv_x = self.Ux @ (self.D1x_comb_inv * UxWxUx) @ self.Ux.T
-            rhs_y = -sym.p_tr(Hxx_inv_x, 0, (self.n, self.m))
+            rhs_y = -sym.p_tr(Hxx_inv_x, self.sys, (self.n0, self.n1))
             H_inv_g_y = np.linalg.solve(self.Hy_KHxK, sym.mat_to_vec(rhs_y))
-            temp = np.kron(np.eye(self.n), sym.vec_to_mat(H_inv_g_y))
+            temp = sym.i_kr(sym.vec_to_mat(H_inv_g_y), self.sys, (self.n0, self.n1))
+
             temp = self.Ux.T @ temp @ self.Ux
             H_inv_w_x = Hxx_inv_x - self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.T
 
@@ -234,17 +244,17 @@ class QuantCondEntropy():
 
         Ht = dirs[0]
         Hx = sym.vec_to_mat(dirs[1:])
-        Hy = sym.p_tr(Hx, 0, (self.n, self.m))
+        Hy = sym.p_tr(Hx, self.sys, (self.n0, self.n1))
 
         UxHxUx = self.Ux.T @ Hx @ self.Ux
         UyHyUy = self.Uy.T @ Hy @ self.Uy
 
         # Quantum conditional entropy oracles
         D2PhiH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
-        D2PhiH -= np.kron(np.eye(self.n), self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T)
+        D2PhiH -= sym.i_kr(self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T, self.sys, (self.n0, self.n1))
 
         D3PhiHH = scnd_frechet(self.D2x_log, self.Ux, UxHxUx)
-        D3PhiHH -= np.kron(np.eye(self.n), scnd_frechet(self.D2y_log, self.Uy, UyHyUy))
+        D3PhiHH -= sym.i_kr(scnd_frechet(self.D2y_log, self.Uy, UyHyUy), self.sys, (self.n0, self.n1))
 
         # Third derivative of barrier
         DPhiH = sym.inner(self.DPhi, Hx)

@@ -17,7 +17,7 @@ A = np.hstack((np.array([[0.]]), tr_A.T))
 b = np.array([[2.]])
 c = np.vstack((np.array([[1.]]), np.zeros((dim - 1, 1))))
 
-cones = [quantcondentr.QuantCondEntropy(n, n)]
+cones = [quantcondentr.QuantCondEntropy(n, n, 0)]
 model = model.Model(c, A, b, cones)
 solver = solver.Solver(model)
 
