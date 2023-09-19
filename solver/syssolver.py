@@ -17,6 +17,7 @@ class SysSolver():
         # Precompute necessary objects on LHS of Newton system
         HA = blk_invhess_prod(model.A.T, model)
         self.AHA = model.A @ HA
+
         return
     
     def solve_system(self, rhs, model):
@@ -25,10 +26,19 @@ class SysSolver():
 
         temp = rhs.y + model.A @ blk_invhess_prod(rhs.x - rhs.z, model)
         self.sol.y[:] = np.linalg.solve(self.AHA, temp)
-        self.sol.x[:] = blk_invhess_prod(model.A.T @ self.sol.y - rhs.x - rhs.z, model)
+        self.sol.x[:] = blk_invhess_prod(model.A.T @ self.sol.y - rhs.x + rhs.z, model)
         self.sol.z[:] = rhs.x - model.A.T @ self.sol.y
 
         return self.sol
+    
+    def apply_system(self, rhs, model):
+        pnt = point.Point(model)
+
+        pnt.x[:] = model.A.T @ rhs.y + rhs.z
+        pnt.y[:] = model.A @ rhs.x
+        pnt.z[:] = blk_hess_prod(rhs.x, model) + rhs.z
+
+        return pnt
 
 def blk_hess_prod(dirs, model):
     out = np.empty_like(dirs)
