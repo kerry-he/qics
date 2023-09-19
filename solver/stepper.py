@@ -66,7 +66,8 @@ class Stepper():
         
             # If feasible, return point
             if in_prox:
-                return next_point
+                point.vec[:] = next_point.vec[:]
+                return point
         
             # Otherwise backtrack
             alpha *= beta

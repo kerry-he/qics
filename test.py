@@ -7,17 +7,11 @@ from solver import model, solver
 
 np.random.seed(1)
 
-n = 2
-N = n**2
-sN = sym.vec_dim(N)
-dim = sN + 1
+A = np.array([[1.,  0.,  1.], [-1.,  1.,  0.]])
+b = np.array([[1.], [1.]])
+c = np.array([[1.], [2.], [0.]])
 
-tr_A = sym.mat_to_vec(np.eye(N, N))
-A = np.hstack((np.array([[0.]]), tr_A.T))
-b = np.array([[2.]])
-c = np.vstack((np.array([[1.]]), np.zeros((dim - 1, 1))))
-
-cones = [quantcondentr.QuantCondEntropy(n, n, 0)]
+cones = [nonnegorthant.NonNegOrthant(3)]
 model = model.Model(c, A, b, cones)
 solver = solver.Solver(model)
 

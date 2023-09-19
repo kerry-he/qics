@@ -56,7 +56,7 @@ class Solver():
         self.num_iters += 1
 
         if self.verbose:
-            print("Iter", self.num_iters)
+            print("Iter: ", self.num_iters, "\tmu: ", self.mu)
         
         return False
 
