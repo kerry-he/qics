@@ -10,7 +10,7 @@ class QuantCondEntropy():
         self.N  = n0 * n1     # Total dimension of bipartite system
 
         self.sys   = sys                       # System being traced out
-        self.n_sys = n0 if (sys == 0) else n1  # Dimension of this system
+        self.n_sys = n0 if (sys == 1) else n1  # Dimension of system not traced out
 
         self.vn = sym.vec_dim(self.n_sys)      # Dimension of vectorized system being traced out
         self.vN = sym.vec_dim(self.N)          # Dimension of vectorized bipartite system
@@ -154,7 +154,7 @@ class QuantCondEntropy():
                 UxK_k = np.zeros((self.N, self.N))
 
                 # Build UxK matrix
-                if self.sys == 1:
+                if self.sys == 0:
                     for l in range(self.n0):
                         lhs = self.Ux[self.n1*l + i, :]
                         rhs = self.Ux[self.n1*l + j, :]
