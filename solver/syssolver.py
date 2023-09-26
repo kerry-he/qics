@@ -29,6 +29,10 @@ class SysSolver():
         self.sol.x[:] = blk_invhess_prod(model.A.T @ self.sol.y - rhs.x + rhs.z, model)
         self.sol.z[:] = rhs.x - model.A.T @ self.sol.y
 
+        # res = self.apply_system(self.sol, model)
+        # res.vec[:] -= rhs.vec
+        # print(np.linalg.norm(res.vec))
+
         return self.sol
     
     def apply_system(self, rhs, model):

@@ -32,7 +32,7 @@ class QuantCondEntropy():
     def set_init_point(self):
         point = np.empty((self.dim, 1))
         point[0] = 0.
-        point[1:] = sym.mat_to_vec(np.eye(self.N))
+        point[1:] = sym.mat_to_vec(np.eye(self.N)) / self.N
 
         self.set_point(point)
 

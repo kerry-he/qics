@@ -3,7 +3,8 @@ import math
 import time
 
 from utils import point
-from solver.stepper import Stepper
+from solver.stepper.basic import BasicStepper
+from solver.stepper.aggressive import AggressiveStepper
 from solver.syssolver import SysSolver
 
 class Solver():
@@ -22,7 +23,7 @@ class Solver():
 
         self.model = model
         syssolver = SysSolver(model) if (syssolver is None) else syssolver
-        self.stepper = Stepper(syssolver, model) if (stepper is None) else stepper
+        self.stepper = AggressiveStepper(syssolver, model) if (stepper is None) else stepper
 
         return
     

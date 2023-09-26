@@ -13,7 +13,7 @@ c = np.array([[1.], [2.], [0.]])
 
 cones = [nonnegorthant.NonNegOrthant(3)]
 model = model.Model(c, A, b, cones)
-solver = solver.Solver(model, max_iter=1000)
+solver = solver.Solver(model, max_iter=20)
 
 solver.solve()
 

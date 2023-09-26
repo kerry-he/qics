@@ -2,7 +2,7 @@ import numpy as np
 import math
 from utils.point import Point
 
-class Stepper():
+class BasicStepper():
     def __init__(self, syssolver, model):
         self.syssolver = syssolver
         self.cent_count = 2
