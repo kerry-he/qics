@@ -29,6 +29,26 @@ def mat_to_vec(mat, rt2=None):
     assert k == vn
     return vec
 
+def mat_to_vec_ip(vec, mat, rt2=None):
+    rt2 = math.sqrt(2) if (rt2 is None) else rt2
+    n = np.size(mat, 0)
+    assert n == np.size(mat, 1)
+
+    vn = vec_dim(n)
+    assert np.size(vec) == vn
+
+    k = 0
+    for j in range(n):
+        for i in range(j + 1):
+            if i == j:
+                vec[k] = mat[i, j]
+            else:
+                vec[k] = mat[i, j] * rt2
+            k += 1
+    
+    assert k == vn
+    return vec
+
 def vec_to_mat(vec):
     irt2 = math.sqrt(0.5)
     vn = np.size(vec)
@@ -48,6 +68,26 @@ def vec_to_mat(vec):
 
     assert k == vn
     return mat
+
+def vec_to_mat_ip(mat, vec):
+    irt2 = math.sqrt(0.5)
+    vn = np.size(vec)
+
+    n = mat_dim(vn)
+    assert np.shape(mat) == (n, n)
+
+    k = 0
+    for j in range(n):
+        for i in range(j + 1):
+            if i == j:
+                mat[i, j] = vec[k]
+            else:
+                mat[i, j] = vec[k] * irt2
+                mat[j, i] = vec[k] * irt2
+            k += 1
+
+    assert k == vn
+    return mat    
 
 def p_tr(mat, sys, dim):
     (n0, n1) = dim

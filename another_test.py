@@ -2,6 +2,8 @@ import numpy as np
 import scipy as sp
 import math
 
+import cProfile
+
 from cones import *
 from utils import symmetric as sym
 from solver import model, solver
@@ -50,7 +52,7 @@ rho_A = np.diag(eig_A)
 rho_AR = purify(eig_A)
 
 Delta = sym.mat_to_vec(np.eye(N) - rho_AR)
-D = 0.0
+D = 0.4
 
 # Build problem model
 tr2 = get_tr2(n, sn, sN)
@@ -69,6 +71,12 @@ c[0] = 1.
 # Input into model and solve
 cones = [quantcondentr.QuantCondEntropy(n, n, 0), nonnegorthant.NonNegOrthant(1)]
 model = model.Model(c, A, b, cones)
-solver = solver.Solver(model, max_iter=50)
+solver = solver.Solver(model, max_iter=100)
+
+profiler = cProfile.Profile()
+profiler.enable()
 
 solver.solve()
+
+profiler.disable()
+profiler.dump_stats("example.stats")

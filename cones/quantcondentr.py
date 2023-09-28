@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 import math
 from utils import symmetric as sym
 
@@ -60,8 +61,8 @@ class QuantCondEntropy():
         
         self.feas_updated = True
 
-        self.Dx, self.Ux = np.linalg.eig(self.X)
-        self.Dy, self.Uy = np.linalg.eig(self.Y)
+        self.Dx, self.Ux = np.linalg.eigh(self.X)
+        self.Dy, self.Uy = np.linalg.eigh(self.Y)
 
         if any(self.Dx <= 0):
             self.feas = False
@@ -116,9 +117,11 @@ class QuantCondEntropy():
         p = np.size(dirs, 1)
         out = np.empty((self.dim, p))
 
+        Hx = np.empty((self.N, self.N))
+
         for j in range(p):
             Ht = dirs[0, j]
-            Hx = sym.vec_to_mat(dirs[1:, j])
+            sym.vec_to_mat_ip(Hx, dirs[1:, j])
             Hy = sym.p_tr(Hx, self.sys, (self.n0, self.n1))
 
             UxHxUx = self.Ux.T @ Hx @ self.Ux
@@ -131,7 +134,7 @@ class QuantCondEntropy():
             # Hessian product of barrier function
             out[0, j] = (Ht - sym.inner(self.DPhi, Hx)) * self.zi * self.zi
             temp = -self.DPhi * out[0, j] + D2PhiH * self.zi + self.inv_X @ Hx @ self.inv_X
-            out[1:, [j]] = sym.mat_to_vec(temp)
+            sym.mat_to_vec_ip(out[1:, j], temp)
 
         return out
     
@@ -169,7 +172,7 @@ class QuantCondEntropy():
                     UxK_k = UxK_k + UxK_k.T
                     UxK_k *= irt2
 
-                UxK[:, [k]] = sym.mat_to_vec(UxK_k)
+                sym.mat_to_vec_ip(UxK[:, k], UxK_k)
 
                 # Build Hyy^-1 matrix
                 lhs = self.Uy[i, :]
@@ -181,14 +184,15 @@ class QuantCondEntropy():
                     UyH_k *= irt2
 
                 temp = self.Uy @ (UyH_k * self.z / self.D1y_log) @ self.Uy.T
-                Hy_inv[:, [k]] = sym.mat_to_vec(temp)
+                sym.mat_to_vec_ip(Hy_inv[:, k], temp)
 
                 k += 1
 
         temp = sym.mat_to_vec(self.D1x_comb_inv, 1.0)
         UxK_temp = UxK * temp
         KHxK = UxK.T @ UxK_temp
-        self.Hy_KHxK = Hy_inv - KHxK
+        Hy_KHxK = Hy_inv - KHxK
+        self.Hy_KHxK_chol = sp.linalg.cho_factor(Hy_KHxK)
 
         self.invhess_aux_updated = True
 
@@ -204,23 +208,25 @@ class QuantCondEntropy():
         p = np.size(dirs, 1)
         out = np.empty((self.dim, p))
 
+        Hx = np.empty((self.N, self.N))
+
         for j in range(p):
             Ht = dirs[0, j]
-            Hx = sym.vec_to_mat(dirs[1:, j])
+            sym.vec_to_mat_ip(Hx, dirs[1:, j])
 
             Wx = Hx + Ht * self.DPhi
 
             UxWxUx = self.Ux.T @ Wx @ self.Ux
             Hxx_inv_x = self.Ux @ (self.D1x_comb_inv * UxWxUx) @ self.Ux.T
             rhs_y = -sym.p_tr(Hxx_inv_x, self.sys, (self.n0, self.n1))
-            H_inv_g_y = np.linalg.solve(self.Hy_KHxK, sym.mat_to_vec(rhs_y))
+            H_inv_g_y = sp.linalg.cho_solve(self.Hy_KHxK_chol, sym.mat_to_vec(rhs_y))
             temp = sym.i_kr(sym.vec_to_mat(H_inv_g_y), self.sys, (self.n0, self.n1))
 
             temp = self.Ux.T @ temp @ self.Ux
             H_inv_w_x = Hxx_inv_x - self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.T
 
             out[0, j] = Ht * self.z * self.z + sym.inner(H_inv_w_x, self.DPhi)
-            out[1:, [j]] = sym.mat_to_vec(H_inv_w_x)
+            sym.mat_to_vec_ip(out[1:, j], H_inv_w_x)
 
         return out
     
