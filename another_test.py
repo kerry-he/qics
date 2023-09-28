@@ -38,7 +38,7 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-n = 2
+n = 4
 N = n * n
 sn = sym.vec_dim(n)
 sN = sym.vec_dim(N)
@@ -50,7 +50,7 @@ rho_A = np.diag(eig_A)
 rho_AR = purify(eig_A)
 
 Delta = sym.mat_to_vec(np.eye(N) - rho_AR)
-D = 0.5
+D = 0.0
 
 # Build problem model
 tr2 = get_tr2(n, sn, sN)
@@ -69,10 +69,6 @@ c[0] = 1.
 # Input into model and solve
 cones = [quantcondentr.QuantCondEntropy(n, n, 0), nonnegorthant.NonNegOrthant(1)]
 model = model.Model(c, A, b, cones)
-solver = solver.Solver(model, max_iter=100)
+solver = solver.Solver(model, max_iter=50)
 
 solver.solve()
-
-print(b)
-print(A @ solver.point.x)
-print(sym.vec_to_mat(solver.point.x[1:-1]))

@@ -2,20 +2,15 @@ import numpy as np
 import math
 from utils import symmetric as sym
 
-class QuantCondEntropy():
-    def __init__(self, n0, n1, sys):
+class QuantRelEntropy():
+    def __init__(self, n):
         # Dimension properties
-        self.n0 = n0          # Dimension of system 0
-        self.n1 = n1          # Dimension of system 1
-        self.N  = n0 * n1     # Total dimension of bipartite system
+        self.n                              # Side dimension of system
+        self.vn = sym.vec_dim(self.n_sys)   # Vector dimension of system
+        self.dim = 1 + 2 * self.vn          # Total dimension of cone
 
-        self.sys   = sys                       # System being traced out
-        self.n_sys = n0 if (sys == 1) else n1  # Dimension of system not traced out
-
-        self.vn = sym.vec_dim(self.n_sys)      # Dimension of vectorized system being traced out
-        self.vN = sym.vec_dim(self.N)          # Dimension of vectorized bipartite system
-
-        self.dim = 1 + self.vN                 # Dimension of the cone
+        self.idx_X = slice(1, 1 + self.vn)
+        self.idx_Y = slice(1 + self.vn, 1 + 2 * self.vn)
 
         # Update flags
         self.feas_updated        = False
@@ -27,12 +22,13 @@ class QuantCondEntropy():
         return
         
     def get_nu(self):
-        return 1 + self.N
+        return 1 + 2 * self.n
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
-        point[0] = 0.
-        point[1:] = sym.mat_to_vec(np.eye(self.N)) / self.N
+        point[0] = 1.
+        point[self.idx_X] = sym.mat_to_vec(np.eye(self.N)) / self.N
+        point[self.idx_Y] = sym.mat_to_vec(np.eye(self.N)) / self.N
 
         self.set_point(point)
 
@@ -43,8 +39,8 @@ class QuantCondEntropy():
         self.point = point
 
         self.t = point[0]
-        self.X = sym.vec_to_mat(point[1:])
-        self.Y = sym.p_tr(self.X, self.sys, (self.n0, self.n1))
+        self.X = sym.vec_to_mat(point[self.idx_X])
+        self.Y = sym.vec_to_mat(point[self.idx_Y])
 
         self.feas_updated        = False
         self.grad_updated        = False
@@ -63,7 +59,7 @@ class QuantCondEntropy():
         self.Dx, self.Ux = np.linalg.eig(self.X)
         self.Dy, self.Uy = np.linalg.eig(self.Y)
 
-        if any(self.Dx <= 0):
+        if any(self.Dx <= 0) or any(self.Dy <= 0):
             self.feas = False
             return self.feas
         
@@ -72,7 +68,7 @@ class QuantCondEntropy():
 
         self.log_X = (self.Ux * self.log_Dx) @ self.Ux.T
         self.log_Y = (self.Uy * self.log_Dy) @ self.Uy.T
-        self.log_XY = self.log_X - sym.i_kr(self.log_Y, self.sys, (self.n0, self.n1))
+        self.log_XY = self.log_X - self.log_Y
         self.z = self.t - sym.inner(self.X, self.log_XY)
 
         self.feas = (self.z > 0)
@@ -85,14 +81,22 @@ class QuantCondEntropy():
             return self.grad
         
         self.inv_Dx = np.reciprocal(self.Dx)
+        self.inv_Dx = np.reciprocal(self.Dy)
         self.inv_X  = (self.Ux * self.inv_Dx) @ self.Ux.T
+        self.inv_Y  = (self.Uy * self.inv_Dy) @ self.Uy.T
 
-        self.zi = np.reciprocal(self.z)
-        self.DPhi = self.log_XY
+        self.D1y_log = D1_log(self.Dy, self.log_Dy)
 
-        self.grad     = np.empty((self.dim, 1))
-        self.grad[0]  = -self.zi
-        self.grad[1:] = sym.mat_to_vec(self.zi * self.DPhi - self.inv_X)
+        self.UyXUy = self.Uy.T @ self.X @ self.Uy
+
+        self.zi    = np.reciprocal(self.z)
+        self.DPhiX = self.log_XY + np.eye(self.n)
+        self.DPhiY = -self.Uy @ (self.D1y_log * self.UyXUy) @ self.Uy.T
+
+        self.grad             = np.empty((self.dim, 1))
+        self.grad[0]          = -self.zi
+        self.grad[self.idx_X] = sym.mat_to_vec(self.zi * self.DPhiX - self.inv_X)
+        self.grad[self.idx_Y] = sym.mat_to_vec(self.zi * self.DPhiY - self.inv_Y)
 
         self.grad_updated = True
         return self.grad
@@ -102,7 +106,11 @@ class QuantCondEntropy():
         assert self.grad_updated
 
         self.D1x_log = D1_log(self.Dx, self.log_Dx)
-        self.D1y_log = D1_log(self.Dy, self.log_Dy)
+        self.D2y_log = D2_log(self.Dy, self.D1y_log)
+
+        self.D2PhiXX = np.empty((self.vn, self.vn))
+        self.D2PhiXY = np.empty((self.vn, self.vn))
+        self.D2PhiYY = np.empty((self.vn, self.vn))
 
         self.hess_aux_updated = True
 
@@ -223,56 +231,6 @@ class QuantCondEntropy():
             out[1:, [j]] = sym.mat_to_vec(H_inv_w_x)
 
         return out
-    
-    def update_dder3_aux(self):
-        assert ~self.dder3_aux_updated
-        assert self.hess_aux_updated
-
-        self.D2x_log = D2_log(self.Dx, self.D1x_log)
-        self.D2y_log = D2_log(self.Dy, self.D1y_log)
-
-        self.dder3_aux_updated = True
-
-        return
-
-    def dder3(self, dirs):
-        assert self.grad_updated
-        if ~self.hess_aux_updated:
-            self.update_hessprod_aux()
-        if ~self.dder3_aux_updated:
-            self.update_dder3_aux()
-
-        Ht = dirs[0]
-        Hx = sym.vec_to_mat(dirs[1:])
-        Hy = sym.p_tr(Hx, self.sys, (self.n0, self.n1))
-
-        UxHxUx = self.Ux.T @ Hx @ self.Ux
-        UyHyUy = self.Uy.T @ Hy @ self.Uy
-
-        # Quantum conditional entropy oracles
-        D2PhiH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
-        D2PhiH -= sym.i_kr(self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T, self.sys, (self.n0, self.n1))
-
-        D3PhiHH = scnd_frechet(self.D2x_log, self.Ux, UxHxUx)
-        D3PhiHH -= sym.i_kr(scnd_frechet(self.D2y_log, self.Uy, UyHyUy), self.sys, (self.n0, self.n1))
-
-        # Third derivative of barrier
-        DPhiH = sym.inner(self.DPhi, Hx)
-        D2PhiHH = sym.inner(D2PhiH, Hx)
-        chi = Ht - DPhiH
-
-        dder3 = np.empty((self.dim, 1))
-        dder3[0] = -2 * (self.zi**3) * (chi**2) - (self.zi**2) * D2PhiHH
-
-        temp = -dder3[0] * self.DPhi
-        temp -= 2 * (self.zi**2) * chi * D2PhiH
-        temp += self.zi * D3PhiHH
-        temp -= 2 * self.inv_X @ Hx @ self.inv_X @ Hx @ self.inv_X
-        dder3[1:] = sym.mat_to_vec(temp)
-
-        return dder3
-
-
 
 
 def D1_log(D, log_D):
@@ -323,17 +281,3 @@ def D2_log(D, D1):
                 D2[k, j, i] = t
 
     return D2
-
-def scnd_frechet(D2, U, UHU):
-    n = np.size(U, 0)
-    out = np.empty((n, n))
-
-    D2_UHU = D2 * UHU
-
-    for k in range(n):
-        out[:, k] = D2_UHU[k, :, :] @ UHU[k, :]
-
-    out *= 2
-    out = U @ out @ U.T
-
-    return out

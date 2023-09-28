@@ -12,7 +12,7 @@ class AggressiveStepper():
         
         return
     
-    def step(self, model, point, mu):
+    def step(self, model, point, mu, verbose):
         self.syssolver.update_lhs(model)
 
         eta = 0.0332
@@ -23,18 +23,28 @@ class AggressiveStepper():
             self.syssolver.solve_system(self.rhs, model)
 
             self.cent_count = 0
+
+            if verbose:
+                print("  | %5s" % "pred", end="")
         else:
             self.update_rhs_cent(model, point, mu)
             self.syssolver.solve_system(self.rhs, model)
 
-            # self.cent_count += 1
+            self.cent_count += 1
 
-        point = self.line_search(model, point)
+            if verbose:
+                print("  | %5s" % "cent", end="")
+
+        res = self.syssolver.apply_system(self.syssolver.sol, model)
+        res.vec[:] -= self.rhs.vec
+        print(" %10.3e" % (np.linalg.norm(res.vec)), end="")
+
+        point = self.line_search(model, point, verbose)
         
         return point
     
-    def line_search(self, model, point):
-        alpha = 0.9999
+    def line_search(self, model, point, verbose):
+        alpha = 1.
         beta = 0.9
         eta = 0.99
 
@@ -72,6 +82,9 @@ class AggressiveStepper():
             # If feasible, return point
             if in_prox:
                 point.vec[:] = next_point.vec[:]
+
+                if verbose:
+                    print("  %5.3f" % (alpha))
                 return point
         
             # Otherwise backtrack

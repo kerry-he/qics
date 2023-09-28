@@ -52,13 +52,31 @@ class Solver():
         # Update barrier parameter mu
         self.calc_mu()
 
-        # Step
-        self.stepper.step(self.model, self.point, self.mu)
-        self.num_iters += 1
+        # Get solve data
+        self.p_obj   = np.dot(self.point.x[:, 0], self.model.c[:, 0])
+        self.d_obj   = np.dot(self.point.y[:, 0], self.model.b[:, 0])
+        self.obj_gap = self.p_obj - self.d_obj
+        self.p_feas  = np.linalg.norm(self.model.A @ self.point.x - self.model.b)
+        self.d_feas  = np.linalg.norm(self.model.A.T @ self.point.y + self.point.z - self.model.c)
 
         if self.verbose:
-            print("Iter: ", self.num_iters, "\tmu: ", self.mu)
-        
+            if self.num_iters % 20 == 0:
+                print("==========================================================================================================")
+                print("%5s" % "iter", " %8s" % "mu",
+                    " | %10s" % "p_obj", " %10s" % "d_obj", " %10s" % "gap", 
+                    " | %10s" % "p_feas", " %10s" % "d_feas",
+                    " | %5s" % "step", "%10s" % "tol", " %5s" % "alpha")
+                print("==========================================================================================================")                
+            
+            print("%5d" % (self.num_iters), " %8.1e" % (self.mu),
+                  " | %10.3e" % (self.p_obj), " %10.3e" % (self.d_obj), " %10.3e" % (self.obj_gap), 
+                  " | %10.3e" % (self.p_feas), " %10.3e" % (self.d_feas), end="")
+            
+        # Step
+        self.stepper.step(self.model, self.point, self.mu, self.verbose)
+        self.num_iters += 1
+
+
         return False
 
     def setup_solver(self):

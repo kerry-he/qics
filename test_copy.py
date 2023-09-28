@@ -15,7 +15,7 @@ c = sym.mat_to_vec(np.array([[1., 2., 3.], [2., 9., 0.], [3., 0., 7.]]))
 
 cones = [possemidefinite.PosSemiDefinite(3)]
 model = model.Model(c, A, b, cones)
-solver = solver.Solver(model, max_iter=100)
+solver = solver.Solver(model, max_iter=30)
 
 solver.solve()
 
