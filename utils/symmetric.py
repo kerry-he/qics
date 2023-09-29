@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import numba as nb
 
 def vec_dim(side):
     return side * (side + 1) // 2
@@ -10,11 +11,17 @@ def mat_dim(len):
     return side
 
 def mat_to_vec(mat, rt2=None):
-    rt2 = math.sqrt(2) if (rt2 is None) else rt2
-    n = np.size(mat, 0)
-    assert n == np.size(mat, 1)
+    rt2 = np.sqrt(2.0) if (rt2 is None) else rt2
+    n = mat.shape[0]
+    if n <= 400:
+        return mat_to_vec_single(mat, rt2)
+    else:
+        return mat_to_vec_parallel(mat, rt2)
 
-    vn = vec_dim(n)
+@nb.njit
+def mat_to_vec_single(mat, rt2):
+    n = mat.shape[0]
+    vn = n * (n + 1) // 2
     vec = np.empty((vn, 1))
 
     k = 0
@@ -26,19 +33,16 @@ def mat_to_vec(mat, rt2=None):
                 vec[k] = mat[i, j] * rt2
             k += 1
     
-    assert k == vn
     return vec
 
-def mat_to_vec_ip(vec, mat, rt2=None):
-    rt2 = math.sqrt(2) if (rt2 is None) else rt2
-    n = np.size(mat, 0)
-    assert n == np.size(mat, 1)
-
-    vn = vec_dim(n)
-    assert np.size(vec) == vn
+@nb.njit(parallel=True)
+def mat_to_vec_parallel(mat, rt2):
+    n = mat.shape[0]
+    vn = n * (n + 1) // 2
+    vec = np.empty((vn, 1))
 
     k = 0
-    for j in range(n):
+    for j in nb.prange(n):
         for i in range(j + 1):
             if i == j:
                 vec[k] = mat[i, j]
@@ -46,48 +50,45 @@ def mat_to_vec_ip(vec, mat, rt2=None):
                 vec[k] = mat[i, j] * rt2
             k += 1
     
-    assert k == vn
     return vec
 
-def vec_to_mat(vec):
-    irt2 = math.sqrt(0.5)
-    vn = np.size(vec)
+def vec_to_mat(vec, irt2=None):
+    irt2 = np.sqrt(0.5) if (irt2 is None) else irt2
+    n = mat_dim(vec.shape[0])
+    if n <= 1600:
+        return vec_to_mat_single(vec, n, irt2)
+    else:
+        return vec_to_mat_parallel(vec, n, irt2)
 
-    n = mat_dim(vn)
+@nb.njit
+def vec_to_mat_single(vec, n, irt2):
     mat = np.empty((n, n))
-
     k = 0
     for j in range(n):
         for i in range(j + 1):
             if i == j:
-                mat[i, j] = vec[k]
+                mat[i, j] = vec[k, 0]
             else:
-                mat[i, j] = vec[k] * irt2
-                mat[j, i] = vec[k] * irt2
+                mat[i, j] = vec[k, 0] * irt2
+                mat[j, i] = vec[k, 0] * irt2
             k += 1
 
-    assert k == vn
     return mat
 
-def vec_to_mat_ip(mat, vec):
-    irt2 = math.sqrt(0.5)
-    vn = np.size(vec)
-
-    n = mat_dim(vn)
-    assert np.shape(mat) == (n, n)
-
+@nb.njit(parallel=True)
+def vec_to_mat_parallel(vec, n, irt2):
+    mat = np.empty((n, n))
     k = 0
-    for j in range(n):
+    for j in nb.prange(n):
         for i in range(j + 1):
             if i == j:
-                mat[i, j] = vec[k]
+                mat[i, j] = vec[k, 0]
             else:
-                mat[i, j] = vec[k] * irt2
-                mat[j, i] = vec[k] * irt2
+                mat[i, j] = vec[k, 0] * irt2
+                mat[j, i] = vec[k, 0] * irt2
             k += 1
 
-    assert k == vn
-    return mat    
+    return mat
 
 def p_tr(mat, sys, dim):
     (n0, n1) = dim

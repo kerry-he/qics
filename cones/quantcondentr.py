@@ -18,6 +18,16 @@ class QuantCondEntropy():
 
         self.dim = 1 + self.vN                 # Dimension of the cone
 
+        # Precompute factors and indices for slicing
+        self.N_tril = np.tril_indices(self.N)
+        self.n_tril = np.tril_indices(self.n_sys)
+        self.N_rt2 = np.ones((self.N, self.N)) * np.sqrt(2.)
+        np.fill_diagonal(self.N_rt2, 1.)
+        self.N_irt2 = np.reciprocal(self.N_rt2)
+        self.n_rt2 = np.ones((self.n_sys, self.n_sys)) * np.sqrt(2.)
+        np.fill_diagonal(self.n_rt2, 1.)
+        self.n_irt2 = np.reciprocal(self.n_rt2)
+
         # Update flags
         self.feas_updated        = False
         self.grad_updated        = False
@@ -44,7 +54,7 @@ class QuantCondEntropy():
         self.point = point
 
         self.t = point[0]
-        self.X = sym.vec_to_mat(point[1:])
+        self.X = sym.vec_to_mat(point[1:, [0]])
         self.Y = sym.p_tr(self.X, self.sys, (self.n0, self.n1))
 
         self.feas_updated        = False
@@ -117,11 +127,9 @@ class QuantCondEntropy():
         p = np.size(dirs, 1)
         out = np.empty((self.dim, p))
 
-        Hx = np.empty((self.N, self.N))
-
         for j in range(p):
             Ht = dirs[0, j]
-            sym.vec_to_mat_ip(Hx, dirs[1:, j])
+            Hx = sym.vec_to_mat(dirs[1:, [j]])
             Hy = sym.p_tr(Hx, self.sys, (self.n0, self.n1))
 
             UxHxUx = self.Ux.T @ Hx @ self.Ux
@@ -134,7 +142,7 @@ class QuantCondEntropy():
             # Hessian product of barrier function
             out[0, j] = (Ht - sym.inner(self.DPhi, Hx)) * self.zi * self.zi
             temp = -self.DPhi * out[0, j] + D2PhiH * self.zi + self.inv_X @ Hx @ self.inv_X
-            sym.mat_to_vec_ip(out[1:, j], temp)
+            out[1:, [j]] = sym.mat_to_vec(temp)
 
         return out
     
@@ -145,7 +153,7 @@ class QuantCondEntropy():
 
         irt2 = math.sqrt(0.5)
 
-        D1x_inv = 1 / np.outer(self.Dx, self.Dx)
+        D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
         self.D1x_comb_inv = 1 / (self.D1x_log*self.zi + D1x_inv)
 
         UxK = np.empty((self.vN, self.vn))
@@ -172,7 +180,7 @@ class QuantCondEntropy():
                     UxK_k = UxK_k + UxK_k.T
                     UxK_k *= irt2
 
-                sym.mat_to_vec_ip(UxK[:, k], UxK_k)
+                UxK[:, [k]] = sym.mat_to_vec(UxK_k)
 
                 # Build Hyy^-1 matrix
                 lhs = self.Uy[i, :]
@@ -184,7 +192,7 @@ class QuantCondEntropy():
                     UyH_k *= irt2
 
                 temp = self.Uy @ (UyH_k * self.z / self.D1y_log) @ self.Uy.T
-                sym.mat_to_vec_ip(Hy_inv[:, k], temp)
+                Hy_inv[:, [k]] = sym.mat_to_vec(temp)
 
                 k += 1
 
@@ -208,25 +216,24 @@ class QuantCondEntropy():
         p = np.size(dirs, 1)
         out = np.empty((self.dim, p))
 
-        Hx = np.empty((self.N, self.N))
-
         for j in range(p):
             Ht = dirs[0, j]
-            sym.vec_to_mat_ip(Hx, dirs[1:, j])
+            Hx = sym.vec_to_mat(dirs[1:, [j]])
 
             Wx = Hx + Ht * self.DPhi
 
             UxWxUx = self.Ux.T @ Wx @ self.Ux
             Hxx_inv_x = self.Ux @ (self.D1x_comb_inv * UxWxUx) @ self.Ux.T
             rhs_y = -sym.p_tr(Hxx_inv_x, self.sys, (self.n0, self.n1))
-            H_inv_g_y = sp.linalg.cho_solve(self.Hy_KHxK_chol, sym.mat_to_vec(rhs_y))
+            temp = sym.mat_to_vec(rhs_y)
+            H_inv_g_y = sp.linalg.cho_solve(self.Hy_KHxK_chol, temp)
             temp = sym.i_kr(sym.vec_to_mat(H_inv_g_y), self.sys, (self.n0, self.n1))
 
             temp = self.Ux.T @ temp @ self.Ux
             H_inv_w_x = Hxx_inv_x - self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.T
 
             out[0, j] = Ht * self.z * self.z + sym.inner(H_inv_w_x, self.DPhi)
-            sym.mat_to_vec_ip(out[1:, j], H_inv_w_x)
+            out[1:, [j]] = sym.mat_to_vec(H_inv_w_x)
 
         return out
     
@@ -249,7 +256,7 @@ class QuantCondEntropy():
             self.update_dder3_aux()
 
         Ht = dirs[0]
-        Hx = sym.vec_to_mat(dirs[1:])
+        Hx = sym.vec_to_mat(dirs[1:, [0]])
         Hy = sym.p_tr(Hx, self.sys, (self.n0, self.n1))
 
         UxHxUx = self.Ux.T @ Hx @ self.Ux
