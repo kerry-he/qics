@@ -1,5 +1,6 @@
 import numpy as np
 import scipy as sp
+import numba as nb
 import math
 from utils import symmetric as sym
 
@@ -17,16 +18,6 @@ class QuantCondEntropy():
         self.vN = sym.vec_dim(self.N)          # Dimension of vectorized bipartite system
 
         self.dim = 1 + self.vN                 # Dimension of the cone
-
-        # Precompute factors and indices for slicing
-        self.N_tril = np.tril_indices(self.N)
-        self.n_tril = np.tril_indices(self.n_sys)
-        self.N_rt2 = np.ones((self.N, self.N)) * np.sqrt(2.)
-        np.fill_diagonal(self.N_rt2, 1.)
-        self.N_irt2 = np.reciprocal(self.N_rt2)
-        self.n_rt2 = np.ones((self.n_sys, self.n_sys)) * np.sqrt(2.)
-        np.fill_diagonal(self.n_rt2, 1.)
-        self.n_irt2 = np.reciprocal(self.n_rt2)
 
         # Update flags
         self.feas_updated        = False
@@ -109,7 +100,7 @@ class QuantCondEntropy():
         return self.grad
     
     def update_hessprod_aux(self):
-        assert ~self.hess_aux_updated
+        assert not self.hess_aux_updated
         assert self.grad_updated
 
         self.D1x_log = D1_log(self.Dx, self.log_Dx)
@@ -121,7 +112,7 @@ class QuantCondEntropy():
 
     def hess_prod(self, dirs):
         assert self.grad_updated
-        if ~self.hess_aux_updated:
+        if not self.hess_aux_updated:
             self.update_hessprod_aux()
 
         p = np.size(dirs, 1)
@@ -147,7 +138,7 @@ class QuantCondEntropy():
         return out
     
     def update_invhessprod_aux(self):
-        assert ~self.invhess_aux_updated
+        assert not self.invhess_aux_updated
         assert self.grad_updated
         assert self.hess_aux_updated
 
@@ -166,15 +157,13 @@ class QuantCondEntropy():
 
                 # Build UxK matrix
                 if self.sys == 0:
-                    for l in range(self.n0):
-                        lhs = self.Ux[self.n1*l + i, :]
-                        rhs = self.Ux[self.n1*l + j, :]
-                        UxK_k += np.outer(lhs, rhs)
+                    lhs = self.Ux[slice(i, self.vN, self.n1), :]
+                    rhs = self.Ux[slice(j, self.vN, self.n1), :]
+                    UxK_k = lhs.T @ rhs
                 else:
-                    for l in range(self.n1):
-                        lhs = self.Ux[self.n1*i + l, :]
-                        rhs = self.Ux[self.n1*j + l, :]
-                        UxK_k += np.outer(lhs, rhs)
+                    lhs = self.Ux[self.n1*i:self.n1*(i+1), :]
+                    rhs = self.Ux[self.n1*j:self.n1*(j+1), :]
+                    UxK_k = lhs.T @ rhs
 
                 if i != j:
                     UxK_k = UxK_k + UxK_k.T
@@ -208,9 +197,9 @@ class QuantCondEntropy():
 
     def invhess_prod(self, dirs):
         assert self.grad_updated
-        if ~self.hess_aux_updated:
+        if not self.hess_aux_updated:
             self.update_hessprod_aux()
-        if ~self.invhess_aux_updated:
+        if not self.invhess_aux_updated:
             self.update_invhessprod_aux()
 
         p = np.size(dirs, 1)
@@ -238,7 +227,7 @@ class QuantCondEntropy():
         return out
     
     def update_dder3_aux(self):
-        assert ~self.dder3_aux_updated
+        assert not self.dder3_aux_updated
         assert self.hess_aux_updated
 
         self.D2x_log = D2_log(self.Dx, self.D1x_log)
@@ -250,9 +239,9 @@ class QuantCondEntropy():
 
     def dder3(self, dirs):
         assert self.grad_updated
-        if ~self.hess_aux_updated:
+        if not self.hess_aux_updated:
             self.update_hessprod_aux()
-        if ~self.dder3_aux_updated:
+        if not self.dder3_aux_updated:
             self.update_dder3_aux()
 
         Ht = dirs[0]
@@ -286,13 +275,12 @@ class QuantCondEntropy():
         return dder3
 
 
-
-
+@nb.njit
 def D1_log(D, log_D):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
 
-    n = np.size(D)
+    n = D.size
     D1 = np.empty((n, n))
     
     for j in range(n):

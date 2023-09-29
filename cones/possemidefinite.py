@@ -26,7 +26,7 @@ class PosSemiDefinite():
         assert np.size(point) == self.dim
         self.point = point
 
-        self.X = sym.vec_to_mat(point[:])
+        self.X = sym.vec_to_mat(point[:, [0]])
 
         self.feas_updated = False
         self.grad_updated = False
@@ -67,7 +67,7 @@ class PosSemiDefinite():
         out = np.empty((self.dim, p))
 
         for j in range(p):
-            H = sym.vec_to_mat(dirs[:, j])
+            H = sym.vec_to_mat(dirs[:, [j]])
             out[:, [j]] = sym.mat_to_vec(self.inv_X @ H @ self.inv_X)
 
         return out
@@ -77,7 +77,7 @@ class PosSemiDefinite():
         out = np.empty((self.dim, p))
 
         for j in range(p):
-            H = sym.vec_to_mat(dirs[:, j])
+            H = sym.vec_to_mat(dirs[:, [j]])
             out[:, [j]] = sym.mat_to_vec(self.X @ H @ self.X)
 
         return out

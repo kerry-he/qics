@@ -40,7 +40,7 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-n = 4
+n = 12
 N = n * n
 sn = sym.vec_dim(n)
 sN = sym.vec_dim(N)

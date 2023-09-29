@@ -82,7 +82,7 @@ class Solver():
         self.p_feas  = np.linalg.norm(self.model.A @ self.point.x - self.model.b)
         self.d_feas  = np.linalg.norm(self.model.A.T @ self.point.y + self.point.z - self.model.c)
 
-        if self.obj_gap <= self.gap_tol and self.p_feas <= self.feas_tol and self.d_feas <= self.feas_tol:
+        if abs(self.obj_gap) <= self.gap_tol and self.p_feas <= self.feas_tol and self.d_feas <= self.feas_tol:
             if self.verbose:
                 print("Solved to desired tolerance")
             return True
