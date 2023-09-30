@@ -172,9 +172,7 @@ class QuantCondEntropy():
                 UxK[:, [k]] = sym.mat_to_vec(UxK_k)
 
                 # Build Hyy^-1 matrix
-                lhs = self.Uy[i, :]
-                rhs = self.Uy[j, :]
-                UyH_k = np.outer(lhs, rhs)
+                UyH_k = np.outer(self.Uy[i, :], self.Uy[j, :])
 
                 if i != j:
                     UyH_k = UyH_k + UyH_k.T
@@ -332,7 +330,7 @@ def scnd_frechet(D2, U, UHU):
     D2_UHU = D2 * UHU
 
     for k in range(n):
-        out[:, k] = D2_UHU[k, :, :] @ UHU[k, :]
+        out[:, k] = D2_UHU[:, :, k] @ UHU[k, :]
 
     out *= 2
     out = U @ out @ U.T

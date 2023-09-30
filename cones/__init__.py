@@ -1,1 +1,1 @@
-__all__ = ["quantcondentr", "nonnegorthant", "possemidefinite"]
+__all__ = ["quantcondentr", "nonnegorthant", "possemidefinite", "quantrelentr"]
