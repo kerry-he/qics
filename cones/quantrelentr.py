@@ -192,7 +192,7 @@ class QuantRelEntropy():
         assert self.grad_updated
         assert self.hess_aux_updated
 
-        self.inv_hess = sp.linalg.inv(self.hess)
+        self.hess_lu = sp.linalg.lu_factor(self.hess)
 
         return
 
@@ -203,10 +203,16 @@ class QuantRelEntropy():
         if not self.invhess_aux_updated:
             self.update_invhessprod_aux()
 
-        return self.inv_hess @ dirs
+        p = np.size(dirs, 1)
+        out = np.empty((self.dim, p))
 
+        for j in range(p):
+            H = dirs[:, j]
+            out[:, j] = sp.linalg.lu_solve(self.hess_lu, H)
 
-# @nb.njit
+        return out
+
+@nb.njit
 def D1_log(D, log_D):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -227,7 +233,7 @@ def D1_log(D, log_D):
 
     return D1
 
-# @nb.njit
+@nb.njit
 def D2_log(D, D1):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -257,6 +263,7 @@ def D2_log(D, D1):
 
     return D2
 
+@nb.njit
 def scnd_frechet(D2, U, UHU, UXU):
     n = U.shape[0]
     out = np.empty((n, n))
@@ -264,7 +271,7 @@ def scnd_frechet(D2, U, UHU, UXU):
     D2_UXU = D2 * UXU
 
     for k in range(n):
-        out[:, k] = D2_UXU[k, :, :] @ UHU[k, :]
+        out[:, k] = np.ascontiguousarray(D2_UXU[k, :, :]) @ np.ascontiguousarray(UHU[k, :])
 
     out = out + out.T
     out = U @ out @ U.T

@@ -330,7 +330,7 @@ def scnd_frechet(D2, U, UHU):
     D2_UHU = D2 * UHU
 
     for k in range(n):
-        out[:, k] = D2_UHU[:, :, k] @ UHU[k, :]
+        out[:, k] = D2_UHU[k, :, :] @ UHU[k, :]
 
     out *= 2
     out = U @ out @ U.T
