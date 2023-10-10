@@ -43,14 +43,13 @@ def mat_to_vec_parallel(mat, rt2):
     vn = n * (n + 1) // 2
     vec = np.empty((vn, 1))
 
-    k = 0
     for j in nb.prange(n):
         for i in range(j + 1):
+            k = i + (j * (j + 1)) // 2
             if i == j:
                 vec[k] = mat[i, j]
             else:
                 vec[k] = mat[i, j] * rt2
-            k += 1
     
     return vec
 
@@ -88,15 +87,14 @@ def vec_to_mat_parallel(vec, irt2):
     n = int(math.sqrt(1 + 8 * vn) // 2)
     mat = np.empty((n, n))
 
-    k = 0
     for j in nb.prange(n):
         for i in range(j + 1):
+            k = i + (j * (j + 1)) // 2
             if i == j:
                 mat[i, j] = vec[k, 0]
             else:
                 mat[i, j] = vec[k, 0] * irt2
                 mat[j, i] = vec[k, 0] * irt2
-            k += 1
 
     return mat
 

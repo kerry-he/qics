@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 from utils import point
 
 # Solves the following square Newton system
@@ -16,7 +17,8 @@ class SysSolver():
     def update_lhs(self, model):
         # Precompute necessary objects on LHS of Newton system
         HA = blk_invhess_prod(model.A.T, model)
-        self.AHA = model.A @ HA
+        AHA = model.A @ HA
+        self.AHA_lu = sp.linalg.cho_factor(AHA)
 
         return
     
@@ -25,7 +27,7 @@ class SysSolver():
         # NOTE: mu has already been accounted for in H
 
         temp = rhs.y + model.A @ blk_invhess_prod(rhs.x - rhs.z, model)
-        self.sol.y[:] = np.linalg.solve(self.AHA, temp)
+        self.sol.y[:] = sp.linalg.cho_solve(self.AHA_lu, temp)
         self.sol.x[:] = blk_invhess_prod(model.A.T @ self.sol.y - rhs.x + rhs.z, model)
         self.sol.z[:] = rhs.x - model.A.T @ self.sol.y
 
