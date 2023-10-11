@@ -20,22 +20,19 @@ class AggressiveStepper():
 
         if (self.prox < eta) or (self.cent_count >= N):
             self.update_rhs_pred(model, point)
-            self.syssolver.solve_system(self.rhs, model)
-
             self.cent_count = 0
 
             if verbose:
                 print("  | %5s" % "pred", end="")
         else:
             self.update_rhs_cent(model, point, mu)
-            self.syssolver.solve_system(self.rhs, model)
-
             self.cent_count += 1
 
             if verbose:
                 print("  | %5s" % "cent", end="")
 
-        res = self.syssolver.apply_system(self.syssolver.sol, model)
+        self.syssolver.solve_system(self.rhs, model, mu / point.tau / point.tau)
+        res = self.syssolver.apply_system(self.syssolver.sol, model, mu / point.tau / point.tau)
         res.vec[:] -= self.rhs.vec
         print(" %10.3e" % (np.linalg.norm(res.vec)), end="")
 
@@ -100,13 +97,19 @@ class AggressiveStepper():
             grad_k = cone_k.get_grad()
             self.rhs.z_views[k][:] = -z_k - rtmu * grad_k
 
+        self.rhs.tau[0]   = 0.
+        self.rhs.kappa[0] = -point.kappa + mu / point.tau
+
         return self.rhs
 
     def update_rhs_pred(self, model, point):
-        self.rhs.x[:] = model.c + model.A.T @ point.y - point.z
-        self.rhs.y[:] = model.b - model.A @ point.x
+        self.rhs.x[:] = model.A.T @ point.y + model.c * point.tau - point.z
+        self.rhs.y[:] = model.b * point.tau - model.A @ point.x
 
         for (rhs_z_k, z_k) in zip(self.rhs.z_views, point.z_views):
             rhs_z_k[:] = -z_k
+
+        self.rhs.tau[0]   = np.dot(model.c[:, 0], point.x[:, 0]) + np.dot(model.b[:, 0], point.y[:, 0]) + point.kappa
+        self.rhs.kappa[0] = -point.kappa
 
         return self.rhs
