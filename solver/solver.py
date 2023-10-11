@@ -40,16 +40,16 @@ class Solver():
                 break
 
         # Get solve data
-        self.p_obj   =  np.dot(self.point.x[:, 0], self.model.c[:, 0])
-        self.d_obj   = -np.dot(self.point.y[:, 0], self.model.b[:, 0])
+        self.p_obj   =  np.dot(self.point.x[:, 0], self.model.c[:, 0]) / self.point.tau
+        self.d_obj   = -np.dot(self.point.y[:, 0], self.model.b[:, 0]) / self.point.tau
         self.obj_gap =  self.p_obj - self.d_obj
-        self.p_feas  =  np.linalg.norm(self.model.A @ self.point.x - self.model.b)
-        self.d_feas  =  np.linalg.norm(self.model.A.T @ self.point.y + self.model.c - self.point.z)
+        self.p_feas  =  np.linalg.norm(self.model.A @ self.point.x - self.model.b * self.point.tau)
+        self.d_feas  =  np.linalg.norm(self.model.A.T @ self.point.y + self.model.c * self.point.tau - self.point.z)
 
         if self.verbose:
-            print("%5d" % (self.num_iters), " %8.1e" % (self.mu),
+            print("%5d" % (self.num_iters), " %8.1e" % (self.mu), " %8.1e" % (self.point.tau), " %8.1e" % (self.point.kappa),
                   " | %10.3e" % (self.p_obj), " %10.3e" % (self.d_obj), " %10.3e" % (self.obj_gap), 
-                  " | %10.3e" % (self.p_feas), " %10.3e" % (self.d_feas))
+                  " | %10.3e" % (self.p_feas), " %10.3e" % (self.d_feas), end="")
 
 
             print()
@@ -76,27 +76,40 @@ class Solver():
         self.calc_mu()
 
         # Get solve data
-        self.p_obj   =  np.dot(self.point.x[:, 0], self.model.c[:, 0])
-        self.d_obj   = -np.dot(self.point.y[:, 0], self.model.b[:, 0])
+        self.p_obj   =  np.dot(self.point.x[:, 0], self.model.c[:, 0]) / self.point.tau
+        self.d_obj   = -np.dot(self.point.y[:, 0], self.model.b[:, 0]) / self.point.tau
         self.obj_gap =  self.p_obj - self.d_obj
-        self.p_feas  =  np.linalg.norm(self.model.A @ self.point.x - self.model.b)
-        self.d_feas  =  np.linalg.norm(self.model.A.T @ self.point.y + self.model.c - self.point.z)
+        self.p_feas  =  np.linalg.norm(self.model.A @ self.point.x - self.model.b * self.point.tau)
+        self.d_feas  =  np.linalg.norm(self.model.A.T @ self.point.y + self.model.c * self.point.tau - self.point.z)
 
+        # Check optimality
         if abs(self.obj_gap) <= self.gap_tol and self.p_feas <= self.feas_tol and self.d_feas <= self.feas_tol:
             if self.verbose:
                 print("Solved to desired tolerance")
             return True
 
+        # Check infeasibility
+        if self.point.tau <= self.feas_tol:
+            if self.d_obj > 0:
+                if self.verbose:
+                    print("Detected primal infeasibility")
+                return True       
+
+            if self.p_obj < 0:
+                if self.verbose:
+                    print("Detected dual infeasibility")
+                return True            
+
         if self.verbose:
             if self.num_iters % 20 == 0:
-                print("==========================================================================================================")
-                print("%5s" % "iter", " %8s" % "mu",
+                print("===============================================================================================================================")
+                print("%5s" % "iter", " %8s" % "mu", " %8s" % "tau", " %8s" % "kappa",
                     " | %10s" % "p_obj", " %10s" % "d_obj", " %10s" % "gap", 
                     " | %10s" % "p_feas", " %10s" % "d_feas",
                     " | %5s" % "step", "%10s" % "dir_tol", " %5s" % "alpha")
-                print("==========================================================================================================")                
+                print("===============================================================================================================================")                
             
-            print("%5d" % (self.num_iters), " %8.1e" % (self.mu),
+            print("%5d" % (self.num_iters), " %8.1e" % (self.mu), " %8.1e" % (self.point.tau), " %8.1e" % (self.point.kappa),
                   " | %10.3e" % (self.p_obj), " %10.3e" % (self.d_obj), " %10.3e" % (self.obj_gap), 
                   " | %10.3e" % (self.p_feas), " %10.3e" % (self.d_feas), end="")
             
@@ -114,6 +127,9 @@ class Solver():
     def setup_point(self):
         model = self.model
         self.point = point.Point(model)
+
+        self.point.tau[0]   = 1.
+        self.point.kappa[0] = 1.
 
         for (k, cone_k) in enumerate(model.cones):
             self.point.x[model.cone_idxs[k]] = cone_k.set_init_point()
