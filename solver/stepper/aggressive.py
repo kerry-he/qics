@@ -103,7 +103,7 @@ class AggressiveStepper():
         return self.rhs
 
     def update_rhs_pred(self, model, point):
-        self.rhs.x[:] = model.c - model.A.T @ point.y - point.z
+        self.rhs.x[:] = model.c + model.A.T @ point.y - point.z
         self.rhs.y[:] = model.b - model.A @ point.x
 
         for (rhs_z_k, z_k) in zip(self.rhs.z_views, point.z_views):

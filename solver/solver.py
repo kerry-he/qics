@@ -40,11 +40,11 @@ class Solver():
                 break
 
         # Get solve data
-        self.p_obj   = np.dot(self.point.x[:, 0], self.model.c[:, 0])
-        self.d_obj   = np.dot(self.point.y[:, 0], self.model.b[:, 0])
-        self.obj_gap = self.p_obj - self.d_obj
-        self.p_feas  = np.linalg.norm(self.model.A @ self.point.x - self.model.b)
-        self.d_feas  = np.linalg.norm(self.model.A.T @ self.point.y + self.point.z - self.model.c)
+        self.p_obj   =  np.dot(self.point.x[:, 0], self.model.c[:, 0])
+        self.d_obj   = -np.dot(self.point.y[:, 0], self.model.b[:, 0])
+        self.obj_gap =  self.p_obj - self.d_obj
+        self.p_feas  =  np.linalg.norm(self.model.A @ self.point.x - self.model.b)
+        self.d_feas  =  np.linalg.norm(self.model.A.T @ self.point.y + self.model.c - self.point.z)
 
         if self.verbose:
             print("%5d" % (self.num_iters), " %8.1e" % (self.mu),
@@ -76,11 +76,11 @@ class Solver():
         self.calc_mu()
 
         # Get solve data
-        self.p_obj   = np.dot(self.point.x[:, 0], self.model.c[:, 0])
-        self.d_obj   = np.dot(self.point.y[:, 0], self.model.b[:, 0])
-        self.obj_gap = self.p_obj - self.d_obj
-        self.p_feas  = np.linalg.norm(self.model.A @ self.point.x - self.model.b)
-        self.d_feas  = np.linalg.norm(self.model.A.T @ self.point.y + self.point.z - self.model.c)
+        self.p_obj   =  np.dot(self.point.x[:, 0], self.model.c[:, 0])
+        self.d_obj   = -np.dot(self.point.y[:, 0], self.model.b[:, 0])
+        self.obj_gap =  self.p_obj - self.d_obj
+        self.p_feas  =  np.linalg.norm(self.model.A @ self.point.x - self.model.b)
+        self.d_feas  =  np.linalg.norm(self.model.A.T @ self.point.y + self.model.c - self.point.z)
 
         if abs(self.obj_gap) <= self.gap_tol and self.p_feas <= self.feas_tol and self.d_feas <= self.feas_tol:
             if self.verbose:
@@ -120,7 +120,7 @@ class Solver():
             assert cone_k.get_feas()
             self.point.z_views[k][:] = -cone_k.get_grad()
 
-        self.point.y[:] = np.linalg.pinv(model.A.T) @ (model.c - self.point.z)
+        self.point.y[:] = np.linalg.pinv(model.A.T) @ (self.point.z - model.c)
 
         self.calc_mu()
         if not math.isclose(self.mu, 1.):
