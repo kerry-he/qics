@@ -20,7 +20,13 @@ class SysSolver():
         # Precompute necessary objects on LHS of Newton system
         HA = blk_invhess_prod(model.A.T, model)
         AHA = model.A @ HA
-        self.AHA_lu = sp.linalg.lu_factor(AHA)
+
+        try:
+            self.AHA_cho = sp.linalg.cho_factor(AHA)
+        except np.linalg.LinAlgError:
+            self.AHA_cho = None
+            self.AHA_lu = sp.linalg.lu_factor(AHA)
+
 
         return
     
@@ -29,11 +35,11 @@ class SysSolver():
         # NOTE: mu has already been accounted for in H
 
         temp = model.A @ blk_invhess_prod(rhs.z - rhs.x, model) - rhs.y
-        y_r = sp.linalg.lu_solve(self.AHA_lu, temp)
+        y_r = sp.linalg.lu_solve(self.AHA_lu, temp) if self.AHA_cho is None else sp.linalg.cho_solve(self.AHA_cho, temp)
         x_r = blk_invhess_prod(rhs.z - rhs.x - model.A.T @ y_r, model)
 
         temp = model.A @ blk_invhess_prod(model.c, model) + model.b
-        y_b = sp.linalg.lu_solve(self.AHA_lu, temp)
+        y_b = sp.linalg.lu_solve(self.AHA_lu, temp) if self.AHA_cho is None else sp.linalg.cho_solve(self.AHA_cho, temp)
         x_b = blk_invhess_prod(model.c - model.A.T @ y_b, model)
 
         self.sol.tau[0]   = rhs.tau + rhs.kappa + np.dot(model.c[:, 0], x_r[:, 0]) + np.dot(model.b[:, 0], y_r[:, 0])

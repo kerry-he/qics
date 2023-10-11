@@ -192,7 +192,11 @@ class QuantRelEntropy():
         assert self.grad_updated
         assert self.hess_aux_updated
 
-        self.hess_lu = sp.linalg.lu_factor(self.hess)
+        try:
+            self.hess_cho = sp.linalg.cho_factor(self.hess)
+        except np.linalg.LinAlgError:
+            self.hess_cho = None
+            self.hess_lu = sp.linalg.lu_factor(self.hess)
 
         return
 
@@ -208,7 +212,7 @@ class QuantRelEntropy():
 
         for j in range(p):
             H = dirs[:, j]
-            out[:, j] = sp.linalg.lu_solve(self.hess_lu, H)
+            out[:, j] = sp.linalg.lu_solve(self.hess_lu, H) if self.hess_cho is None else sp.linalg.cho_solve(self.hess_cho, H)
 
         return out
 

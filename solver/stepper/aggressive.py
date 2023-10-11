@@ -9,6 +9,9 @@ class AggressiveStepper():
         self.prox = 0.0
         
         self.rhs = Point(model)
+        self.dir = Point(model)
+        self.res = Point(model)
+        self.temp = Point(model)
         
         return
     
@@ -31,10 +34,32 @@ class AggressiveStepper():
             if verbose:
                 print("  | %5s" % "cent", end="")
 
-        self.syssolver.solve_system(self.rhs, model, mu / point.tau / point.tau)
-        res = self.syssolver.apply_system(self.syssolver.sol, model, mu / point.tau / point.tau)
-        res.vec[:] -= self.rhs.vec
-        print(" %10.3e" % (np.linalg.norm(res.vec)), end="")
+        self.dir.vec[:] = self.syssolver.solve_system(self.rhs, model, mu / point.tau / point.tau).vec
+        self.res.vec[:] = self.rhs.vec - self.syssolver.apply_system(self.dir, model, mu / point.tau / point.tau).vec
+        res_norm = np.linalg.norm(self.res.vec)
+
+        # Iterative refinement
+        iter_refine_count = 0
+        while res_norm > 1e-10:
+            self.syssolver.solve_system(self.res, model, mu / point.tau / point.tau)
+            self.temp.vec[:] = self.dir.vec + self.syssolver.sol.vec
+            self.res.vec[:] = self.rhs.vec - self.syssolver.apply_system(self.temp, model, mu / point.tau / point.tau).vec
+            res_norm_new = np.linalg.norm(self.res.vec)
+
+            # Check if iterative refinement made things worse
+            if res_norm_new > res_norm:
+                break
+
+            self.dir.vec[:] = self.temp.vec
+            res_norm = res_norm_new
+
+            iter_refine_count += 1
+
+            if iter_refine_count > 5:
+                break
+
+
+        print(" %10.3e" % (res_norm), end="")
 
         point = self.line_search(model, point, verbose)
         
@@ -45,7 +70,7 @@ class AggressiveStepper():
         beta = 0.9
         eta = 0.99
 
-        dir = self.syssolver.sol
+        dir = self.dir
         next_point = Point(model)
 
         while True:
