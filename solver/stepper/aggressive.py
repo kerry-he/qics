@@ -40,7 +40,7 @@ class AggressiveStepper():
 
         # Iterative refinement
         iter_refine_count = 0
-        while res_norm > 1e-10:
+        while res_norm > 1e-2:
             self.syssolver.solve_system(self.res, model, mu / point.tau / point.tau)
             self.temp.vec[:] = self.dir.vec + self.syssolver.sol.vec
             self.res.vec[:] = self.rhs.vec - self.syssolver.apply_system(self.temp, model, mu / point.tau / point.tau).vec
