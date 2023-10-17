@@ -40,7 +40,7 @@ class AggressiveStepper():
 
         # Iterative refinement
         iter_refine_count = 0
-        while res_norm > 1e-2:
+        while res_norm > 1e-8:
             self.syssolver.solve_system(self.res, model, mu / point.tau / point.tau)
             self.temp.vec[:] = self.dir.vec + self.syssolver.sol.vec
             self.res.vec[:] = self.rhs.vec - self.syssolver.apply_system(self.temp, model, mu / point.tau / point.tau).vec
@@ -76,7 +76,7 @@ class AggressiveStepper():
         while True:
             # Step point in direction and step size
             next_point.vec[:] = point.vec + dir.vec * alpha
-            mu = np.dot(next_point.x[:, 0], next_point.z[:, 0]) / model.nu
+            mu = np.dot(next_point.s[:, 0], next_point.z[:, 0]) / model.nu
             if mu < 0:
                 alpha *= beta
                 continue
@@ -88,7 +88,7 @@ class AggressiveStepper():
             # Check feasibility
             in_prox = False
             for (k, cone_k) in enumerate(model.cones):
-                cone_k.set_point(next_point.x_views[k] * irtmu)
+                cone_k.set_point(next_point.s_views[k] * irtmu)
 
                 in_prox = False
                 if cone_k.get_feas():
@@ -115,12 +115,13 @@ class AggressiveStepper():
     def update_rhs_cent(self, model, point, mu):
         self.rhs.x.fill(0.)
         self.rhs.y.fill(0.)
+        self.rhs.z.fill(0.)
 
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
             z_k = point.z_views[k]
             grad_k = cone_k.get_grad()
-            self.rhs.z_views[k][:] = -z_k - rtmu * grad_k
+            self.rhs.s_views[k][:] = -z_k - rtmu * grad_k
 
         self.rhs.tau[0]   = 0.
         self.rhs.kappa[0] = -point.kappa + mu / point.tau
@@ -128,13 +129,14 @@ class AggressiveStepper():
         return self.rhs
 
     def update_rhs_pred(self, model, point):
-        self.rhs.x[:] = model.A.T @ point.y + model.c * point.tau - point.z
-        self.rhs.y[:] = model.b * point.tau - model.A @ point.x
+        self.rhs.x[:] = -model.A.T @ point.y - model.G.T @ point.z - model.c * point.tau
+        self.rhs.y[:] = model.A @ point.x - model.b * point.tau
+        self.rhs.z[:] = model.G @ point.x - model.h * point.tau + point.s
 
-        for (rhs_z_k, z_k) in zip(self.rhs.z_views, point.z_views):
-            rhs_z_k[:] = -z_k
+        for (rhs_s_k, z_k) in zip(self.rhs.s_views, point.z_views):
+            rhs_s_k[:] = -z_k
 
-        self.rhs.tau[0]   = np.dot(model.c[:, 0], point.x[:, 0]) + np.dot(model.b[:, 0], point.y[:, 0]) + point.kappa
+        self.rhs.tau[0]   = np.dot(model.c[:, 0], point.x[:, 0]) + np.dot(model.b[:, 0], point.y[:, 0]) + np.dot(model.h[:, 0], point.z[:, 0]) + point.kappa
         self.rhs.kappa[0] = -point.kappa
 
         return self.rhs

@@ -40,7 +40,7 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-n = 6
+n = 8
 N = n * n
 sn = sym.vec_dim(n)
 sN = sym.vec_dim(N)
@@ -70,7 +70,7 @@ c[0] = 1.
 
 # Input into model and solve
 cones = [quantcondentr.QuantCondEntropy(n, n, 0), nonnegorthant.NonNegOrthant(1)]
-model = model.Model(c, A, b, cones)
+model = model.Model(c, A, b, cones=cones)
 solver = solver.Solver(model)
 
 profiler = cProfile.Profile()
