@@ -91,7 +91,7 @@ c[0] = 1.
 
 # Input into model and solve
 cones = [quantrelentr.QuantRelEntropy(N), nonnegorthant.NonNegOrthant(1)]
-model = model.Model(c, A, b, cones)
+model = model.Model(c, A, b, cones=cones)
 solver = solver.Solver(model)
 
 profiler = cProfile.Profile()

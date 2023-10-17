@@ -34,32 +34,62 @@ class SysSolver():
         # Solve Newton system using elimination
         # NOTE: mu has already been accounted for in H
 
-        temp = model.A @ blk_invhess_prod(rhs.z - rhs.x, model) - rhs.y
+        temp = model.A @ (blk_invhess_prod(rhs.x + rhs.s, model) + rhs.z) + rhs.y
         y_r = sp.linalg.lu_solve(self.AHA_lu, temp) if self.AHA_cho is None else sp.linalg.cho_solve(self.AHA_cho, temp)
-        x_r = blk_invhess_prod(rhs.z - rhs.x - model.A.T @ y_r, model)
+        x_r = blk_invhess_prod(rhs.x + rhs.s - model.A.T @ y_r, model) + rhs.z
 
         temp = model.A @ blk_invhess_prod(model.c, model) + model.b
         y_b = sp.linalg.lu_solve(self.AHA_lu, temp) if self.AHA_cho is None else sp.linalg.cho_solve(self.AHA_cho, temp)
         x_b = blk_invhess_prod(model.c - model.A.T @ y_b, model)
 
-        self.sol.tau[0]   = rhs.tau + rhs.kappa + np.dot(model.c[:, 0], x_r[:, 0]) + np.dot(model.b[:, 0], y_r[:, 0])
+        self.sol.tau[0]   = rhs.tau + rhs.kappa + np.dot(model.c[:, 0], x_r[:, 0]) + np.dot(model.b[:, 0], y_r[:, 0]) 
         self.sol.tau[0]   = self.sol.tau[0] / (mu_tau2 + np.dot(model.c[:, 0], x_b[:, 0]) + np.dot(model.b[:, 0], y_b[:, 0]))
 
-        self.sol.y[:]     = y_r - self.sol.tau[0] * y_b
         self.sol.x[:]     = x_r - self.sol.tau[0] * x_b
-        self.sol.z[:]     = rhs.x + self.sol.tau[0] * model.c + model.A.T @ self.sol.y[:]
-        self.sol.kappa[:] = rhs.kappa - mu_tau2 * self.sol.tau[0]
+        self.sol.y[:]     = y_r - self.sol.tau[0] * y_b
+        self.sol.z[:]     = model.A.T @ self.sol.y[:] + model.c * self.sol.tau[0] - rhs.x
+        self.sol.s[:]     = self.sol.x[:] - rhs.z
+        self.sol.kappa[0] = rhs.kappa - mu_tau2 * self.sol.tau[0]
 
         return self.sol
+
+    # def solve_system(self, rhs, model, mu_tau2):
+    #     # Solve Newton system using elimination
+    #     # NOTE: mu has already been accounted for in H
+
+    #     rhs.z.fill(0.)
+
+    #     temp = model.A @ (blk_invhess_prod(rhs.x + rhs.s, model) + rhs.z) + rhs.y
+    #     y_r = sp.linalg.lu_solve(self.AHA_lu, temp) if self.AHA_cho is None else sp.linalg.cho_solve(self.AHA_cho, temp)
+    #     x_r = blk_invhess_prod(rhs.x + rhs.s - model.A.T @ y_r, model) + rhs.z
+    #     z_r = model.A.T @ y_r - rhs.x
+
+    #     temp = model.A @ (blk_invhess_prod(model.c, model) + model.h) + model.b
+    #     y_b = sp.linalg.lu_solve(self.AHA_lu, temp) if self.AHA_cho is None else sp.linalg.cho_solve(self.AHA_cho, temp)
+    #     x_b = blk_invhess_prod(model.c - model.A.T @ y_b, model) + model.h
+    #     z_b = model.A.T @ y_b - model.c
+
+    #     self.sol.tau[0]   = rhs.tau + rhs.kappa + np.dot(model.c[:, 0], x_r[:, 0]) + np.dot(model.b[:, 0], y_r[:, 0]) + np.dot(model.h[:, 0], z_r[:, 0])
+    #     self.sol.tau[0]   = self.sol.tau[0] / (mu_tau2 + np.dot(model.c[:, 0], x_b[:, 0]) + np.dot(model.b[:, 0], y_b[:, 0]) + np.dot(model.h[:, 0], z_b[:, 0]))
+
+    #     self.sol.x[:]     = x_r - self.sol.tau[0] * x_b
+    #     self.sol.y[:]     = y_r - self.sol.tau[0] * y_b
+    #     self.sol.z[:]     = z_r - self.sol.tau[0] * z_b
+    #     self.sol.s[:]     = blk_invhess_prod(rhs.s - self.sol.z, model)
+    #     self.sol.kappa[0] = rhs.kappa - mu_tau2 * self.sol.tau[0]
+
+    #     return self.sol
+
     
     def apply_system(self, rhs, model, mu_tau2):
         pnt = point.Point(model)
 
-        pnt.x[:]     = -model.A.T @ rhs.y + rhs.z - model.c * rhs.tau
-        pnt.y[:]     = model.A @ rhs.x - model.b * rhs.tau
-        pnt.z[:]     = blk_hess_prod(rhs.x, model) + rhs.z
-        pnt.tau[:]   = -np.dot(model.c[:, 0], rhs.x[:, 0]) - np.dot(model.b[:, 0], rhs.y[:, 0]) - rhs.kappa
-        pnt.kappa[:] = mu_tau2 * rhs.tau + rhs.kappa
+        pnt.x[:]     =  model.A.T @ rhs.y + model.G.T @ rhs.z + model.c * rhs.tau
+        pnt.y[:]     = -model.A @ rhs.x + model.b * rhs.tau
+        pnt.z[:]     = -model.G @ rhs.x + model.h * rhs.tau - rhs.s
+        pnt.s[:]     =  blk_hess_prod(rhs.s, model) + rhs.z
+        pnt.tau[0]   = -np.dot(model.c[:, 0], rhs.x[:, 0]) - np.dot(model.b[:, 0], rhs.y[:, 0]) - np.dot(model.h[:, 0], rhs.z[:, 0]) - rhs.kappa
+        pnt.kappa[0] = mu_tau2 * rhs.tau + rhs.kappa
 
         return pnt
 

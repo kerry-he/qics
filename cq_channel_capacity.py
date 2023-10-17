@@ -37,7 +37,7 @@ c[n] = 1.
 
 # Input into model and solve
 cones = [nonnegorthant.NonNegOrthant(n), quantentr.QuantEntropy(n)]
-model = model.Model(c, A, b, cones)
+model = model.Model(c, A, b, cones=cones)
 solver = solver.Solver(model)
 
 profiler = cProfile.Profile()

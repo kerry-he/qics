@@ -12,7 +12,7 @@ b = np.array([[1.], [1.]])
 c = np.array([[1.], [2.], [0.], [-1.]])
 
 cones = [nonnegorthant.NonNegOrthant(4)]
-model = model.Model(c, A, b, cones)
+model = model.Model(c, A, b, cones=cones)
 solver = solver.Solver(model)
 
 solver.solve()
