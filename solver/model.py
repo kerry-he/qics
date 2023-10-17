@@ -13,7 +13,7 @@ class Model():
         self.h = h if (h is not None) else np.zeros((self.n, 1))
         self.cones = cones
 
-        self.use_G = (G is None)
+        self.use_G = (G is not None)
 
         self.cone_idxs = build_cone_idxs(self.q, cones)
         self.nu = 0 if (len(cones) == 0) else sum((cone.get_nu() for cone in cones))

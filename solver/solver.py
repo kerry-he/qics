@@ -41,7 +41,7 @@ class Solver():
 
         # Get solve data
         self.p_obj   = np.dot(self.model.c[:, 0], self.point.x[:, 0]) / self.point.tau
-        self.d_obj   = -(np.dot(self.model.b[:, 0], self.point.y[:, 0]) + -np.dot(self.model.h[:, 0], self.point.z[:, 0])) / self.point.tau
+        self.d_obj   = -(np.dot(self.model.b[:, 0], self.point.y[:, 0]) + np.dot(self.model.h[:, 0], self.point.z[:, 0])) / self.point.tau
         self.obj_gap = self.p_obj - self.d_obj
         self.x_feas  = np.linalg.norm(self.model.A.T @ self.point.y + self.model.G.T @ self.point.z + self.model.c * self.point.tau)
         self.y_feas  = np.linalg.norm(self.model.A @ self.point.x - self.model.b * self.point.tau)
@@ -78,7 +78,7 @@ class Solver():
 
         # Get solve data
         self.p_obj   = np.dot(self.model.c[:, 0], self.point.x[:, 0]) / self.point.tau
-        self.d_obj   = -(np.dot(self.model.b[:, 0], self.point.y[:, 0]) + -np.dot(self.model.h[:, 0], self.point.z[:, 0])) / self.point.tau
+        self.d_obj   = -(np.dot(self.model.b[:, 0], self.point.y[:, 0]) + np.dot(self.model.h[:, 0], self.point.z[:, 0])) / self.point.tau
         self.obj_gap = self.p_obj - self.d_obj
         self.x_feas  = np.linalg.norm(self.model.A.T @ self.point.y + self.model.G.T @ self.point.z + self.model.c * self.point.tau)
         self.y_feas  = np.linalg.norm(self.model.A @ self.point.x - self.model.b * self.point.tau)
@@ -140,7 +140,7 @@ class Solver():
             assert cone_k.get_feas()
             self.point.z_views[k][:] = -cone_k.get_grad()
 
-        self.point.x[:] = np.linalg.pinv(model.G.T) @ (model.h - self.point.s)
+        self.point.x[:] = np.linalg.pinv(model.G) @ (model.h - self.point.s)
         self.point.y[:] = np.linalg.pinv(model.A.T) @ (-model.G.T @ self.point.z - model.c)
 
         self.calc_mu()

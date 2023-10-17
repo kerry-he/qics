@@ -1,6 +1,6 @@
 import numpy as np
 import scipy as sp
-from utils import point
+from utils import point, linear
 
 # Solves the following square Newton system
 #            - A'*y     - c*tau + z         = rx
@@ -18,28 +18,42 @@ class SysSolver():
     
     def update_lhs(self, model):
         # Precompute necessary objects on LHS of Newton system
-        HA = blk_invhess_prod(model.A.T, model)
-        AHA = model.A @ HA
 
-        try:
-            self.AHA_cho = sp.linalg.cho_factor(AHA)
-        except np.linalg.LinAlgError:
-            self.AHA_cho = None
-            self.AHA_lu = sp.linalg.lu_factor(AHA)
+        if model.use_G:
+            HG = blk_hess_prod(model.G, model)
+            GHG = model.G.T @ HG
+            self.GHG_fact = linear.fact(GHG)
 
+            GHGA = np.zeros((model.n, model.p))
+            for i in range(model.p):
+                GHGA[:, i] = linear.fact_solve(self.GHG_fact, model.A.T[:, i])
+            AGHGA = model.A @ GHGA
+            self.AGHGA_fact = linear.fact(AGHGA)
+
+        else:
+            HA = blk_invhess_prod(model.A.T, model)
+            AHA = model.A @ HA
+            self.AHA_fact = linear.fact(AHA)
 
         return
-    
+
     def solve_system(self, rhs, model, mu_tau2):
+        if model.use_G:
+            return self.solve_system_with_G(rhs, model, mu_tau2)
+        else:
+            return self.solve_system_without_G(rhs, model, mu_tau2)
+    
+
+    def solve_system_without_G(self, rhs, model, mu_tau2):
         # Solve Newton system using elimination
         # NOTE: mu has already been accounted for in H
 
         temp = model.A @ (blk_invhess_prod(rhs.x + rhs.s, model) + rhs.z) + rhs.y
-        y_r = sp.linalg.lu_solve(self.AHA_lu, temp) if self.AHA_cho is None else sp.linalg.cho_solve(self.AHA_cho, temp)
+        y_r = linear.fact_solve(self.AHA_fact, temp)
         x_r = blk_invhess_prod(rhs.x + rhs.s - model.A.T @ y_r, model) + rhs.z
 
         temp = model.A @ blk_invhess_prod(model.c, model) + model.b
-        y_b = sp.linalg.lu_solve(self.AHA_lu, temp) if self.AHA_cho is None else sp.linalg.cho_solve(self.AHA_cho, temp)
+        y_b = linear.fact_solve(self.AHA_fact, temp)
         x_b = blk_invhess_prod(model.c - model.A.T @ y_b, model)
 
         self.sol.tau[0]   = rhs.tau + rhs.kappa + np.dot(model.c[:, 0], x_r[:, 0]) + np.dot(model.b[:, 0], y_r[:, 0]) 
@@ -53,32 +67,32 @@ class SysSolver():
 
         return self.sol
 
-    # def solve_system(self, rhs, model, mu_tau2):
-    #     # Solve Newton system using elimination
-    #     # NOTE: mu has already been accounted for in H
+    def solve_system_with_G(self, rhs, model, mu_tau2):
+        # Solve Newton system using elimination
+        # NOTE: mu has already been accounted for in H
 
-    #     rhs.z.fill(0.)
+        temp_vec = rhs.x - model.G.T @ (blk_hess_prod(rhs.z, model) + rhs.s)
+        temp = model.A @ linear.fact_solve(self.GHG_fact, temp_vec) + rhs.y
+        y_r = linear.fact_solve(self.AGHGA_fact, temp)
+        x_r = linear.fact_solve(self.GHG_fact, temp_vec - model.A.T @ y_r)
+        z_r = blk_hess_prod(rhs.z + model.G @ x_r, model) + rhs.s
 
-    #     temp = model.A @ (blk_invhess_prod(rhs.x + rhs.s, model) + rhs.z) + rhs.y
-    #     y_r = sp.linalg.lu_solve(self.AHA_lu, temp) if self.AHA_cho is None else sp.linalg.cho_solve(self.AHA_cho, temp)
-    #     x_r = blk_invhess_prod(rhs.x + rhs.s - model.A.T @ y_r, model) + rhs.z
-    #     z_r = model.A.T @ y_r - rhs.x
+        temp_vec = model.c - model.G.T @ blk_hess_prod(model.h, model)
+        temp = model.A @ linear.fact_solve(self.GHG_fact, temp_vec) + model.b
+        y_b = linear.fact_solve(self.AGHGA_fact, temp)
+        x_b = linear.fact_solve(self.GHG_fact, temp_vec - model.A.T @ y_b)
+        z_b = blk_hess_prod(model.h + model.G @ x_b, model)
 
-    #     temp = model.A @ (blk_invhess_prod(model.c, model) + model.h) + model.b
-    #     y_b = sp.linalg.lu_solve(self.AHA_lu, temp) if self.AHA_cho is None else sp.linalg.cho_solve(self.AHA_cho, temp)
-    #     x_b = blk_invhess_prod(model.c - model.A.T @ y_b, model) + model.h
-    #     z_b = model.A.T @ y_b - model.c
+        self.sol.tau[0]   = rhs.tau + rhs.kappa + np.dot(model.c[:, 0], x_r[:, 0]) + np.dot(model.b[:, 0], y_r[:, 0]) + np.dot(model.h[:, 0], z_r[:, 0])
+        self.sol.tau[0]   = self.sol.tau[0] / (mu_tau2 + np.dot(model.c[:, 0], x_b[:, 0]) + np.dot(model.b[:, 0], y_b[:, 0]) + np.dot(model.h[:, 0], z_b[:, 0]))
 
-    #     self.sol.tau[0]   = rhs.tau + rhs.kappa + np.dot(model.c[:, 0], x_r[:, 0]) + np.dot(model.b[:, 0], y_r[:, 0]) + np.dot(model.h[:, 0], z_r[:, 0])
-    #     self.sol.tau[0]   = self.sol.tau[0] / (mu_tau2 + np.dot(model.c[:, 0], x_b[:, 0]) + np.dot(model.b[:, 0], y_b[:, 0]) + np.dot(model.h[:, 0], z_b[:, 0]))
+        self.sol.x[:]     = x_r - self.sol.tau[0] * x_b
+        self.sol.y[:]     = y_r - self.sol.tau[0] * y_b
+        self.sol.z[:]     = z_r - self.sol.tau[0] * z_b
+        self.sol.s[:]     = blk_invhess_prod(rhs.s - self.sol.z, model)
+        self.sol.kappa[0] = rhs.kappa - mu_tau2 * self.sol.tau[0]
 
-    #     self.sol.x[:]     = x_r - self.sol.tau[0] * x_b
-    #     self.sol.y[:]     = y_r - self.sol.tau[0] * y_b
-    #     self.sol.z[:]     = z_r - self.sol.tau[0] * z_b
-    #     self.sol.s[:]     = blk_invhess_prod(rhs.s - self.sol.z, model)
-    #     self.sol.kappa[0] = rhs.kappa - mu_tau2 * self.sol.tau[0]
-
-    #     return self.sol
+        return self.sol
 
     
     def apply_system(self, rhs, model, mu_tau2):
