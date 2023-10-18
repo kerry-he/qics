@@ -52,19 +52,20 @@ c = np.zeros((2 + sin, 1))
 c[0:2] = 1.
 
 G1 = np.hstack((np.ones((1, 1)), np.zeros((1, 1 + sin))))
-G2 = np.hstack((np.zeros((sin, 2)), np.eye(sin)))
+G2 = np.hstack((np.zeros((sout_env, 2)), VV))
 G3 = np.hstack((np.zeros((1, 1)), np.ones((1, 1)), np.zeros((1, sin))))
 G4 = np.zeros((1, 2 + sin))
 G5 = np.hstack((np.zeros((sout, 2)), trE_VV))
-G = -np.vstack((G1, G2, G3, G4, G5))
+G6 = np.hstack((np.zeros((sin, 2)), np.eye(sin)))
+G = -np.vstack((G1, G2, G3, G4, G5, G6))
 
-h = np.zeros((1 + sin + 1 + 1 + sout, 1))
-h[1 + sin + 1] = 1.
+h = np.zeros((1 + sout_env + 1 + 1 + sout + sin, 1))
+h[1 + sout_env + 1] = 1.
 
 # Input into model and solve
-cones = [quantmutualinf.QuantMutualInf(trE_VV), quantentr.QuantEntropy(nout)]
+cones = [quantcondentr.QuantCondEntropy(nout, nenv, 0), quantentr.QuantEntropy(nout), possemidefinite.PosSemiDefinite(nin)]
 model = model.Model(c, A, b, G, h, cones=cones)
-solver = solver.Solver(model)
+solver = solver.Solver(model, max_iter=30)
 
 profiler = cProfile.Profile()
 profiler.enable()

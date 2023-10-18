@@ -3,5 +3,6 @@ __all__ = [
     "nonnegorthant", 
     "possemidefinite", 
     "quantrelentr", 
-    "quantentr"
+    "quantentr",
+    "quantmutualinf"
     ]

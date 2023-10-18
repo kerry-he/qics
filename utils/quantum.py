@@ -26,3 +26,8 @@ def quantEntropy(rho):
     eig = np.linalg.eigvalsh(rho)
     eig = eig[eig > 0]
     return -sum(eig * np.log(eig))
+
+def entropy(x):
+    # "Safe" entropy for positive vectors
+    x = x[x > 0]
+    return -sum(x * np.log(x))

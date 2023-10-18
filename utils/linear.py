@@ -1,6 +1,10 @@
 import numpy as np
 import scipy as sp
 
+def inp(x, y):
+    # Standard inner product
+    return np.sum(x * y)
+
 def fact(A):
     # Perform a Cholesky decomposition, or an LU factorization if Cholesky fails
     try:
