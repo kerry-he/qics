@@ -146,8 +146,6 @@ class QuantMutualInf():
 
         # Hessians of quantum relative entropy
         D2PhiX = np.empty((self.vni, self.vni))
-        D2PhiNX = np.empty((self.vno, self.vno))
-        D2PhiNcX = np.empty((self.vne, self.vne))
         invXX  = np.empty((self.vni, self.vni))
 
         k = 0
@@ -170,33 +168,29 @@ class QuantMutualInf():
 
                 k += 1
 
-        k = 0
-        for j in range(self.no):
-            for i in range(j + 1):
-                UHU = np.outer(self.Unx[i, :], self.Unx[j, :])
-                if i != j:
-                    UHU = UHU + UHU.T
-                    UHU *= irt2
-                temp = self.Unx @ (self.D1nx_log * UHU) @ self.Unx.T
-                D2PhiNX[:, [k]] = sym.mat_to_vec(temp)                
+        UnUnN = np.empty((self.vno, self.vno))
+        for k in range(self.vno):
+            N = sym.vec_to_mat(self.N[:, [k]])
+            UnNUn = self.Unx.T @ N @ self.Unx
+            UnUnN[:, [k]] = sym.mat_to_vec(UnNUn)
 
-                k += 1
+        temp = sym.mat_to_vec(self.D1nx_log, 1.0)
+        UnUnN_temp = UnUnN * temp
+        D2PhiNX = UnUnN.T @ UnUnN_temp
 
-        k = 0
-        for j in range(self.ne):
-            for i in range(j + 1):
-                UHU = np.outer(self.Uncx[i, :], self.Uncx[j, :])
-                if i != j:
-                    UHU = UHU + UHU.T
-                    UHU *= irt2
-                temp = self.Uncx @ (self.D1ncx_log * UHU) @ self.Uncx.T
-                D2PhiNcX[:, [k]] = sym.mat_to_vec(temp)                
+        UcnUcnN = np.empty((self.vne, self.vne))
+        for k in range(self.vne):
+            Nc = sym.vec_to_mat(self.Nc[:, [k]])
+            UcnNcUcn = self.Uncx.T @ Nc @ self.Uncx
+            UcnUcnN[:, [k]] = sym.mat_to_vec(UcnNcUcn)
 
-                k += 1                
+        temp = sym.mat_to_vec(self.D1ncx_log, 1.0)
+        UnUnN_temp = UcnUcnN * temp
+        D2PhiNcX = UcnUcnN.T @ UnUnN_temp           
 
         # Preparing other required variables
         zi2 = self.zi * self.zi
-        D2Phi = D2PhiX + self.N.T @ D2PhiNX @ self.N - self.Nc.T @ D2PhiNcX @ self.Nc - self.tr.T @ self.tr / self.trX
+        D2Phi = D2PhiX + D2PhiNX - D2PhiNcX - self.tr.T @ self.tr / self.trX
 
         self.hess = np.empty((self.dim, self.dim))
         self.hess[0, 0] = zi2
@@ -220,14 +214,7 @@ class QuantMutualInf():
         assert self.grad_updated
         assert self.hess_aux_updated
 
-        # try:
-        #     self.hess_cho = sp.linalg.cho_factor(self.hess)
-        # except np.linalg.LinAlgError:
-        #     self.hess_cho = None
-        #     self.hess_lu = sp.linalg.lu_factor(self.hess)
-
-        self.hess_inv = np.linalg.inv(self.hess)
-
+        self.hess_fact = lin.fact(self.hess)
         return
 
     def invhess_prod(self, dirs):
@@ -240,11 +227,8 @@ class QuantMutualInf():
         p = np.size(dirs, 1)
         out = np.empty((self.dim, p))
 
-        # for j in range(p):
-        #     H = dirs[:, j]
-        #     out[:, j] = sp.linalg.lu_solve(self.hess_lu, H) if self.hess_cho is None else sp.linalg.cho_solve(self.hess_cho, H)
-
-        out = self.hess_inv @ dirs
+        for j in range(p):
+            out[:, j] = lin.fact_solve(self.hess_fact, dirs[:, j])
 
         return out
 
