@@ -101,9 +101,11 @@ class HolevoInf():
         self.D1x_log = D1_log(self.Dx, self.log_Dx)
 
         # Hessians of quantum relative entropy
-        self.UXU_list = np.array([self.Ux.T @ Xi @ self.Ux for Xi in self.X_list])
-        D2Phi = np.empty((self.n, self.n))
+        self.UXU_list = np.empty((self.n, self.N, self.N))
+        for i in range(self.n):
+            self.UXU_list[i] = self.Ux.T @ self.X_list[i] @ self.Ux
 
+        D2Phi = np.empty((self.n, self.n))
         for j in range(self.n):
             for i in range(j + 1):
                 D2Phi[i, j] = np.sum(self.D1x_log * self.UXU_list[i] * self.UXU_list[j])
