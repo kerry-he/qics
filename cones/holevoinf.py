@@ -103,11 +103,11 @@ class HolevoInf():
         sqrt_D1x_log = np.sqrt(sym.mat_to_vec(D1x_log, rt2=1.0))
 
         # Hessians of quantum relative entropy
-        UXU_list = np.empty((self.vN, self.n))
+        UXU_list = np.empty((self.n, self.vN))
         for i in range(self.n):
-            UXU_list[:, [i]] = sym.mat_to_vec(self.Ux.T @ self.X_list[i] @ self.Ux) * sqrt_D1x_log
+            UXU_list[[i], :] = (sym.mat_to_vec(self.Ux.T @ self.X_list[i] @ self.Ux) * sqrt_D1x_log).T
 
-        D2Phi = UXU_list.T @ UXU_list
+        D2Phi = UXU_list @ UXU_list.T
         D2Phi -= np.reciprocal(self.sum_p)
 
         # Preparing other required variables
