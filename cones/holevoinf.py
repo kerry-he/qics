@@ -9,6 +9,7 @@ class HolevoInf():
         # Dimension properties
         self.X_list = X_list                # List of quantum states
         self.N, self.n, _ = np.shape(X_list) # Get number of states
+        self.vN = sym.vec_dim(self.N)
         
         self.dim = 1 + self.n       # Total dimension of cone
 
@@ -73,7 +74,7 @@ class HolevoInf():
 
         self.feas = (self.z > 0)
         return self.feas
-    
+
     def get_grad(self):
         assert self.feas_updated
 
@@ -91,25 +92,22 @@ class HolevoInf():
 
         self.grad_updated = True
         return self.grad
-    
+
     def update_hessprod_aux(self):
         assert not self.hess_aux_updated
         assert self.grad_updated
 
         irt2 = math.sqrt(0.5)
 
-        self.D1x_log = D1_log(self.Dx, self.log_Dx)
+        D1x_log = D1_log(self.Dx, self.log_Dx)
+        sqrt_D1x_log = np.sqrt(sym.mat_to_vec(D1x_log, rt2=1.0))
 
         # Hessians of quantum relative entropy
-        self.UXU_list = np.empty((self.n, self.N, self.N))
+        UXU_list = np.empty((self.vN, self.n))
         for i in range(self.n):
-            self.UXU_list[i] = self.Ux.T @ self.X_list[i] @ self.Ux
+            UXU_list[:, [i]] = sym.mat_to_vec(self.Ux.T @ self.X_list[i] @ self.Ux) * sqrt_D1x_log
 
-        D2Phi = np.empty((self.n, self.n))
-        for j in range(self.n):
-            for i in range(j + 1):
-                D2Phi[i, j] = np.sum(self.D1x_log * self.UXU_list[i] * self.UXU_list[j])
-                D2Phi[j, i] = D2Phi[i, j]
+        D2Phi = UXU_list.T @ UXU_list
         D2Phi -= np.reciprocal(self.sum_p)
 
         # Preparing other required variables

@@ -41,7 +41,7 @@ h[n + 1] = 1.
 # Input into model and solve
 cones = [nonnegorthant.NonNegOrthant(n), quantentr.QuantEntropy(n)]
 model = model.Model(c, A, b, G, h, cones=cones)
-solver = solver.Solver(model, max_iter=78)
+solver = solver.Solver(model)
 
 profiler = cProfile.Profile()
 profiler.enable()

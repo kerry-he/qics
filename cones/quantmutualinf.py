@@ -168,25 +168,21 @@ class QuantMutualInf():
 
                 k += 1
 
+        sqrt_D1nx_log = np.sqrt(sym.mat_to_vec(self.D1nx_log, 1.0))
         UnUnN = np.empty((self.vno, self.vno))
         for k in range(self.vno):
             N = sym.vec_to_mat(self.N[:, [k]])
             UnNUn = self.Unx.T @ N @ self.Unx
-            UnUnN[:, [k]] = sym.mat_to_vec(UnNUn)
+            UnUnN[:, [k]] = sym.mat_to_vec(UnNUn) * sqrt_D1nx_log
+        D2PhiNX = UnUnN.T @ UnUnN
 
-        temp = sym.mat_to_vec(self.D1nx_log, 1.0)
-        UnUnN_temp = UnUnN * temp
-        D2PhiNX = UnUnN.T @ UnUnN_temp
-
+        sqrt_D1ncx_log = np.sqrt(sym.mat_to_vec(self.D1ncx_log, 1.0))
         UcnUcnN = np.empty((self.vne, self.vne))
         for k in range(self.vne):
             Nc = sym.vec_to_mat(self.Nc[:, [k]])
             UcnNcUcn = self.Uncx.T @ Nc @ self.Uncx
-            UcnUcnN[:, [k]] = sym.mat_to_vec(UcnNcUcn)
-
-        temp = sym.mat_to_vec(self.D1ncx_log, 1.0)
-        UnUnN_temp = UcnUcnN * temp
-        D2PhiNcX = UcnUcnN.T @ UnUnN_temp           
+            UcnUcnN[:, [k]] = sym.mat_to_vec(UcnNcUcn) * sqrt_D1ncx_log
+        D2PhiNcX = UcnUcnN.T @ UcnUcnN        
 
         # Preparing other required variables
         zi2 = self.zi * self.zi
