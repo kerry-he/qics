@@ -146,8 +146,9 @@ class QuantCondEntropy():
 
         D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
         self.D1x_comb_inv = 1 / (self.D1x_log*self.zi + D1x_inv)
+        sqrt_D1x_comb_inv = np.sqrt(sym.mat_to_vec(self.D1x_comb_inv, 1.0))
 
-        UxK = np.empty((self.vN, self.vn))
+        UxK = np.empty((self.vn, self.vN))
         Hy_inv = np.empty((self.vn, self.vn))
 
         k = 0
@@ -169,7 +170,7 @@ class QuantCondEntropy():
                     UxK_k = UxK_k + UxK_k.T
                     UxK_k *= irt2
 
-                UxK[:, [k]] = sym.mat_to_vec(UxK_k)
+                UxK[[k], :] = (sym.mat_to_vec(UxK_k) * sqrt_D1x_comb_inv).T
 
                 # Build Hyy^-1 matrix
                 UyH_k = np.outer(self.Uy[i, :], self.Uy[j, :])
@@ -183,9 +184,7 @@ class QuantCondEntropy():
 
                 k += 1
 
-        temp = sym.mat_to_vec(self.D1x_comb_inv, 1.0)
-        UxK_temp = UxK * temp
-        KHxK = UxK.T @ UxK_temp
+        KHxK = UxK @ UxK.T
         Hy_KHxK = Hy_inv - KHxK
         self.Hy_KHxK_chol = sp.linalg.cho_factor(Hy_KHxK)
 

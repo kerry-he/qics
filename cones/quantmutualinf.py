@@ -5,14 +5,39 @@ import math
 from utils import symmetric as sym, linear as lin
 
 class QuantMutualInf():
-    def __init__(self, Nc):
+    def __init__(self, V, no):
         # Dimension properties
-        self.Nc = Nc                           # Define complementary channel as matrix
-        self.vnin, self.vnenv = np.shape(Nc)   # Get input and environment vector dimensions
-        self.nin  = sym.mat_dim(self.vnin)     # Get input dimension
-        self.nenv = sym.mat_dim(self.vnenv)     # Get environment dimension
+        self.V = V                  # Define channel using Stinespring representation
+        N, self.ni = np.shape(V)    # Get input dimension
+        self.no = no                # Get output dimension
+        self.ne = N // no           # Get environment dimension
+        
+        self.vni = sym.vec_dim(self.ni)     # Get input vector dimension
+        self.vno = sym.vec_dim(self.no)     # Get output vector dimension
+        self.vne = sym.vec_dim(self.ne)     # Get environment vector dimension
 
-        self.dim = 1 + self.vnin                 # Total dimension of cone
+        self.dim = 1 + self.vni     # Total dimension of cone
+
+        # Build linear maps of quantum channels
+        self.N  = np.zeros((self.vno, self.vni))  # Quantum channel
+        self.Nc = np.zeros((self.vne, self.vni))  # Complementary channel
+        k = -1
+        for j in range(self.ni):
+            for i in range(j + 1):
+                k += 1
+            
+                VHV = np.outer(self.V[:, i], self.V[:, j])
+                if i != j:
+                    VHV = VHV + VHV.T
+                    VHV *= math.sqrt(0.5)
+                
+                trE_VHV = sym.p_tr(VHV, 1, (self.no, self.ne))
+                trB_VHV = sym.p_tr(VHV, 0, (self.no, self.ne))
+
+                self.N[:, [k]]  = sym.mat_to_vec(trE_VHV)
+                self.Nc[:, [k]] = sym.mat_to_vec(trB_VHV)
+        self.tr = sym.mat_to_vec(np.eye(self.ni)).T
+        
 
         # Update flags
         self.feas_updated        = False
@@ -24,12 +49,12 @@ class QuantMutualInf():
         return
         
     def get_nu(self):
-        return 1 + self.nin
+        return 1 + self.ni
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
         point[0] = 1.
-        point[1:] = sym.mat_to_vec(np.eye(self.nin)) / self.nin
+        point[1:] = sym.mat_to_vec(np.eye(self.ni)) / self.ni
 
         self.set_point(point)
 
@@ -39,9 +64,11 @@ class QuantMutualInf():
         assert np.size(point) == self.dim
         self.point = point
 
-        self.t = point[0]
-        self.X = sym.vec_to_mat(point[1:])
-        self.Y = sym.vec_to_mat(self.Nc @ point[1:])
+        self.t   = point[0]
+        self.X   = sym.vec_to_mat(point[1:])
+        self.NX  = sym.vec_to_mat(self.N @ point[1:])
+        self.NcX = sym.vec_to_mat(self.Nc @ point[1:])
+        self.trX = np.trace(self.X)
 
         self.feas_updated        = False
         self.grad_updated        = False
@@ -57,17 +84,25 @@ class QuantMutualInf():
         
         self.feas_updated = True
 
-        self.Dx, self.Ux = np.linalg.eigh(self.X)
-        self.Dy, self.Uy = np.linalg.eigh(self.Y)
-
+        self.Dx, self.Ux     = np.linalg.eigh(self.X)
         if any(self.Dx <= 0):
             self.feas = False
             return self.feas
-        
-        self.log_Dx = np.log(self.Dx)
-        self.log_Dy = np.log(self.Dy)
 
-        self.z = self.t - (lin.inp(self.Dx, self.log_Dx) - lin.inp(self.Dy, self.log_Dy))
+        self.Dnx, self.Unx   = np.linalg.eigh(self.NX)
+        self.Dncx, self.Uncx = np.linalg.eigh(self.NcX)
+        
+        self.log_Dx   = np.log(self.Dx)
+        self.log_Dnx  = np.log(self.Dnx)
+        self.log_Dncx = np.log(self.Dncx)
+        self.log_trX  = np.log(self.trX)
+
+        entr_X   = lin.inp(self.Dx, self.log_Dx)
+        entr_NX  = lin.inp(self.Dnx, self.log_Dnx)
+        entr_NcX = lin.inp(self.Dncx, self.log_Dncx)
+        entr_trX = self.trX * self.log_trX
+
+        self.z = self.t - (entr_X + entr_NX - entr_NcX - entr_trX)
 
         self.feas = (self.z > 0)
         return self.feas
@@ -78,21 +113,23 @@ class QuantMutualInf():
         if self.grad_updated:
             return self.grad
         
-        self.log_X = (self.Ux * self.log_Dx) @ self.Ux.T
-        self.log_Y = (self.Uy * self.log_Dy) @ self.Uy.T
-        self.Nc_log_Y = sym.vec_to_mat(self.Nc.T @ sym.mat_to_vec(self.log_Y))
+        log_X   = (self.Ux * self.log_Dx) @ self.Ux.T
+        log_NX  = (self.Unx * self.log_Dnx) @ self.Unx.T
+        log_NcX = (self.Uncx * self.log_Dncx) @ self.Uncx.T
+        self.log_X      = sym.mat_to_vec(log_X)
+        self.N_log_NX   = self.N.T @ sym.mat_to_vec(log_NX)
+        self.Nc_log_NcX = self.Nc.T @ sym.mat_to_vec(log_NcX)
+        self.tr_log_trX = self.tr.T * self.log_trX
 
         self.inv_Dx = np.reciprocal(self.Dx)
         self.inv_X  = (self.Ux * self.inv_Dx) @ self.Ux.T
 
-        self.UyXUy = self.Uy.T @ self.X @ self.Uy
-
         self.zi   = np.reciprocal(self.z)
-        self.DPhi = self.log_X - self.Nc_log_Y
+        self.DPhi = self.log_X + self.N_log_NX - self.Nc_log_NcX - self.tr_log_trX
 
-        self.grad     = np.empty((self.dim, 1))
+        self.grad     =  np.empty((self.dim, 1))
         self.grad[0]  = -self.zi
-        self.grad[1:] = sym.mat_to_vec(self.zi * self.DPhi - self.inv_X)
+        self.grad[1:] =  self.zi * self.DPhi - sym.mat_to_vec(self.inv_X)
 
         self.grad_updated = True
         return self.grad
@@ -103,23 +140,23 @@ class QuantMutualInf():
 
         irt2 = math.sqrt(0.5)
 
-        self.D1x_log = D1_log(self.Dx, self.log_Dx)
-        self.D1y_log = D1_log(self.Dy, self.log_Dy)
+        self.D1x_log   = D1_log(self.Dx, self.log_Dx)
+        self.D1nx_log  = D1_log(self.Dnx, self.log_Dnx)
+        self.D1ncx_log = D1_log(self.Dncx, self.log_Dncx)
 
         # Hessians of quantum relative entropy
-        D2PhiX = np.empty((self.vnin, self.vnin))
-        D2PhiY = np.empty((self.vnenv, self.vnenv))
-        invXX  = np.empty((self.vnin, self.vnin))
+        D2PhiX = np.empty((self.vni, self.vni))
+        invXX  = np.empty((self.vni, self.vni))
 
         k = 0
-        for j in range(self.nin):
+        for j in range(self.ni):
             for i in range(j + 1):
                 # D2Phi
-                UxHUx = np.outer(self.Ux[i, :], self.Ux[j, :])
+                UHU = np.outer(self.Ux[i, :], self.Ux[j, :])
                 if i != j:
-                    UxHUx = UxHUx + UxHUx.T
-                    UxHUx *= irt2
-                temp = self.Ux @ (self.D1x_log * UxHUx) @ self.Ux.T
+                    UHU = UHU + UHU.T
+                    UHU *= irt2
+                temp = self.Ux @ (self.D1x_log * UHU) @ self.Ux.T
                 D2PhiX[:, [k]] = sym.mat_to_vec(temp)
 
                 # invXX
@@ -131,28 +168,31 @@ class QuantMutualInf():
 
                 k += 1
 
-        k = 0
-        for j in range(self.nenv):
-            for i in range(j + 1):
-                UyHUy = np.outer(self.Uy[i, :], self.Uy[j, :])
-                if i != j:
-                    UyHUy = UyHUy + UyHUy.T
-                    UyHUy *= irt2
-                temp = self.Uy @ (self.D1y_log * UyHUy) @ self.Uy.T
-                D2PhiY[:, [k]] = sym.mat_to_vec(temp)                
+        sqrt_D1nx_log = np.sqrt(sym.mat_to_vec(self.D1nx_log, 1.0))
+        UnUnN = np.empty((self.vno, self.vno))
+        for k in range(self.vno):
+            N = sym.vec_to_mat(self.N[:, [k]])
+            UnNUn = self.Unx.T @ N @ self.Unx
+            UnUnN[[k], :] = (sym.mat_to_vec(UnNUn) * sqrt_D1nx_log).T
+        D2PhiNX = UnUnN @ UnUnN.T
 
-                k += 1
+        sqrt_D1ncx_log = np.sqrt(sym.mat_to_vec(self.D1ncx_log, 1.0))
+        UcnUcnN = np.empty((self.vne, self.vne))
+        for k in range(self.vne):
+            Nc = sym.vec_to_mat(self.Nc[:, [k]])
+            UcnNcUcn = self.Uncx.T @ Nc @ self.Uncx
+            UcnUcnN[[k], :] = (sym.mat_to_vec(UcnNcUcn) * sqrt_D1ncx_log).T
+        D2PhiNcX = UcnUcnN @ UcnUcnN.T
 
         # Preparing other required variables
         zi2 = self.zi * self.zi
-        DPhi_vec = sym.mat_to_vec(self.DPhi)
-        D2Phi = D2PhiX - self.Nc.T @ D2PhiY @ self.Nc
+        D2Phi = D2PhiX + D2PhiNX - D2PhiNcX - self.tr.T @ self.tr / self.trX
 
         self.hess = np.empty((self.dim, self.dim))
         self.hess[0, 0] = zi2
-        self.hess[1:, [0]] = -zi2 * DPhi_vec
+        self.hess[1:, [0]] = -zi2 * self.DPhi
         self.hess[[0], 1:] = self.hess[1:, [0]].T
-        self.hess[1:, 1:] = zi2 * np.outer(DPhi_vec, DPhi_vec) + self.zi * D2Phi + invXX
+        self.hess[1:, 1:] = zi2 * np.outer(self.DPhi, self.DPhi) + self.zi * D2Phi + invXX
 
         self.hess_aux_updated = True
 
@@ -170,14 +210,7 @@ class QuantMutualInf():
         assert self.grad_updated
         assert self.hess_aux_updated
 
-        # try:
-        #     self.hess_cho = sp.linalg.cho_factor(self.hess)
-        # except np.linalg.LinAlgError:
-        #     self.hess_cho = None
-        #     self.hess_lu = sp.linalg.lu_factor(self.hess)
-
-        self.hess_inv = np.linalg.inv(self.hess)
-
+        self.hess_fact = lin.fact(self.hess)
         return
 
     def invhess_prod(self, dirs):
@@ -190,11 +223,8 @@ class QuantMutualInf():
         p = np.size(dirs, 1)
         out = np.empty((self.dim, p))
 
-        # for j in range(p):
-        #     H = dirs[:, j]
-        #     out[:, j] = sp.linalg.lu_solve(self.hess_lu, H) if self.hess_cho is None else sp.linalg.cho_solve(self.hess_cho, H)
-
-        out = self.hess_inv @ dirs
+        for j in range(p):
+            out[:, j] = lin.fact_solve(self.hess_fact, dirs[:, j])
 
         return out
 

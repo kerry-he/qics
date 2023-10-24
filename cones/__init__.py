@@ -4,5 +4,6 @@ __all__ = [
     "possemidefinite", 
     "quantrelentr", 
     "quantentr",
-    "quantmutualinf"
+    "quantmutualinf",
+    "holevoinf"
     ]
