@@ -56,8 +56,8 @@ class SysSolver():
         y_b = lin.fact_solve(self.AHA_fact, temp)
         x_b = blk_invhess_prod(model.c - model.A.T @ y_b, model)
 
-        self.sol.tau[0]   = rhs.tau + rhs.kappa + np.dot(model.c[:, 0], x_r[:, 0]) + np.dot(model.b[:, 0], y_r[:, 0]) 
-        self.sol.tau[0]   = self.sol.tau[0] / (mu_tau2 + np.dot(model.c[:, 0], x_b[:, 0]) + np.dot(model.b[:, 0], y_b[:, 0]))
+        self.sol.tau[0]   = rhs.tau + rhs.kappa + lin.inp(model.c, x_r) + lin.inp(model.b, y_r) 
+        self.sol.tau[0]   = self.sol.tau[0] / (mu_tau2 + lin.inp(model.c, x_b) + lin.inp(model.b, y_b))
 
         self.sol.x[:]     = x_r - self.sol.tau[0] * x_b
         self.sol.y[:]     = y_r - self.sol.tau[0] * y_b
@@ -83,8 +83,8 @@ class SysSolver():
         x_b = lin.fact_solve(self.GHG_fact, temp_vec - model.A.T @ y_b)
         z_b = blk_hess_prod(model.h + model.G @ x_b, model)
 
-        self.sol.tau[0]   = rhs.tau + rhs.kappa + np.dot(model.c[:, 0], x_r[:, 0]) + np.dot(model.b[:, 0], y_r[:, 0]) + np.dot(model.h[:, 0], z_r[:, 0])
-        self.sol.tau[0]   = self.sol.tau[0] / (mu_tau2 + np.dot(model.c[:, 0], x_b[:, 0]) + np.dot(model.b[:, 0], y_b[:, 0]) + np.dot(model.h[:, 0], z_b[:, 0]))
+        self.sol.tau[0]   = rhs.tau + rhs.kappa + lin.inp(model.c, x_r) + lin.inp(model.b, y_r) + lin.inp(model.h, z_r)
+        self.sol.tau[0]   = self.sol.tau[0] / (mu_tau2 + lin.inp(model.c, x_b) + lin.inp(model.b, y_b) + lin.inp(model.h, z_b))
 
         self.sol.x[:]     = x_r - self.sol.tau[0] * x_b
         self.sol.y[:]     = y_r - self.sol.tau[0] * y_b
@@ -102,7 +102,7 @@ class SysSolver():
         pnt.y[:]     = -model.A @ rhs.x + model.b * rhs.tau
         pnt.z[:]     = -model.G @ rhs.x + model.h * rhs.tau - rhs.s
         pnt.s[:]     =  blk_hess_prod(rhs.s, model) + rhs.z
-        pnt.tau[0]   = -np.dot(model.c[:, 0], rhs.x[:, 0]) - np.dot(model.b[:, 0], rhs.y[:, 0]) - np.dot(model.h[:, 0], rhs.z[:, 0]) - rhs.kappa
+        pnt.tau[0]   = -lin.inp(model.c, rhs.x) - lin.inp(model.b, rhs.y) - lin.inp(model.h, rhs.z) - rhs.kappa
         pnt.kappa[0] = mu_tau2 * rhs.tau + rhs.kappa
 
         return pnt

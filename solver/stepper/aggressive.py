@@ -1,6 +1,7 @@
 import numpy as np
 import math
 from utils.point import Point
+from utils import linear as lin
 
 class AggressiveStepper():
     def __init__(self, syssolver, model):
@@ -76,7 +77,7 @@ class AggressiveStepper():
         while True:
             # Step point in direction and step size
             next_point.vec[:] = point.vec + dir.vec * alpha
-            mu = np.dot(next_point.s[:, 0], next_point.z[:, 0]) / model.nu
+            mu = lin.inp(next_point.s, next_point.z) / model.nu
             if mu < 0:
                 alpha *= beta
                 continue
@@ -95,7 +96,7 @@ class AggressiveStepper():
                     grad_k = cone_k.get_grad()
                     psi = next_point.z_views[k] * irtmu + grad_k
                     prod = cone_k.invhess_prod(psi)
-                    self.prox = max(self.prox, np.dot(prod[:, 0], psi[:, 0]))
+                    self.prox = max(self.prox, lin.inp(prod, psi))
 
                     in_prox = (self.prox < eta)
                 if not in_prox:
@@ -136,7 +137,7 @@ class AggressiveStepper():
         for (rhs_s_k, z_k) in zip(self.rhs.s_views, point.z_views):
             rhs_s_k[:] = -z_k
 
-        self.rhs.tau[0]   = np.dot(model.c[:, 0], point.x[:, 0]) + np.dot(model.b[:, 0], point.y[:, 0]) + np.dot(model.h[:, 0], point.z[:, 0]) + point.kappa
+        self.rhs.tau[0]   = lin.inp(model.c, point.x) + lin.inp(model.b, point.y) + lin.inp(model.h, point.z) + point.kappa
         self.rhs.kappa[0] = -point.kappa
 
         return self.rhs

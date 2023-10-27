@@ -1,6 +1,7 @@
 import numpy as np
 import math
 from utils.point import Point
+from utils import linear as lin
 
 class BasicStepper():
     def __init__(self, syssolver, model):
@@ -39,7 +40,7 @@ class BasicStepper():
 
         while True:
             next_point.vec[:] = point.vec + dir.vec * alpha
-            mu = np.dot(next_point.x[:, 0], next_point.z[:, 0]) / model.nu
+            mu = lin.inp(next_point.x, next_point.z) / model.nu
             if mu < 0:
                 alpha *= beta
                 continue
@@ -58,7 +59,7 @@ class BasicStepper():
                     grad_k = cone_k.get_grad()
                     psi = next_point.z_views[k] + rtmu * grad_k
                     prod = cone_k.invhess_prod(psi)
-                    total_prox += np.dot(prod[:, 0], psi[:, 0])
+                    total_prox += lin.inp(prod, psi)
 
                     in_prox = (total_prox < (eta*mu)**2)
                 if not in_prox:

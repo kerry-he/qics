@@ -2,7 +2,7 @@ import numpy as np
 import math
 import time
 
-from utils import point
+from utils import point, linear as lin
 from solver.stepper.basic import BasicStepper
 from solver.stepper.aggressive import AggressiveStepper
 from solver.syssolver import SysSolver
@@ -40,12 +40,7 @@ class Solver():
                 break
 
         # Get solve data
-        self.p_obj   = np.dot(self.model.c[:, 0], self.point.x[:, 0]) / self.point.tau
-        self.d_obj   = -(np.dot(self.model.b[:, 0], self.point.y[:, 0]) + np.dot(self.model.h[:, 0], self.point.z[:, 0])) / self.point.tau
-        self.obj_gap = self.p_obj - self.d_obj
-        self.x_feas  = np.linalg.norm(self.model.A.T @ self.point.y + self.model.G.T @ self.point.z + self.model.c * self.point.tau)
-        self.y_feas  = np.linalg.norm(self.model.A @ self.point.x - self.model.b * self.point.tau)
-        self.z_feas  = np.linalg.norm(self.model.G @ self.point.x - self.model.h * self.point.tau + self.point.s)
+        self.get_gap_feas()
 
         if self.verbose:
             print("%5d" % (self.num_iters), " %8.1e" % (self.mu), " %8.1e" % (self.point.tau), " %8.1e" % (self.point.kappa),
@@ -77,12 +72,7 @@ class Solver():
         self.calc_mu()
 
         # Get solve data
-        self.p_obj   = np.dot(self.model.c[:, 0], self.point.x[:, 0]) / self.point.tau
-        self.d_obj   = -(np.dot(self.model.b[:, 0], self.point.y[:, 0]) + np.dot(self.model.h[:, 0], self.point.z[:, 0])) / self.point.tau
-        self.obj_gap = self.p_obj - self.d_obj
-        self.x_feas  = np.linalg.norm(self.model.A.T @ self.point.y + self.model.G.T @ self.point.z + self.model.c * self.point.tau)
-        self.y_feas  = np.linalg.norm(self.model.A @ self.point.x - self.model.b * self.point.tau)
-        self.z_feas  = np.linalg.norm(self.model.G @ self.point.x - self.model.h * self.point.tau + self.point.s)
+        self.get_gap_feas()      
 
         # Check optimality
         if abs(self.obj_gap) <= self.gap_tol:
@@ -150,5 +140,14 @@ class Solver():
         return
 
     def calc_mu(self):
-        self.mu = np.dot(self.point.s[:, 0], self.point.z[:, 0]) / self.model.nu
+        self.mu = lin.inp(self.point.s, self.point.z) / self.model.nu
         return self.mu
+
+    def get_gap_feas(self):
+        # Get solve data
+        self.p_obj   = lin.inp(self.model.c, self.point.x) / self.point.tau
+        self.d_obj   = -(lin.inp(self.model.b, self.point.y) + lin.inp(self.model.h, self.point.z)) / self.point.tau
+        self.obj_gap = self.p_obj - self.d_obj
+        self.x_feas  = np.linalg.norm(self.model.A.T @ self.point.y + self.model.G.T @ self.point.z + self.model.c * self.point.tau)
+        self.y_feas  = np.linalg.norm(self.model.A @ self.point.x - self.model.b * self.point.tau)
+        self.z_feas  = np.linalg.norm(self.model.G @ self.point.x - self.model.h * self.point.tau + self.point.s)
