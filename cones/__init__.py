@@ -5,5 +5,6 @@ __all__ = [
     "quantrelentr", 
     "quantentr",
     "quantmutualinf",
-    "holevoinf"
+    "holevoinf",
+    "quantkeydist"
     ]
