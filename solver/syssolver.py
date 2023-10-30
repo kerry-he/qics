@@ -113,6 +113,11 @@ def blk_hess_prod(dirs, model):
     for (cone_k, cone_idxs_k) in zip(model.cones, model.cone_idxs):
         out[cone_idxs_k, :] = cone_k.hess_prod(dirs[cone_idxs_k, :])
 
+        grad_k = cone_k.get_grad()
+
+        # print(lin.inp(grad_k, cone_k.invhess_prod(grad_k)))
+        # print(lin.inp(cone_k.point, cone_k.hess_prod(cone_k.point)))
+
     return out
 
 def blk_invhess_prod(dirs, model):

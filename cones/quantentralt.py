@@ -123,14 +123,14 @@ class QuantEntropy():
             Hx     = sym.vec_to_mat(Hx_vec)
 
             trH = np.trace(Hx)
-            chi  = self.zi * self.zi * (Ht - lin.inp(Hx_vec, self.log_X) + trH)
+            chi  = self.zi * self.zi * (Ht - lin.inp(Hx_vec, self.DPhi))
 
             UxHUx = self.Ux.T @ Hx @ self.Ux
             D2PhiH = self.Ux @ (self.D1x_comb * UxHUx) @ self.Ux.T
 
             # Hessian product of barrier function
             out[0, j]    =  chi
-            out[1:, [j]] = -chi * self.DPhi + sym.mat_to_vec(D2PhiH) + (self.zi * trH / self.trX) * self.tr.T
+            out[1:, [j]] = -chi * self.DPhi + sym.mat_to_vec(D2PhiH) - (self.zi * trH / self.trX) * self.tr.T
 
         return out
     
@@ -139,10 +139,8 @@ class QuantEntropy():
         assert self.grad_updated
         assert self.hess_aux_updated
 
-        irt2 = math.sqrt(0.5)
-
         self.D1x_comb_inv = np.reciprocal(self.D1x_comb)
-        self.Hinv_tr      = self.Ux @ self.D1x_comb_inv @ self.Ux.T
+        self.Hinv_tr      = self.Ux @ np.diag(np.diag(self.D1x_comb_inv)) @ self.Ux.T
         self.tr_Hinv_tr   = np.trace(self.D1x_comb_inv)
 
         self.invhess_aux_updated = True
@@ -159,6 +157,8 @@ class QuantEntropy():
         p = np.size(dirs, 1)
         out = np.empty((self.dim, p))
 
+        Hess = self.hess_prod(np.eye(self.dim))
+
         for j in range(p):
             Ht = dirs[0, j]
             Hx = sym.vec_to_mat(dirs[1:, [j]])
@@ -169,11 +169,26 @@ class QuantEntropy():
             Hinv_W = self.Ux @ (self.D1x_comb_inv * UxWUx) @ self.Ux.T
 
             fac = np.trace(Hinv_W) / (self.trX - self.tr_Hinv_tr)
-            temp = sym.mat_to_vec(Hinv_W + fac * self.Hinv_tr)
+            temp = Hinv_W + fac * self.Hinv_tr
+            
+            # print(Wx)
+            # temp2 = self.Ux.T @ temp @ self.Ux
+            # temp2 = self.Ux @ (self.D1x_comb * temp2) @ self.Ux.T - np.eye(self.n) * np.trace(temp) / self.trX
+            # print(temp2)
+
+            temp = sym.mat_to_vec(temp)
 
             out[0, j] = Ht * self.z * self.z + lin.inp(temp, self.DPhi)
             out[1:, [j]] = temp
 
+        print(np.linalg.inv(Hess) @ dirs)
+        print(out)
+
+        # print(self.DPhi)
+        # print(self.zi)
+        
+
+        # return np.linalg.inv(Hess) @ dirs
         return out
 
 @nb.njit
