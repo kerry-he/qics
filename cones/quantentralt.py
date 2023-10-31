@@ -27,7 +27,7 @@ class QuantEntropy():
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
-        point[0] = 1.
+        point[0]  = 1.
         point[1:] = sym.mat_to_vec(np.eye(self.n)) / self.n
 
         self.set_point(point)
@@ -88,6 +88,7 @@ class QuantEntropy():
 
         self.zi   = np.reciprocal(self.z)
         self.DPhi = self.log_X - self.tr_log_trX
+        self.DPhi_mat = log_X - np.eye(self.n) * self.log_trX
 
         self.grad     =  np.empty((self.dim, 1))
         self.grad[0]  = -self.zi
@@ -157,38 +158,22 @@ class QuantEntropy():
         p = np.size(dirs, 1)
         out = np.empty((self.dim, p))
 
-        Hess = self.hess_prod(np.eye(self.dim))
-
         for j in range(p):
             Ht = dirs[0, j]
             Hx = sym.vec_to_mat(dirs[1:, [j]])
 
-            Wx = Hx + Ht * sym.vec_to_mat(self.DPhi)
+            Wx = Hx + Ht * self.DPhi_mat
 
             UxWUx = self.Ux.T @ Wx @ self.Ux
             Hinv_W = self.Ux @ (self.D1x_comb_inv * UxWUx) @ self.Ux.T
 
-            fac = np.trace(Hinv_W) / (self.trX - self.tr_Hinv_tr)
+            fac = self.zi * np.trace(Hinv_W) / (self.trX - self.zi * self.tr_Hinv_tr)
             temp = Hinv_W + fac * self.Hinv_tr
-            
-            # print(Wx)
-            # temp2 = self.Ux.T @ temp @ self.Ux
-            # temp2 = self.Ux @ (self.D1x_comb * temp2) @ self.Ux.T - np.eye(self.n) * np.trace(temp) / self.trX
-            # print(temp2)
-
             temp = sym.mat_to_vec(temp)
 
             out[0, j] = Ht * self.z * self.z + lin.inp(temp, self.DPhi)
             out[1:, [j]] = temp
 
-        print(np.linalg.inv(Hess) @ dirs)
-        print(out)
-
-        # print(self.DPhi)
-        # print(self.zi)
-        
-
-        # return np.linalg.inv(Hess) @ dirs
         return out
 
 @nb.njit
