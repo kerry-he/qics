@@ -13,7 +13,7 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-n = 4
+n = 128
 sn = sym.vec_dim(n)
 
 # cq channel capacity problem data
@@ -35,7 +35,6 @@ G3 = np.hstack((alphabet_vec, np.zeros((sn, 1))))
 G = -np.vstack((G1, G2, G3))
 
 h = np.zeros((n + 1 + sn, 1))
-h[n + 1] = 1.
 
 # Input into model and solve
 cones = [nonnegorthant.NonNegOrthant(n), quantentralt.QuantEntropy(n)]
