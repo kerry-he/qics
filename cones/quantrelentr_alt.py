@@ -162,62 +162,64 @@ class QuantRelEntropy():
 
         irt2 = math.sqrt(0.5)
 
-        self.D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
-
-        self.D1x_comb_inv = np.reciprocal(self.zi * self.D1x_log + self.D1x_inv)
-        self.D1x_comb_inv_sqrt = np.sqrt(self.D1x_comb_inv)
-
         # Hessians of quantum relative entropy
+        D2PhiXX = np.empty((self.vn, self.vn))
+        D2PhiXY = np.empty((self.vn, self.vn))
         D2PhiYY = np.empty((self.vn, self.vn))
-        Hyy_Hxx = np.empty((self.vn, self.vn))
 
-        self.Hxx_inv = np.empty((self.vn, self.vn))
-
-        invYY = np.empty((self.vn, self.vn))
-
-        self.UyUx = self.Uy.T @ self.Ux
+        invXX = np.empty((self.vn, self.vn))
+        invYY = np.empty((self.vn, self.vn))        
 
         k = 0
         for j in range(self.n):
             for i in range(j + 1):
-                # Hyx @ Hxx^-0.5
-                # UxHUx = np.outer(self.Ux[i, :], self.Ux[j, :])
-                # if i != j:
-                #     UxHUx = UxHUx + UxHUx.T
-                #     UxHUx *= irt2
-                # temp = self.Ux @ (self.D1x_comb_inv_sqrt * UxHUx) @ self.Ux.T
-                # temp = self.Uy.T @ temp @ self.Uy
-                # temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
-                # Hyy_Hxx[:, [k]] = sym.mat_to_vec(temp) 
-
-                temp = np.outer(self.UyUx.T[i, :], self.UyUx.T[j, :])
+                # D2PhiXX
+                UxHUx = np.outer(self.Ux[i, :], self.Ux[j, :])
                 if i != j:
-                    temp = temp + temp.T
-                    temp *= irt2
-                temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
-                Hyy_Hxx[:, [k]] = sym.mat_to_vec(temp) * self.D1x_comb_inv_sqrt[i, j]
+                    UxHUx = UxHUx + UxHUx.T
+                    UxHUx *= irt2
+                temp = self.Ux @ (self.D1x_log * UxHUx) @ self.Ux.T
+                D2PhiXX[:, [k]] = sym.mat_to_vec(temp)
 
-                # D2PhiYY
+                # D2PhiXY
                 UyHUy = np.outer(self.Uy[i, :], self.Uy[j, :])
                 if i != j:
                     UyHUy = UyHUy + UyHUy.T
                     UyHUy *= irt2
+                temp = -self.Uy @ (self.D1y_log * UyHUy) @ self.Uy.T
+                D2PhiXY[:, [k]] = sym.mat_to_vec(temp)
+
+                # D2PhiYY
                 temp = -scnd_frechet(self.D2y_log, self.Uy, UyHUy, self.UyXUy)
                 D2PhiYY[:, [k]] = sym.mat_to_vec(temp)
 
                 # invXX and invYY
+                temp = np.outer(self.inv_X[i, :], self.inv_X[j, :])
+                if i != j:
+                    temp = temp + temp.T
+                    temp *= irt2
+                invXX[:, [k]] = sym.mat_to_vec(temp)
+
                 temp = np.outer(self.inv_Y[i, :], self.inv_Y[j, :])
                 if i != j:
                     temp = temp + temp.T
                     temp *= irt2
-                invYY[:, [k]] = sym.mat_to_vec(temp)
+                invYY[:, [k]] = sym.mat_to_vec(temp)                
 
                 k += 1
 
         # Preparing other required variables
-        Hyy = self.zi * D2PhiYY + invYY
-        hess_schur = Hyy - Hyy_Hxx @ Hyy_Hxx.T
-        self.hess_schur_inv = np.linalg.inv(hess_schur)
+        self.DPhiZ_vec = np.vstack((sym.mat_to_vec(self.DPhiX), sym.mat_to_vec(self.DPhiY)))
+
+        self.hess = np.empty((self.dim - 1, self.dim - 1))
+
+        self.hess[:self.vn, self.vn:] = self.zi * D2PhiXY
+        self.hess[self.vn:, :self.vn] = self.zi * D2PhiXY.T
+
+        self.hess[:self.vn, :self.vn] = self.zi * D2PhiXX + invXX
+        self.hess[self.vn:, self.vn:] = self.zi * D2PhiYY + invYY
+
+        self.hess_inv = np.linalg.inv(self.hess)
 
         self.invhess_aux_updated = True
 
@@ -234,45 +236,27 @@ class QuantRelEntropy():
         out = np.empty((self.dim, p))
 
         Ht = dirs[0, :]
-        Hx = dirs[1:self.vn+1, :]
-        Hy = dirs[self.vn+1:, :]
+        Hz = dirs[1:, :]
 
-        Wx = Hx + Ht * self.DPhiX_vec
-        Wy = Hy + Ht * self.DPhiY_vec
+        Wz = Hz + Ht * self.DPhiZ_vec
 
-        Wx_mat = np.empty((p, self.n, self.n))
-        for j in range(p):
-            Wx_mat[j, :, :] = sym.vec_to_mat(Wx[:, [j]])
-
-        temp = self.Ux.T @ Wx_mat @ self.Ux
-        temp = self.UyUx @ (self.D1x_comb_inv * temp) @ self.UyUx.T
-        temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
-
-        temp_vec = np.empty((self.vn, p))
-        for j in range(p):
-            temp_vec[:, [j]] = sym.mat_to_vec(temp[j, :, :])
-
-        outY = self.hess_schur_inv @ (Wy - temp_vec)
-
-        temp2 = np.empty((p, self.n, self.n))
-        for j in range(p):
-            temp2[j, :, :] = sym.vec_to_mat(outY[:, [j]])
-
-        temp = self.Uy.T @ temp2 @ self.Uy
-        temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
-        temp = Wx_mat - temp
-        temp = self.Ux.T @ temp @ self.Ux
-        temp = self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.T
-
-        outX = np.empty((self.vn, p))
-        for j in range(p):
-            outX[:, [j]] = sym.mat_to_vec(temp[j, :, :])
-
-        outt = self.z * self.z * Ht + lin.inp(self.DPhiX_vec, outX) + lin.inp(self.DPhiY_vec, outY)      
+        outZ = self.hess_inv @ Wz
+        outt = self.z * self.z * Ht + lin.inp(self.DPhiZ_vec, outZ)
 
         out[0, :] = outt
-        out[1:self.vn+1, :] = outX
-        out[self.vn+1:, :] = outY          
+        out[1:, :] = outZ
+
+        # for j in range(p):
+        #     Ht = dirs[0, j]
+        #     Hz = dirs[1:, [j]]
+
+        #     Wz = Hz + Ht * self.DPhiZ_vec
+
+        #     outZ = self.hess_inv @ Wz
+        #     outt = self.z * self.z * Ht + lin.inp(self.DPhiZ_vec, outZ)
+
+        #     out[0, j] = outt
+        #     out[1:, [j]] = outZ
 
         return out
     

@@ -112,8 +112,6 @@ def blk_hess_prod(dirs, model):
 
     for (cone_k, cone_idxs_k) in zip(model.cones, model.cone_idxs):
         out[cone_idxs_k, :] = cone_k.hess_prod(dirs[cone_idxs_k, :])
-
-        grad_k = cone_k.get_grad()
         
     return out
 

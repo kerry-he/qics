@@ -216,6 +216,9 @@ class QuantKeyDist():
         assert self.hess_aux_updated
 
         self.hess_fact = lin.fact(self.hess)
+
+        self.invhess_aux_updated = True
+
         return
 
     def invhess_prod(self, dirs):

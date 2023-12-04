@@ -148,6 +148,8 @@ class QuantEntropy():
         self.k2 = self.sigma + sym.inner(self.DPhi, self.gamma)
         self.k3 = self.yi*self.yi + self.yi * sym.inner(self.gamma, self.inv_X)
 
+        self.invhess_aux_updated = True
+
         return
 
     def invhess_prod(self, dirs):
