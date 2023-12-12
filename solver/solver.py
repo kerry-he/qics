@@ -130,8 +130,12 @@ class Solver():
             assert cone_k.get_feas()
             self.point.z_views[k][:] = -cone_k.get_grad()
 
-        self.point.x[:] = np.linalg.pinv(model.G) @ (model.h - self.point.s)
-        self.point.y[:] = np.linalg.pinv(model.A.T) @ (-model.G.T @ self.point.z - model.c)
+        if model.use_G:
+            self.point.x[:] = np.linalg.pinv(model.G) @ (model.h - self.point.s)
+            self.point.y[:] = np.linalg.pinv(model.A.T) @ (-model.G.T @ self.point.z - model.c)
+        else:
+            self.point.x[:] = -(model.h - self.point.s)
+            self.point.y[:] = np.linalg.pinv(model.A.T) @ (self.point.z - model.c)
 
         self.calc_mu()
         if not math.isclose(self.mu, 1.):

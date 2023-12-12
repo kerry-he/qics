@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 
 class Model():
     def __init__(self, c, A, b, G=None, h=None, cones=None):
@@ -9,7 +10,7 @@ class Model():
         self.c = c
         self.A = A
         self.b = b
-        self.G = G if (G is not None) else -np.eye(self.n)
+        self.G = G if (G is not None) else -sp.sparse.identity(self.n)
         self.h = h if (h is not None) else np.zeros((self.n, 1))
         self.cones = cones
 
