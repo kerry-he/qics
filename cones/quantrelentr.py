@@ -397,7 +397,7 @@ def scnd_frechet_parallel(D2, U, UHU, UXU):
 
     return out
 
-
+@nb.njit
 def D3_log_ij(i, j, D3, D):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -431,7 +431,7 @@ def D3_log_ij(i, j, D3, D):
     
     return D3_ij
 
-
+@nb.njit
 def thrd_frechet(D2, D, U, H1, H2, H3):
     n = D.size
     out = np.zeros((n, n))

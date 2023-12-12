@@ -31,7 +31,5 @@ class NonNegOrthant():
     def invhess_prod(self, dirs):
         return dirs * (self.point**2)
 
-    def dder3(self, dirs):
+    def third_dir_deriv(self, dirs):
         return -2 * (dirs**2) / (self.point**3)
-
-        return dder3

@@ -5,6 +5,7 @@ import time
 from utils import point, linear as lin
 from solver.stepper.basic import BasicStepper
 from solver.stepper.aggressive import AggressiveStepper
+from solver.stepper.comb import CombinedStepper
 from solver.syssolver import SysSolver
 
 class Solver():
@@ -27,7 +28,7 @@ class Solver():
 
         self.model = model
         syssolver = SysSolver(model) if (syssolver is None) else syssolver
-        self.stepper = AggressiveStepper(syssolver, model) if (stepper is None) else stepper
+        self.stepper = CombinedStepper(syssolver, model) if (stepper is None) else stepper
 
         return
     

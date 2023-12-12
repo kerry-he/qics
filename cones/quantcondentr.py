@@ -234,7 +234,7 @@ class QuantCondEntropy():
 
         return
 
-    def dder3(self, dirs):
+    def third_dir_deriv(self, dirs):
         assert self.grad_updated
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
@@ -252,8 +252,8 @@ class QuantCondEntropy():
         D2PhiH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
         D2PhiH -= sym.i_kr(self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T, self.sys, (self.n0, self.n1))
 
-        D3PhiHH = scnd_frechet(self.D2x_log, self.Ux, UxHxUx)
-        D3PhiHH -= sym.i_kr(scnd_frechet(self.D2y_log, self.Uy, UyHyUy), self.sys, (self.n0, self.n1))
+        D3PhiHH = scnd_frechet(self.D2x_log, self.Ux, UxHxUx, UxHxUx)
+        D3PhiHH -= sym.i_kr(scnd_frechet(self.D2y_log, self.Uy, UyHyUy, UyHyUy), self.sys, (self.n0, self.n1))
 
         # Third derivative of barrier
         DPhiH = sym.inner(self.DPhi, Hx)
@@ -293,11 +293,12 @@ def D1_log(D, log_D):
 
     return D1
 
+@nb.njit
 def D2_log(D, D1):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
 
-    n = np.size(D)
+    n = D.size
     D2 = np.zeros((n, n, n))
 
     for k in range(n):
@@ -322,16 +323,33 @@ def D2_log(D, D1):
 
     return D2
 
-def scnd_frechet(D2, U, UHU):
-    n = np.size(U, 0)
+def scnd_frechet(D2, U, UHU, UXU):
+    if D2.shape[0] <= 40:
+        return scnd_frechet_single(D2, U, UHU, UXU)
+    else:
+        return scnd_frechet_parallel(D2, U, UHU, UXU)
+
+def scnd_frechet_single(D2, U, UHU, UXU):
+    n = U.shape[0]
+
+    D2_UXU = D2 * UXU
+    out = D2_UXU @ UHU.reshape((n, n, 1))
+    out = out.reshape((n, n))
+    out = out + out.T
+    out = U @ out @ U.T
+
+    return out
+
+@nb.njit(parallel=True)
+def scnd_frechet_parallel(D2, U, UHU, UXU):
+    n = U.shape[0]
     out = np.empty((n, n))
 
-    D2_UHU = D2 * UHU
+    for k in nb.prange(n):
+        D2_UXU = D2[k, :, :] * UXU
+        out[:, k] = D2_UXU @ UHU[k, :]
 
-    for k in range(n):
-        out[:, k] = D2_UHU[k, :, :] @ UHU[k, :]
-
-    out *= 2
+    out = out + out.T
     out = U @ out @ U.T
 
     return out
