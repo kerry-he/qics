@@ -258,15 +258,15 @@ class QuantRelEntropy():
         outt = self.z * self.z * Ht + lin.inp(self.DPhiX_vec, outX) + lin.inp(self.DPhiY_vec, outY)      
 
         out[0, :] = outt
-        out[1:self.vn+1, :] = outX
-        out[self.vn+1:, :] = outY          
+        out[self.idx_X, :] = outX
+        out[self.idx_Y, :] = outY          
 
         return out
     
     def third_dir_deriv(self, dirs):
         Ht = dirs[0, :]
-        Hx = sym.vec_to_mat(dirs[1:self.vn+1, :])
-        Hy = sym.vec_to_mat(dirs[self.vn+1:, :])
+        Hx = sym.vec_to_mat(dirs[self.idx_X, :])
+        Hy = sym.vec_to_mat(dirs[self.idx_Y, :])
 
         out = np.empty((self.dim, 1))
 
@@ -282,7 +282,7 @@ class QuantRelEntropy():
         D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
         D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T
         D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.T
-        D2PhiYYH = -scnd_frechet(self.D2y_log, self.Ux, UyHyUy, self.UyXUy)
+        D2PhiYYH = -scnd_frechet(self.D2y_log, self.Uy, UyHyUy, self.UyXUy)
 
         D2PhiXHH = lin.inp(Hx, D2PhiXXH + D2PhiXYH)
         D2PhiYHH = lin.inp(Hy, D2PhiYXH + D2PhiYYH)
@@ -290,9 +290,9 @@ class QuantRelEntropy():
         # Quantum relative entropy third order derivatives
         self.D2x_log = D2_log(self.Dx, self.D1x_log)
         D3PhiXXX =  scnd_frechet(self.D2x_log, self.Ux, UxHxUx, UxHxUx)
-        D3PhiXYY = -scnd_frechet(self.D2y_log, self.Ux, UyHyUy, UyHyUy)
+        D3PhiXYY = -scnd_frechet(self.D2y_log, self.Uy, UyHyUy, UyHyUy)
 
-        D3PhiYYX = -scnd_frechet(self.D2y_log, self.Ux, UyHyUy, UyHxUy)
+        D3PhiYYX = -scnd_frechet(self.D2y_log, self.Uy, UyHyUy, UyHxUy)
         D3PhiYXY = D3PhiYYX
         D3PhiYYY = -thrd_frechet(self.D2y_log, self.Dy, self.Uy, self.UyXUy, UyHyUy, UyHyUy)
         
