@@ -2,7 +2,9 @@ import numpy as np
 import scipy as sp
 import numba as nb
 import math
-from utils import symmetric as sym, linear as lin
+from utils import symmetric as sym
+from utils import linear    as lin
+from utils import mtxgrad   as mgrad
 
 class QuantEntropy():
     def __init__(self, n):
@@ -101,7 +103,7 @@ class QuantEntropy():
         assert not self.hess_aux_updated
         assert self.grad_updated
 
-        self.D1x_log = D1_log(self.Dx, self.log_Dx)
+        self.D1x_log = mgrad.D1_log(self.Dx, self.log_Dx)
 
         self.D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
         self.D1x_comb = self.D1x_log * self.zi + self.D1x_inv
@@ -175,24 +177,3 @@ class QuantEntropy():
             out[1:, [j]] = temp
 
         return out
-
-@nb.njit
-def D1_log(D, log_D):
-    eps = np.finfo(np.float64).eps
-    rteps = np.sqrt(eps)
-
-    n = D.size
-    D1 = np.empty((n, n))
-    
-    for j in range(n):
-        for i in range(j):
-            d_ij = D[i] - D[j]
-            if abs(d_ij) < rteps:
-                D1[i, j] = 2 / (D[i] + D[j])
-            else:
-                D1[i, j] = (log_D[i] - log_D[j]) / d_ij
-            D1[j, i] = D1[i, j]
-
-        D1[j, j] = np.reciprocal(D[j])
-
-    return D1

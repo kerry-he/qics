@@ -3,6 +3,8 @@ import scipy as sp
 import numba as nb
 import math
 from utils import symmetric as sym
+from utils import linear    as lin
+from utils import mtxgrad   as mgrad
 
 class QuantCondEntropy():
     def __init__(self, n0, n1, sys):
@@ -75,7 +77,7 @@ class QuantCondEntropy():
         self.log_X = (self.Ux * self.log_Dx) @ self.Ux.T
         self.log_Y = (self.Uy * self.log_Dy) @ self.Uy.T
         self.log_XY = self.log_X - sym.i_kr(self.log_Y, self.sys, (self.n0, self.n1))
-        self.z = self.t - sym.inner(self.X, self.log_XY)
+        self.z = self.t - lin.inp(self.X, self.log_XY)
 
         self.feas = (self.z > 0)
         return self.feas
@@ -103,8 +105,8 @@ class QuantCondEntropy():
         assert not self.hess_aux_updated
         assert self.grad_updated
 
-        self.D1x_log = D1_log(self.Dx, self.log_Dx)
-        self.D1y_log = D1_log(self.Dy, self.log_Dy)
+        self.D1x_log = mgrad.D1_log(self.Dx, self.log_Dx)
+        self.D1y_log = mgrad.D1_log(self.Dy, self.log_Dy)
 
         self.hess_aux_updated = True
 
@@ -131,7 +133,7 @@ class QuantCondEntropy():
             D2PhiH -= sym.i_kr(self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T, self.sys, (self.n0, self.n1))
 
             # Hessian product of barrier function
-            out[0, j] = (Ht - sym.inner(self.DPhi, Hx)) * self.zi * self.zi
+            out[0, j] = (Ht - lin.inp(self.DPhi, Hx)) * self.zi * self.zi
             temp = -self.DPhi * out[0, j] + D2PhiH * self.zi + self.inv_X @ Hx @ self.inv_X
             out[1:, [j]] = sym.mat_to_vec(temp)
 
@@ -218,7 +220,7 @@ class QuantCondEntropy():
             temp = self.Ux.T @ temp @ self.Ux
             H_inv_w_x = Hxx_inv_x - self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.T
 
-            out[0, j] = Ht * self.z * self.z + sym.inner(H_inv_w_x, self.DPhi)
+            out[0, j] = Ht * self.z * self.z + lin.inp(H_inv_w_x, self.DPhi)
             out[1:, [j]] = sym.mat_to_vec(H_inv_w_x)
 
         return out
@@ -227,8 +229,8 @@ class QuantCondEntropy():
         assert not self.dder3_aux_updated
         assert self.hess_aux_updated
 
-        self.D2x_log = D2_log(self.Dx, self.D1x_log)
-        self.D2y_log = D2_log(self.Dy, self.D1y_log)
+        self.D2x_log = mgrad.D2_log(self.Dx, self.D1x_log)
+        self.D2y_log = mgrad.D2_log(self.Dy, self.D1y_log)
 
         self.dder3_aux_updated = True
 
@@ -252,12 +254,12 @@ class QuantCondEntropy():
         D2PhiH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
         D2PhiH -= sym.i_kr(self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T, self.sys, (self.n0, self.n1))
 
-        D3PhiHH = scnd_frechet(self.D2x_log, self.Ux, UxHxUx, UxHxUx)
-        D3PhiHH -= sym.i_kr(scnd_frechet(self.D2y_log, self.Uy, UyHyUy, UyHyUy), self.sys, (self.n0, self.n1))
+        D3PhiHH = mgrad.scnd_frechet(self.D2x_log, self.Ux, UxHxUx, UxHxUx)
+        D3PhiHH -= sym.i_kr(mgrad.scnd_frechet(self.D2y_log, self.Uy, UyHyUy, UyHyUy), self.sys, (self.n0, self.n1))
 
         # Third derivative of barrier
-        DPhiH = sym.inner(self.DPhi, Hx)
-        D2PhiHH = sym.inner(D2PhiH, Hx)
+        DPhiH = lin.inp(self.DPhi, Hx)
+        D2PhiHH = lin.inp(D2PhiH, Hx)
         chi = Ht - DPhiH
 
         dder3 = np.empty((self.dim, 1))
@@ -270,86 +272,3 @@ class QuantCondEntropy():
         dder3[1:] = sym.mat_to_vec(temp)
 
         return dder3
-
-
-@nb.njit
-def D1_log(D, log_D):
-    eps = np.finfo(np.float64).eps
-    rteps = np.sqrt(eps)
-
-    n = D.size
-    D1 = np.empty((n, n))
-    
-    for j in range(n):
-        for i in range(j):
-            d_ij = D[i] - D[j]
-            if abs(d_ij) < rteps:
-                D1[i, j] = 2 / (D[i] + D[j])
-            else:
-                D1[i, j] = (log_D[i] - log_D[j]) / d_ij
-            D1[j, i] = D1[i, j]
-
-        D1[j, j] = np.reciprocal(D[j])
-
-    return D1
-
-@nb.njit
-def D2_log(D, D1):
-    eps = np.finfo(np.float64).eps
-    rteps = np.sqrt(eps)
-
-    n = D.size
-    D2 = np.zeros((n, n, n))
-
-    for k in range(n):
-        for j in range(k + 1):
-            for i in range(j + 1):
-                d_jk = D[j] - D[k]
-                if abs(d_jk) < rteps:
-                    d_ij = D[i] - D[j]
-                    if abs(d_ij) < rteps:
-                        t = ((3 / (D[i] + D[j] + D[k]))**2) / -2
-                    else:
-                        t = (D1[i, j] - D1[j, k]) / d_ij
-                else:
-                    t = (D1[i, j] - D1[i, k]) / d_jk
-
-                D2[i, j, k] = t
-                D2[i, k, j] = t
-                D2[j, i, k] = t
-                D2[j, k, i] = t
-                D2[k, i, j] = t
-                D2[k, j, i] = t
-
-    return D2
-
-def scnd_frechet(D2, U, UHU, UXU):
-    if D2.shape[0] <= 40:
-        return scnd_frechet_single(D2, U, UHU, UXU)
-    else:
-        return scnd_frechet_parallel(D2, U, UHU, UXU)
-
-def scnd_frechet_single(D2, U, UHU, UXU):
-    n = U.shape[0]
-
-    D2_UXU = D2 * UXU
-    out = D2_UXU @ UHU.reshape((n, n, 1))
-    out = out.reshape((n, n))
-    out = out + out.T
-    out = U @ out @ U.T
-
-    return out
-
-@nb.njit(parallel=True)
-def scnd_frechet_parallel(D2, U, UHU, UXU):
-    n = U.shape[0]
-    out = np.empty((n, n))
-
-    for k in nb.prange(n):
-        D2_UXU = D2[k, :, :] * UXU
-        out[:, k] = D2_UXU @ UHU[k, :]
-
-    out = out + out.T
-    out = U @ out @ U.T
-
-    return out

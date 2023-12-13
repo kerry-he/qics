@@ -11,10 +11,16 @@ def mat_dim(len):
     return side
 
 def mat_to_vec(mat, rt2=None):
-    if mat.shape[0] <= 400:
-        return mat_to_vec_single(mat, rt2)
-    else:
-        return mat_to_vec_parallel(mat, rt2)
+    if mat.ndim == 2:
+        if mat.shape[0] <= 400:
+            return mat_to_vec_single(mat, rt2)
+        else:
+            return mat_to_vec_parallel(mat, rt2)
+    elif mat.ndim == 3:
+        if mat.shape[0] <= 400:
+            return mat_to_vec_multi_single(mat, rt2)
+        else:
+            return mat_to_vec_multi_parallel(mat, rt2)
 
 @nb.njit
 def mat_to_vec_single(mat, rt2):
@@ -52,12 +58,6 @@ def mat_to_vec_parallel(mat, rt2):
                 vec[k] = mat[i, j] * rt2
     
     return vec
-
-def mat_to_vec_multi(mat, rt2=None):
-    if mat.shape[0] <= 400:
-        return mat_to_vec_multi_single(mat, rt2)
-    else:
-        return mat_to_vec_multi_parallel(mat, rt2)
 
 @nb.njit
 def mat_to_vec_multi_single(mat, rt2):
@@ -98,10 +98,16 @@ def mat_to_vec_multi_parallel(mat, rt2):
     return vec
 
 def vec_to_mat(vec, irt2=None):
-    if vec.size <= 1280800:
-        return vec_to_mat_single(vec, irt2)
+    if vec.shape[1] == 1:
+        if vec.size <= 1280800:
+            return vec_to_mat_single(vec, irt2)
+        else:
+            return vec_to_mat_parallel(vec, irt2)
     else:
-        return vec_to_mat_parallel(vec, irt2)
+        if vec.shape[0] <= 1280800:
+            return vec_to_mat_single_multi(vec, irt2)
+        else:
+            return vec_to_mat_parallel_multi(vec, irt2)
 
 @nb.njit
 def vec_to_mat_single(vec, irt2):
