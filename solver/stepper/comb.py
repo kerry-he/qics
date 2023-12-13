@@ -25,27 +25,23 @@ class CombinedStepper():
 
         # Get prediction direction
         self.update_rhs_pred(model, point)
-        self.dir_p.vec[:] = self.syssolver.solve_system(self.rhs, model, mu / point.tau / point.tau).vec
-        self.res.vec[:] = self.rhs.vec - self.syssolver.apply_system(self.dir_p, model, mu / point.tau / point.tau).vec
         res_norm = np.linalg.norm(self.res.vec)
+        res_norm = self.syssolver.solve_system_ir(self.dir_p, self.res, self.rhs, model, mu, point.tau)
 
         # Get TOA prediction direction
         self.update_rhs_pred_toa(model, point, mu, self.dir_p)
-        self.dir_p_toa.vec[:] = self.syssolver.solve_system(self.rhs, model, mu / point.tau / point.tau).vec
-        self.res.vec[:] = self.rhs.vec - self.syssolver.apply_system(self.dir_p_toa, model, mu / point.tau / point.tau).vec
-        res_norm = max(np.linalg.norm(self.res.vec), res_norm)
+        temp_res_norm = self.syssolver.solve_system_ir(self.dir_p_toa, self.res, self.rhs, model, mu, point.tau)
+        res_norm = max(temp_res_norm, res_norm)
 
         # Get centering direction
         self.update_rhs_cent(model, point, mu)
-        self.dir_c.vec[:] = self.syssolver.solve_system(self.rhs, model, mu / point.tau / point.tau).vec
-        self.res.vec[:] = self.rhs.vec - self.syssolver.apply_system(self.dir_c, model, mu / point.tau / point.tau).vec
-        res_norm = max(np.linalg.norm(self.res.vec), res_norm)
+        temp_res_norm = self.syssolver.solve_system_ir(self.dir_c, self.res, self.rhs, model, mu, point.tau)
+        res_norm = max(temp_res_norm, res_norm)
 
         # Get TOA centering direction
         self.update_rhs_cent_toa(model, point, mu, self.dir_c)
-        self.dir_c_toa.vec[:] = self.syssolver.solve_system(self.rhs, model, mu / point.tau / point.tau).vec
-        self.res.vec[:] = self.rhs.vec - self.syssolver.apply_system(self.dir_c_toa, model, mu / point.tau / point.tau).vec
-        res_norm = max(np.linalg.norm(self.res.vec), res_norm)
+        temp_res_norm = self.syssolver.solve_system_ir(self.dir_c_toa, self.res, self.rhs, model, mu, point.tau)
+        res_norm = max(temp_res_norm, res_norm)
 
         point, alpha, success = self.line_search_comb(model, point)
         if not success:

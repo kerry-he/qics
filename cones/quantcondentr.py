@@ -188,7 +188,7 @@ class QuantCondEntropy():
 
         KHxK = UxK @ UxK.T
         Hy_KHxK = Hy_inv - KHxK
-        self.Hy_KHxK_chol = sp.linalg.cho_factor(Hy_KHxK)
+        self.Hy_KHxK_fact = lin.fact(Hy_KHxK)
 
         self.invhess_aux_updated = True
 
@@ -214,7 +214,7 @@ class QuantCondEntropy():
             Hxx_inv_x = self.Ux @ (self.D1x_comb_inv * UxWxUx) @ self.Ux.T
             rhs_y = -sym.p_tr(Hxx_inv_x, self.sys, (self.n0, self.n1))
             temp = sym.mat_to_vec(rhs_y)
-            H_inv_g_y = sp.linalg.cho_solve(self.Hy_KHxK_chol, temp)
+            H_inv_g_y = lin.fact_solve(self.Hy_KHxK_fact, temp)
             temp = sym.i_kr(sym.vec_to_mat(H_inv_g_y), self.sys, (self.n0, self.n1))
 
             temp = self.Ux.T @ temp @ self.Ux

@@ -85,4 +85,4 @@ class PosSemiDefinite():
     def third_dir_deriv(self, dirs):
         assert self.grad_updated
         H = sym.vec_to_mat(dirs)
-        return -2 * self.inv_X @ H @ self.inv_X @ H @ self.inv_X
+        return -2 * sym.mat_to_vec(self.inv_X @ H @ self.inv_X @ H @ self.inv_X)

@@ -2,7 +2,9 @@ import numpy as np
 import scipy as sp
 import numba as nb
 import math
-from utils import symmetric as sym, linear as lin
+from utils import symmetric as sym
+from utils import linear    as lin
+from utils import mtxgrad   as mgrad
 
 class QuantKeyDist():
     def __init__(self, K_list, Z_list):
@@ -156,8 +158,8 @@ class QuantKeyDist():
 
         irt2 = math.sqrt(0.5)
 
-        self.D1kx_log  = D1_log(self.Dkx, self.log_Dkx)
-        self.D1zkx_log = D1_log(self.Dzkx, self.log_Dzkx)
+        self.D1kx_log  = mgrad.D1_log(self.Dkx, self.log_Dkx)
+        self.D1zkx_log = mgrad.D1_log(self.Dzkx, self.log_Dzkx)
 
         # Hessians of quantum relative entropy
         invXX  = np.empty((self.vni, self.vni))
@@ -236,23 +238,52 @@ class QuantKeyDist():
 
         return out
 
-@nb.njit
-def D1_log(D, log_D):
-    eps = np.finfo(np.float64).eps
-    rteps = np.sqrt(eps)
+    def update_dder3_aux(self):
+        assert not self.dder3_aux_updated
+        assert self.hess_aux_updated
 
-    n = D.size
-    D1 = np.empty((n, n))
-    
-    for j in range(n):
-        for i in range(j):
-            d_ij = D[i] - D[j]
-            if abs(d_ij) < rteps:
-                D1[i, j] = 2 / (D[i] + D[j])
-            else:
-                D1[i, j] = (log_D[i] - log_D[j]) / d_ij
-            D1[j, i] = D1[i, j]
+        self.D2kx_log   = mgrad.D2_log(self.Dkx, self.D1kx_log)
+        self.D2zkx_log  = mgrad.D2_log(self.Dzkx, self.D1zkx_log)
 
-        D1[j, j] = np.reciprocal(D[j])
+        self.dder3_aux_updated = True
 
-    return D1
+        return
+
+    def third_dir_deriv(self, dirs):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+        if not self.dder3_aux_updated:
+            self.update_dder3_aux()
+
+        Ht   = dirs[0]
+        Hx   = sym.vec_to_mat(dirs[1:, [0]])
+        Hkx  = sym.vec_to_mat(self.K  @ dirs[1:, [0]])
+        Hzkx = sym.vec_to_mat(self.ZK @ dirs[1:, [0]])
+        Hx_vec = dirs[1:, [0]]
+
+        UkxHkxUkx    = self.Ukx.T @ Hkx @ self.Ukx
+        UzkxHzkxUzkx = self.Uzkx.T @ Hzkx @ self.Uzkx
+
+        # Quantum conditional entropy oracles
+        D2PhiH  = self.K.T  @ sym.mat_to_vec(self.Ukx @ (self.D1kx_log * UkxHkxUkx) @ self.Ukx.T)
+        D2PhiH -= self.ZK.T @ sym.mat_to_vec(self.Uzkx @ (self.D1zkx_log * UzkxHzkxUzkx) @ self.Uzkx.T)
+
+        D3PhiHH  = self.K.T  @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2kx_log, self.Ukx, UkxHkxUkx, UkxHkxUkx))
+        D3PhiHH -= self.ZK.T @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2zkx_log, self.Uzkx, UzkxHzkxUzkx, UzkxHzkxUzkx))
+
+        # Third derivative of barrier
+        DPhiH = lin.inp(self.DPhi, Hx_vec)
+        D2PhiHH = lin.inp(D2PhiH, Hx_vec)
+        chi = Ht - DPhiH
+
+        dder3 = np.empty((self.dim, 1))
+        dder3[0] = -2 * (self.zi**3) * (chi**2) - (self.zi**2) * D2PhiHH
+
+        temp = -dder3[0] * self.DPhi
+        temp -= 2 * (self.zi**2) * chi * D2PhiH
+        temp += self.zi * D3PhiHH
+        temp -= 2 * sym.mat_to_vec(self.inv_X @ Hx @ self.inv_X @ Hx @ self.inv_X)
+        dder3[1:] = temp
+
+        return dder3

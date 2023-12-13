@@ -2,7 +2,9 @@ import numpy as np
 import scipy as sp
 import numba as nb
 import math
-from utils import symmetric as sym, linear as lin
+from utils import symmetric as sym
+from utils import linear    as lin
+from utils import mtxgrad   as mgrad
 
 class QuantMutualInf():
     def __init__(self, V, no):
@@ -140,9 +142,9 @@ class QuantMutualInf():
 
         irt2 = math.sqrt(0.5)
 
-        self.D1x_log   = D1_log(self.Dx, self.log_Dx)
-        self.D1nx_log  = D1_log(self.Dnx, self.log_Dnx)
-        self.D1ncx_log = D1_log(self.Dncx, self.log_Dncx)
+        self.D1x_log   = mgrad.D1_log(self.Dx, self.log_Dx)
+        self.D1nx_log  = mgrad.D1_log(self.Dnx, self.log_Dnx)
+        self.D1ncx_log = mgrad.D1_log(self.Dncx, self.log_Dncx)
 
         # Hessians of quantum relative entropy
         D2PhiX = np.empty((self.vni, self.vni))
@@ -223,31 +225,61 @@ class QuantMutualInf():
         if not self.invhess_aux_updated:
             self.update_invhessprod_aux()
 
-        p = np.size(dirs, 1)
-        out = np.empty((self.dim, p))
+        return lin.fact_solve(self.hess_fact, dirs)
 
-        for j in range(p):
-            out[:, j] = lin.fact_solve(self.hess_fact, dirs[:, j])
+    def update_dder3_aux(self):
+        assert not self.dder3_aux_updated
+        assert self.hess_aux_updated
 
-        return out
+        self.D2x_log   = mgrad.D2_log(self.Dx, self.D1x_log)
+        self.D2nx_log  = mgrad.D2_log(self.Dnx, self.D1nx_log)
+        self.D2ncx_log = mgrad.D2_log(self.Dncx, self.D1ncx_log)
 
-@nb.njit
-def D1_log(D, log_D):
-    eps = np.finfo(np.float64).eps
-    rteps = np.sqrt(eps)
+        self.dder3_aux_updated = True
 
-    n = D.size
-    D1 = np.empty((n, n))
-    
-    for j in range(n):
-        for i in range(j):
-            d_ij = D[i] - D[j]
-            if abs(d_ij) < rteps:
-                D1[i, j] = 2 / (D[i] + D[j])
-            else:
-                D1[i, j] = (log_D[i] - log_D[j]) / d_ij
-            D1[j, i] = D1[i, j]
+        return
 
-        D1[j, j] = np.reciprocal(D[j])
+    def third_dir_deriv(self, dirs):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+        if not self.dder3_aux_updated:
+            self.update_dder3_aux()
 
-    return D1
+        Ht   = dirs[0]
+        Hx   = sym.vec_to_mat(dirs[1:, [0]])
+        Hnx  = sym.vec_to_mat(self.N @ dirs[1:, [0]])
+        Hncx = sym.vec_to_mat(self.Nc @ dirs[1:, [0]])
+        trH  = np.trace(Hx)
+        Hx_vec = dirs[1:, [0]]
+
+        UxHxUx       = self.Ux.T @ Hx @ self.Ux
+        UnxHnxUnx    = self.Unx.T @ Hnx @ self.Unx
+        UncxHncxUncx = self.Uncx.T @ Hncx @ self.Uncx
+
+        # Quantum conditional entropy oracles
+        D2PhiH  =             sym.mat_to_vec(self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T)
+        D2PhiH += self.N.T  @ sym.mat_to_vec(self.Unx @ (self.D1nx_log * UnxHnxUnx) @ self.Unx.T)
+        D2PhiH -= self.Nc.T @ sym.mat_to_vec(self.Uncx @ (self.D1ncx_log * UncxHncxUncx) @ self.Uncx.T)
+        D2PhiH -= (trH / self.trX) * self.tr.T
+
+        D3PhiHH  =             sym.mat_to_vec(mgrad.scnd_frechet(self.D2x_log, self.Ux, UxHxUx, UxHxUx))
+        D3PhiHH += self.N.T  @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2nx_log, self.Unx, UnxHnxUnx, UnxHnxUnx))
+        D3PhiHH -= self.Nc.T @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2ncx_log, self.Uncx, UncxHncxUncx, UncxHncxUncx))
+        D3PhiHH += (trH / self.trX) ** 2 * self.tr.T
+
+        # Third derivative of barrier
+        DPhiH = lin.inp(self.DPhi, Hx_vec)
+        D2PhiHH = lin.inp(D2PhiH, Hx_vec)
+        chi = Ht - DPhiH
+
+        dder3 = np.empty((self.dim, 1))
+        dder3[0] = -2 * (self.zi**3) * (chi**2) - (self.zi**2) * D2PhiHH
+
+        temp = -dder3[0] * self.DPhi
+        temp -= 2 * (self.zi**2) * chi * D2PhiH
+        temp += self.zi * D3PhiHH
+        temp -= 2 * sym.mat_to_vec(self.inv_X @ Hx @ self.inv_X @ Hx @ self.inv_X)
+        dder3[1:] = temp
+
+        return dder3

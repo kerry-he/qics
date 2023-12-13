@@ -37,6 +37,39 @@ class SysSolver():
 
         return
 
+    def solve_system_ir(self, dir, res, rhs, model, mu, tau):
+        temp = point.Point(model)
+
+        # Solve system
+        dir.vec[:] = self.solve_system(rhs, model, mu / tau / tau).vec
+
+        # Check residuals of solve
+        res.vec[:] = rhs.vec - self.apply_system(dir, model, mu / tau / tau).vec
+        res_norm = np.linalg.norm(res.vec)
+
+        # Iterative refinement
+        iter_refine_count = 0
+        while res_norm > 1e-8:
+            self.solve_system(res, model, mu / tau / tau)
+            temp.vec[:] = dir.vec + self.sol.vec
+            res.vec[:] = rhs.vec - self.apply_system(temp, model, mu / tau / tau).vec
+            res_norm_new = np.linalg.norm(res.vec)
+
+            # Check if iterative refinement made things worse
+            if res_norm_new > res_norm:
+                break
+
+            dir.vec[:] = temp.vec
+            res_norm = res_norm_new
+
+            iter_refine_count += 1
+
+            if iter_refine_count > 5:
+                break
+
+        return res_norm
+
+
     def solve_system(self, rhs, model, mu_tau2):
         if model.use_G:
             return self.solve_system_with_G(rhs, model, mu_tau2)

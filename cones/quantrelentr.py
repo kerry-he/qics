@@ -129,8 +129,8 @@ class QuantRelEntropy():
         out = np.empty((self.dim, p))
 
         Ht = dirs[0, :]
-        Hx = sym.vec_to_mat(dirs[1:self.vn+1, :])
-        Hy = sym.vec_to_mat(dirs[self.vn+1:, :])
+        Hx = sym.vec_to_mat_multi(dirs[1:self.vn+1, :])
+        Hy = sym.vec_to_mat_multi(dirs[self.vn+1:, :])
 
         UxHxUx = self.Ux.T @ Hx @ self.Ux
         UyHxUy = self.Uy.T @ Hx @ self.Uy
@@ -140,18 +140,21 @@ class QuantRelEntropy():
         D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
         D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T
         D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.T
-        D2PhiYYH = -mgrad.scnd_frechet(self.D2y_log, self.Uy, UyHyUy, self.UyXUy)
+        # @TODO: Make vectorized operations better/prettier
+        D2PhiYYH = np.empty((p, self.n, self.n))
+        for k in range(p):
+            D2PhiYYH[k, :, :] = -mgrad.scnd_frechet(self.D2y_log, self.Uy, UyHyUy[k, :, :], self.UyXUy)
         
         # Hessian product of barrier function
         out[0, :] = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
 
         out[1:self.vn+1, :]  = -out[0, :] * self.DPhiX_vec
-        out[1:self.vn+1, :] +=  sym.mat_to_vec(self.zi * D2PhiXXH + self.inv_X @ Hx @ self.inv_X)
-        out[1:self.vn+1, :] +=  self.zi * sym.mat_to_vec(D2PhiXYH)
+        out[1:self.vn+1, :] +=  sym.mat_to_vec_multi(self.zi * D2PhiXXH + self.inv_X @ Hx @ self.inv_X)
+        out[1:self.vn+1, :] +=  self.zi * sym.mat_to_vec_multi(D2PhiXYH)
 
         out[self.vn+1:, :]  = -out[0, :] * self.DPhiY_vec
-        out[self.vn+1:, :] +=  self.zi * sym.mat_to_vec(D2PhiYXH)
-        out[self.vn+1:, :] +=  sym.mat_to_vec(self.zi * D2PhiYYH + self.inv_Y @ Hy @ self.inv_Y)
+        out[self.vn+1:, :] +=  self.zi * sym.mat_to_vec_multi(D2PhiYXH)
+        out[self.vn+1:, :] +=  sym.mat_to_vec_multi(self.zi * D2PhiYYH + self.inv_Y @ Hy @ self.inv_Y)
 
         return out
     
@@ -240,20 +243,20 @@ class QuantRelEntropy():
         Wx = Hx + Ht * self.DPhiX_vec
         Wy = Hy + Ht * self.DPhiY_vec
 
-        Wx_mat = sym.vec_to_mat(Wx)
+        Wx_mat = sym.vec_to_mat_multi(Wx)
         temp = self.Ux.T @ Wx_mat @ self.Ux
         temp = self.UyUx @ (self.D1x_comb_inv * temp) @ self.UyUx.T
         temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
-        temp_vec = sym.mat_to_vec(temp)
+        temp_vec = sym.mat_to_vec_multi(temp)
         outY = self.hess_schur_inv @ (Wy - temp_vec)
 
-        temp2 = sym.vec_to_mat(outY)
+        temp2 = sym.vec_to_mat_multi(outY)
         temp = self.Uy.T @ temp2 @ self.Uy
         temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
         temp = Wx_mat - temp
         temp = self.Ux.T @ temp @ self.Ux
         temp = self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.T
-        outX = sym.mat_to_vec(temp)
+        outX = sym.mat_to_vec_multi(temp)
 
         outt = self.z * self.z * Ht + lin.inp(self.DPhiX_vec, outX) + lin.inp(self.DPhiY_vec, outY)      
 
@@ -263,14 +266,30 @@ class QuantRelEntropy():
 
         return out
     
+    def update_dder3_aux(self):
+        assert not self.dder3_aux_updated
+        assert self.hess_aux_updated
+
+        self.zi3 = self.zi2 * self.zi
+        self.D2x_log = mgrad.D2_log(self.Dx, self.D1x_log)
+
+        self.dder3_aux_updated = True
+
+        return
+
     def third_dir_deriv(self, dirs):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+        if not self.dder3_aux_updated:
+            self.update_dder3_aux()
+
         Ht = dirs[0, :]
         Hx = sym.vec_to_mat(dirs[self.idx_X, :])
         Hy = sym.vec_to_mat(dirs[self.idx_Y, :])
 
         out = np.empty((self.dim, 1))
 
-        self.zi3 = self.zi2 * self.zi
         chi = Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)
         chi2 = chi * chi
 
@@ -288,7 +307,6 @@ class QuantRelEntropy():
         D2PhiYHH = lin.inp(Hy, D2PhiYXH + D2PhiYYH)
 
         # Quantum relative entropy third order derivatives
-        self.D2x_log = mgrad.D2_log(self.Dx, self.D1x_log)
         D3PhiXXX =  mgrad.scnd_frechet(self.D2x_log, self.Ux, UxHxUx, UxHxUx)
         D3PhiXYY = -mgrad.scnd_frechet(self.D2y_log, self.Uy, UyHyUy, UyHyUy)
 
