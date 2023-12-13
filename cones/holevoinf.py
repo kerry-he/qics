@@ -1,8 +1,10 @@
 import numpy as np
 import scipy as sp
 import numba as nb
-import math
-from utils import symmetric as sym, linear as lin, quantum as quant
+from utils import symmetric as sym
+from utils import linear    as lin
+from utils import mtxgrad   as mgrad
+from utils import quantum   as quant
 
 class HolevoInf():
     def __init__(self, X_list):
@@ -97,18 +99,20 @@ class HolevoInf():
         assert not self.hess_aux_updated
         assert self.grad_updated
 
-        irt2 = math.sqrt(0.5)
-
-        D1x_log = D1_log(self.Dx, self.log_Dx)
-        sqrt_D1x_log = np.sqrt(sym.mat_to_vec(D1x_log, rt2=1.0))
+        self.D1x_log = mgrad.D1_log(self.Dx, self.log_Dx)
+        sqrt_D1x_log = np.sqrt(sym.mat_to_vec(self.D1x_log, rt2=1.0))
 
         # Hessians of quantum relative entropy
-        UXU_list = np.empty((self.n, self.vN))
+        self.UXU_list     = np.empty((self.n, self.N, self.N))
+        self.UXU_vec_list = np.empty((self.n, self.N**2))
+        UXU_list_scaled = np.empty((self.n, self.vN))
         for i in range(self.n):
-            UXU_list[[i], :] = (sym.mat_to_vec(self.Ux.T @ self.X_list[i] @ self.Ux) * sqrt_D1x_log).T
-
-        D2Phi = UXU_list @ UXU_list.T
-        D2Phi -= np.reciprocal(self.sum_p)
+            self.UXU_list[i, :, :]    = self.Ux.T @ self.X_list[i] @ self.Ux
+            self.UXU_vec_list[[i], :] = np.matrix.flatten(self.UXU_list[i, :, :])
+            UXU_list_scaled[[i], :]   = (sym.mat_to_vec(self.UXU_list[i, :, :]) * sqrt_D1x_log).T
+        
+        self.D2Phi = UXU_list_scaled @ UXU_list_scaled.T
+        self.D2Phi -= np.reciprocal(self.sum_p)
 
         # Preparing other required variables
         zi2 = self.zi * self.zi
@@ -118,7 +122,7 @@ class HolevoInf():
         self.hess[0, 0] = zi2
         self.hess[1:, [0]] = -zi2 * self.DPhi
         self.hess[[0], 1:] = self.hess[1:, [0]].T
-        self.hess[1:, 1:] = zi2 * np.outer(self.DPhi, self.DPhi) + self.zi * D2Phi + invXX
+        self.hess[1:, 1:] = zi2 * np.outer(self.DPhi, self.DPhi) + self.zi * self.D2Phi + invXX
 
         self.hess_aux_updated = True
 
@@ -156,24 +160,62 @@ class HolevoInf():
             out[:, j] = lin.fact_solve(self.hess_fact, dirs[:, j])
 
         return out
-
-@nb.njit
-def D1_log(D, log_D):
-    eps = np.finfo(np.float64).eps
-    rteps = np.sqrt(eps)
-
-    n = D.size
-    D1 = np.empty((n, n))
     
-    for j in range(n):
-        for i in range(j):
-            d_ij = D[i] - D[j]
-            if abs(d_ij) < rteps:
-                D1[i, j] = 2 / (D[i] + D[j])
-            else:
-                D1[i, j] = (log_D[i] - log_D[j]) / d_ij
-            D1[j, i] = D1[i, j]
+    def update_dder3_aux(self):
+        assert not self.dder3_aux_updated
+        assert self.hess_aux_updated
 
-        D1[j, j] = np.reciprocal(D[j])
+        self.D2x_log = mgrad.D2_log(self.Dx, self.D1x_log)
 
-    return D1
+        self.dder3_aux_updated = True
+
+        return
+
+    def third_dir_deriv(self, dirs):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+        if not self.dder3_aux_updated:
+            self.update_dder3_aux()
+
+        Ht = dirs[0]
+        Hp = dirs[1:, [0]]
+
+        # Quantum conditional entropy oracles
+        D2PhiH = self.D2Phi @ Hp
+
+        D3 = dder3_helper(self.D2x_log, self.UXU_list, self.UXU_vec_list)
+        D3PhiHH = Hp.T @ (D3 + np.reciprocal(self.sum_p * self.sum_p)) @ Hp
+        D3PhiHH = D3PhiHH.reshape((self.n, 1))
+
+        # Third derivative of barrier
+        DPhiH = lin.inp(self.DPhi, Hp)
+        D2PhiHH = lin.inp(D2PhiH, Hp)
+        chi = Ht - DPhiH
+
+        dder3 = np.empty((self.dim, 1))
+        dder3[0] = -2 * (self.zi**3) * (chi**2) - (self.zi**2) * D2PhiHH
+
+        temp = -dder3[0] * self.DPhi
+        temp -= 2 * (self.zi**2) * chi * D2PhiH
+        temp += self.zi * D3PhiHH
+        temp -= 2 * (Hp ** 2) / (self.p ** 3)
+        dder3[1:] = temp
+
+        return dder3
+    
+def dder3_helper(D2, UXU_list, UXU_vec_list):
+    n = D2.shape[0]
+
+    out = np.zeros((n, n, n))
+    temp1 = np.empty_like(UXU_vec_list)
+
+    for i in range(n):
+        for j in range(n):
+            D2_ij = D2[j, :, :] * UXU_list[i, :, :]
+            temp1[:, j*n:(j+1)*n] = UXU_vec_list[:, j*n:(j+1)*n] @ D2_ij
+
+        temp = temp1 @ UXU_vec_list.T
+        out[i, :, :] = temp + temp.T
+
+    return out
