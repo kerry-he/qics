@@ -181,12 +181,16 @@ class HolevoInf():
         Ht = dirs[0]
         Hp = dirs[1:, [0]]
 
+        H = np.sum(np.reshape(Hp, (self.n, 1, 1)) * self.X_list, 0)
+        UHU = self.Ux.T @ H @ self.Ux
+
         # Quantum conditional entropy oracles
         D2PhiH = self.D2Phi @ Hp
 
-        D3 = dder3_helper(self.D2x_log, self.UXU_list, self.UXU_vec_list)
-        D3PhiHH = Hp.T @ (D3 + np.reciprocal(self.sum_p * self.sum_p)) @ Hp
-        D3PhiHH = D3PhiHH.reshape((self.n, 1))
+        D3 = mgrad.scnd_frechet(self.D2x_log, np.eye(self.N), UHU, UHU)
+        D3PhiHH = np.full((self.n, 1), np.sum(np.outer(Hp, Hp)) / self.sum_p / self.sum_p)
+        for i in range(self.n):
+            D3PhiHH[i] += lin.inp(D3, self.UXU_list[i, :, :])
 
         # Third derivative of barrier
         DPhiH = lin.inp(self.DPhi, Hp)
@@ -203,19 +207,3 @@ class HolevoInf():
         dder3[1:] = temp
 
         return dder3
-    
-def dder3_helper(D2, UXU_list, UXU_vec_list):
-    n = D2.shape[0]
-
-    out = np.zeros((n, n, n))
-    temp1 = np.empty_like(UXU_vec_list)
-
-    for i in range(n):
-        for j in range(n):
-            D2_ij = D2[j, :, :] * UXU_list[i, :, :]
-            temp1[:, j*n:(j+1)*n] = UXU_vec_list[:, j*n:(j+1)*n] @ D2_ij
-
-        temp = temp1 @ UXU_vec_list.T
-        out[i, :, :] = temp + temp.T
-
-    return out
