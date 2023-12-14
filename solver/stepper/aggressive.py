@@ -35,29 +35,7 @@ class AggressiveStepper():
             if verbose:
                 print("  | %5s" % "cent", end="")
 
-        self.dir.vec[:] = self.syssolver.solve_system(self.rhs, model, mu / point.tau / point.tau).vec
-        self.res.vec[:] = self.rhs.vec - self.syssolver.apply_system(self.dir, model, mu / point.tau / point.tau).vec
-        res_norm = np.linalg.norm(self.res.vec)
-
-        # Iterative refinement
-        iter_refine_count = 0
-        while res_norm > 1e-8:
-            self.syssolver.solve_system(self.res, model, mu / point.tau / point.tau)
-            self.temp.vec[:] = self.dir.vec + self.syssolver.sol.vec
-            self.res.vec[:] = self.rhs.vec - self.syssolver.apply_system(self.temp, model, mu / point.tau / point.tau).vec
-            res_norm_new = np.linalg.norm(self.res.vec)
-
-            # Check if iterative refinement made things worse
-            if res_norm_new > res_norm:
-                break
-
-            self.dir.vec[:] = self.temp.vec
-            res_norm = res_norm_new
-
-            iter_refine_count += 1
-
-            if iter_refine_count > 5:
-                break
+        res_norm = self.syssolver.solve_system_ir(self.dir, self.res, self.rhs, model, mu, point.tau)
 
 
         print(" %10.3e" % (res_norm), end="")

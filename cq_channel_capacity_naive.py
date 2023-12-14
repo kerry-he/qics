@@ -31,12 +31,10 @@ c[n] = 1.
 
 G1 = np.hstack((np.eye(n), np.zeros((n, 1))))
 G2 = np.hstack((np.zeros((1, n)), np.ones((1, 1))))
-G3 = np.zeros((1, n + 1))
-G4 = np.hstack((alphabet_vec, np.zeros((sn, 1))))
-G = -np.vstack((G1, G2, G3, G4))
+G3 = np.hstack((alphabet_vec, np.zeros((sn, 1))))
+G = -np.vstack((G1, G2, G3))
 
-h = np.zeros((n + 1 + 1 + sn, 1))
-h[n + 1] = 1.
+h = np.zeros((n + 1 + sn, 1))
 
 # Input into model and solve
 cones = [nonnegorthant.NonNegOrthant(n), quantentr.QuantEntropy(n)]
