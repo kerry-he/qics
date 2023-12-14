@@ -72,7 +72,10 @@ class SysSolver():
 
     def solve_system(self, rhs, model, mu_tau2):
         if model.use_G:
-            return self.solve_system_with_G(rhs, model, mu_tau2)
+            if model.use_A:
+                return self.solve_system_with_G(rhs, model, mu_tau2)
+            else:
+                return self.solve_system_without_A(rhs, model, mu_tau2)
         else:
             return self.solve_system_without_G(rhs, model, mu_tau2)
     
@@ -99,6 +102,28 @@ class SysSolver():
         self.sol.kappa[0] = rhs.kappa - mu_tau2 * self.sol.tau[0]
 
         return self.sol
+
+    def solve_system_without_A(self, rhs, model, mu_tau2):
+        # Solve Newton system using elimination
+        # NOTE: mu has already been accounted for in H
+
+        temp_vec = rhs.x - model.G.T @ (blk_hess_prod(rhs.z, model) + rhs.s)
+        x_r = lin.fact_solve(self.GHG_fact, temp_vec)
+        z_r = blk_hess_prod(rhs.z + model.G @ x_r, model) + rhs.s
+
+        temp_vec = model.c - model.G.T @ blk_hess_prod(model.h, model)
+        x_b = lin.fact_solve(self.GHG_fact, temp_vec)
+        z_b = blk_hess_prod(model.h + model.G @ x_b, model)
+
+        self.sol.tau[0]   = rhs.tau + rhs.kappa + lin.inp(model.c, x_r) + lin.inp(model.h, z_r)
+        self.sol.tau[0]   = self.sol.tau[0] / (mu_tau2 + lin.inp(model.c, x_b) + lin.inp(model.h, z_b))
+
+        self.sol.x[:]     = x_r - self.sol.tau[0] * x_b
+        self.sol.z[:]     = z_r - self.sol.tau[0] * z_b
+        self.sol.s[:]     = blk_invhess_prod(rhs.s - self.sol.z, model)
+        self.sol.kappa[0] = rhs.kappa - mu_tau2 * self.sol.tau[0]
+
+        return self.sol        
 
     def solve_system_with_G(self, rhs, model, mu_tau2):
         # Solve Newton system using elimination

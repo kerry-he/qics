@@ -12,15 +12,15 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Problem data
-n = 25
+n = 100
 vn = sym.vec_dim(n)
 M = 2 * np.eye(n)
 
 # Build problem model
-A = np.array([[]])
-b = np.array([[]])
+A = np.zeros((0, n))
+b = np.zeros((0, 1))
 
-c = np.zeros((1 + vn, 1))
+c = np.zeros((n, 1))
 c[0] = 1.
 
 G1 = np.hstack((np.ones((1, 1)), np.zeros((1, n - 1))))
@@ -42,10 +42,10 @@ cones = [quantrelentr.QuantRelEntropy(n)]
 model = model.Model(c, A, b, G, h, cones=cones)
 solver = solver.Solver(model)
 
-# profiler = cProfile.Profile()
-# profiler.enable()
+profiler = cProfile.Profile()
+profiler.enable()
 
 solver.solve()
 
-# profiler.disable()
-# profiler.dump_stats("example.stats")
+profiler.disable()
+profiler.dump_stats("example.stats")
