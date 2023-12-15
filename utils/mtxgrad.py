@@ -139,3 +139,50 @@ def thrd_frechet(D2, D, U, H1, H2, H3):
             out[j, i] = out[i, j]
 
     return U @ out @ U.T
+
+@nb.njit
+def get_S_matrix(D2_UXU, rt2):
+    n = D2_UXU.shape[0]
+    vn = n * (n + 1) // 2
+    S = np.zeros((vn, vn))
+    col = 0
+
+    for j in range(n):
+
+        for i in range(j):
+            # Column corresponding to unit vector (Hij + Hji) / sqrt(2)
+            # Increment rows
+            for k in range(j):
+                row = k + (j * (j + 1)) // 2
+                S[row, col] = D2_UXU[j, k, i]
+            row = j + (j * (j + 1)) // 2    
+            S[row, col] = D2_UXU[j, j, i] * rt2
+            for k in range(j + 1, n):
+                row = j + (k * (k + 1)) // 2
+                S[row, col] = D2_UXU[j, k, i]
+
+            # Increment columns
+            for k in range(i):
+                row = k + (i * (i + 1)) // 2
+                S[row, col] += D2_UXU[i, k, j]
+            row = i + (i * (i + 1)) // 2    
+            S[row, col] = D2_UXU[i, j, i] * rt2
+            for k in range(i + 1, n):
+                row = i + (k * (k + 1)) // 2
+                S[row, col] += D2_UXU[i, k, j]
+
+            col += 1
+
+        # Column corresponding to unit vector Hjj
+        for k in range(j):
+            row = k + (j * (j + 1)) // 2
+            S[row, col] = D2_UXU[j, j, k] * rt2
+        row = j + (j * (j + 1)) // 2    
+        S[row, col] = 2 * D2_UXU[j, j, j]
+        for k in range(j + 1, n):
+            row = j + (k * (k + 1)) // 2
+            S[row, col] = D2_UXU[j, j, k] * rt2
+
+        col += 1
+
+    return S
