@@ -130,8 +130,8 @@ class QuantRelEntropy():
 
         for k in range(p):
             Ht = dirs[0, k]
-            Hx = sym.vec_to_mat(dirs[1:self.vn+1, [k]])
-            Hy = sym.vec_to_mat(dirs[self.vn+1:, [k]])
+            Hx = sym.vec_to_mat(dirs[self.idx_X, [k]])
+            Hy = sym.vec_to_mat(dirs[self.idx_Y, [k]])
 
             UxHxUx = self.Ux.T @ Hx @ self.Ux
             UyHxUy = self.Uy.T @ Hx @ self.Uy

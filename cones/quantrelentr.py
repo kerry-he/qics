@@ -128,33 +128,31 @@ class QuantRelEntropy():
         p = np.size(dirs, 1)
         out = np.empty((self.dim, p))
 
-        Ht = dirs[0, :]
-        Hx = sym.vec_to_mat_multi(dirs[1:self.vn+1, :])
-        Hy = sym.vec_to_mat_multi(dirs[self.vn+1:, :])
-
-        UxHxUx = self.Ux.T @ Hx @ self.Ux
-        UyHxUy = self.Uy.T @ Hx @ self.Uy
-        UyHyUy = self.Uy.T @ Hy @ self.Uy
-
-        # Hessian product of conditional entropy
-        D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
-        D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T
-        D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.T
-        # @TODO: Make vectorized operations better/prettier
-        D2PhiYYH = np.empty((p, self.n, self.n))
         for k in range(p):
-            D2PhiYYH[k, :, :] = -mgrad.scnd_frechet(self.D2y_log, self.Uy, UyHyUy[k, :, :], self.UyXUy)
-        
-        # Hessian product of barrier function
-        out[0, :] = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
+            Ht = dirs[0, k]
+            Hx = sym.vec_to_mat(dirs[self.idx_X, [k]])
+            Hy = sym.vec_to_mat(dirs[self.idx_Y, [k]])
 
-        out[1:self.vn+1, :]  = -out[0, :] * self.DPhiX_vec
-        out[1:self.vn+1, :] +=  sym.mat_to_vec_multi(self.zi * D2PhiXXH + self.inv_X @ Hx @ self.inv_X)
-        out[1:self.vn+1, :] +=  self.zi * sym.mat_to_vec_multi(D2PhiXYH)
+            UxHxUx = self.Ux.T @ Hx @ self.Ux
+            UyHxUy = self.Uy.T @ Hx @ self.Uy
+            UyHyUy = self.Uy.T @ Hy @ self.Uy
 
-        out[self.vn+1:, :]  = -out[0, :] * self.DPhiY_vec
-        out[self.vn+1:, :] +=  self.zi * sym.mat_to_vec_multi(D2PhiYXH)
-        out[self.vn+1:, :] +=  sym.mat_to_vec_multi(self.zi * D2PhiYYH + self.inv_Y @ Hy @ self.inv_Y)
+            # Hessian product of conditional entropy
+            D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
+            D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T
+            D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.T
+            D2PhiYYH = -mgrad.scnd_frechet(self.D2y_log, self.Uy, UyHyUy, self.UyXUy)
+            
+            # Hessian product of barrier function
+            out[0, k] = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
+
+            out[self.idx_X, [k]]  = -out[0, k] * self.DPhiX_vec
+            out[self.idx_X, [k]] +=  sym.mat_to_vec(self.zi * D2PhiXXH + self.inv_X @ Hx @ self.inv_X)
+            out[self.idx_X, [k]] +=  self.zi * sym.mat_to_vec(D2PhiXYH)
+
+            out[self.idx_Y, [k]]  = -out[0, k] * self.DPhiY_vec
+            out[self.idx_Y, [k]] +=  self.zi * sym.mat_to_vec(D2PhiYXH)
+            out[self.idx_Y, [k]] +=  sym.mat_to_vec(self.zi * D2PhiYYH + self.inv_Y @ Hy @ self.inv_Y)
 
         return out
     
