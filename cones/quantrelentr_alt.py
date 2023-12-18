@@ -165,28 +165,32 @@ class QuantRelEntropy():
         irt2 = math.sqrt(0.5)
 
         self.D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
-
         self.D1x_comb_inv = np.reciprocal(self.zi * self.D1x_log + self.D1x_inv)
-        self.D1x_comb_inv_sqrt = np.sqrt(self.D1x_comb_inv)
 
         # Hessians of quantum relative entropy
-        Hyy_Hxx = np.empty((self.vn, self.vn))
+        Hxy_Hxx_Hxy = np.empty((self.vn, self.vn))
 
         self.UyUx = self.Uy.T @ self.Ux
 
         # D2PhiYY
         Hyy = -self.zi * mgrad.get_S_matrix(self.D2y_log * self.UyXUy, rt2)
 
+        # @TODO: Investigate how to make these loops faster
         k = 0
         for j in range(self.n):
             for i in range(j + 1):
-                # Hyx @ Hxx^-0.5
-                temp = np.outer(self.UyUx.T[i, :], self.UyUx.T[j, :])
+                # Hyx @ Hxx @ Hyx
+                temp = np.outer(self.UyUx[i, :], self.UyUx[j, :])
                 if i != j:
                     temp = temp + temp.T
-                    temp *= irt2
-                temp = self.zi * self.D1y_log * temp
-                Hyy_Hxx[:, [k]] = sym.mat_to_vec(temp) * self.D1x_comb_inv_sqrt[i, j]
+                    temp *= (irt2 * self.zi2 * self.D1y_log[i, j])
+                else:
+                    temp *= (self.zi2 * self.D1y_log[i, j])
+                temp = self.D1x_comb_inv * temp
+                temp = self.UyUx @ temp @ self.UyUx.T
+                temp = self.D1y_log * temp
+
+                Hxy_Hxx_Hxy[:, [k]] = sym.mat_to_vec(temp)
 
                 # invYY
                 Hyy[k, k] += np.reciprocal(self.Dy[i] * self.Dy[j])
@@ -194,8 +198,8 @@ class QuantRelEntropy():
                 k += 1
 
         # Preparing other required variables
-        hess_schur = Hyy - Hyy_Hxx @ Hyy_Hxx.T
-        self.hess_schur_inv = np.linalg.inv(hess_schur)
+        hess_schur = Hyy - (Hxy_Hxx_Hxy + Hxy_Hxx_Hxy.T) / 2
+        self.hess_schur_inv = lin.fact(hess_schur)
 
         self.invhess_aux_updated = True
 
@@ -225,7 +229,7 @@ class QuantRelEntropy():
             temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
             temp = self.Uy.T @ (Wy - temp) @ self.Uy
             temp_vec = sym.mat_to_vec(temp)
-            temp_vec = self.hess_schur_inv @ temp_vec
+            temp_vec = lin.fact_solve(self.hess_schur_inv, temp_vec)
             temp = sym.vec_to_mat(temp_vec)
             temp = self.Uy @ temp @ self.Uy.T
             outY = sym.mat_to_vec(temp)

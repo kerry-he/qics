@@ -5,16 +5,17 @@ import math
 import cProfile
 
 from cones import *
-from utils import symmetric as sym
+from utils import symmetric as sym, quantum as quant
 from solver import model, solver
 
 np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Problem data
-n = 100
+n = 200
 vn = sym.vec_dim(n)
-M = 2 * np.eye(n)
+# M = 2 * np.eye(n)
+M = quant.randDensityMatrix(n)
 
 # Build problem model
 A = np.zeros((0, n))
