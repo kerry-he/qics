@@ -199,7 +199,7 @@ class QuantRelEntropy():
 
         # Preparing other required variables
         hess_schur = Hyy - (Hxy_Hxx_Hxy + Hxy_Hxx_Hxy.T) / 2
-        self.hess_schur_inv = lin.fact(hess_schur)
+        self.hess_schur_inv = np.linalg.inv(hess_schur)
 
         self.invhess_aux_updated = True
 
@@ -217,27 +217,25 @@ class QuantRelEntropy():
 
         for k in range(p):
             Ht = dirs[0, k]
-            Hx = dirs[1:self.vn+1, [k]]
-            Hy = sym.vec_to_mat(dirs[self.vn+1:, [k]])
+            Hx = sym.vec_to_mat(dirs[self.idx_X, [k]])
+            Hy = sym.vec_to_mat(dirs[self.idx_Y, [k]])
 
-            Wx = Hx + Ht * self.DPhiX_vec
+            Wx = Hx + Ht * self.DPhiX
             Wy = Hy + Ht * self.DPhiY
 
-            Wx_mat = sym.vec_to_mat(Wx)
-            temp = self.Ux.T @ Wx_mat @ self.Ux
+            temp = self.Ux.T @ Wx @ self.Ux
             temp = self.UyUx @ (self.D1x_comb_inv * temp) @ self.UyUx.T
             temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
             temp = self.Uy.T @ (Wy - temp) @ self.Uy
             temp_vec = sym.mat_to_vec(temp)
-            temp_vec = lin.fact_solve(self.hess_schur_inv, temp_vec)
+            temp_vec = (self.hess_schur_inv @ temp_vec)
             temp = sym.vec_to_mat(temp_vec)
             temp = self.Uy @ temp @ self.Uy.T
             outY = sym.mat_to_vec(temp)
 
-            temp2 = sym.vec_to_mat(outY)
-            temp = self.Uy.T @ temp2 @ self.Uy
+            temp = self.Uy.T @ temp @ self.Uy
             temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
-            temp = Wx_mat - temp
+            temp = Wx - temp
             temp = self.Ux.T @ temp @ self.Ux
             temp = self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.T
             outX = sym.mat_to_vec(temp)
