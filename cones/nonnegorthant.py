@@ -33,3 +33,6 @@ class NonNegOrthant():
 
     def third_dir_deriv(self, dirs):
         return -2 * (dirs**2) / (self.point**3)
+
+    def norm_invhess(self, x):
+        return 0.0

@@ -57,7 +57,7 @@ class CombinedStepper():
         return point
     
     def line_search_comb(self, model, point):
-        alpha_iter = 1
+        alpha_iter = 0
         eta = 0.99
 
         dir_p = self.dir_p
@@ -85,16 +85,45 @@ class CombinedStepper():
             # Check feasibility
             in_prox = False
             for (k, cone_k) in enumerate(model.cones):
+                in_prox = False
+
                 cone_k.set_point(next_point.s_views[k] * irtmu)
 
-                in_prox = False
-                if cone_k.get_feas():
-                    grad_k = cone_k.get_grad()
-                    psi = next_point.z_views[k] * irtmu + grad_k
-                    prod = cone_k.invhess_prod(psi)
-                    self.prox = max(self.prox, lin.inp(prod, psi))
+                # Check cheap proximity conditions first
+                inp_s_z_k = lin.inp(next_point.z_views[k], next_point.s_views[k])
+                if inp_s_z_k <= 0:
+                    # print("inp_s_z_k break")
+                    break
 
-                    in_prox = (self.prox < eta)
+                nu_k = cone_k.get_nu()
+                rho_k = np.reciprocal(np.sqrt(nu_k)) * np.abs(inp_s_z_k / mu - nu_k)
+                if rho_k >= eta:
+                    # print("rho_k break")
+                    break
+                
+                # Check if feasible
+                if not cone_k.get_feas():
+                    break
+
+                grad_k = cone_k.get_grad()
+                psi = next_point.z_views[k] * irtmu + grad_k
+
+                # Check cheap inverse Hessian norm oracle
+                # if cone_k.norm_invhess(psi) >= eta:
+                    # print("cheap hess break")
+                    # break
+
+                prod = cone_k.invhess_prod(psi)
+                # if lin.inp(prod, psi) < 0:
+                #     print("negative hessian??")
+                #     break
+                self.prox = max(self.prox, lin.inp(prod, psi))
+                test_prox = cone_k.norm_invhess(psi)
+                other_prox = lin.inp(prod, psi)
+                # if test_prox > other_prox:
+                #     print("UH OH")
+                #     test_prox = cone_k.norm_invhess(psi)
+                in_prox = (self.prox < eta)
                 if not in_prox:
                     break
         
@@ -107,7 +136,7 @@ class CombinedStepper():
             alpha_iter += 1
 
     def line_search_cent(self, model, point):
-        alpha_iter = 1
+        alpha_iter = 0
         eta = 0.99
 
         dir_c = self.dir_c

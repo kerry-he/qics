@@ -86,3 +86,6 @@ class PosSemiDefinite():
         assert self.grad_updated
         H = sym.vec_to_mat(dirs)
         return -2 * sym.mat_to_vec(self.inv_X @ H @ self.inv_X @ H @ self.inv_X)
+
+    def norm_invhess(self, x):
+        return 0.0        

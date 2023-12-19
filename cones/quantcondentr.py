@@ -272,3 +272,22 @@ class QuantCondEntropy():
         dder3[1:] = sym.mat_to_vec(temp)
 
         return dder3
+
+    def norm_invhess(self, x):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+
+        D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
+        self.D1x_comb_inv = np.reciprocal(self.D1x_log*self.zi + D1x_inv)
+
+        Ht = x[0, :]
+        Hx = sym.vec_to_mat(x[1:, :])
+
+        Wx = Hx + Ht * self.DPhi
+
+        UxWxUx = self.Ux.T @ Wx @ self.Ux
+        outX = self.Ux @ (self.D1x_comb_inv * UxWxUx) @ self.Ux.T
+        outt = Ht * self.z * self.z + lin.inp(outX, self.DPhi)
+        
+        return lin.inp(outX, Hx) + (outt * Ht)

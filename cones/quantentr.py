@@ -223,3 +223,6 @@ class QuantEntropy():
         dder3[1:] = sym.mat_to_vec(temp)
 
         return dder3
+
+    def norm_invhess(self, x):
+        return 0.0        
