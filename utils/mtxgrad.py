@@ -13,9 +13,12 @@ def D1_log(D, log_D):
         for i in range(j):
             d_ij = D[i] - D[j]
             if abs(d_ij) < rteps:
-                D1[i, j] = 2 / (D[i] + D[j])
-            else:
+                D1[i, j] = 2.0 / (D[i] + D[j])
+            elif (D[i] < D[j]/2) or (D[j] < D[i]/2):
                 D1[i, j] = (log_D[i] - log_D[j]) / d_ij
+            else:
+                z = d_ij / (D[i] + D[j])
+                D1[i, j] = 2.0 * np.arctanh(z) / d_ij
             D1[j, i] = D1[i, j]
 
         D1[j, j] = np.reciprocal(D[j])
