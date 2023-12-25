@@ -199,7 +199,8 @@ class QuantRelEntropy():
 
         # Preparing other required variables
         hess_schur = Hyy - (Hxy_Hxx_Hxy + Hxy_Hxx_Hxy.T) / 2
-        self.hess_schur_inv = np.linalg.inv(hess_schur)
+        # self.hess_schur_inv = np.linalg.inv(hess_schur)
+        self.hess_schur_fact = lin.fact(hess_schur)
 
         self.invhess_aux_updated = True
 
@@ -213,7 +214,10 @@ class QuantRelEntropy():
             self.update_invhessprod_aux()
 
         p = np.size(dirs, 1)
-        out = np.empty((self.dim, p))
+        out = np.empty((self.dim, p))    
+
+        temp_vec = np.empty((self.vn, p))   
+        Wx_list = np.empty((p, self.n, self.n))
 
         for k in range(p):
             Ht = dirs[0, k]
@@ -222,14 +226,22 @@ class QuantRelEntropy():
 
             Wx = Hx + Ht * self.DPhiX
             Wy = Hy + Ht * self.DPhiY
+            Wx_list[k, :, :] = Wx
 
             temp = self.Ux.T @ Wx @ self.Ux
             temp = self.UyUx @ (self.D1x_comb_inv * temp) @ self.UyUx.T
             temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
             temp = self.Uy.T @ (Wy - temp) @ self.Uy
-            temp_vec = sym.mat_to_vec(temp)
-            temp_vec = (self.hess_schur_inv @ temp_vec)
-            temp = sym.vec_to_mat(temp_vec)
+            temp_vec[:, [k]] = sym.mat_to_vec(temp)
+
+        # temp_vec = self.hess_schur_inv @ temp_vec
+        temp_vec = lin.fact_solve(self.hess_schur_fact, temp_vec)
+
+        for k in range(p):
+            Ht = dirs[0, k]
+            Wx = Wx_list[k, :, :]
+
+            temp = sym.vec_to_mat(temp_vec[:, [k]])
             temp = self.Uy @ temp @ self.Uy.T
             outY = sym.mat_to_vec(temp)
 
@@ -244,7 +256,7 @@ class QuantRelEntropy():
 
             out[0, k] = outt
             out[self.idx_X, [k]] = outX
-            out[self.idx_Y, [k]] = outY          
+            out[self.idx_Y, [k]] = outY
 
         return out
     
