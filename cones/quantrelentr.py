@@ -164,6 +164,8 @@ class QuantRelEntropy():
         rt2 = math.sqrt(2.0)
         irt2 = math.sqrt(0.5)
 
+        self.z2 = self.z * self.z
+
         self.D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
         self.D1x_comb_inv = np.reciprocal(self.zi * self.D1x_log + self.D1x_inv)
 
@@ -252,7 +254,7 @@ class QuantRelEntropy():
             temp = self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.T
             outX = sym.mat_to_vec(temp)
 
-            outt = self.z * self.z * Ht + lin.inp(self.DPhiX_vec, outX) + lin.inp(self.DPhiY_vec, outY)      
+            outt = self.z2 * Ht + self.DPhiX_vec.T @ outX + self.DPhiY_vec.T @ outY
 
             out[0, k] = outt
             out[self.idx_X, [k]] = outX
