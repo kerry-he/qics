@@ -88,4 +88,4 @@ class PosSemiDefinite():
         return -2 * sym.mat_to_vec(self.inv_X @ H @ self.inv_X @ H @ self.inv_X)
 
     def norm_invhess(self, x):
-        return 0.0        
+        return 0.0

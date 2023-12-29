@@ -207,3 +207,6 @@ class HolevoInf():
         dder3[1:] = temp
 
         return dder3
+    
+    def norm_invhess(self, x):
+        return 0.0

@@ -59,7 +59,7 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-n = 4
+n = 6
 N = n * n
 sn = sym.vec_dim(n)
 sN = sym.vec_dim(N)
@@ -77,21 +77,25 @@ D = 0.5
 tr2 = get_tr2(n, sn, sN)
 ikr_tr1 = get_ikr_tr1(n, sN)
 
-A1 = np.hstack((np.zeros((sn, 1)), tr2, np.zeros((sn, sN)), np.zeros((sn, 1))))
-A2 = np.hstack((np.zeros((1, 1)), Delta.T, np.zeros((1, sN)), np.ones((1, 1))))
-A3 = np.hstack((np.zeros((sN, 1)), -ikr_tr1.T, np.eye(sN), np.zeros((sN, 1))))
-A = np.vstack((A1, A2, A3))
+A = np.hstack((np.zeros((sn, 1)), tr2))
 
-b = np.zeros((sn + 1 + sN, 1))
-b[:sn] = sym.mat_to_vec(rho_A)
-b[sn] = D
+b = sym.mat_to_vec(rho_A)
 
-c = np.zeros((2*sN + 2, 1))
+c = np.zeros((sN + 1, 1))
 c[0] = 1.
+
+G1 = np.hstack((np.ones((1, 1)), np.zeros((1, sN))))            # t_qre
+G2 = np.hstack((np.zeros((sN, 1)), np.eye(sN)))                 # X_qre
+G3 = np.hstack((np.zeros((sN, 1)), ikr_tr1))                    # Y_qre
+G4 = np.hstack((np.zeros((1, 1)), Delta.T))                     # LP
+G = -np.vstack((G1, G2, G3, G4))
+
+h = np.zeros((1 + sN*2 + 1, 1))
+h[-1] = D
 
 # Input into model and solve
 cones = [quantrelentr.QuantRelEntropy(N), nonnegorthant.NonNegOrthant(1)]
-model = model.Model(c, A, b, cones=cones)
+model = model.Model(c, A, b, G, h, cones=cones)
 solver = solver.Solver(model)
 
 profiler = cProfile.Profile()
