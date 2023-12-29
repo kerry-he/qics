@@ -110,6 +110,7 @@ class QuantRelEntropy():
 
         self.D1x_log = mgrad.D1_log(self.Dx, self.log_Dx)
         self.D2y_log = mgrad.D2_log(self.Dy, self.D1y_log)
+        self.D2y_log_UXU = self.D2y_log * self.UyXUy
 
         # Preparing other required variables
         self.zi2 = self.zi * self.zi
@@ -141,7 +142,7 @@ class QuantRelEntropy():
             D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
             D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T
             D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.T
-            D2PhiYYH = -mgrad.scnd_frechet(self.D2y_log, self.Uy, UyHyUy, self.UyXUy)
+            D2PhiYYH = -mgrad.scnd_frechet(self.D2y_log_UXU, self.Uy, UyHyUy)
             
             # Hessian product of barrier function
             out[0, k] = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
@@ -200,7 +201,7 @@ class QuantRelEntropy():
                 k += 1
 
         # Preparing other required variables
-        hess_schur = Hyy - (Hxy_Hxx_Hxy + Hxy_Hxx_Hxy.T) / 2
+        hess_schur = Hyy - Hxy_Hxx_Hxy
         # self.hess_schur_inv = np.linalg.inv(hess_schur)
         self.hess_schur_fact = lin.fact(hess_schur)
 
