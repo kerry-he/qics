@@ -85,7 +85,7 @@ class AggressiveStepper():
                 point.vec[:] = next_point.vec[:]
 
                 if verbose:
-                    print("  %5.3f" % (alpha))
+                    print(" %10.3e" % (self.prox), "  %5.3f" % (alpha))
                 return point
         
             # Otherwise backtrack

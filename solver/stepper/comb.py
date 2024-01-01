@@ -3,7 +3,7 @@ import math
 from utils.point import Point
 from utils import linear as lin
 
-alpha_sched = [0.8, 0.7, 0.5, 0.3, 0.2, 0.1, 0.001]
+alpha_sched = [0.9, 0.8, 0.7, 0.5, 0.3, 0.2, 0.1, 0.001]
 
 class CombinedStepper():
     def __init__(self, syssolver, model):
@@ -49,9 +49,9 @@ class CombinedStepper():
         
         if verbose:
             if success:
-                print("  | %5s" % "comb", "%10.3e" % (res_norm), " %5.3f" % (alpha))
+                print("  | %5s" % "comb", "%10.3e" % (res_norm), "%10.3e" % (self.prox), " %5.3f" % (alpha))
             else:
-                print("  | %5s" % "cent", "%10.3e" % (res_norm), " %5.3f" % (alpha))
+                print("  | %5s" % "cent", "%10.3e" % (res_norm), "%10.3e" % (self.prox), " %5.3f" % (alpha))
 
         
         return point
