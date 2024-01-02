@@ -11,6 +11,7 @@ class QuantRelEntropy():
         self.n = n                          # Side dimension of system
         self.vn = sym.vec_dim(self.n)       # Vector dimension of system
         self.dim = 1 + 2 * self.vn          # Total dimension of cone
+        self.use_sqrt = False
 
         self.idx_X = slice(1, 1 + self.vn)
         self.idx_Y = slice(1 + self.vn, 1 + 2 * self.vn)

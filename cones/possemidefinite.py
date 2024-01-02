@@ -7,6 +7,7 @@ class PosSemiDefinite():
         # Dimension properties
         self.n  = n                     # Side length of matrix
         self.dim = sym.vec_dim(n)       # Dimension of the cone
+        self.use_sqrt = True
 
         # Update flags
         self.feas_updated = False
@@ -53,8 +54,8 @@ class PosSemiDefinite():
         if self.grad_updated:
             return self.grad
         
-        temp = np.linalg.inv(self.X_chol)
-        self.inv_X = temp.T @ temp
+        self.X_chol_inv = np.linalg.inv(self.X_chol)
+        self.inv_X = self.X_chol_inv.T @ self.X_chol_inv
         self.grad  = -sym.mat_to_vec(self.inv_X)
 
         self.grad_updated = True
@@ -71,6 +72,18 @@ class PosSemiDefinite():
             out[:, [j]] = sym.mat_to_vec(self.inv_X @ H @ self.inv_X)
 
         return out
+
+    def sqrt_hess_prod(self, dirs):
+        assert self.grad_updated
+
+        p = np.size(dirs, 1)
+        out = np.empty((self.dim, p))
+
+        for j in range(p):
+            H = sym.vec_to_mat(dirs[:, [j]])
+            out[:, [j]] = sym.mat_to_vec(self.X_chol_inv @ H @ self.X_chol_inv.T)
+
+        return out
     
     def invhess_prod(self, dirs):
         p = np.size(dirs, 1)
@@ -81,6 +94,18 @@ class PosSemiDefinite():
             out[:, [j]] = sym.mat_to_vec(self.X @ H @ self.X)
 
         return out
+
+    def sqrt_invhess_prod(self, dirs):
+        assert self.grad_updated
+
+        p = np.size(dirs, 1)
+        out = np.empty((self.dim, p))
+
+        for j in range(p):
+            H = sym.vec_to_mat(dirs[:, [j]])
+            out[:, [j]] = sym.mat_to_vec(self.X_chol.T @ H @ self.X_chol)
+
+        return out        
 
     def third_dir_deriv(self, dirs):
         assert self.grad_updated

@@ -19,7 +19,8 @@ class QuantMutualInf():
         self.vne = sym.vec_dim(self.ne)     # Get environment vector dimension
 
         self.dim = 1 + self.vni     # Total dimension of cone
-
+        self.use_sqrt = False
+        
         # Build linear maps of quantum channels
         self.N  = np.zeros((self.vno, self.vni))  # Quantum channel
         self.Nc = np.zeros((self.vne, self.vni))  # Complementary channel

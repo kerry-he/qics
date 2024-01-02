@@ -17,6 +17,7 @@ class QuantKeyDist():
         self.vno = sym.vec_dim(self.no)     # Get output vector dimension
 
         self.dim = 1 + self.vni             # Total dimension of cone
+        self.use_sqrt = False
 
         # Reduce systems
         KK = np.zeros((self.no, self.no))

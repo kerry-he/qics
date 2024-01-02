@@ -12,6 +12,7 @@ class QuantEntropy():
         self.n = n                          # Side dimension of system
         self.vn = sym.vec_dim(self.n)       # Vector dimension of system
         self.dim = 1 + self.vn              # Total dimension of cone
+        self.use_sqrt = False
 
         # Update flags
         self.feas_updated        = False
@@ -30,7 +31,7 @@ class QuantEntropy():
     def set_init_point(self):
         point = np.empty((self.dim, 1))
         point[0]  = 1.
-        point[1:] = sym.mat_to_vec(np.eye(self.n)) / self.n
+        point[1:] = sym.mat_to_vec(np.eye(self.n))
 
         self.set_point(point)
 

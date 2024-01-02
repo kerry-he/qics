@@ -20,6 +20,7 @@ class QuantCondEntropy():
         self.vN = sym.vec_dim(self.N)          # Dimension of vectorized bipartite system
 
         self.dim = 1 + self.vN                 # Dimension of the cone
+        self.use_sqrt = False
 
         # Update flags
         self.feas_updated        = False
@@ -35,8 +36,8 @@ class QuantCondEntropy():
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
-        point[0] = 0.
-        point[1:] = sym.mat_to_vec(np.eye(self.N)) / self.N
+        point[0] = 1.
+        point[1:] = sym.mat_to_vec(np.eye(self.N))
 
         self.set_point(point)
 

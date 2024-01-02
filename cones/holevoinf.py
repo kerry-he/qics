@@ -14,6 +14,7 @@ class HolevoInf():
         self.vN = sym.vec_dim(self.N)
         
         self.dim = 1 + self.n       # Total dimension of cone
+        self.use_sqrt = False
 
         # Precompute constants
         self.SX_list = np.array([[quant.quantEntropy(Xi)] for Xi in self.X_list])
