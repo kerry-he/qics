@@ -81,7 +81,7 @@ class QuantKeyDist():
     def set_init_point(self):
         point = np.empty((self.dim, 1))
         point[0] = 1.
-        point[1:] = sym.mat_to_vec(np.eye(self.ni)) / self.ni
+        point[1:] = sym.mat_to_vec(np.eye(self.ni))
 
         self.set_point(point)
 

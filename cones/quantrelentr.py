@@ -31,11 +31,11 @@ class QuantRelEntropy():
     def set_init_point(self):
         point = np.empty((self.dim, 1))
 
-        (u, y, x) = get_central_ray_epirelentropy(self.n)
+        (t0, x0, y0) = get_central_ray_relentr(self.n)
 
-        point[0] = u
-        point[self.idx_X] = sym.mat_to_vec(np.eye(self.n)) * x
-        point[self.idx_Y] = sym.mat_to_vec(np.eye(self.n)) * y
+        point[0] = t0
+        point[self.idx_X] = sym.mat_to_vec(np.eye(self.n)) * x0
+        point[self.idx_Y] = sym.mat_to_vec(np.eye(self.n)) * y0
 
         # point[0] = 1.
         # point[self.idx_X] = sym.mat_to_vec(np.eye(self.n))
@@ -381,32 +381,32 @@ class QuantRelEntropy():
         return lin.inp(outX, Hx) + lin.inp(outY, Hy) + (outt * Ht)
 
 
-def get_central_ray_epirelentropy(w_dim):
-    if w_dim <= 10:
-        return central_rays_epirelentropy[w_dim, :]
+def get_central_ray_relentr(x_dim):
+    if x_dim <= 10:
+        return central_rays_relentr[x_dim, :]
     
     # use nonlinear fit for higher dimensions
-    rtw_dim = np.sqrt(w_dim)
-    if w_dim <= 20:
-        u = 1.2023 / rtw_dim - 0.015
-        v = 0.432 / rtw_dim + 1.0125
-        w = -0.3057 / rtw_dim + 0.972
+    rtx_dim = np.sqrt(x_dim)
+    if x_dim <= 20:
+        t = 1.2023 / rtx_dim - 0.015
+        x = -0.3057 / rtx_dim + 0.972
+        y = 0.432 / rtx_dim + 1.0125
     else:
-        u = 1.1513 / rtw_dim - 0.0069
-        v = 0.4873 / rtw_dim + 1.0008
-        w = -0.4247 / rtw_dim + 0.9961
+        t = 1.1513 / rtx_dim - 0.0069
+        x = -0.4247 / rtx_dim + 0.9961
+        y = 0.4873 / rtx_dim + 1.0008
 
-    return [u, v, w]
+    return [t, x, y]
 
-central_rays_epirelentropy = np.array([
-    [0.827838399, 1.290927714, 0.805102005],
-    [0.708612491, 1.256859155, 0.818070438],
-    [0.622618845, 1.231401008, 0.829317079],
-    [0.558111266, 1.211710888, 0.838978357],
-    [0.508038611, 1.196018952, 0.847300431],
-    [0.468039614, 1.183194753, 0.854521307],
-    [0.435316653, 1.172492397, 0.860840992],
-    [0.408009282, 1.163403374, 0.866420017],
-    [0.384838620, 1.155570329, 0.871385499],
-    [0.364899122, 1.148735192, 0.875838068]
+central_rays_relentr = np.array([
+    [0.827838399, 0.805102005, 1.290927714],
+    [0.708612491, 0.818070438, 1.256859155],
+    [0.622618845, 0.829317079, 1.231401008],
+    [0.558111266, 0.838978357, 1.211710888],
+    [0.508038611, 0.847300431, 1.196018952],
+    [0.468039614, 0.854521307, 1.183194753],
+    [0.435316653, 0.860840992, 1.172492397],
+    [0.408009282, 0.866420017, 1.163403374],
+    [0.384838620, 0.871385499, 1.155570329],
+    [0.364899122, 0.875838068, 1.148735192]
 ])

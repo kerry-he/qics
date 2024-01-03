@@ -63,7 +63,7 @@ h = np.zeros((1 + sout_env + 1 + sout + sin, 1))
 # Input into model and solve
 cones = [quantcondentr.QuantCondEntropy(nout, nenv, 0), quantentr.QuantEntropy(nout), possemidefinite.PosSemiDefinite(nin)]
 model = model.Model(c, A, b, G, h, cones=cones)
-solver = solver.Solver(model, max_iter=30)
+solver = solver.Solver(model)
 
 profiler = cProfile.Profile()
 profiler.enable()

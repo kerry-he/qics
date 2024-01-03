@@ -73,7 +73,7 @@ h = np.zeros((1 + 2 * vno, 1))
 # Input into model and solve
 cones = [quantrelentr.QuantRelEntropy(no)]
 model = model.Model(c, A, b, G, h, cones=cones)
-solver = solver.Solver(model, max_iter=27)
+solver = solver.Solver(model)
 
 profiler = cProfile.Profile()
 profiler.enable()
