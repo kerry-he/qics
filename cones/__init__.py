@@ -1,5 +1,6 @@
 __all__ = [
     "classentr",
+    "classrelentr",
     "quantcondentr", 
     "nonnegorthant", 
     "possemidefinite", 

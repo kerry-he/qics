@@ -1,10 +1,5 @@
 import numpy as np
-import scipy as sp
-import numba as nb
-import math
-from utils import symmetric as sym
-from utils import linear    as lin
-from utils import mtxgrad   as mgrad
+from utils import linear as lin
 
 class ClassEntropy():
     def __init__(self, n):
@@ -17,8 +12,6 @@ class ClassEntropy():
         self.feas_updated        = False
         self.grad_updated        = False
         self.hess_aux_updated    = False
-        self.invhess_aux_updated = False
-        self.dder3_aux_updated   = False
 
         return
         
@@ -173,7 +166,7 @@ class ClassEntropy():
     
 def get_central_ray_entr(x_dim):
     if x_dim <= 10:
-        return central_rays_entr[x_dim, :]
+        return central_rays_entr[x_dim - 1, :]
     
     # use nonlinear fit for higher dimensions
     t0 = np.power(2.1031 * x_dim - 5.3555, -0.865)

@@ -1,4 +1,4 @@
-from ..cones import *
+from cones import *
 import numpy as np
 
 n = 3

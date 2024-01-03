@@ -233,7 +233,7 @@ class QuantEntropy():
     
 def get_central_ray_entr(x_dim):
     if x_dim <= 10:
-        return central_rays_entr[x_dim, :]
+        return central_rays_entr[x_dim - 1, :]
     
     # use nonlinear fit for higher dimensions
     t0 = np.power(2.1031 * x_dim - 5.3555, -0.865)
