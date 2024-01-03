@@ -4,6 +4,7 @@ class NonNegOrthant():
     def __init__(self, dim):
         # Dimension properties
         self.dim = dim
+        self.use_sqrt = True
         return
         
     def get_nu(self):
@@ -28,8 +29,17 @@ class NonNegOrthant():
     def hess_prod(self, dirs):
         return dirs / (self.point**2)
 
+    def sqrt_hess_prod(self, dirs):
+        return dirs / (self.point)        
+
     def invhess_prod(self, dirs):
         return dirs * (self.point**2)
 
+    def sqrt_invhess_prod(self, dirs):
+        return dirs * (self.point)        
+
     def third_dir_deriv(self, dirs):
         return -2 * (dirs**2) / (self.point**3)
+
+    def norm_invhess(self, x):
+        return 0.0

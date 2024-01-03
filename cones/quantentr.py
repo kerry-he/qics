@@ -12,6 +12,7 @@ class QuantEntropy():
         self.n = n                          # Side dimension of system
         self.vn = sym.vec_dim(self.n)       # Vector dimension of system
         self.dim = 1 + self.vn              # Total dimension of cone
+        self.use_sqrt = False
 
         # Update flags
         self.feas_updated        = False
@@ -29,8 +30,11 @@ class QuantEntropy():
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
-        point[0]  = 1.
-        point[1:] = sym.mat_to_vec(np.eye(self.n)) / self.n
+
+        (t0, x0) = get_central_ray_entr(self.n)
+
+        point[0]  = t0
+        point[1:] = sym.mat_to_vec(np.eye(self.n)) * x0
 
         self.set_point(point)
 
@@ -223,3 +227,29 @@ class QuantEntropy():
         dder3[1:] = sym.mat_to_vec(temp)
 
         return dder3
+
+    def norm_invhess(self, x):
+        return 0.0
+    
+def get_central_ray_entr(x_dim):
+    if x_dim <= 10:
+        return central_rays_entr[x_dim - 1, :]
+    
+    # use nonlinear fit for higher dimensions
+    t0 = np.power(2.1031 * x_dim - 5.3555, -0.865)
+    x0 = 1 + np.reciprocal(1.9998 * x_dim + 0.626)
+
+    return np.array([t0, x0])
+
+central_rays_entr = np.array([
+    [1.000000000000000, 1.00000000000000],
+    [0.474515353116114, 1.17788691016068],
+    [0.248466010640737, 1.14575369296145],
+    [0.157680362921038, 1.11525072080430],
+    [0.112130291129889, 1.09428983209783],
+    [0.085532730884352, 1.07955514941305],
+    [0.068371512284588, 1.06873258290068],
+    [0.056503495284181, 1.06047202668235],
+    [0.047869373521682, 1.05397177503172],
+    [0.041340796367988, 1.04872736869751]
+])

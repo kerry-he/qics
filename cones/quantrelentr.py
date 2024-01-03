@@ -11,6 +11,7 @@ class QuantRelEntropy():
         self.n = n                          # Side dimension of system
         self.vn = sym.vec_dim(self.n)       # Vector dimension of system
         self.dim = 1 + 2 * self.vn          # Total dimension of cone
+        self.use_sqrt = False
 
         self.idx_X = slice(1, 1 + self.vn)
         self.idx_Y = slice(1 + self.vn, 1 + 2 * self.vn)
@@ -29,9 +30,12 @@ class QuantRelEntropy():
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
-        point[0] = 1.
-        point[self.idx_X] = sym.mat_to_vec(np.eye(self.n)) / self.n
-        point[self.idx_Y] = sym.mat_to_vec(np.eye(self.n)) / self.n
+
+        (t0, x0, y0) = get_central_ray_relentr(self.n)
+
+        point[0] = t0
+        point[self.idx_X] = sym.mat_to_vec(np.eye(self.n)) * x0
+        point[self.idx_Y] = sym.mat_to_vec(np.eye(self.n)) * y0
 
         self.set_point(point)
 
@@ -110,6 +114,7 @@ class QuantRelEntropy():
 
         self.D1x_log = mgrad.D1_log(self.Dx, self.log_Dx)
         self.D2y_log = mgrad.D2_log(self.Dy, self.D1y_log)
+        self.D2y_log_UXU = self.D2y_log * self.UyXUy
 
         # Preparing other required variables
         self.zi2 = self.zi * self.zi
@@ -128,33 +133,31 @@ class QuantRelEntropy():
         p = np.size(dirs, 1)
         out = np.empty((self.dim, p))
 
-        Ht = dirs[0, :]
-        Hx = sym.vec_to_mat_multi(dirs[1:self.vn+1, :])
-        Hy = sym.vec_to_mat_multi(dirs[self.vn+1:, :])
-
-        UxHxUx = self.Ux.T @ Hx @ self.Ux
-        UyHxUy = self.Uy.T @ Hx @ self.Uy
-        UyHyUy = self.Uy.T @ Hy @ self.Uy
-
-        # Hessian product of conditional entropy
-        D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
-        D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T
-        D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.T
-        # @TODO: Make vectorized operations better/prettier
-        D2PhiYYH = np.empty((p, self.n, self.n))
         for k in range(p):
-            D2PhiYYH[k, :, :] = -mgrad.scnd_frechet(self.D2y_log, self.Uy, UyHyUy[k, :, :], self.UyXUy)
-        
-        # Hessian product of barrier function
-        out[0, :] = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
+            Ht = dirs[0, k]
+            Hx = sym.vec_to_mat(dirs[self.idx_X, [k]])
+            Hy = sym.vec_to_mat(dirs[self.idx_Y, [k]])
 
-        out[1:self.vn+1, :]  = -out[0, :] * self.DPhiX_vec
-        out[1:self.vn+1, :] +=  sym.mat_to_vec_multi(self.zi * D2PhiXXH + self.inv_X @ Hx @ self.inv_X)
-        out[1:self.vn+1, :] +=  self.zi * sym.mat_to_vec_multi(D2PhiXYH)
+            UxHxUx = self.Ux.T @ Hx @ self.Ux
+            UyHxUy = self.Uy.T @ Hx @ self.Uy
+            UyHyUy = self.Uy.T @ Hy @ self.Uy
 
-        out[self.vn+1:, :]  = -out[0, :] * self.DPhiY_vec
-        out[self.vn+1:, :] +=  self.zi * sym.mat_to_vec_multi(D2PhiYXH)
-        out[self.vn+1:, :] +=  sym.mat_to_vec_multi(self.zi * D2PhiYYH + self.inv_Y @ Hy @ self.inv_Y)
+            # Hessian product of conditional entropy
+            D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
+            D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T
+            D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.T
+            D2PhiYYH = -mgrad.scnd_frechet(self.D2y_log_UXU, self.Uy, UyHyUy)
+            
+            # Hessian product of barrier function
+            out[0, k] = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
+
+            out[self.idx_X, [k]]  = -out[0, k] * self.DPhiX_vec
+            out[self.idx_X, [k]] +=  sym.mat_to_vec(self.zi * D2PhiXXH + self.inv_X @ Hx @ self.inv_X)
+            out[self.idx_X, [k]] +=  self.zi * sym.mat_to_vec(D2PhiXYH)
+
+            out[self.idx_Y, [k]]  = -out[0, k] * self.DPhiY_vec
+            out[self.idx_Y, [k]] +=  self.zi * sym.mat_to_vec(D2PhiYXH)
+            out[self.idx_Y, [k]] +=  sym.mat_to_vec(self.zi * D2PhiYYH + self.inv_Y @ Hy @ self.inv_Y)
 
         return out
     
@@ -163,64 +166,48 @@ class QuantRelEntropy():
         assert self.grad_updated
         assert self.hess_aux_updated
 
+        rt2 = math.sqrt(2.0)
         irt2 = math.sqrt(0.5)
 
-        self.D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
+        self.z2 = self.z * self.z
 
+        self.D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
         self.D1x_comb_inv = np.reciprocal(self.zi * self.D1x_log + self.D1x_inv)
-        self.D1x_comb_inv_sqrt = np.sqrt(self.D1x_comb_inv)
 
         # Hessians of quantum relative entropy
-        D2PhiYY = np.empty((self.vn, self.vn))
-        Hyy_Hxx = np.empty((self.vn, self.vn))
-
-        self.Hxx_inv = np.empty((self.vn, self.vn))
-
-        invYY = np.empty((self.vn, self.vn))
+        Hxy_Hxx_Hxy = np.empty((self.vn, self.vn))
 
         self.UyUx = self.Uy.T @ self.Ux
 
+        # D2PhiYY
+        Hyy = -self.zi * mgrad.get_S_matrix(self.D2y_log * self.UyXUy, rt2)
+
+        # @TODO: Investigate how to make these loops faster
         k = 0
         for j in range(self.n):
             for i in range(j + 1):
-                # Hyx @ Hxx^-0.5
-                # UxHUx = np.outer(self.Ux[i, :], self.Ux[j, :])
-                # if i != j:
-                #     UxHUx = UxHUx + UxHUx.T
-                #     UxHUx *= irt2
-                # temp = self.Ux @ (self.D1x_comb_inv_sqrt * UxHUx) @ self.Ux.T
-                # temp = self.Uy.T @ temp @ self.Uy
-                # temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
-                # Hyy_Hxx[:, [k]] = sym.mat_to_vec(temp) 
-
-                temp = np.outer(self.UyUx.T[i, :], self.UyUx.T[j, :])
+                # Hyx @ Hxx @ Hyx
+                temp = np.outer(self.UyUx[i, :], self.UyUx[j, :])
                 if i != j:
                     temp = temp + temp.T
-                    temp *= irt2
-                temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
-                Hyy_Hxx[:, [k]] = sym.mat_to_vec(temp) * self.D1x_comb_inv_sqrt[i, j]
+                    temp *= (irt2 * self.zi2 * self.D1y_log[i, j])
+                else:
+                    temp *= (self.zi2 * self.D1y_log[i, j])
+                temp = self.D1x_comb_inv * temp
+                temp = self.UyUx @ temp @ self.UyUx.T
+                temp = self.D1y_log * temp
 
-                # D2PhiYY
-                UyHUy = np.outer(self.Uy[i, :], self.Uy[j, :])
-                if i != j:
-                    UyHUy = UyHUy + UyHUy.T
-                    UyHUy *= irt2
-                temp = -mgrad.scnd_frechet(self.D2y_log, self.Uy, UyHUy, self.UyXUy)
-                D2PhiYY[:, [k]] = sym.mat_to_vec(temp)
+                Hxy_Hxx_Hxy[:, [k]] = sym.mat_to_vec(temp)
 
-                # invXX and invYY
-                temp = np.outer(self.inv_Y[i, :], self.inv_Y[j, :])
-                if i != j:
-                    temp = temp + temp.T
-                    temp *= irt2
-                invYY[:, [k]] = sym.mat_to_vec(temp)
+                # invYY
+                Hyy[k, k] += np.reciprocal(self.Dy[i] * self.Dy[j])
 
                 k += 1
 
         # Preparing other required variables
-        Hyy = self.zi * D2PhiYY + invYY
-        hess_schur = Hyy - Hyy_Hxx @ Hyy_Hxx.T
-        self.hess_schur_inv = np.linalg.inv(hess_schur)
+        hess_schur = Hyy - Hxy_Hxx_Hxy
+        # self.hess_schur_inv = np.linalg.inv(hess_schur)
+        self.hess_schur_fact = lin.fact(hess_schur)
 
         self.invhess_aux_updated = True
 
@@ -234,35 +221,49 @@ class QuantRelEntropy():
             self.update_invhessprod_aux()
 
         p = np.size(dirs, 1)
-        out = np.empty((self.dim, p))
+        out = np.empty((self.dim, p))    
 
-        Ht = dirs[0, :]
-        Hx = dirs[1:self.vn+1, :]
-        Hy = dirs[self.vn+1:, :]
+        temp_vec = np.empty((self.vn, p))   
+        Wx_list = np.empty((p, self.n, self.n))
 
-        Wx = Hx + Ht * self.DPhiX_vec
-        Wy = Hy + Ht * self.DPhiY_vec
+        for k in range(p):
+            Ht = dirs[0, k]
+            Hx = sym.vec_to_mat(dirs[self.idx_X, [k]])
+            Hy = sym.vec_to_mat(dirs[self.idx_Y, [k]])
 
-        Wx_mat = sym.vec_to_mat_multi(Wx)
-        temp = self.Ux.T @ Wx_mat @ self.Ux
-        temp = self.UyUx @ (self.D1x_comb_inv * temp) @ self.UyUx.T
-        temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
-        temp_vec = sym.mat_to_vec_multi(temp)
-        outY = self.hess_schur_inv @ (Wy - temp_vec)
+            Wx = Hx + Ht * self.DPhiX
+            Wy = Hy + Ht * self.DPhiY
+            Wx_list[k, :, :] = Wx
 
-        temp2 = sym.vec_to_mat_multi(outY)
-        temp = self.Uy.T @ temp2 @ self.Uy
-        temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
-        temp = Wx_mat - temp
-        temp = self.Ux.T @ temp @ self.Ux
-        temp = self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.T
-        outX = sym.mat_to_vec_multi(temp)
+            temp = self.Ux.T @ Wx @ self.Ux
+            temp = self.UyUx @ (self.D1x_comb_inv * temp) @ self.UyUx.T
+            temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
+            temp = self.Uy.T @ (Wy - temp) @ self.Uy
+            temp_vec[:, [k]] = sym.mat_to_vec(temp)
 
-        outt = self.z * self.z * Ht + lin.inp(self.DPhiX_vec, outX) + lin.inp(self.DPhiY_vec, outY)      
+        # temp_vec = self.hess_schur_inv @ temp_vec
+        temp_vec = lin.fact_solve(self.hess_schur_fact, temp_vec)
 
-        out[0, :] = outt
-        out[self.idx_X, :] = outX
-        out[self.idx_Y, :] = outY          
+        for k in range(p):
+            Ht = dirs[0, k]
+            Wx = Wx_list[k, :, :]
+
+            temp = sym.vec_to_mat(temp_vec[:, [k]])
+            temp = self.Uy @ temp @ self.Uy.T
+            outY = sym.mat_to_vec(temp)
+
+            temp = self.Uy.T @ temp @ self.Uy
+            temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
+            temp = Wx - temp
+            temp = self.Ux.T @ temp @ self.Ux
+            temp = self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.T
+            outX = sym.mat_to_vec(temp)
+
+            outt = self.z2 * Ht + self.DPhiX_vec.T @ outX + self.DPhiY_vec.T @ outY
+
+            out[0, k] = outt
+            out[self.idx_X, [k]] = outX
+            out[self.idx_Y, [k]] = outY
 
         return out
     
@@ -332,3 +333,76 @@ class QuantRelEntropy():
         out[self.idx_Y] = sym.mat_to_vec(dder3_Y)
 
         return out
+
+    def norm_invhess(self, x):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+
+        Ht = x[0, :]
+        Hx = sym.vec_to_mat(x[self.idx_X, :])
+        Hy = sym.vec_to_mat(x[self.idx_Y, :])
+
+        Wx = Hx + Ht * self.DPhiX
+        Wy = Hy + Ht * self.DPhiY
+
+        UWxU = self.Uy.T @ Wx @ self.Uy
+        UWyU = self.Uy.T @ Wy @ self.Uy
+
+        # Estimate Hessian
+        self.D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
+        self.D1y_inv = np.reciprocal(np.outer(self.Dy, self.Dy))
+        self.D1x_comb = self.zi * self.D1x_log + self.D1x_inv
+        x_largest = np.max(self.D1x_comb)
+
+        D2y_UXU = self.D2y_log * self.UyXUy
+        S_est = np.zeros((self.n, self.n))
+        for k in range(self.n):
+            eigs_k = np.linalg.eigvalsh(D2y_UXU[k, :, :])
+            y_smallest = np.min(eigs_k)
+            S_est[k, :] += y_smallest
+            S_est[:, k] += y_smallest
+
+        Dxy = -self.D1y_log * self.zi
+        Dyy = -S_est * self.zi + self.D1y_inv
+
+        schur = Dyy - Dxy * Dxy / x_largest
+
+        temp = UWyU - Dxy * UWxU / x_largest
+        tempY = temp / schur
+        outY = self.Uy @ tempY @ self.Uy.T
+        outX = (Wx - (self.Uy @ (Dxy * tempY) @ self.Uy.T)) / x_largest
+        outt = self.z * self.z * Ht + lin.inp(self.DPhiX, outX) + lin.inp(self.DPhiY, outY)
+        
+        return lin.inp(outX, Hx) + lin.inp(outY, Hy) + (outt * Ht)
+
+
+def get_central_ray_relentr(x_dim):
+    if x_dim <= 10:
+        return central_rays_relentr[x_dim - 1, :]
+    
+    # use nonlinear fit for higher dimensions
+    rtx_dim = np.sqrt(x_dim)
+    if x_dim <= 20:
+        t = 1.2023 / rtx_dim - 0.015
+        x = -0.3057 / rtx_dim + 0.972
+        y = 0.432 / rtx_dim + 1.0125
+    else:
+        t = 1.1513 / rtx_dim - 0.0069
+        x = -0.4247 / rtx_dim + 0.9961
+        y = 0.4873 / rtx_dim + 1.0008
+
+    return [t, x, y]
+
+central_rays_relentr = np.array([
+    [0.827838399065679, 0.805102001584795, 1.290927709856958],
+    [0.708612491381680, 0.818070436209846, 1.256859152780596],
+    [0.622618845069333, 0.829317078332457, 1.231401007595669],
+    [0.558111266369854, 0.838978355564968, 1.211710886507694],
+    [0.508038610665358, 0.847300430936648, 1.196018952086134],
+    [0.468039614334303, 0.854521306762642, 1.183194752717249],
+    [0.435316653088949, 0.860840990717540, 1.172492396103674],
+    [0.408009282337263, 0.866420016062860, 1.163403373278751],
+    [0.384838611966541, 0.871385497883771, 1.155570329098724],
+    [0.364899121739834, 0.875838067970643, 1.148735192195660]
+])

@@ -17,6 +17,7 @@ class QuantKeyDist():
         self.vno = sym.vec_dim(self.no)     # Get output vector dimension
 
         self.dim = 1 + self.vni             # Total dimension of cone
+        self.use_sqrt = False
 
         # Reduce systems
         KK = np.zeros((self.no, self.no))
@@ -80,7 +81,7 @@ class QuantKeyDist():
     def set_init_point(self):
         point = np.empty((self.dim, 1))
         point[0] = 1.
-        point[1:] = sym.mat_to_vec(np.eye(self.ni)) / self.ni
+        point[1:] = sym.mat_to_vec(np.eye(self.ni))
 
         self.set_point(point)
 
@@ -287,3 +288,6 @@ class QuantKeyDist():
         dder3[1:] = temp
 
         return dder3
+    
+    def norm_invhess(self, x):
+        return 0.0    

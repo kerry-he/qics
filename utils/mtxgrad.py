@@ -13,9 +13,12 @@ def D1_log(D, log_D):
         for i in range(j):
             d_ij = D[i] - D[j]
             if abs(d_ij) < rteps:
-                D1[i, j] = 2 / (D[i] + D[j])
-            else:
+                D1[i, j] = 2.0 / (D[i] + D[j])
+            elif (D[i] < D[j]/2) or (D[j] < D[i]/2):
                 D1[i, j] = (log_D[i] - log_D[j]) / d_ij
+            else:
+                z = d_ij / (D[i] + D[j])
+                D1[i, j] = 2.0 * np.arctanh(z) / d_ij
             D1[j, i] = D1[i, j]
 
         D1[j, j] = np.reciprocal(D[j])
@@ -86,7 +89,14 @@ def D3_log_ij(i, j, D3, D):
     
     return D3_ij    
 
-def scnd_frechet(D2, U, UHU, UXU):
+def scnd_frechet(D2, U, UHU, UXU=None):
+    # If UXU is None, assume UXU has already been pre-multiplied into D2
+    if UXU is None:
+        if D2.shape[0] <= 85:
+            return scnd_frechet_premult_single(D2, U, UHU)
+        else:
+            return scnd_frechet_premult_parallel(D2, U, UHU)
+
     if D2.shape[0] <= 40:
         return scnd_frechet_single(D2, U, UHU, UXU)
     else:
@@ -117,6 +127,30 @@ def scnd_frechet_parallel(D2, U, UHU, UXU):
 
     return out
 
+def scnd_frechet_premult_single(D2, U, UHU):
+    n = U.shape[0]
+
+    out = D2 @ UHU.reshape((n, n, 1))
+    out = out.reshape((n, n))
+    out = out + out.T
+    out = U @ out @ U.T
+
+    return out
+
+@nb.njit(parallel=True)
+def scnd_frechet_premult_parallel(D2, U, UHU):
+    n = U.shape[0]
+    out = np.empty((n, n))
+
+    for k in nb.prange(n):
+        out[k, :] = D2[k] @ UHU[k]
+
+    out = out + out.T
+    out = U @ out @ U.T
+
+    return out
+
+
 @nb.njit
 def thrd_frechet(D2, D, U, H1, H2, H3):
     n = D.size
@@ -139,3 +173,50 @@ def thrd_frechet(D2, D, U, H1, H2, H3):
             out[j, i] = out[i, j]
 
     return U @ out @ U.T
+
+@nb.njit
+def get_S_matrix(D2_UXU, rt2):
+    n = D2_UXU.shape[0]
+    vn = n * (n + 1) // 2
+    S = np.zeros((vn, vn))
+    col = 0
+
+    for j in range(n):
+
+        for i in range(j):
+            # Column corresponding to unit vector (Hij + Hji) / sqrt(2)
+            # Increment rows
+            for k in range(j):
+                row = k + (j * (j + 1)) // 2
+                S[row, col] = D2_UXU[j, k, i]
+            row = j + (j * (j + 1)) // 2    
+            S[row, col] = D2_UXU[j, j, i] * rt2
+            for k in range(j + 1, n):
+                row = j + (k * (k + 1)) // 2
+                S[row, col] = D2_UXU[j, k, i]
+
+            # Increment columns
+            for k in range(i):
+                row = k + (i * (i + 1)) // 2
+                S[row, col] += D2_UXU[i, k, j]
+            row = i + (i * (i + 1)) // 2    
+            S[row, col] = D2_UXU[i, j, i] * rt2
+            for k in range(i + 1, n):
+                row = i + (k * (k + 1)) // 2
+                S[row, col] += D2_UXU[i, k, j]
+
+            col += 1
+
+        # Column corresponding to unit vector Hjj
+        for k in range(j):
+            row = k + (j * (j + 1)) // 2
+            S[row, col] = D2_UXU[j, j, k] * rt2
+        row = j + (j * (j + 1)) // 2    
+        S[row, col] = 2 * D2_UXU[j, j, j]
+        for k in range(j + 1, n):
+            row = j + (k * (k + 1)) // 2
+            S[row, col] = D2_UXU[j, j, k] * rt2
+
+        col += 1
+
+    return S

@@ -19,7 +19,8 @@ class QuantMutualInf():
         self.vne = sym.vec_dim(self.ne)     # Get environment vector dimension
 
         self.dim = 1 + self.vni     # Total dimension of cone
-
+        self.use_sqrt = False
+        
         # Build linear maps of quantum channels
         self.N  = np.zeros((self.vno, self.vni))  # Quantum channel
         self.Nc = np.zeros((self.vne, self.vni))  # Complementary channel
@@ -56,7 +57,7 @@ class QuantMutualInf():
     def set_init_point(self):
         point = np.empty((self.dim, 1))
         point[0] = 1.
-        point[1:] = sym.mat_to_vec(np.eye(self.ni)) / self.ni
+        point[1:] = sym.mat_to_vec(np.eye(self.ni))
 
         self.set_point(point)
 
@@ -283,3 +284,6 @@ class QuantMutualInf():
         dder3[1:] = temp
 
         return dder3
+    
+    def norm_invhess(self, x):
+        return 0.0

@@ -7,6 +7,7 @@ import cProfile
 from cones import *
 from utils import symmetric as sym
 from solver import model, solver
+from utils import quantum as quant
 
 np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
@@ -14,7 +15,8 @@ np.set_printoptions(threshold=np.inf)
 # Problem data
 n = 50
 vn = sym.vec_dim(n)
-M = 2 * np.eye(n)
+# M = 2 * np.eye(n)
+M = quant.randDensityMatrix(n)
 
 # Build problem model
 A = np.zeros((n, 1 + vn))
@@ -40,10 +42,10 @@ cones = [quantrelentr.QuantRelEntropy(n)]
 model = model.Model(c, A, b, G, h, cones=cones)
 solver = solver.Solver(model)
 
-# profiler = cProfile.Profile()
-# profiler.enable()
+profiler = cProfile.Profile()
+profiler.enable()
 
 solver.solve()
 
-# profiler.disable()
-# profiler.dump_stats("example.stats")
+profiler.disable()
+profiler.dump_stats("example.stats")

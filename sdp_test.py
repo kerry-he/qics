@@ -15,6 +15,6 @@ c = sym.mat_to_vec(np.array([[1., 2., 3.], [2., 9., 0.], [3., 0., 7.]]))
 
 cones = [possemidefinite.PosSemiDefinite(3)]
 model = model.Model(c, A, b, cones=cones)
-solver = solver.Solver(model)
+solver = solver.Solver(model, subsolver="qrchol")
 
 solver.solve()

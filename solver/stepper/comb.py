@@ -3,7 +3,7 @@ import math
 from utils.point import Point
 from utils import linear as lin
 
-alpha_sched = [0.8, 0.7, 0.5, 0.3, 0.2, 0.1, 0.001]
+alpha_sched = [0.99, 0.9, 0.8, 0.7, 0.5, 0.3, 0.2, 0.1, 0.001]
 
 class CombinedStepper():
     def __init__(self, syssolver, model):
@@ -43,21 +43,28 @@ class CombinedStepper():
         temp_res_norm = self.syssolver.solve_system_ir(self.dir_c_toa, self.res, self.rhs, model, mu, point.tau)
         res_norm = max(temp_res_norm, res_norm)
 
-        point, alpha, success = self.line_search_comb(model, point)
+        step_mode = "co_toa"
+        point, alpha, success = self.line_search(model, point, step_mode)
         if not success:
-            point, alpha = self.line_search_cent(model, point)
+            step_mode = "comb"
+            point, alpha, success = self.line_search(model, point, step_mode)
+            if not success:
+                step_mode = "ce_toa"
+                point, alpha, success = self.line_search(model, point, step_mode)
+                if not success:
+                    step_mode = "cent"
+                    point, alpha, success = self.line_search(model, point, step_mode)
         
         if verbose:
             if success:
-                print("  | %5s" % "comb", "%10.3e" % (res_norm), " %5.3f" % (alpha))
+                print("  | %6s" % step_mode, "%10.3e" % (res_norm), "%10.3e" % (self.prox), " %5.3f" % (alpha))
             else:
-                print("  | %5s" % "cent", "%10.3e" % (res_norm), " %5.3f" % (alpha))
-
+                return False
         
-        return point
+        return True
     
-    def line_search_comb(self, model, point):
-        alpha_iter = 1
+    def line_search(self, model, point, mode="co_toa"):
+        alpha_iter = 0
         eta = 0.99
 
         dir_p = self.dir_p
@@ -72,7 +79,16 @@ class CombinedStepper():
 
             alpha = alpha_sched[alpha_iter]
             # Step point in direction and step size
-            next_point.vec[:] = point.vec + alpha * (dir_p.vec + alpha * dir_p_toa.vec) + (1.0 - alpha) * (dir_c.vec + (1.0 - alpha) * dir_c_toa.vec)
+            if mode == "co_toa":
+                step = alpha * (dir_p.vec + alpha * dir_p_toa.vec) + (1.0 - alpha) * (dir_c.vec + (1.0 - alpha) * dir_c_toa.vec)
+            elif mode == "comb":
+                step = alpha * dir_p.vec + (1.0 - alpha) * dir_c.vec
+            elif mode == "ce_toa":
+                step = alpha * (dir_p.vec + alpha * dir_p_toa.vec)
+            elif mode == "cent":
+                step = alpha * dir_c.vec
+
+            next_point.vec[:] = point.vec + step
             mu = lin.inp(next_point.s, next_point.z) / model.nu
             if mu < 0:
                 alpha_iter += 1
@@ -85,16 +101,37 @@ class CombinedStepper():
             # Check feasibility
             in_prox = False
             for (k, cone_k) in enumerate(model.cones):
+                in_prox = False
+
                 cone_k.set_point(next_point.s_views[k] * irtmu)
 
-                in_prox = False
-                if cone_k.get_feas():
-                    grad_k = cone_k.get_grad()
-                    psi = next_point.z_views[k] * irtmu + grad_k
-                    prod = cone_k.invhess_prod(psi)
-                    self.prox = max(self.prox, lin.inp(prod, psi))
+                # Check cheap proximity conditions first
+                inp_s_z_k = lin.inp(next_point.z_views[k], next_point.s_views[k])
+                if inp_s_z_k <= 0:
+                    # print("inp_s_z_k break")
+                    break
 
-                    in_prox = (self.prox < eta)
+                nu_k = cone_k.get_nu()
+                rho_k = np.reciprocal(np.sqrt(nu_k)) * np.abs(inp_s_z_k / mu - nu_k)
+                if rho_k >= eta:
+                    # print("rho_k break")
+                    break
+                
+                # Check if feasible
+                if not cone_k.get_feas():
+                    break
+
+                grad_k = cone_k.get_grad()
+                psi = next_point.z_views[k] * irtmu + grad_k
+
+                # Check cheap inverse Hessian norm oracle
+                if cone_k.norm_invhess(psi) >= eta:
+                    # print("cheap hess break")
+                    break
+
+                prod = cone_k.invhess_prod(psi)
+                self.prox = max(self.prox, lin.inp(prod, psi))
+                in_prox = (self.prox < eta)
                 if not in_prox:
                     break
         
@@ -105,51 +142,6 @@ class CombinedStepper():
         
             # Otherwise backtrack
             alpha_iter += 1
-
-    def line_search_cent(self, model, point):
-        alpha_iter = 1
-        eta = 0.99
-
-        dir_c = self.dir_c
-        dir_c_toa = self.dir_c_toa
-        next_point = Point(model)
-
-        while True:
-            alpha = alpha_sched[alpha_iter]
-            # Step point in direction and step size
-            next_point.vec[:] = point.vec + alpha * (dir_c.vec + alpha * dir_c_toa.vec)
-            mu = lin.inp(next_point.s, next_point.z) / model.nu
-            if mu < 0:
-                alpha_iter += 1
-                continue
-
-            rtmu = math.sqrt(mu)
-            irtmu = np.reciprocal(rtmu)
-            self.prox = 0.
-
-            # Check feasibility
-            in_prox = False
-            for (k, cone_k) in enumerate(model.cones):
-                cone_k.set_point(next_point.s_views[k] * irtmu)
-
-                in_prox = False
-                if cone_k.get_feas():
-                    grad_k = cone_k.get_grad()
-                    psi = next_point.z_views[k] * irtmu + grad_k
-                    prod = cone_k.invhess_prod(psi)
-                    self.prox = max(self.prox, lin.inp(prod, psi))
-
-                    in_prox = (self.prox < eta)
-                if not in_prox:
-                    break
-        
-            # If feasible, return point
-            if in_prox:
-                point.vec[:] = next_point.vec[:]
-                return point, alpha
-        
-            # Otherwise backtrack
-            alpha_iter += 1            
 
     def update_rhs_cent(self, model, point, mu):
         self.rhs.x.fill(0.)

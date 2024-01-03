@@ -13,9 +13,9 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-nin  = 16
-nout = 16
-nenv = 16
+nin  = 4
+nout = 4
+nenv = 4
 
 sin = sym.vec_dim(nin)
 sout = sym.vec_dim(nout)
@@ -27,6 +27,7 @@ V = quantum.randStinespringOperator(nin, nout, nenv)
 tr = sym.mat_to_vec(np.eye(nin)).T
 VV = np.zeros((sout_env, sin))
 trE_VV = np.zeros((sout, sin))
+I_trB_VV = np.zeros((sout_env, sin))
 k = -1
 for j in range(nin):
     for i in range(j + 1):
@@ -42,7 +43,12 @@ for j in range(nin):
         VV[:, [k]] = sym.mat_to_vec(VHV)
 
         trE_VHV = sym.p_tr(VHV, 1, (nout, nenv))
+        trB_VHV = sym.p_tr(VHV, 0, (nout, nenv))
+        I_trB_VHV = sym.i_kr(trB_VHV, 0, (nout, nenv))
+
         trE_VV[:, [k]] = sym.mat_to_vec(trE_VHV)
+        I_trB_VV[:, [k]] = sym.mat_to_vec(I_trB_VHV)
+
 
 # Build problem model
 A = np.hstack((np.zeros((1, 2)), tr))
@@ -51,17 +57,18 @@ b = np.ones((1, 1))
 c = np.zeros((2 + sin, 1))
 c[0:2] = 1.
 
-G1 = np.hstack((np.ones((1, 1)), np.zeros((1, 1 + sin))))                   # t_cond
-G2 = np.hstack((np.zeros((sout_env, 2)), VV))                               # X_cond
-G3 = np.hstack((np.zeros((1, 1)), np.ones((1, 1)), np.zeros((1, sin))))     # t_entr
-G4 = np.hstack((np.zeros((sout, 2)), trE_VV))                               # X_entr
-G5 = np.hstack((np.zeros((sin, 2)), np.eye(sin)))                           # PSD
-G = -np.vstack((G1, G2, G3, G4, G5))
+G1 = np.hstack((np.ones((1, 1)), np.zeros((1, 1 + sin))))                   # t_qre
+G2 = np.hstack((np.zeros((sout_env, 2)), VV))                               # X_qre
+G3 = np.hstack((np.zeros((sout_env, 2)), I_trB_VV))                         # Y_qre
+G4 = np.hstack((np.zeros((1, 1)), np.ones((1, 1)), np.zeros((1, sin))))     # t_entr
+G5 = np.hstack((np.zeros((sout, 2)), trE_VV))                               # X_entr
+G6 = np.hstack((np.zeros((sin, 2)), np.eye(sin)))                           # PSD
+G = -np.vstack((G1, G2, G3, G4, G5, G6))
 
-h = np.zeros((1 + sout_env + 1 + sout + sin, 1))
+h = np.zeros((1 + sout_env*2 + 1 + sout + sin, 1))
 
 # Input into model and solve
-cones = [quantcondentr.QuantCondEntropy(nout, nenv, 0), quantentr.QuantEntropy(nout), possemidefinite.PosSemiDefinite(nin)]
+cones = [quantrelentr.QuantRelEntropy(nout * nenv), quantentr.QuantEntropy(nout), possemidefinite.PosSemiDefinite(nin)]
 model = model.Model(c, A, b, G, h, cones=cones)
 solver = solver.Solver(model)
 
