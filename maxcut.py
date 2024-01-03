@@ -19,7 +19,7 @@ c = sym.mat_to_vec(C)
 
 cones = [possemidefinite.PosSemiDefinite(n)]
 model = model.Model(c, A, b, cones=cones)
-solver = solver.Solver(model,max_iter=100)
+solver = solver.Solver(model, subsolver="qrchol")
 solver.solve()
 
 # Solve using MOSEK
