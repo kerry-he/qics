@@ -1,10 +1,10 @@
 __all__ = [
+    "classentr",
     "quantcondentr", 
     "nonnegorthant", 
     "possemidefinite", 
     "quantrelentr", 
     "quantentr",
-    "quantentralt",
     "quantmutualinf",
     "holevoinf",
     "quantkeydist"
