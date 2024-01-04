@@ -47,7 +47,7 @@ class Solver():
         if self.verbose:
             if not self.status == "step_failure":
                 print("%5d" % (self.num_iters), " %8.1e" % (self.mu), " %8.1e" % (self.point.tau), " %8.1e" % (self.point.kappa),
-                    " | %10.3e" % (self.p_obj), " %10.3e" % (self.d_obj), " %10.3e" % (self.obj_gap), 
+                    " | %10.3e" % (self.p_obj), " %10.3e" % (self.d_obj), " %10.3e" % (self.abs_gap), " %10.3e" % (self.rel_gap), 
                     " | %10.3e" % (self.x_feas), " %10.3e" % (self.y_feas), " %10.3e" % (self.z_feas), end="")
 
             print()
@@ -77,7 +77,7 @@ class Solver():
         self.get_gap_feas()      
 
         # Check optimality
-        if abs(self.obj_gap) <= self.gap_tol:
+        if self.rel_gap <= self.gap_tol:
             # Check feasibility
             if self.x_feas <= self.feas_tol and self.y_feas <= self.feas_tol and self.z_feas <= self.feas_tol:
                 if self.verbose:
@@ -101,15 +101,15 @@ class Solver():
 
         if self.verbose:
             if self.num_iters % 20 == 0:
-                print("=======================================================================================================================================================")
+                print("===================================================================================================================================================================")
                 print("%5s" % "iter", " %8s" % "mu", " %8s" % "tau", " %8s" % "kappa",
-                    " | %10s" % "p_obj", " %10s" % "d_obj", " %10s" % "gap", 
+                    " | %10s" % "p_obj", " %10s" % "d_obj", " %10s" % "abs_gap", " %10s" % "rel_gap", 
                     " | %10s" % "x_feas", " %10s" % "y_feas", " %10s" % "z_feas",
                     " | %6s" % "step", "%10s" % "dir_tol", "%10s" % "prox", " %5s" % "alpha")
-                print("=======================================================================================================================================================")                
+                print("===================================================================================================================================================================")                
             
             print("%5d" % (self.num_iters), " %8.1e" % (self.mu), " %8.1e" % (self.point.tau), " %8.1e" % (self.point.kappa),
-                  " | %10.3e" % (self.p_obj), " %10.3e" % (self.d_obj), " %10.3e" % (self.obj_gap), 
+                  " | %10.3e" % (self.p_obj), " %10.3e" % (self.d_obj), " %10.3e" % (self.abs_gap), " %10.3e" % (self.rel_gap), 
                   " | %10.3e" % (self.x_feas), " %10.3e" % (self.y_feas), " %10.3e" % (self.z_feas), end="")
             
         # Step
@@ -163,7 +163,8 @@ class Solver():
         # Get solve data
         self.p_obj   = lin.inp(self.model.c, self.point.x) / self.point.tau
         self.d_obj   = -(lin.inp(self.model.b, self.point.y) + lin.inp(self.model.h, self.point.z)) / self.point.tau
-        self.obj_gap = self.p_obj - self.d_obj
+        self.abs_gap = self.p_obj - self.d_obj
+        self.rel_gap = abs(self.abs_gap) / (1.0 + abs(self.d_obj))
         self.x_feas  = np.linalg.norm(self.model.A.T @ self.point.y + self.model.G.T @ self.point.z + self.model.c * self.point.tau, np.inf)
         self.y_feas  = np.linalg.norm(self.model.A @ self.point.x - self.model.b * self.point.tau, np.inf) if self.model.use_A else 0.0
         self.z_feas  = np.linalg.norm(self.model.G @ self.point.x - self.model.h * self.point.tau + self.point.s, np.inf)
