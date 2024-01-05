@@ -19,7 +19,7 @@ class PosSemiDefinite():
         return self.n
     
     def set_init_point(self):
-        point = sym.mat_to_vec(np.eye(self.n)) / self.n
+        point = sym.mat_to_vec(np.eye(self.n))
         self.set_point(point)
         return point
     
