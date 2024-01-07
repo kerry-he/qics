@@ -51,7 +51,7 @@ class Solver():
                     " | %10.3e" % (self.x_feas), " %10.3e" % (self.y_feas), " %10.3e" % (self.z_feas), end="")
 
             print()
-            print("Opt value:  %.10f" % (self.p_obj))
+            print("Opt value:  %.10f" % (self.p_obj + self.model.offset))
             print("Tolerance:  %.10e" % (self.p_obj - self.d_obj))
             print("Solve time: %.10f" % (time.time() - self.solve_time), " seconds")
             print()

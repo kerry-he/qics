@@ -2,7 +2,7 @@ import numpy as np
 import scipy as sp
 
 class Model():
-    def __init__(self, c, A=None, b=None, G=None, h=None, cones=None):
+    def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0):
         self.n = np.size(c)
         self.p = np.size(b) if (b is not None) else 0
         self.q = np.size(h) if (h is not None) else self.n
@@ -19,6 +19,8 @@ class Model():
 
         self.cone_idxs = build_cone_idxs(self.q, cones)
         self.nu = 0 if (len(cones) == 0) else sum((cone.get_nu() for cone in cones))
+
+        self.offset = offset
 
         return
     
