@@ -165,7 +165,7 @@ class SysSolver():
         self.sol.x[:]     = x_r - self.sol.tau[0] * self.x_b
         self.sol.y[:]     = y_r - self.sol.tau[0] * self.y_b
         self.sol.z[:]     = z_r - self.sol.tau[0] * self.z_b
-        self.sol.s[:]     = blk_invhess_prod(rhs.s - self.sol.z, model) if model.use_G else (self.sol.x[:] - rhs.z)
+        self.sol.s[:]     = -model.G @ self.sol.x[:] - rhs.z + self.sol.tau[0] * model.h
         self.sol.kappa[0] = rhs.kappa - mu_tau2 * self.sol.tau[0]
 
         return self.sol
