@@ -61,11 +61,13 @@ class Solver():
     def step_and_check(self):
         # Check termination
         if self.num_iters >= self.max_iter:
+            self.status = "max_iter"
             if self.verbose:
                 print("Maximum iteration limit reached")
             return True
         
         if time.time() - self.solve_time >= self.max_time:
+            self.status = "max_time"
             if self.verbose:
                 print("Maximum time limit reached")
             return True

@@ -25,25 +25,23 @@ A = np.zeros((0, n))
 b = np.zeros((0, 1))
 
 c = np.zeros((n, 1))
-c[0] = 1.
+c[0] = 1.0 / n
 
-G1 = np.hstack((np.ones((1, 1)), np.zeros((1, n - 1))))
-G2 = np.hstack((np.zeros((vn, 1)), np.zeros((vn, n - 1))))
-G3 = np.zeros((vn, n))
+G1 = np.hstack((np.ones((1, 1)), np.zeros((1, n - 1))))         # QRE t
+G2 = np.zeros((vn, n))                                          # QRE Y
 for i in range(n - 1):
     H = np.zeros((n, n))
     H[i, i + 1] = np.sqrt(0.5)
     H[i + 1, i] = np.sqrt(0.5)
-    G3[:, [1 + i]] = sym.mat_to_vec(H)
-G = -np.vstack((G1, G2, G3))
+    G2[:, [1 + i]] = sym.mat_to_vec(H)
+G = -np.vstack((G1, G2))
 
-h = np.zeros((1 + 2 * vn, 1))
-h[1:vn+1] = sym.mat_to_vec(M)
-h[vn+1:]  = sym.mat_to_vec(np.eye(n))
+h = np.zeros((1 + vn, 1))
+h[1:]  = sym.mat_to_vec(np.eye(n))
 
 # Input into model and solve
-cones = [quantrelentr.QuantRelEntropy(n)]
-model = model.Model(c, A, b, G, h, cones=cones)
+cones = [quantrelentr_Y.QuantRelEntropyY(n, M)]
+model = model.Model(c, A, b, G, h, cones=cones, offset=-np.trace(M) * np.log(n))
 solver = solver.Solver(model)
 
 profiler = cProfile.Profile()

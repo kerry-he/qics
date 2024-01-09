@@ -6,20 +6,23 @@ from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 
 class QuantRelEntropyY():
-    def __init__(self, n, X):
+    def __init__(self, n, X, cg=False):
         # Dimension properties
         self.n = n                          # Side dimension of system
         self.vn = sym.vec_dim(self.n)       # Vector dimension of system
         self.dim = 1 + self.vn              # Total dimension of cone
         self.use_sqrt = False
+        self.cg = cg
 
         self.X      = X
-        assert np.all(np.linalg.eigvals(X) > 0)
+        self.Dx     = np.linalg.eigvalsh(X)
+        assert np.all(self.Dx > 0)
         log_X       = sp.linalg.logm(X)
         self.entr_X = lin.inp(X, log_X)
         self.tr_X   = np.trace(X)
 
-        self.tr = sym.mat_to_vec(np.eye(self.n)).T
+        self.eye = np.eye(self.n)
+        self.tr = sym.mat_to_vec(self.eye).T
 
         # Update flags
         self.feas_updated        = False
@@ -37,7 +40,7 @@ class QuantRelEntropyY():
         point = np.empty((self.dim, 1))
 
         point[0]  = 1.0 + self.n * (self.entr_X + self.tr_X * np.log(self.n))
-        point[1:] = sym.mat_to_vec(np.eye(self.n))        
+        point[1:] = sym.mat_to_vec(self.eye)        
 
         self.set_point(point)
 
@@ -102,7 +105,7 @@ class QuantRelEntropyY():
         self.D1y_logUyXUy     =  self.D1y_log * self.UyXUy
         self.UyD1y_logUyXUyUy =  self.Uy @ self.D1y_logUyXUy @ self.Uy.T
         self.DPhi             = -self.tr_Y * self.UyD1y_logUyXUyUy
-        self.DPhi            += np.eye(self.n) * (self.Phi + self.tr_X)
+        self.DPhi            += self.eye * (self.Phi + self.tr_X)
         self.DPhi_vec         = sym.mat_to_vec(self.DPhi)
         
         self.grad     = np.empty((self.dim, 1))
@@ -116,10 +119,14 @@ class QuantRelEntropyY():
         assert not self.hess_aux_updated
         assert self.grad_updated
 
-        self.D2y_log     = mgrad.D2_log(self.Dy, self.D1y_log)
-        self.D2y_log_UXU = self.D2y_log * self.UyXUy
+        self.D2y_log      = mgrad.D2_log(self.Dy, self.D1y_log)
+        self.D2y_log_UXU  = self.D2y_log * self.UyXUy
+        self.D2_UXU_comb = -self.zi * self.tr_Y * self.D2y_log_UXU
+        for i in range(self.n):
+            for j in range(self.n):
+                self.D2_UXU_comb[i, j, j] += np.reciprocal(self.Dy[i] * self.Dy[j]) / 2
 
-        self.hess_fac = self.tr_X / self.tr_Y * np.eye(self.n) - self.UyD1y_logUyXUyUy
+        self.hess_fac = self.tr_X / self.tr_Y * self.eye - self.UyD1y_logUyXUyUy
 
         # Preparing other required variables
         self.zi2 = self.zi * self.zi
@@ -143,15 +150,15 @@ class QuantRelEntropyY():
             UyHyUy = self.Uy.T @ Hy @ self.Uy
 
             # Hessian product of conditional entropy
-            D2PhiH  = -self.tr_Y * mgrad.scnd_frechet(self.D2y_log_UXU, self.Uy, UyHyUy)
-            D2PhiH -=  np.trace(Hy) * self.UyD1y_logUyXUyUy
-            D2PhiH +=  lin.inp(self.hess_fac, Hy) * np.eye(self.n)
+            D2PhiH  = mgrad.scnd_frechet(self.D2_UXU_comb, self.Uy, UyHyUy)
+            D2PhiH -= self.zi * np.trace(Hy) * self.UyD1y_logUyXUyUy
+            D2PhiH += self.zi * lin.inp(self.hess_fac, Hy) * self.eye
             
             chi  = self.zi * self.zi * (Ht - lin.inp(Hy, self.DPhi))
 
             # Hessian product of barrier function
             out[0, k]    = chi
-            out[1:, [k]] = sym.mat_to_vec(-chi * self.DPhi + self.zi * D2PhiH + self.inv_Y @ Hy @ self.inv_Y)
+            out[1:, [k]] = sym.mat_to_vec(-chi * self.DPhi + D2PhiH)
 
         return out
     
@@ -164,26 +171,40 @@ class QuantRelEntropyY():
 
         self.z2 = self.z * self.z
 
-        # Hessians of quantum relative entropy
-        Hyy = -self.zi * self.tr_Y * mgrad.get_S_matrix(self.D2y_log_UXU, rt2)
-
-        temp_hess = np.zeros((self.vn, self.vn))
-
-        k = 0
-        for j in range(self.n):
-            for i in range(j + 1):
-                # invYY
-                Hyy[k, k] += np.reciprocal(self.Dy[i] * self.Dy[j])
-                k += 1
-
-        # Preparing other required variables
-        self.Hyy_fact = lin.fact(Hyy)
-
         self.M = sym.mat_to_vec(self.D1y_logUyXUy)
 
         self.U = np.hstack((self.tr.T, self.M))
         self.V = np.vstack((self.tr_X / self.tr_Y * self.tr - self.M.T, -self.tr))
-        self.Hyy_U = lin.fact_solve(self.Hyy_fact, self.U)
+
+        if not self.cg:
+            # Precompute reqired matrices for explicit inverse oracle
+            Hyy = mgrad.get_S_matrix(self.D2_UXU_comb, rt2)
+            self.Hyy_fact = lin.fact(Hyy)
+            self.Hyy_U = lin.fact_solve(self.Hyy_fact, self.U)
+        else:
+            # Precompute required objects for preconditioned conjugate gradient for inverse oracle
+            # Preconditioner
+            precon_diag = np.zeros(self.n * self.n)
+            for i in range(self.n):
+                for j in range(self.n):
+                    precon_diag[i*self.n + j] += self.D2_UXU_comb[i, j, j]
+                    precon_diag[j*self.n + i] += self.D2_UXU_comb[i, j, j]
+            self.precon = sp.sparse.diags( 1.0 / precon_diag )
+
+            self.A = sp.sparse.linalg.LinearOperator((self.n * self.n, self.n * self.n), matvec=self.A_func)
+            
+            self.Hyy_U = np.empty((self.vn, 2))
+
+            self.nstep = 0
+            temp, _ = sp.sparse.linalg.cgs(self.A, self.eye.flatten(), x0=1.0 / precon_diag, maxiter=self.n, tol=1e-9, M=self.precon, callback=self.callback)
+            # print("tr steps taken: ", self.nstep, ";   res: ", np.linalg.norm(self.A @ temp - self.eye.flatten()))
+            self.Hyy_U[:, [0]] = sym.mat_to_vec(temp.reshape((self.n, self.n)))
+
+            self.nstep = 0
+            temp, _ = sp.sparse.linalg.cgs(self.A, self.D1y_logUyXUy.flatten(), x0=self.precon @ self.D1y_logUyXUy.flatten(), maxiter=self.n, tol=1e-9, M=self.precon, callback=self.callback)
+            # print("m steps taken: ", self.nstep, ";   res: ", np.linalg.norm(self.A @ temp - self.D1y_logUyXUy.flatten()))
+            self.Hyy_U[:, [1]] = sym.mat_to_vec(temp.reshape((self.n, self.n)))        
+
 
         self.mat = np.linalg.inv(self.z * np.eye(2) + self.V @ self.Hyy_U)
 
@@ -212,12 +233,22 @@ class QuantRelEntropyY():
             temp = self.Uy.T @ Wy @ self.Uy
             temp_vec[:, [k]] = sym.mat_to_vec(temp)
 
-        # temp_vec = self.hess_schur_inv @ temp_vec
-        temp_vec = lin.fact_solve(self.Hyy_fact, temp_vec)
+        if not self.cg:
+            # Solve using direct method
+            # temp_vec = self.hess_schur_inv @ temp_vec
+            temp_vec = lin.fact_solve(self.Hyy_fact, temp_vec)
+        else:
+            # Solve using preconditioned conjugate gradient
+            for k in range(p):
+                temp = sym.vec_to_mat(temp_vec[:, [k]])
+                self.nstep = 0
+                temp2, _ = sp.sparse.linalg.cgs(self.A, temp.flatten(), x0=self.precon @ temp.flatten(), maxiter=self.n, tol=1e-9, M=self.precon, callback=self.callback)
+                # print("steps taken: ", self.nstep, ";   res: ", np.linalg.norm(self.A @ temp2 - temp.flatten()))
+                temp_vec[:, [k]] = sym.mat_to_vec(temp2.reshape((self.n, self.n)))
 
         for k in range(p):
             Ht = dirs[0, k]
-
+            
             temp = temp_vec[:, [k]] - self.Hyy_U @ (self.mat @ (self.V @ temp_vec[:, [k]]))
             temp = sym.vec_to_mat(temp)
             temp = self.Uy @ temp @ self.Uy.T
@@ -229,6 +260,9 @@ class QuantRelEntropyY():
             out[1:, [k]] = outY
 
         return out
+    
+    def callback(self, xk):
+        self.nstep += 1
     
     def update_dder3_aux(self):
         assert not self.dder3_aux_updated
@@ -262,17 +296,17 @@ class QuantRelEntropyY():
         # Quantum relative entropy Hessians
         D2PhiH  = -self.tr_Y * scnd_frechet
         D2PhiH -=  tr_H * self.UyD1y_logUyXUyUy
-        D2PhiH +=  lin.inp(self.hess_fac, Hy) * np.eye(self.n)
+        D2PhiH +=  lin.inp(self.hess_fac, Hy) * self.eye
 
         D2PhiHH = lin.inp(Hy, D2PhiH)
 
         # Quantum relative entropy third order derivatives
         D3PhiHH  = -self.tr_Y * mgrad.thrd_frechet(self.D2y_log, self.Dy, self.Uy, self.UyXUy, UyHyUy, UyHyUy)
         D3PhiHH -=  2 * tr_H * scnd_frechet
-        D3PhiHH -=  (lin.inp(Hy, scnd_frechet) + self.tr_X * (tr_H / self.tr_Y) ** 2) * np.eye(self.n)
+        D3PhiHH -=  (lin.inp(Hy, scnd_frechet) + self.tr_X * (tr_H / self.tr_Y) ** 2) * self.eye
         
         # Third derivatives of barrier
-        dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhiHH)
+        dder3_t = -2 * self.zi3 * chi2 - self.zi2 * D2PhiHH
 
         dder3_Y  = -dder3_t * self.DPhi
         dder3_Y -=  2 * self.zi2 * chi * D2PhiH
@@ -326,3 +360,14 @@ class QuantRelEntropyY():
         outt = self.z * self.z * Ht + lin.inp(self.DPhi, outY)
         
         return lin.inp(outY, Hy) + (outt * Ht)
+    
+    def A_func(self, x):
+        n = int(math.sqrt(x.size))
+        X = x.reshape((n, n))
+
+        out = self.D2_UXU_comb @ X.reshape((n, n, 1))
+        out = out.reshape((n, n))
+
+        out = out + out.T
+
+        return out.flatten()

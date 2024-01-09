@@ -27,7 +27,8 @@ b = np.ones((1, 1))
 c = np.zeros((1 + vN, 1))
 c[0] = 1.0
 
-G0 = np.eye(vN + 1)
+G = np.zeros((1 + vN*2, 1 + vN))
+G[:vN+1, :] = -np.eye(vN + 1)
 G1 = np.zeros((vN, 1 + vN))
 for J in range(N):
     for I in range(J + 1):
@@ -47,16 +48,14 @@ for J in range(N):
         k_in  = I + (J * (J + 1)) // 2
         k_out = I_pt + (J_pt * (J_pt + 1)) // 2
 
-        G1[k_out, 1 + k_in] = 1.0
-G = -np.vstack((G0, G1))
+        G[vN + k_out, 1 + k_in] = -1.0
 
 h = np.zeros((1 + 2*vN, 1))
-
 
 # Input into model and solve
 cones = [quantrelentr_Y.QuantRelEntropyY(N, X), possemidefinite.PosSemiDefinite(N)]
 model = model.Model(c, A, b, G, h, cones=cones)
-solver = solver.Solver(model)
+solver = solver.Solver(model, subsolver="elim", feas_tol=1e-7, gap_tol=1e-7)
 
 profiler = cProfile.Profile()
 profiler.enable()
