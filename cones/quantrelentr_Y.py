@@ -4,6 +4,7 @@ import math
 from utils import symmetric as sym
 from utils import linear    as lin
 from utils import mtxgrad   as mgrad
+from utils import quantum   as quant
 
 class QuantRelEntropyY():
     def __init__(self, n, X, cg=False):
@@ -15,10 +16,7 @@ class QuantRelEntropyY():
         self.cg = cg
 
         self.X      = X
-        self.Dx     = np.linalg.eigvalsh(X)
-        assert np.all(self.Dx > 0)
-        log_X       = sp.linalg.logm(X)
-        self.entr_X = lin.inp(X, log_X)
+        self.entr_X = quant.quantEntropy(self.X)
         self.tr_X   = np.trace(X)
 
         self.eye = np.eye(self.n)
@@ -40,7 +38,7 @@ class QuantRelEntropyY():
         point = np.empty((self.dim, 1))
 
         point[0]  = 1.0 + self.n * (self.entr_X + self.tr_X * np.log(self.n))
-        point[1:] = sym.mat_to_vec(self.eye)        
+        point[1:] = sym.mat_to_vec(self.eye)
 
         self.set_point(point)
 
@@ -176,6 +174,23 @@ class QuantRelEntropyY():
         self.U = np.hstack((self.tr.T, self.M))
         self.V = np.vstack((self.tr_X / self.tr_Y * self.tr - self.M.T, -self.tr))
 
+
+        Hyy = mgrad.get_S_matrix(self.D2_UXU_comb, rt2)
+
+        D2_UXU = self.D2y_log * np.diag(np.diag(self.UyXUy))
+        D2_UXU = -self.zi * self.tr_Y * D2_UXU
+        for i in range(self.n):
+            for j in range(self.n):
+                D2_UXU[i, j, j] += np.reciprocal(self.Dy[i] * self.Dy[j]) / 2
+        S = mgrad.get_S_matrix(D2_UXU, rt2)
+        M = sp.sparse.diags(np.diag(S) ** -0.5)
+
+        print()
+        print("Original cond: ", np.linalg.cond(Hyy), "; New cond: ", np.linalg.cond(M @ Hyy @ M))
+        # print(self.Y)
+        print()
+
+
         if not self.cg:
             # Precompute reqired matrices for explicit inverse oracle
             Hyy = mgrad.get_S_matrix(self.D2_UXU_comb, rt2)
@@ -197,12 +212,12 @@ class QuantRelEntropyY():
 
             self.nstep = 0
             temp, _ = sp.sparse.linalg.cgs(self.A, self.eye.flatten(), x0=1.0 / precon_diag, maxiter=self.n, tol=1e-9, M=self.precon, callback=self.callback)
-            # print("tr steps taken: ", self.nstep, ";   res: ", np.linalg.norm(self.A @ temp - self.eye.flatten()))
+            print("tr steps taken: ", self.nstep, ";   res: ", np.linalg.norm(self.A @ temp - self.eye.flatten()))
             self.Hyy_U[:, [0]] = sym.mat_to_vec(temp.reshape((self.n, self.n)))
 
             self.nstep = 0
             temp, _ = sp.sparse.linalg.cgs(self.A, self.D1y_logUyXUy.flatten(), x0=self.precon @ self.D1y_logUyXUy.flatten(), maxiter=self.n, tol=1e-9, M=self.precon, callback=self.callback)
-            # print("m steps taken: ", self.nstep, ";   res: ", np.linalg.norm(self.A @ temp - self.D1y_logUyXUy.flatten()))
+            print("m steps taken: ", self.nstep, ";   res: ", np.linalg.norm(self.A @ temp - self.D1y_logUyXUy.flatten()))
             self.Hyy_U[:, [1]] = sym.mat_to_vec(temp.reshape((self.n, self.n)))        
 
 

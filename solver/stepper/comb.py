@@ -90,7 +90,7 @@ class CombinedStepper():
 
             next_point.vec[:] = point.vec + step
             mu = lin.inp(next_point.s, next_point.z) / model.nu
-            if mu < 0:
+            if mu < 0 or next_point.tau < 0 or next_point.kappa < 0:
                 alpha_iter += 1
                 continue
 
