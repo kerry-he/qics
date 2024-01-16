@@ -6,7 +6,7 @@ import time
 import cProfile
 
 from cones import *
-from utils import symmetric as sym
+from utils import symmetric as sym, linear as lin
 from solver import model, solver
 
 from cvxopt import matrix, log, div, spdiag, solvers
@@ -222,7 +222,7 @@ def F(x = None, z = None):
     log_X = (Ux * log_Dx) @ Ux.T
     log_Y = (Uy * log_Dy) @ Uy.T
     log_XY = log_X - log_Y
-    val = sym.inner(X, log_XY)
+    val = lin.inp(X, log_XY)
 
     D1y_log = D1_log(Dy, log_Dy)
     UyXUy = Uy.T @ X @ Uy

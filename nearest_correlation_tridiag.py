@@ -12,13 +12,13 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Problem data
-n = 100
+n = 50
 vn = sym.vec_dim(n)
 # M = 2 * np.eye(n)
-M = quant.randDensityMatrix(n)
-# M = np.random.rand(n, n)
-# M = (M @ M.T)
-# M = M / np.max(np.diag(M))
+# M = quant.randDensityMatrix(n)
+M = np.random.rand(n, 10)
+M = (M @ M.T)
+M = M / np.max(np.diag(M))
 
 # Build problem model
 A = np.zeros((0, n))

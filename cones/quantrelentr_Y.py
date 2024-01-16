@@ -148,7 +148,7 @@ class QuantRelEntropyY():
             UyHyUy = self.Uy.T @ Hy @ self.Uy
 
             # Hessian product of conditional entropy
-            D2PhiH  = mgrad.scnd_frechet(self.D2_UXU_comb, self.Uy, UyHyUy)
+            D2PhiH  = mgrad.scnd_frechet(self.D2_UXU_comb, UyHyUy, U=self.Uy)
             D2PhiH -= self.zi * np.trace(Hy) * self.UyD1y_logUyXUyUy
             D2PhiH += self.zi * lin.inp(self.hess_fac, Hy) * self.eye
             
@@ -175,19 +175,26 @@ class QuantRelEntropyY():
         self.V = np.vstack((self.tr_X / self.tr_Y * self.tr - self.M.T, -self.tr))
 
 
-        Hyy = mgrad.get_S_matrix(self.D2_UXU_comb, rt2)
+        # Hyy = mgrad.get_S_matrix(self.D2_UXU_comb, rt2)
 
-        D2_UXU = self.D2y_log * np.diag(np.diag(self.UyXUy))
-        D2_UXU = -self.zi * self.tr_Y * D2_UXU
-        for i in range(self.n):
-            for j in range(self.n):
-                D2_UXU[i, j, j] += np.reciprocal(self.Dy[i] * self.Dy[j]) / 2
-        S = mgrad.get_S_matrix(D2_UXU, rt2)
-        M = sp.sparse.diags(np.diag(S) ** -0.5)
+        # D2_UXU = self.D2y_log * np.diag(np.diag(self.UyXUy))
+        # D2_UXU = -self.zi * self.tr_Y * D2_UXU
+        # for i in range(self.n):
+        #     for j in range(self.n):
+        #         D2_UXU[i, j, j] += np.reciprocal(self.Dy[i] * self.Dy[j]) / 2
+        # S = mgrad.get_S_matrix(D2_UXU, rt2)
+        # M = sp.sparse.diags(np.diag(S) ** -0.5)
 
-        print()
-        print("Original cond: ", np.linalg.cond(Hyy), "; New cond: ", np.linalg.cond(M @ Hyy @ M))
-        # print(self.Y)
+        # D2_UXU = self.D2y_log * np.eye(self.n)
+        # D2_UXU = -self.zi * self.tr_Y * D2_UXU
+        # for i in range(self.n):
+        #     for j in range(self.n):
+        #         D2_UXU[i, j, j] += np.reciprocal(self.Dy[i] * self.Dy[j]) / 2
+        # S = mgrad.get_S_matrix(D2_UXU, rt2)
+        # M2 = sp.sparse.diags(np.diag(S) ** -0.5)        
+
+        # print()
+        # print("Original cond: ", np.linalg.cond(Hyy), "; New cond: ", np.linalg.cond(M @ Hyy @ M), "; Other cond: ", np.linalg.cond(M2 @ Hyy @ M2))
         print()
 
 
@@ -199,26 +206,39 @@ class QuantRelEntropyY():
         else:
             # Precompute required objects for preconditioned conjugate gradient for inverse oracle
             # Preconditioner
-            precon_diag = np.zeros(self.n * self.n)
+            # precon_diag = np.zeros(self.n * self.n)
+            # for i in range(self.n):
+            #     for j in range(self.n):
+            #         precon_diag[i*self.n + j] += self.D2_UXU_comb[i, j, j]
+            #         precon_diag[j*self.n + i] += self.D2_UXU_comb[i, j, j]
+            # self.precon = sp.sparse.diags( 1.0 / precon_diag )
+
+            self.M_mtx = np.zeros((self.n, self.n))
             for i in range(self.n):
                 for j in range(self.n):
-                    precon_diag[i*self.n + j] += self.D2_UXU_comb[i, j, j]
-                    precon_diag[j*self.n + i] += self.D2_UXU_comb[i, j, j]
-            self.precon = sp.sparse.diags( 1.0 / precon_diag )
+                    self.M_mtx[i, j] += self.D2_UXU_comb[i, j, j]
+                    self.M_mtx[j, i] += self.D2_UXU_comb[i, j, j]
+            self.M_mtx = np.reciprocal(self.M_mtx)
 
-            self.A = sp.sparse.linalg.LinearOperator((self.n * self.n, self.n * self.n), matvec=self.A_func)
+            # self.A = sp.sparse.linalg.LinearOperator((self.n * self.n, self.n * self.n), matvec=self.A_func)
             
             self.Hyy_U = np.empty((self.vn, 2))
 
-            self.nstep = 0
-            temp, _ = sp.sparse.linalg.cgs(self.A, self.eye.flatten(), x0=1.0 / precon_diag, maxiter=self.n, tol=1e-9, M=self.precon, callback=self.callback)
-            print("tr steps taken: ", self.nstep, ";   res: ", np.linalg.norm(self.A @ temp - self.eye.flatten()))
-            self.Hyy_U[:, [0]] = sym.mat_to_vec(temp.reshape((self.n, self.n)))
+            sol, nstep, res = lin.pcg(self.A_cg, self.eye, self.M_cg, tol=1e-9, max_iter=2*self.n)
+            print("tr steps taken: ", nstep, ";   res: ", res)
+            self.Hyy_U[:, [0]] = sym.mat_to_vec(sol)
+            # self.nstep = 0
+            # temp, _ = sp.sparse.linalg.cg(self.A, self.eye.flatten(), x0=1.0 / precon_diag, maxiter=2*self.n, tol=1e-9, M=self.precon, callback=self.callback)
+            # print("tr steps taken: ", self.nstep, ";   res: ", np.linalg.norm(self.A @ temp - self.eye.flatten()))
+            # self.Hyy_U[:, [0]] = sym.mat_to_vec(temp.reshape((self.n, self.n)))
 
-            self.nstep = 0
-            temp, _ = sp.sparse.linalg.cgs(self.A, self.D1y_logUyXUy.flatten(), x0=self.precon @ self.D1y_logUyXUy.flatten(), maxiter=self.n, tol=1e-9, M=self.precon, callback=self.callback)
-            print("m steps taken: ", self.nstep, ";   res: ", np.linalg.norm(self.A @ temp - self.D1y_logUyXUy.flatten()))
-            self.Hyy_U[:, [1]] = sym.mat_to_vec(temp.reshape((self.n, self.n)))        
+            sol, nstep, res = lin.pcg(self.A_cg, self.D1y_logUyXUy, self.M_cg, tol=1e-9, max_iter=2*self.n)
+            print("tr steps taken: ", nstep, ";   res: ", res)
+            self.Hyy_U[:, [1]] = sym.mat_to_vec(sol)    
+            # self.nstep = 0
+            # temp, _ = sp.sparse.linalg.cg(self.A, self.D1y_logUyXUy.flatten(), x0=self.precon @ self.D1y_logUyXUy.flatten(), maxiter=2*self.n, tol=1e-9, M=self.precon, callback=self.callback)
+            # print("m steps taken: ", self.nstep, ";   res: ", np.linalg.norm(self.A @ temp - self.D1y_logUyXUy.flatten()))
+            # self.Hyy_U[:, [0]] = sym.mat_to_vec(temp.reshape((self.n, self.n)))
 
 
         self.mat = np.linalg.inv(self.z * np.eye(2) + self.V @ self.Hyy_U)
@@ -256,10 +276,12 @@ class QuantRelEntropyY():
             # Solve using preconditioned conjugate gradient
             for k in range(p):
                 temp = sym.vec_to_mat(temp_vec[:, [k]])
-                self.nstep = 0
-                temp2, _ = sp.sparse.linalg.cgs(self.A, temp.flatten(), x0=self.precon @ temp.flatten(), maxiter=self.n, tol=1e-9, M=self.precon, callback=self.callback)
-                # print("steps taken: ", self.nstep, ";   res: ", np.linalg.norm(self.A @ temp2 - temp.flatten()))
-                temp_vec[:, [k]] = sym.mat_to_vec(temp2.reshape((self.n, self.n)))
+                sol, nstep, res = lin.pcg(self.A_cg, temp, self.M_cg, tol=1e-9, max_iter=2*self.n)
+                temp_vec[:, [k]] = sym.mat_to_vec(sol)
+                # self.nstep = 0
+                # temp2, _ = sp.sparse.linalg.cg(self.A, temp.flatten(), x0=self.precon @ temp.flatten(), maxiter=2*self.n, tol=1e-9, M=self.precon, callback=self.callback)
+                # # print("steps taken: ", self.nstep, ";   res: ", np.linalg.norm(self.A @ temp2 - temp.flatten()))
+                # temp_vec[:, [k]] = sym.mat_to_vec(temp2.reshape((self.n, self.n)))
 
         for k in range(p):
             Ht = dirs[0, k]
@@ -306,7 +328,7 @@ class QuantRelEntropyY():
         chi2 = chi * chi
 
         UyHyUy = self.Uy.T @ Hy @ self.Uy
-        scnd_frechet = mgrad.scnd_frechet(self.D2y_log_UXU, self.Uy, UyHyUy)
+        scnd_frechet = mgrad.scnd_frechet(self.D2y_log_UXU, UyHyUy, U=self.Uy)
 
         # Quantum relative entropy Hessians
         D2PhiH  = -self.tr_Y * scnd_frechet
@@ -386,3 +408,9 @@ class QuantRelEntropyY():
         out = out + out.T
 
         return out.flatten()
+
+    def A_cg(self, x):
+        return mgrad.scnd_frechet(self.D2_UXU_comb, x)
+
+    def M_cg(self, x):
+        return x * self.M_mtx

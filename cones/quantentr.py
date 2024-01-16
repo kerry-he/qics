@@ -209,7 +209,7 @@ class QuantEntropy():
         D2PhiH  = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
         D2PhiH -= (trH / self.trX) * np.eye(self.n)
 
-        D3PhiHH  = mgrad.scnd_frechet(self.D2x_log, self.Ux, UxHxUx, UxHxUx)
+        D3PhiHH  = mgrad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
         D3PhiHH += (trH / self.trX) ** 2 * np.eye(self.n)
 
         # Third derivative of barrier

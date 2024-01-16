@@ -270,8 +270,8 @@ class QuantKeyDist():
         D2PhiH  = self.K.T  @ sym.mat_to_vec(self.Ukx @ (self.D1kx_log * UkxHkxUkx) @ self.Ukx.T)
         D2PhiH -= self.ZK.T @ sym.mat_to_vec(self.Uzkx @ (self.D1zkx_log * UzkxHzkxUzkx) @ self.Uzkx.T)
 
-        D3PhiHH  = self.K.T  @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2kx_log, self.Ukx, UkxHkxUkx, UkxHkxUkx))
-        D3PhiHH -= self.ZK.T @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2zkx_log, self.Uzkx, UzkxHzkxUzkx, UzkxHzkxUzkx))
+        D3PhiHH  = self.K.T  @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2kx_log, UkxHkxUkx, UkxHkxUkx, self.Ukx))
+        D3PhiHH -= self.ZK.T @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2zkx_log, UzkxHzkxUzkx, UzkxHzkxUzkx, self.Uzkx))
 
         # Third derivative of barrier
         DPhiH = lin.inp(self.DPhi, Hx_vec)

@@ -264,9 +264,9 @@ class QuantMutualInf():
         D2PhiH -= self.Nc.T @ sym.mat_to_vec(self.Uncx @ (self.D1ncx_log * UncxHncxUncx) @ self.Uncx.T)
         D2PhiH -= (trH / self.trX) * self.tr.T
 
-        D3PhiHH  =             sym.mat_to_vec(mgrad.scnd_frechet(self.D2x_log, self.Ux, UxHxUx, UxHxUx))
-        D3PhiHH += self.N.T  @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2nx_log, self.Unx, UnxHnxUnx, UnxHnxUnx))
-        D3PhiHH -= self.Nc.T @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2ncx_log, self.Uncx, UncxHncxUncx, UncxHncxUncx))
+        D3PhiHH  =             sym.mat_to_vec(mgrad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux))
+        D3PhiHH += self.N.T  @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2nx_log, UnxHnxUnx, UnxHnxUnx, self.Unx))
+        D3PhiHH -= self.Nc.T @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2ncx_log, UncxHncxUncx, UncxHncxUncx, self.Uncx))
         D3PhiHH += (trH / self.trX) ** 2 * self.tr.T
 
         # Third derivative of barrier

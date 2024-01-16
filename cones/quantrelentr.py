@@ -76,7 +76,7 @@ class QuantRelEntropy():
         self.log_X = (self.Ux * self.log_Dx) @ self.Ux.T
         self.log_Y = (self.Uy * self.log_Dy) @ self.Uy.T
         self.log_XY = self.log_X - self.log_Y
-        self.z = self.t - sym.inner(self.X, self.log_XY)
+        self.z = self.t - lin.inp(self.X, self.log_XY)
 
         self.feas = (self.z > 0)
         return self.feas
@@ -146,7 +146,7 @@ class QuantRelEntropy():
             D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
             D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T
             D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.T
-            D2PhiYYH = -mgrad.scnd_frechet(self.D2y_log_UXU, self.Uy, UyHyUy)
+            D2PhiYYH = -mgrad.scnd_frechet(self.D2y_log_UXU, UyHyUy, U=self.Uy)
             
             # Hessian product of barrier function
             out[0, k] = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
@@ -302,16 +302,16 @@ class QuantRelEntropy():
         D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
         D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T
         D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.T
-        D2PhiYYH = -mgrad.scnd_frechet(self.D2y_log, self.Uy, UyHyUy, self.UyXUy)
+        D2PhiYYH = -mgrad.scnd_frechet(self.D2y_log_UXU, UyHyUy, U=self.Uy)
 
         D2PhiXHH = lin.inp(Hx, D2PhiXXH + D2PhiXYH)
         D2PhiYHH = lin.inp(Hy, D2PhiYXH + D2PhiYYH)
 
         # Quantum relative entropy third order derivatives
-        D3PhiXXX =  mgrad.scnd_frechet(self.D2x_log, self.Ux, UxHxUx, UxHxUx)
-        D3PhiXYY = -mgrad.scnd_frechet(self.D2y_log, self.Uy, UyHyUy, UyHyUy)
+        D3PhiXXX =  mgrad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
+        D3PhiXYY = -mgrad.scnd_frechet(self.D2y_log, UyHyUy, UyHyUy, self.Uy)
 
-        D3PhiYYX = -mgrad.scnd_frechet(self.D2y_log, self.Uy, UyHyUy, UyHxUy)
+        D3PhiYYX = -mgrad.scnd_frechet(self.D2y_log, UyHyUy, UyHxUy, self.Uy)
         D3PhiYXY = D3PhiYYX
         D3PhiYYY = -mgrad.thrd_frechet(self.D2y_log, self.Dy, self.Uy, self.UyXUy, UyHyUy, UyHyUy)
         

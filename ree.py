@@ -13,8 +13,8 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Problem data
-n = 5
-m = 5
+n = 11
+m = 11
 N = n * m
 vn = sym.vec_dim(n)
 vN = sym.vec_dim(N)
@@ -53,7 +53,7 @@ for J in range(N):
 h = np.zeros((1 + 2*vN, 1))
 
 # Input into model and solve
-cones = [quantrelentr_Y.QuantRelEntropyY(N, X), possemidefinite.PosSemiDefinite(N)]
+cones = [quantrelentr_Y.QuantRelEntropyY(N, X, cg=True), possemidefinite.PosSemiDefinite(N)]
 model = model.Model(c, A, b, G, h, cones=cones)
 solver = solver.Solver(model, subsolver="elim", feas_tol=1e-7, gap_tol=1e-7)
 
