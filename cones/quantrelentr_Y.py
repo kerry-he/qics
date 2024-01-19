@@ -203,7 +203,7 @@ class QuantRelEntropyY():
             Hyy = mgrad.get_S_matrix(self.D2_UXU_comb, rt2)
             self.Hyy_fact = lin.fact(Hyy)
             self.Hyy_U = lin.fact_solve(self.Hyy_fact, self.U)
-        else:
+        elif self.cg == 0:
             # Precompute required objects for preconditioned conjugate gradient for inverse oracle
             # Preconditioner
             # precon_diag = np.zeros(self.n * self.n)
@@ -233,12 +233,39 @@ class QuantRelEntropyY():
             # self.Hyy_U[:, [0]] = sym.mat_to_vec(temp.reshape((self.n, self.n)))
 
             sol, nstep, res = lin.pcg(self.A_cg, self.D1y_logUyXUy, self.M_cg, tol=1e-9, max_iter=2*self.n)
-            print("tr steps taken: ", nstep, ";   res: ", res)
+            print("m steps taken: ", nstep, ";   res: ", res)
             self.Hyy_U[:, [1]] = sym.mat_to_vec(sol)    
             # self.nstep = 0
             # temp, _ = sp.sparse.linalg.cg(self.A, self.D1y_logUyXUy.flatten(), x0=self.precon @ self.D1y_logUyXUy.flatten(), maxiter=2*self.n, tol=1e-9, M=self.precon, callback=self.callback)
             # print("m steps taken: ", self.nstep, ";   res: ", np.linalg.norm(self.A @ temp - self.D1y_logUyXUy.flatten()))
             # self.Hyy_U[:, [0]] = sym.mat_to_vec(temp.reshape((self.n, self.n)))
+        else:
+            self.gamma = 0.25
+            self.alpha = 1.0
+
+            # Preconditioner
+            self.M_mtx = np.zeros((self.n, self.n))
+            for i in range(self.n):
+                for j in range(self.n):
+                    self.M_mtx[i, j] += self.D2_UXU_comb[i, j, j]
+                    self.M_mtx[j, i] += self.D2_UXU_comb[i, j, j]
+            self.M_mtx = np.reciprocal(np.sqrt(self.M_mtx))
+
+            # Preconditioned DR objects
+            MSM = np.array([self.M_mtx[[k]] * self.D2_UXU_comb[k] * self.M_mtx[[k]].T for k in range(self.n)])
+            MSM_I = MSM + self.gamma*np.eye(self.n)
+            self.MSM_I_fact = [lin.fact(MSM_I_k) for MSM_I_k in MSM_I]
+
+            self.Hyy_U = np.empty((self.vn, 2))
+
+            sol, nstep, res = self.dr(self.eye, tol=1e-12, max_iter=150)
+            print("tr steps taken: ", nstep, ";   res: ", res)
+            self.Hyy_U[:, [0]] = sym.mat_to_vec(sol)
+
+            sol, nstep, res = self.dr(self.D1y_logUyXUy, tol=1e-12, max_iter=150)
+            print("tr steps taken: ", nstep, ";   res: ", res)
+            self.Hyy_U[:, [1]] = sym.mat_to_vec(sol)
+
 
 
         self.mat = np.linalg.inv(self.z * np.eye(2) + self.V @ self.Hyy_U)
@@ -275,13 +302,17 @@ class QuantRelEntropyY():
         else:
             # Solve using preconditioned conjugate gradient
             for k in range(p):
-                temp = sym.vec_to_mat(temp_vec[:, [k]])
-                sol, nstep, res = lin.pcg(self.A_cg, temp, self.M_cg, tol=1e-9, max_iter=2*self.n)
-                temp_vec[:, [k]] = sym.mat_to_vec(sol)
+                # temp = sym.vec_to_mat(temp_vec[:, [k]])
+                # sol, nstep, res = lin.pcg(self.A_cg, temp, self.M_cg, tol=1e-9, max_iter=2*self.n)
+                # temp_vec[:, [k]] = sym.mat_to_vec(sol)
                 # self.nstep = 0
                 # temp2, _ = sp.sparse.linalg.cg(self.A, temp.flatten(), x0=self.precon @ temp.flatten(), maxiter=2*self.n, tol=1e-9, M=self.precon, callback=self.callback)
                 # # print("steps taken: ", self.nstep, ";   res: ", np.linalg.norm(self.A @ temp2 - temp.flatten()))
                 # temp_vec[:, [k]] = sym.mat_to_vec(temp2.reshape((self.n, self.n)))
+
+                sol, nstep, res = self.dr(temp, tol=1e-12, max_iter=150)
+                print("steps taken: ", nstep, ";   res: ", res)
+                temp_vec[:, [k]] = sym.mat_to_vec(sol)
 
         for k in range(p):
             Ht = dirs[0, k]
@@ -414,3 +445,43 @@ class QuantRelEntropyY():
 
     def M_cg(self, x):
         return x * self.M_mtx
+
+
+
+    def dr(self, C, tol, max_iter):
+        MC = self.M_mtx * C
+
+        z = self.M_mtx * MC
+        x = np.zeros_like(z)
+        y = np.zeros_like(z)
+
+        for i in range(max_iter):
+
+            temp = self.gamma * z + 0.5 * MC
+            for k in range(self.n):
+                x[k] = lin.fact_solve(self.MSM_I_fact[k], temp[k])
+            
+            temp = self.gamma * (2*x - z) + 0.5 * MC
+            for k in range(self.n):
+                y.T[k] = lin.fact_solve(self.MSM_I_fact[k], temp.T[k])
+
+            z = z + 2*self.alpha*(y - x)
+
+            Mx = self.M_mtx * x
+            res_vec = mgrad.scnd_frechet(self.D2_UXU_comb, Mx) - C
+            res = np.linalg.norm(res_vec)
+
+            # print("iter: ", i, "; res: ", res)
+
+            if res < tol:
+                break
+
+        Mx = (Mx + Mx.T) * 0.5
+
+        # print("X: ", self.X)
+        # print("Y: ", self.Y)
+        # print("z: ", self.z)
+
+        # print("C: ", C)
+
+        return Mx, i, res
