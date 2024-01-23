@@ -302,7 +302,7 @@ class QuantRelEntropyY():
         else:
             # Solve using preconditioned conjugate gradient
             for k in range(p):
-                # temp = sym.vec_to_mat(temp_vec[:, [k]])
+                temp = sym.vec_to_mat(temp_vec[:, [k]])
                 # sol, nstep, res = lin.pcg(self.A_cg, temp, self.M_cg, tol=1e-9, max_iter=2*self.n)
                 # temp_vec[:, [k]] = sym.mat_to_vec(sol)
                 # self.nstep = 0
@@ -311,7 +311,7 @@ class QuantRelEntropyY():
                 # temp_vec[:, [k]] = sym.mat_to_vec(temp2.reshape((self.n, self.n)))
 
                 sol, nstep, res = self.dr(temp, tol=1e-12, max_iter=150)
-                print("steps taken: ", nstep, ";   res: ", res)
+                # print("steps taken: ", nstep, ";   res: ", res)
                 temp_vec[:, [k]] = sym.mat_to_vec(sol)
 
         for k in range(p):
