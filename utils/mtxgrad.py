@@ -108,7 +108,7 @@ def scnd_frechet_single(D2, UHU, UXU=None, U=None):
 
     return out
 
-@nb.njit(parallel=True)
+# @nb.njit(parallel=True)
 def scnd_frechet_parallel(D2, UHU, UXU=None, U=None):
     n = D2.shape[0]
     out = np.empty((n, n))
