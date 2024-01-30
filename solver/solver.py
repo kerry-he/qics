@@ -18,7 +18,8 @@ class Solver():
         gap_tol = 1e-8,
         verbose  = True,
         subsolver = None,
-        stepper = None
+        stepper = None,
+        ir = True
     ):
         self.max_iter = max_iter
         self.max_time = max_time
@@ -27,7 +28,7 @@ class Solver():
         self.verbose = verbose
 
         self.model = model
-        syssolver = SysSolver(model, subsolver=subsolver)
+        syssolver = SysSolver(model, subsolver=subsolver, ir=ir)
         self.stepper = CombinedStepper(syssolver, model) if (stepper is None) else stepper
 
         return
@@ -51,7 +52,7 @@ class Solver():
                     " | %10.3e" % (self.x_feas), " %10.3e" % (self.y_feas), " %10.3e" % (self.z_feas), end="")
 
             print()
-            print("Opt value:  %.10f" % (self.p_obj))
+            print("Opt value:  %.10f" % (self.p_obj + self.model.offset))
             print("Tolerance:  %.10e" % (self.p_obj - self.d_obj))
             print("Solve time: %.10f" % (time.time() - self.solve_time), " seconds")
             print()
@@ -61,11 +62,13 @@ class Solver():
     def step_and_check(self):
         # Check termination
         if self.num_iters >= self.max_iter:
+            self.status = "max_iter"
             if self.verbose:
                 print("Maximum iteration limit reached")
             return True
         
         if time.time() - self.solve_time >= self.max_time:
+            self.status = "max_time"
             if self.verbose:
                 print("Maximum time limit reached")
             return True

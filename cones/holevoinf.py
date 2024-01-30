@@ -188,7 +188,7 @@ class HolevoInf():
         # Quantum conditional entropy oracles
         D2PhiH = self.D2Phi @ Hp
 
-        D3 = mgrad.scnd_frechet(self.D2x_log, np.eye(self.N), UHU, UHU)
+        D3 = mgrad.scnd_frechet(self.D2x_log, UHU, UHU)
         D3PhiHH = np.full((self.n, 1), np.sum(np.outer(Hp, Hp)) / self.sum_p / self.sum_p)
         for i in range(self.n):
             D3PhiHH[i] += lin.inp(D3, self.UXU_list[i, :, :])

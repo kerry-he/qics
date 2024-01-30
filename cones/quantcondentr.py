@@ -255,8 +255,8 @@ class QuantCondEntropy():
         D2PhiH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
         D2PhiH -= sym.i_kr(self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.T, self.sys, (self.n0, self.n1))
 
-        D3PhiHH = mgrad.scnd_frechet(self.D2x_log, self.Ux, UxHxUx, UxHxUx)
-        D3PhiHH -= sym.i_kr(mgrad.scnd_frechet(self.D2y_log, self.Uy, UyHyUy, UyHyUy), self.sys, (self.n0, self.n1))
+        D3PhiHH = mgrad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
+        D3PhiHH -= sym.i_kr(mgrad.scnd_frechet(self.D2y_log, UyHyUy, UyHyUy, self.Uy), self.sys, (self.n0, self.n1))
 
         # Third derivative of barrier
         DPhiH = lin.inp(self.DPhi, Hx)

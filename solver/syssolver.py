@@ -12,8 +12,9 @@ from utils import point, linear as lin
 # by using elimination.
 
 class SysSolver():
-    def __init__(self, model, subsolver=None):
+    def __init__(self, model, subsolver=None, ir=True):
         self.sol = point.Point(model)
+        self.ir = ir                    # Use iterative refinement or not
 
         if subsolver is None:
             if not model.use_G:
@@ -109,24 +110,25 @@ class SysSolver():
         res_norm = np.linalg.norm(res.vec)
 
         # Iterative refinement
-        iter_refine_count = 0
-        while res_norm > 1e-8:
-            self.solve_system(res, model, mu / tau / tau)
-            temp.vec[:] = dir.vec + self.sol.vec
-            res.vec[:] = rhs.vec - self.apply_system(temp, model, mu / tau / tau).vec
-            res_norm_new = np.linalg.norm(res.vec)
+        if self.ir:
+            iter_refine_count = 0
+            while res_norm > 1e-8:
+                self.solve_system(res, model, mu / tau / tau)
+                temp.vec[:] = dir.vec + self.sol.vec
+                res.vec[:] = rhs.vec - self.apply_system(temp, model, mu / tau / tau).vec
+                res_norm_new = np.linalg.norm(res.vec)
 
-            # Check if iterative refinement made things worse
-            if res_norm_new > res_norm:
-                break
+                # Check if iterative refinement made things worse
+                if res_norm_new > res_norm:
+                    break
 
-            dir.vec[:] = temp.vec
-            res_norm = res_norm_new
+                dir.vec[:] = temp.vec
+                res_norm = res_norm_new
 
-            iter_refine_count += 1
+                iter_refine_count += 1
 
-            if iter_refine_count > 5:
-                break
+                if iter_refine_count > 5:
+                    break
 
         return res_norm
 
@@ -135,29 +137,30 @@ class SysSolver():
         # NOTE: mu has already been accounted for in H
 
         x_r, y_r, z_r = self.solve_subsystem(rhs.x, rhs.y, blk_hess_prod(rhs.z, model) + rhs.s, model)
-        c_est, b_est, h_est = self.forward_subsystem(x_r, y_r, z_r, model)
-        (x_res, y_res, z_res) = (rhs.x - c_est, rhs.y - b_est, rhs.z + blk_invhess_prod(rhs.s, model) - h_est)
-        res_norm = np.linalg.norm(np.vstack((x_res, y_res, z_res)))
-
-        iter_refine_count = 0
-        while res_norm > 1e-8:
-            x_b2, y_b2, z_b2 = self.solve_subsystem(x_res, y_res, blk_hess_prod(z_res, model), model)      
-            (x_temp, y_temp, z_temp) = (self.x_b + x_b2, self.y_b + y_b2, self.z_b + z_b2)
-            c_est, b_est, h_est = self.forward_subsystem(x_temp, y_temp, z_temp, model)
+        if self.ir:
+            c_est, b_est, h_est = self.forward_subsystem(x_r, y_r, z_r, model)
             (x_res, y_res, z_res) = (rhs.x - c_est, rhs.y - b_est, rhs.z + blk_invhess_prod(rhs.s, model) - h_est)
-            res_norm_new = np.linalg.norm(np.vstack((x_res, y_res, z_res)))
+            res_norm = np.linalg.norm(np.vstack((x_res, y_res, z_res)))
 
-            # Check if iterative refinement made things worse
-            if res_norm_new > res_norm:
-                break
+            iter_refine_count = 0
+            while res_norm > 1e-8:
+                x_b2, y_b2, z_b2 = self.solve_subsystem(x_res, y_res, blk_hess_prod(z_res, model), model)      
+                (x_temp, y_temp, z_temp) = (self.x_b + x_b2, self.y_b + y_b2, self.z_b + z_b2)
+                c_est, b_est, h_est = self.forward_subsystem(x_temp, y_temp, z_temp, model)
+                (x_res, y_res, z_res) = (rhs.x - c_est, rhs.y - b_est, rhs.z + blk_invhess_prod(rhs.s, model) - h_est)
+                res_norm_new = np.linalg.norm(np.vstack((x_res, y_res, z_res)))
 
-            (x_r, y_r, z_r) = (x_temp, y_temp, z_temp)
-            res_norm = res_norm_new
+                # Check if iterative refinement made things worse
+                if res_norm_new > res_norm:
+                    break
 
-            iter_refine_count += 1
+                (x_r, y_r, z_r) = (x_temp, y_temp, z_temp)
+                res_norm = res_norm_new
 
-            if iter_refine_count > 5:
-                break        
+                iter_refine_count += 1
+
+                if iter_refine_count > 5:
+                    break        
 
         self.sol.tau[0]   = rhs.tau + rhs.kappa + lin.inp(model.c, x_r) + lin.inp(model.b, y_r) + lin.inp(model.h, z_r)
         self.sol.tau[0]   = self.sol.tau[0] / (mu_tau2 + lin.inp(model.c, self.x_b) + lin.inp(model.b, self.y_b) + lin.inp(model.h, self.z_b))
@@ -165,7 +168,7 @@ class SysSolver():
         self.sol.x[:]     = x_r - self.sol.tau[0] * self.x_b
         self.sol.y[:]     = y_r - self.sol.tau[0] * self.y_b
         self.sol.z[:]     = z_r - self.sol.tau[0] * self.z_b
-        self.sol.s[:]     = blk_invhess_prod(rhs.s - self.sol.z, model) if model.use_G else (self.sol.x[:] - rhs.z)
+        self.sol.s[:]     = -model.G @ self.sol.x[:] - rhs.z + self.sol.tau[0] * model.h
         self.sol.kappa[0] = rhs.kappa - mu_tau2 * self.sol.tau[0]
 
         return self.sol

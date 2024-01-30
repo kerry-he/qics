@@ -16,10 +16,10 @@ np.set_printoptions(threshold=np.inf)
 n = 100
 vn = sym.vec_dim(n)
 # M = 2 * np.eye(n)
-# M = quant.randDensityMatrix(n)
-M = np.random.rand(n, n)
-M = (M @ M.T)
-M = M / np.max(np.diag(M))
+M = quant.randDensityMatrix(n)
+# M = np.random.rand(n, n)
+# M = (M @ M.T)
+# M = M / np.max(np.diag(M))
 
 # Build problem model
 A = np.zeros((n, 1 + vn))
@@ -30,11 +30,19 @@ for i in range(n):
 b = np.ones((n, 1))
 
 c = np.zeros((1 + vn, 1))
-c[0] = 1.0 / n
+c[0] = 1.
+
+G1 = np.hstack((np.ones((1, 1)), np.zeros((1, vn))))
+G2 = np.hstack((np.zeros((vn, 1)), np.zeros((vn, vn))))
+G3 = np.hstack((np.zeros((vn, 1)), np.eye(vn)))
+G = -np.vstack((G1, G2, G3))
+
+h = np.zeros((1 + 2 * vn, 1))
+h[1:vn+1] = sym.mat_to_vec(M)
 
 # Input into model and solve
-cones = [quantrelentr_Y.QuantRelEntropyY(n, M)]
-model = model.Model(c, A, b, cones=cones, offset=-np.trace(M) * np.log(n))
+cones = [quantrelentr.QuantRelEntropy(n)]
+model = model.Model(c, A, b, G, h, cones=cones)
 solver = solver.Solver(model)
 
 profiler = cProfile.Profile()

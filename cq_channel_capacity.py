@@ -13,7 +13,7 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-n = 128
+n = 400
 sn = sym.vec_dim(n)
 
 # cq channel capacity problem data

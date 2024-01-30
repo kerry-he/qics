@@ -89,67 +89,38 @@ def D3_log_ij(i, j, D3, D):
     
     return D3_ij    
 
-def scnd_frechet(D2, U, UHU, UXU=None):
+def scnd_frechet(D2, UHU, UXU=None, U=None):
     # If UXU is None, assume UXU has already been pre-multiplied into D2
-    if UXU is None:
-        if D2.shape[0] <= 85:
-            return scnd_frechet_premult_single(D2, U, UHU)
-        else:
-            return scnd_frechet_premult_parallel(D2, U, UHU)
-
+    # If U is None, assume we are computing the factorized version without U
     if D2.shape[0] <= 40:
-        return scnd_frechet_single(D2, U, UHU, UXU)
+        return scnd_frechet_single(D2, UHU, UXU, U)
     else:
-        return scnd_frechet_parallel(D2, U, UHU, UXU)
+        return scnd_frechet_parallel(D2, UHU, UXU, U)
 
-def scnd_frechet_single(D2, U, UHU, UXU):
-    n = U.shape[0]
+def scnd_frechet_single(D2, UHU, UXU=None, U=None):
+    n = D2.shape[0]
 
-    D2_UXU = D2 * UXU
+    D2_UXU = (D2 * UXU) if (UXU is not None) else (D2)
     out = D2_UXU @ UHU.reshape((n, n, 1))
     out = out.reshape((n, n))
     out = out + out.T
-    out = U @ out @ U.T
+    out = (U @ out @ U.T) if (U is not None) else (out)
 
     return out
 
-@nb.njit(parallel=True)
-def scnd_frechet_parallel(D2, U, UHU, UXU):
-    n = U.shape[0]
+# @nb.njit(parallel=True)
+def scnd_frechet_parallel(D2, UHU, UXU=None, U=None):
+    n = D2.shape[0]
     out = np.empty((n, n))
 
     for k in nb.prange(n):
-        D2_UXU = D2[k, :, :] * UXU
+        D2_UXU = (D2[k] * UXU) if (UXU is not None) else (D2[k])
         out[:, k] = D2_UXU @ UHU[k, :]
 
     out = out + out.T
-    out = U @ out @ U.T
+    out = (U @ out @ U.T) if (U is not None) else (out)
 
     return out
-
-def scnd_frechet_premult_single(D2, U, UHU):
-    n = U.shape[0]
-
-    out = D2 @ UHU.reshape((n, n, 1))
-    out = out.reshape((n, n))
-    out = out + out.T
-    out = U @ out @ U.T
-
-    return out
-
-@nb.njit(parallel=True)
-def scnd_frechet_premult_parallel(D2, U, UHU):
-    n = U.shape[0]
-    out = np.empty((n, n))
-
-    for k in nb.prange(n):
-        out[k, :] = D2[k] @ UHU[k]
-
-    out = out + out.T
-    out = U @ out @ U.T
-
-    return out
-
 
 @nb.njit
 def thrd_frechet(D2, D, U, H1, H2, H3):

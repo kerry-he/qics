@@ -128,6 +128,3 @@ def i_kr(mat, sys, dim):
         out = np.kron(np.eye(n0), mat)
 
     return out 
-
-def inner(x, y):
-    return (x * y).sum()

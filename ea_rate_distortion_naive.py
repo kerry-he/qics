@@ -59,7 +59,7 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-n = 6
+n = 7
 N = n * n
 sn = sym.vec_dim(n)
 sN = sym.vec_dim(N)
@@ -69,6 +69,7 @@ eig_A = np.random.rand(n)
 eig_A /= np.sum(eig_A)
 rho_A = np.diag(eig_A)
 rho_AR = purify(eig_A)
+entr_A = -np.sum(eig_A * np.log(eig_A))
 
 Delta = sym.mat_to_vec(np.eye(N) - rho_AR)
 D = 0.5
@@ -95,7 +96,7 @@ h[-1] = D
 
 # Input into model and solve
 cones = [quantrelentr.QuantRelEntropy(N), nonnegorthant.NonNegOrthant(1)]
-model = model.Model(c, A, b, G, h, cones=cones)
+model = model.Model(c, A, b, G, h, cones=cones, offset=entr_A)
 solver = solver.Solver(model)
 
 profiler = cProfile.Profile()
