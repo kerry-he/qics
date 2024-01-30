@@ -18,7 +18,8 @@ class Solver():
         gap_tol = 1e-8,
         verbose  = True,
         subsolver = None,
-        stepper = None
+        stepper = None,
+        ir = True
     ):
         self.max_iter = max_iter
         self.max_time = max_time
@@ -27,7 +28,7 @@ class Solver():
         self.verbose = verbose
 
         self.model = model
-        syssolver = SysSolver(model, subsolver=subsolver)
+        syssolver = SysSolver(model, subsolver=subsolver, ir=ir)
         self.stepper = CombinedStepper(syssolver, model) if (stepper is None) else stepper
 
         return

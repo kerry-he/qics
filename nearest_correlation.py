@@ -13,7 +13,7 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Problem data
-n = 4
+n = 100
 vn = sym.vec_dim(n)
 # M = 2 * np.eye(n)
 # M = quant.randDensityMatrix(n)
@@ -33,7 +33,7 @@ c = np.zeros((1 + vn, 1))
 c[0] = 1.0 / n
 
 # Input into model and solve
-cones = [quantrelentr_Y.QuantRelEntropyY(n, M, cg=True)]
+cones = [quantrelentr_Y.QuantRelEntropyY(n, M)]
 model = model.Model(c, A, b, cones=cones, offset=-np.trace(M) * np.log(n))
 solver = solver.Solver(model)
 

@@ -12,7 +12,7 @@ from utils import point, linear as lin
 # by using elimination.
 
 class SysSolver():
-    def __init__(self, model, subsolver=None, ir=False):
+    def __init__(self, model, subsolver=None, ir=True):
         self.sol = point.Point(model)
         self.ir = ir                    # Use iterative refinement or not
 

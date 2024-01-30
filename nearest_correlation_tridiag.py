@@ -12,7 +12,7 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Problem data
-n = 50
+n = 100
 vn = sym.vec_dim(n)
 # M = 2 * np.eye(n)
 # M = quant.randDensityMatrix(n)
