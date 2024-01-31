@@ -9,7 +9,7 @@ fprintf("Now solving: %s\n", description)
 
 
 % Objective and constraint matrices
-c_DDS = h5read(file_name, '/data/c');
+c = h5read(file_name, '/data/c');
 b = h5read(file_name, '/data/b')';
 h = h5read(file_name, '/data/h')';
 
@@ -54,14 +54,21 @@ for i = 1:length(h5info(file_name, '/cones').Datasets)
         complex = h5readatt(file_name, cone_name, 'complex');
 
         vn = n * (n + 1) / 2;
-        cons_DDS{i, 1}  = 'QRE';
-        cons_DDS{i, 2}  = [double(n)];
+        cons{i, 1}  = 'QRE';
+        cons{i, 2}  = [double(n)];
         A_DDS{i, 1} = -[          G(total_dim, :);
                        expand_vec(G(total_dim+1    : total_dim+vn, :));
                        expand_vec(G(total_dim+vn+1 : dim, :))];
         b_DDS{i, 1} =  [          h(total_dim);
                        expand_vec(h(total_dim+1    : total_dim+vn));
                        expand_vec(h(total_dim+vn+1 : dim))];
+    elseif strcmp(cone_type, 'nn')
+        dim = h5readatt(file_name, cone_name, 'dim');
+
+        cons{i, 1}  = 'LP';
+        cons{i, 2}  = [double(dim)];
+        A_DDS{i, 1} = -G(total_dim:total_dim+dim-1, :);
+        b_DDS{i, 1} = h(total_dim:total_dim+dim-1);
     end
 
     total_dim = total_dim + dim;
@@ -72,7 +79,7 @@ cons{i + 1, 2}  = [length(b)];
 A_DDS{i + 1, 1} = A;
 b_DDS{i + 1, 1} = b;
 
-[x, y, info] = DDS(c_DDS, A_DDS, b_DDS, cons_DDS);
+[x, y, info] = DDS(c, A_DDS, b_DDS, cons);
 
 
 

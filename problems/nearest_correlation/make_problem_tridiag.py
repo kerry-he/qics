@@ -4,29 +4,33 @@ import h5py
 
 from utils import symmetric as sym
 
-def ncm_problem(n, X, description=[None, None], offset=0.0, optval=None):
+np.random.seed(1)
+
+def make_problem(n, X, description=[None, None], offset=0.0, optval=None):
     vn = sym.vec_dim(n)
 
     # Objective function
-    c = np.zeros((1 + vn, 1))
+    c = np.zeros((n, 1))
     c[0] = 1.
 
-    # Linear constraints
-    A = np.zeros((n, 1 + vn))
-    for i in range(n):
-        H = np.zeros((n, n))
-        H[i, i] = 1.0
-        A[[i], 1:] = sym.mat_to_vec(H).T
-    b = np.ones((n, 1))
+    # Build problem model
+    A = np.zeros((0, n))
+    b = np.zeros((0, 1))
 
-    # Cone constraints
-    G1 = np.hstack((np.ones((1, 1)), np.zeros((1, vn))))
-    G2 = np.hstack((np.zeros((vn, 1)), np.zeros((vn, vn))))
-    G3 = np.hstack((np.zeros((vn, 1)), np.eye(vn)))
+    G1 = np.hstack((np.ones((1, 1)), np.zeros((1, n - 1))))         # QRE t
+    G2 = np.hstack((np.zeros((vn, 1)), np.zeros((vn, n - 1))))      # QRE X
+    G3 = np.zeros((vn, n))                                          # QRE Y
+    for i in range(n - 1):
+        H = np.zeros((n, n))
+        H[i, i + 1] = np.sqrt(0.5)
+        H[i + 1, i] = np.sqrt(0.5)
+        G3[:, [1 + i]] = sym.mat_to_vec(H)
     G = -np.vstack((G1, G2, G3))
 
     h = np.zeros((1 + 2 * vn, 1))
     h[1:vn+1] = sym.mat_to_vec(X)
+    h[vn+1:]  = sym.mat_to_vec(np.eye(n))
+
 
     # Make A and G sparse
     A_sparse = sp.sparse.coo_array(A)
@@ -36,7 +40,7 @@ def ncm_problem(n, X, description=[None, None], offset=0.0, optval=None):
     G_vij = np.vstack((G_sparse.data, G_sparse.row, G_sparse.col))
 
     # Write problem data to file
-    with h5py.File('ncm_' + str(n) + "_" + description[1] + '.hdf5', 'w') as f:
+    with h5py.File('ncm_tridiag_' + str(n) + "_" + description[1] + '.hdf5', 'w') as f:
         # Auxiliary problem information
         f.attrs['description'] = description[0]
         f.attrs['offset'] = offset
@@ -44,7 +48,7 @@ def ncm_problem(n, X, description=[None, None], offset=0.0, optval=None):
 
         # Raw problem data
         raw = f.create_group('raw')
-        raw.create_dataset('n', data=n)         # Dimension of matrix
+        raw.create_dataset('n', data=n, )         # Dimension of matrix
         raw.create_dataset('rho', data=X)       # Input matrix
         
         # List of cones
@@ -68,11 +72,11 @@ def ncm_problem(n, X, description=[None, None], offset=0.0, optval=None):
 
 
 if __name__ == "__main__":
-    n = 2
+    n = 3
     X = 2 * np.eye(n)
 
-    description = ["Nearest correlation matrix problem, N=" + str(n) + ", rho=2*eye(N)",
+    description = ["Nearest correlation matrix problem, n=" + str(n) + ", rho=2*eye(n)",
                    "eye"]
     optval = 2.0 * np.log(2.0) * n
 
-    ncm_problem(n, X, description=description, optval=optval)
+    make_problem(n, X, description=description, optval=optval)

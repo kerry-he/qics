@@ -31,3 +31,14 @@ def entropy(x):
     # "Safe" entropy for positive vectors
     x = x[x > 0]
     return -sum(x * np.log(x))
+
+def purify(rho):
+    # Returns a purification of a quantum state
+    n = rho.shape[0]
+    D, U = np.linalg.eigh(rho)
+
+    vec = np.zeros((n*n, 1))
+    for i in range(n):
+        vec += np.sqrt(D[i]) * np.kron(U[:, [i]], U[:, [i]])
+
+    return vec @ vec.T

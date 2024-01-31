@@ -128,3 +128,26 @@ def i_kr(mat, sys, dim):
         out = np.kron(np.eye(n0), mat)
 
     return out 
+
+def lin_to_mat(lin, ni, no):
+    # Returns the matrix representation of a linear operator from (ni x ni) symmetric
+    # matrices to (no x no) symmetric matrices given as a function handle
+    vni = vec_dim(ni)
+    vno = vec_dim(no)
+    mat = np.zeros((vno, vni))
+
+    k = -1
+    for j in range(ni):
+        for i in range(j + 1):
+            k += 1
+        
+            H = np.zeros((ni, ni))
+            if i == j:
+                H[i, j] = 1
+            else:
+                H[i, j] = H[j, i] = math.sqrt(0.5)
+            
+            lin_H = lin(H)
+            mat[:, [k]] = mat_to_vec(lin_H)
+
+    return mat
