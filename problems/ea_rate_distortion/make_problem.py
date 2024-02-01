@@ -41,9 +41,9 @@ def make_problem(ni, no, rho, Delta, D, description=["", ""], optval=0.0):
     G_vij = np.vstack((G_sparse.data, G_sparse.row, G_sparse.col))
 
     # Write problem data to file
-    with h5py.File('ea-rd_' + str(n) + "_" + description[1] + '.hdf5', 'w') as f:
+    with h5py.File('ea-rd_' + str(ni) + "_" + str(no) + "_" + description[1] + '.hdf5', 'w') as f:
         # Auxiliary problem information
-        f.attrs['description'] = description[0]
+        f.attrs['description'] = "Entanglement assisted rate-distortion problem, " + str(ni) + "inputs, " + str(no) + " outputs, " + description[0]
         f.attrs['offset'] = entr_A
         f.attrs['optval'] = optval
 
@@ -58,7 +58,7 @@ def make_problem(ni, no, rho, Delta, D, description=["", ""], optval=0.0):
         # List of cones
         cones = f.create_group('cones')
         c0 = cones.create_dataset('0', data='qre')
-        c0.attrs['complex'] = False
+        c0.attrs['complex'] = 0
         c0.attrs['dim'] = 1 + 2*vN
         c0.attrs['n'] = N
 
@@ -71,20 +71,20 @@ def make_problem(ni, no, rho, Delta, D, description=["", ""], optval=0.0):
         data.create_dataset('b', data=b)
         data.create_dataset('h', data=h)
         data_A = data.create_dataset('A', data=A_vij)
-        data_A.attrs['sparse'] = True
+        data_A.attrs['sparse'] = 1
         data_A.attrs['shape'] = A.shape
         data_G = data.create_dataset('G', data=G_vij)
-        data_G.attrs['sparse'] = True
+        data_G.attrs['sparse'] = 1
         data_G.attrs['shape'] = G.shape
 
 
 if __name__ == "__main__":
-    n     = 2
+    n     = 4
     rho   = quant.randDensityMatrix(n)
     Delta = np.eye(n*n) - quant.purify(rho)
-    D     = 0.1
+    D     = 0.5
 
-    description = ["Entanglement assisted rate-distortion problem, n=" + str(n) + ", entanglement fidelity distortion observable",
-                   "ef"]
+    description = ["entanglement fidelity distortion observable",       # Long description
+                   "ef"]                                                # Short description
 
     make_problem(n, n, rho, Delta, D, description=description)

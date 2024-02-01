@@ -38,7 +38,7 @@ def make_problem(n, X, description=["", ""], offset=0.0, optval=0.0):
     # Write problem data to file
     with h5py.File('ncm_' + str(n) + "_" + description[1] + '.hdf5', 'w') as f:
         # Auxiliary problem information
-        f.attrs['description'] = description[0]
+        f.attrs['description'] = "Nearest correlation matrix problem, n=" + str(n) + ", " + description[0]
         f.attrs['offset'] = offset
         f.attrs['optval'] = optval
 
@@ -50,7 +50,7 @@ def make_problem(n, X, description=["", ""], offset=0.0, optval=0.0):
         # List of cones
         cones = f.create_group('cones')
         c0 = cones.create_dataset('0', data='qre')
-        c0.attrs['complex'] = False
+        c0.attrs['complex'] = 0
         c0.attrs['dim'] = 1 + 2*vn
         c0.attrs['n'] = n
 
@@ -60,10 +60,10 @@ def make_problem(n, X, description=["", ""], offset=0.0, optval=0.0):
         data.create_dataset('b', data=b)
         data.create_dataset('h', data=h)
         data_A = data.create_dataset('A', data=A_vij)
-        data_A.attrs['sparse'] = True
+        data_A.attrs['sparse'] = 1
         data_A.attrs['shape'] = A.shape
         data_G = data.create_dataset('G', data=G_vij)
-        data_G.attrs['sparse'] = True
+        data_G.attrs['sparse'] = 1
         data_G.attrs['shape'] = G.shape
 
 
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     n = 2
     X = 2 * np.eye(n)
 
-    description = ["Nearest correlation matrix problem, n=" + str(n) + ", rho=2*eye(n)",
+    description = ["rho=2*eye(n)",
                    "eye"]
     optval = 2.0 * np.log(2.0) * n
 

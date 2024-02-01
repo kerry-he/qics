@@ -13,8 +13,7 @@ c = h5read(file_name, '/data/c');
 b = h5read(file_name, '/data/b')';
 h = h5read(file_name, '/data/h')';
 
-is_sparse = h5readatt(file_name, '/data/A', 'sparse');
-if strcmp(is_sparse{1}, 'TRUE')
+if h5readatt(file_name, '/data/A', 'sparse')
     A_vij   = h5read(file_name, '/data/A');
     A_v     = A_vij(:, 1);
     A_i     = A_vij(:, 2) + 1;
@@ -27,8 +26,7 @@ else
     A = h5read(file_name, '/data/A');
 end
 
-is_sparse = h5readatt(file_name, '/data/G', 'sparse');
-if strcmp(is_sparse{1}, 'TRUE')
+if h5readatt(file_name, '/data/G', 'sparse')
     G_vij   = h5read(file_name, '/data/G');
     G_v     = G_vij(:, 1);
     G_i     = G_vij(:, 2) + 1;

@@ -5,6 +5,8 @@ import Hypatia
 import Hypatia.Cones
 import Hypatia.Solvers
 
+T = Float64
+
 function read_problem(file_name)
     # Read data from file
     f = HDF5.h5open(file_name, "r")
@@ -25,6 +27,7 @@ function read_problem(file_name)
         A_j     = f["/data/A"][][:, 3] .+ 1
         A_shape = HDF5.attributes(f["/data/A"])["shape"][]
         A       = SparseArrays.sparse(A_i, A_j, A_v, A_shape[1], A_shape[2])
+        A = collect(A)
     else
         A = f["/data/A"][]
     end
@@ -35,6 +38,7 @@ function read_problem(file_name)
         G_j     = f["/data/G"][][:, 3] .+ 1
         G_shape = HDF5.attributes(f["/data/G"])["shape"][]
         G       = SparseArrays.sparse(G_i, G_j, G_v, G_shape[1], G_shape[2])
+        G       = collect(G)
     else
         G = f["/data/G"][]
     end
@@ -71,8 +75,7 @@ function read_problem(file_name)
 end
 
 # Input into model and solve
-file_name = "problems/ea_rate_distortion/ea-rd_2_ef.hdf5"
-T = Float64
+file_name = "problems/ea_rate_distortion/ea-rd_6_ef.hdf5"
 
 model = read_problem(file_name)
 solver = Solvers.Solver{T}(verbose = true)
