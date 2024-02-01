@@ -1,8 +1,11 @@
 import numpy as np
 
-def randDensityMatrix(n):
+def randDensityMatrix(n, hermitian=False):
     # Generate random density matrix on Haar measure
-    X = np.random.normal(size=(n, n))
+    if hermitian:
+        X = np.random.normal(size=(n, n)) + np.random.normal(size=(n, n)) * 1j
+    else:
+        X = np.random.normal(size=(n, n))
     rho = X @ X.T
     return rho / np.trace(rho)
 

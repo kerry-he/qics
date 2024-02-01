@@ -17,31 +17,16 @@ def make_problem(n, m, X, description=["", ""], offset=0.0, optval=0.0):
     A = np.hstack((np.zeros((1, 1)), sym.mat_to_vec(np.eye(N)).T))
     b = np.ones((1, 1))
 
+    p_transpose = sym.lin_to_mat(lambda x : sym.p_transpose(x, 1, (n, m)), n*m, n*m)
+
     G0 = np.hstack((np.ones((1, 1)), np.zeros((1, vN))))
     G1 = np.hstack((np.zeros((vN, 1)), np.zeros((vN, vN))))
     G2 = np.hstack((np.zeros((vN, 1)), np.eye(vN)))
-    G3 = np.zeros((vN, 1 + vN))
-    # Build partial transpose operator
-    for J in range(N):
-        for I in range(J + 1):
-            # Get product space indices
-            i = I // m
-            j = I - i * m
-
-            k = J // m
-            l = J - k * m
-
-            I_pt = i * m + l
-            J_pt = k * m + j
-
-            if I_pt > J_pt:
-                I_pt, J_pt = J_pt, I_pt
-
-            k_in  = I + (J * (J + 1)) // 2
-            k_out = I_pt + (J_pt * (J_pt + 1)) // 2
-
-            G3[k_out, 1 + k_in] = 1.0
+    G3 = np.hstack((np.zeros((vN, 1)), p_transpose))
     G = -np.vstack((G0, G1, G2, G3))
+
+    h = np.zeros((1 + 3*vN, 1))
+    h[1:1+vN] = sym.mat_to_vec(X)
 
     h = np.zeros((1 + 3*vN, 1))
     h[1:1+vN] = sym.mat_to_vec(X)
@@ -93,8 +78,8 @@ def make_problem(n, m, X, description=["", ""], offset=0.0, optval=0.0):
 
 
 if __name__ == "__main__":
-    n = 3
-    m = 3
+    n = 8
+    m = 8
     X = quant.randDensityMatrix(n * m)
 
     description = ["rho=randDensity(n*m)",

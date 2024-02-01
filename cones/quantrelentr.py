@@ -6,11 +6,12 @@ from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 
 class QuantRelEntropy():
-    def __init__(self, n):
+    def __init__(self, n, hermitian=False):
         # Dimension properties
-        self.n = n                          # Side dimension of system
-        self.vn = sym.vec_dim(self.n)       # Vector dimension of system
-        self.dim = 1 + 2 * self.vn          # Total dimension of cone
+        self.n = n                                      # Side dimension of system
+        self.hermitian = hermitian                      # Hermitian or symmetric vector space
+        self.vn = sym.vec_dim(self.n, self.hermitian)   # Vector dimension of system
+        self.dim = 1 + 2 * self.vn                      # Total dimension of cone
         self.use_sqrt = False
 
         self.idx_X = slice(1, 1 + self.vn)
@@ -34,8 +35,8 @@ class QuantRelEntropy():
         (t0, x0, y0) = get_central_ray_relentr(self.n)
 
         point[0] = t0
-        point[self.idx_X] = sym.mat_to_vec(np.eye(self.n)) * x0
-        point[self.idx_Y] = sym.mat_to_vec(np.eye(self.n)) * y0
+        point[self.idx_X] = sym.mat_to_vec(np.eye(self.n), hermitian=self.hermitian) * x0
+        point[self.idx_Y] = sym.mat_to_vec(np.eye(self.n), hermitian=self.hermitian) * y0
 
         self.set_point(point)
 
@@ -46,8 +47,8 @@ class QuantRelEntropy():
         self.point = point
 
         self.t = point[0]
-        self.X = sym.vec_to_mat(point[self.idx_X])
-        self.Y = sym.vec_to_mat(point[self.idx_Y])
+        self.X = sym.vec_to_mat(point[self.idx_X], hermitian=self.hermitian)
+        self.Y = sym.vec_to_mat(point[self.idx_Y], hermitian=self.hermitian)
 
         self.feas_updated        = False
         self.grad_updated        = False
@@ -102,8 +103,8 @@ class QuantRelEntropy():
 
         self.grad             = np.empty((self.dim, 1))
         self.grad[0]          = -self.zi
-        self.grad[self.idx_X] = sym.mat_to_vec(self.zi * self.DPhiX - self.inv_X)
-        self.grad[self.idx_Y] = sym.mat_to_vec(self.zi * self.DPhiY - self.inv_Y)
+        self.grad[self.idx_X] = sym.mat_to_vec(self.zi * self.DPhiX - self.inv_X, hermitian=self.hermitian)
+        self.grad[self.idx_Y] = sym.mat_to_vec(self.zi * self.DPhiY - self.inv_Y, hermitian=self.hermitian)
 
         self.grad_updated = True
         return self.grad
@@ -118,8 +119,8 @@ class QuantRelEntropy():
 
         # Preparing other required variables
         self.zi2 = self.zi * self.zi
-        self.DPhiX_vec = sym.mat_to_vec(self.DPhiX)
-        self.DPhiY_vec = sym.mat_to_vec(self.DPhiY)
+        self.DPhiX_vec = sym.mat_to_vec(self.DPhiX, hermitian=self.hermitian)
+        self.DPhiY_vec = sym.mat_to_vec(self.DPhiY, hermitian=self.hermitian)
 
         self.hess_aux_updated = True
 
@@ -135,8 +136,8 @@ class QuantRelEntropy():
 
         for k in range(p):
             Ht = dirs[0, k]
-            Hx = sym.vec_to_mat(dirs[self.idx_X, [k]])
-            Hy = sym.vec_to_mat(dirs[self.idx_Y, [k]])
+            Hx = sym.vec_to_mat(dirs[self.idx_X, [k]], hermitian=self.hermitian)
+            Hy = sym.vec_to_mat(dirs[self.idx_Y, [k]], hermitian=self.hermitian)
 
             UxHxUx = self.Ux.T @ Hx @ self.Ux
             UyHxUy = self.Uy.T @ Hx @ self.Uy
@@ -152,12 +153,12 @@ class QuantRelEntropy():
             out[0, k] = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
 
             out[self.idx_X, [k]]  = -out[0, k] * self.DPhiX_vec
-            out[self.idx_X, [k]] +=  sym.mat_to_vec(self.zi * D2PhiXXH + self.inv_X @ Hx @ self.inv_X)
-            out[self.idx_X, [k]] +=  self.zi * sym.mat_to_vec(D2PhiXYH)
+            out[self.idx_X, [k]] +=  sym.mat_to_vec(self.zi * D2PhiXXH + self.inv_X @ Hx @ self.inv_X, hermitian=self.hermitian)
+            out[self.idx_X, [k]] +=  self.zi * sym.mat_to_vec(D2PhiXYH, hermitian=self.hermitian)
 
             out[self.idx_Y, [k]]  = -out[0, k] * self.DPhiY_vec
-            out[self.idx_Y, [k]] +=  self.zi * sym.mat_to_vec(D2PhiYXH)
-            out[self.idx_Y, [k]] +=  sym.mat_to_vec(self.zi * D2PhiYYH + self.inv_Y @ Hy @ self.inv_Y)
+            out[self.idx_Y, [k]] +=  self.zi * sym.mat_to_vec(D2PhiYXH, hermitian=self.hermitian)
+            out[self.idx_Y, [k]] +=  sym.mat_to_vec(self.zi * D2PhiYYH + self.inv_Y @ Hy @ self.inv_Y, hermitian=self.hermitian)
 
         return out
     
@@ -180,7 +181,7 @@ class QuantRelEntropy():
         self.UyUx = self.Uy.T @ self.Ux
 
         # D2PhiYY
-        Hyy = -self.zi * mgrad.get_S_matrix(self.D2y_log * self.UyXUy, rt2)
+        Hyy = -self.zi * mgrad.get_S_matrix(self.D2y_log * self.UyXUy, rt2, hermitian=self.hermitian)
 
         # @TODO: Investigate how to make these loops faster
         k = 0
@@ -188,20 +189,23 @@ class QuantRelEntropy():
             for i in range(j + 1):
                 # Hyx @ Hxx @ Hyx
                 temp = np.outer(self.UyUx[i, :], self.UyUx[j, :])
-                if i != j:
-                    temp = temp + temp.T
-                    temp *= (irt2 * self.zi2 * self.D1y_log[i, j])
-                else:
-                    temp *= (self.zi2 * self.D1y_log[i, j])
                 temp = self.D1x_comb_inv * temp
                 temp = self.UyUx @ temp @ self.UyUx.T
                 temp = self.D1y_log * temp
+                if i != j:
+                    temp *= (irt2 * self.zi2 * self.D1y_log[i, j])
 
-                Hxy_Hxx_Hxy[:, [k]] = sym.mat_to_vec(temp)
+                    Hxy_Hxx_Hxy[:, [k]] = sym.mat_to_vec(temp + temp.T, hermitian=self.hermitian)
+
+                    if self.hermitian:
+                        Hyy[k, k] += np.reciprocal(self.Dy[i] * self.Dy[j])
+                        k = k + 1
+                        Hxy_Hxx_Hxy[:, [k]] = sym.mat_to_vec(temp - temp.T, hermitian=self.hermitian)
+                else:
+                    temp *= (self.zi2 * self.D1y_log[i, j])
 
                 # invYY
                 Hyy[k, k] += np.reciprocal(self.Dy[i] * self.Dy[j])
-
                 k += 1
 
         # Preparing other required variables
@@ -228,8 +232,8 @@ class QuantRelEntropy():
 
         for k in range(p):
             Ht = dirs[0, k]
-            Hx = sym.vec_to_mat(dirs[self.idx_X, [k]])
-            Hy = sym.vec_to_mat(dirs[self.idx_Y, [k]])
+            Hx = sym.vec_to_mat(dirs[self.idx_X, [k]], hermitian=self.hermitian)
+            Hy = sym.vec_to_mat(dirs[self.idx_Y, [k]], hermitian=self.hermitian)
 
             Wx = Hx + Ht * self.DPhiX
             Wy = Hy + Ht * self.DPhiY
@@ -239,7 +243,7 @@ class QuantRelEntropy():
             temp = self.UyUx @ (self.D1x_comb_inv * temp) @ self.UyUx.T
             temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
             temp = self.Uy.T @ (Wy - temp) @ self.Uy
-            temp_vec[:, [k]] = sym.mat_to_vec(temp)
+            temp_vec[:, [k]] = sym.mat_to_vec(temp, hermitian=self.hermitian)
 
         # temp_vec = self.hess_schur_inv @ temp_vec
         temp_vec = lin.fact_solve(self.hess_schur_fact, temp_vec)
@@ -248,16 +252,16 @@ class QuantRelEntropy():
             Ht = dirs[0, k]
             Wx = Wx_list[k, :, :]
 
-            temp = sym.vec_to_mat(temp_vec[:, [k]])
+            temp = sym.vec_to_mat(temp_vec[:, [k]], hermitian=self.hermitian)
             temp = self.Uy @ temp @ self.Uy.T
-            outY = sym.mat_to_vec(temp)
+            outY = sym.mat_to_vec(temp, hermitian=self.hermitian)
 
             temp = self.Uy.T @ temp @ self.Uy
             temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.T
             temp = Wx - temp
             temp = self.Ux.T @ temp @ self.Ux
             temp = self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.T
-            outX = sym.mat_to_vec(temp)
+            outX = sym.mat_to_vec(temp, hermitian=self.hermitian)
 
             outt = self.z2 * Ht + self.DPhiX_vec.T @ outX + self.DPhiY_vec.T @ outY
 
@@ -286,8 +290,8 @@ class QuantRelEntropy():
             self.update_dder3_aux()
 
         Ht = dirs[0, :]
-        Hx = sym.vec_to_mat(dirs[self.idx_X, :])
-        Hy = sym.vec_to_mat(dirs[self.idx_Y, :])
+        Hx = sym.vec_to_mat(dirs[self.idx_X, :], hermitian=self.hermitian)
+        Hy = sym.vec_to_mat(dirs[self.idx_Y, :], hermitian=self.hermitian)
 
         out = np.empty((self.dim, 1))
 
@@ -329,8 +333,8 @@ class QuantRelEntropy():
         dder3_Y -=  2 * self.inv_Y @ Hy @ self.inv_Y @ Hy @ self.inv_Y
 
         out[0]          = dder3_t
-        out[self.idx_X] = sym.mat_to_vec(dder3_X)
-        out[self.idx_Y] = sym.mat_to_vec(dder3_Y)
+        out[self.idx_X] = sym.mat_to_vec(dder3_X, hermitian=self.hermitian)
+        out[self.idx_Y] = sym.mat_to_vec(dder3_Y, hermitian=self.hermitian)
 
         return out
 
@@ -340,8 +344,8 @@ class QuantRelEntropy():
             self.update_hessprod_aux()
 
         Ht = x[0, :]
-        Hx = sym.vec_to_mat(x[self.idx_X, :])
-        Hy = sym.vec_to_mat(x[self.idx_Y, :])
+        Hx = sym.vec_to_mat(x[self.idx_X, :], hermitian=self.hermitian)
+        Hy = sym.vec_to_mat(x[self.idx_Y, :], hermitian=self.hermitian)
 
         Wx = Hx + Ht * self.DPhiX
         Wy = Hy + Ht * self.DPhiY
