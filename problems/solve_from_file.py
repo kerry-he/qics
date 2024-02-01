@@ -52,9 +52,11 @@ def read_problem(file_name):
 
     return model.Model(c, A, b, G, h, cones=cones, offset=offset)
 
-# Input into model and solve
-file_name = "problems/ea_rate_distortion/ea-rd_2_ef.hdf5"
 
-model = read_problem(file_name)
-solver = solver.Solver(model)
-solver.solve()
+if __name__ == "__main__":
+    # Input into model and solve
+    file_name = "problems/rel_entr_entanglement/ree_8_8_rand.hdf5"
+
+    model = read_problem(file_name)
+    solver = solver.Solver(model)
+    solver.solve()
