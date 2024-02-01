@@ -47,26 +47,32 @@ for i = 1:length(h5info(file_name, '/cones').Datasets)
     cone_type = h5read(file_name, cone_name);
 
     if strcmp(cone_type, 'qre')
-        n       = h5readatt(file_name, cone_name, 'n');
-        dim     = h5readatt(file_name, cone_name, 'dim');
-        complex = h5readatt(file_name, cone_name, 'complex');
-
-        vn = n * (n + 1) / 2;
+        n           = h5readatt(file_name, cone_name, 'n');
+        dim         = h5readatt(file_name, cone_name, 'dim');
+        vn          = n * (n + 1) / 2;
         cons{i, 1}  = 'QRE';
         cons{i, 2}  = [double(n)];
         A_DDS{i, 1} = -[          G(total_dim, :);
                        expand_vec(G(total_dim+1    : total_dim+vn, :));
-                       expand_vec(G(total_dim+vn+1 : dim, :))];
+                       expand_vec(G(total_dim+vn+1 : total_dim+dim-1, :))];
         b_DDS{i, 1} =  [          h(total_dim);
                        expand_vec(h(total_dim+1    : total_dim+vn));
-                       expand_vec(h(total_dim+vn+1 : dim))];
-    elseif strcmp(cone_type, 'nn')
-        dim = h5readatt(file_name, cone_name, 'dim');
+                       expand_vec(h(total_dim+vn+1 : total_dim+dim-1))];
 
+    elseif strcmp(cone_type, 'nn')
+        dim         = h5readatt(file_name, cone_name, 'dim');
         cons{i, 1}  = 'LP';
         cons{i, 2}  = [double(dim)];
         A_DDS{i, 1} = -G(total_dim:total_dim+dim-1, :);
         b_DDS{i, 1} = h(total_dim:total_dim+dim-1);
+
+    elseif strcmp(cone_type, 'psd')
+        n           = h5readatt(file_name, cone_name, 'n');
+        dim         = h5readatt(file_name, cone_name, 'dim');
+        cons{i, 1}  = 'SDP';
+        cons{i, 2}  = [double(n)];
+        A_DDS{i, 1} = -expand_vec(G(total_dim : total_dim+dim-1, :));
+        b_DDS{i, 1} =  expand_vec(h(total_dim : total_dim+dim-1));    
     end
 
     total_dim = total_dim + dim;
@@ -77,9 +83,11 @@ cons{i + 1, 2}  = [length(b)];
 A_DDS{i + 1, 1} = A;
 b_DDS{i + 1, 1} = b;
 
+
 [x, y, info] = DDS(c, A_DDS, b_DDS, cons);
 
-
+fprintf("Opt value: %.10f \t\n", c*x + offset);
+fprintf("Solve time: %.10f \t\n", info.time);
 
 %% Functions
 function mat = vec_to_mat(vec)

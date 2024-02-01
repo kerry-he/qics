@@ -6,7 +6,7 @@ from utils import symmetric as sym
 
 np.random.seed(1)
 
-def make_problem(n, X, description=[None, None], offset=0.0, optval=None):
+def make_problem(n, X, description=["", ""], offset=0.0, optval=0.0):
     vn = sym.vec_dim(n)
 
     # Objective function
@@ -42,19 +42,19 @@ def make_problem(n, X, description=[None, None], offset=0.0, optval=None):
     # Write problem data to file
     with h5py.File('ncm_tridiag_' + str(n) + "_" + description[1] + '.hdf5', 'w') as f:
         # Auxiliary problem information
-        f.attrs['description'] = description[0]
+        f.attrs['description'] = "Nearest tridiagonal correlation matrix problem, n=" + str(n) + ", " + description[0]
         f.attrs['offset'] = offset
         f.attrs['optval'] = optval
 
         # Raw problem data
         raw = f.create_group('raw')
-        raw.create_dataset('n', data=n, )         # Dimension of matrix
+        raw.create_dataset('n', data=n)         # Dimension of matrix
         raw.create_dataset('rho', data=X)       # Input matrix
         
         # List of cones
         cones = f.create_group('cones')
         c0 = cones.create_dataset('0', data='qre')
-        c0.attrs['complex'] = False
+        c0.attrs['complex'] = 0
         c0.attrs['dim'] = 1 + 2*vn
         c0.attrs['n'] = n
 
@@ -64,10 +64,10 @@ def make_problem(n, X, description=[None, None], offset=0.0, optval=None):
         data.create_dataset('b', data=b)
         data.create_dataset('h', data=h)
         data_A = data.create_dataset('A', data=A_vij)
-        data_A.attrs['sparse'] = True
+        data_A.attrs['sparse'] = 1
         data_A.attrs['shape'] = A.shape
         data_G = data.create_dataset('G', data=G_vij)
-        data_G.attrs['sparse'] = True
+        data_G.attrs['sparse'] = 1
         data_G.attrs['shape'] = G.shape
 
 
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     n = 3
     X = 2 * np.eye(n)
 
-    description = ["Nearest correlation matrix problem, n=" + str(n) + ", rho=2*eye(n)",
+    description = ["rho=2*eye(n)",
                    "eye"]
     optval = 2.0 * np.log(2.0) * n
 

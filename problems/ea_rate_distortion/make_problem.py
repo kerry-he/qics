@@ -43,7 +43,7 @@ def make_problem(ni, no, rho, Delta, D, description=["", ""], optval=0.0):
     # Write problem data to file
     with h5py.File('ea-rd_' + str(ni) + "_" + str(no) + "_" + description[1] + '.hdf5', 'w') as f:
         # Auxiliary problem information
-        f.attrs['description'] = "Entanglement assisted rate-distortion problem, " + str(ni) + "inputs, " + str(no) + " outputs, " + description[0]
+        f.attrs['description'] = "Entanglement assisted rate-distortion problem, " + str(ni) + "-dimensional input, " + str(no) + "-dimensional output, " + description[0]
         f.attrs['offset'] = entr_A
         f.attrs['optval'] = optval
 

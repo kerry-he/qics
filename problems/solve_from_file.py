@@ -42,9 +42,13 @@ def read_problem(file_name):
                 n       = f['/cones/' + str(i)].attrs['n']
                 complex = f['/cones/' + str(i)].attrs['complex']
                 cones.append(quantrelentr.QuantRelEntropy(n))
-            elif cone_type =='nn':
+            elif cone_type == 'nn':
                 dim       = f['/cones/' + str(i)].attrs['dim']
                 cones.append(nonnegorthant.NonNegOrthant(dim))
+            elif cone_type == 'psd':
+                n       = f['/cones/' + str(i)].attrs['n']
+                complex = f['/cones/' + str(i)].attrs['complex']
+                cones.append(possemidefinite.PosSemiDefinite(n))                
 
     return model.Model(c, A, b, G, h, cones=cones, offset=offset)
 

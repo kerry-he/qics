@@ -62,8 +62,11 @@ function read_problem(file_name)
                 h[total_dim + k], h[total_dim + vn + k] = h[total_dim + vn + k], h[total_dim + k]
             end
         elseif cone_type == "nn"
-            dim     = HDF5.attributes(f["/cones/" * string(i)])["dim"][]
-            push!(cones, Cones.Nonnegative{T}(Int64(dim)))        
+            dim = HDF5.attributes(f["/cones/" * string(i)])["dim"][]
+            push!(cones, Cones.Nonnegative{T}(Int64(dim)))
+        elseif cone_type == "psd"
+            dim = HDF5.attributes(f["/cones/" * string(i)])["dim"][]
+            push!(cones, Cones.PosSemidefTri{T, T}(Int64(dim)))         
         end
 
         total_dim += dim
@@ -81,3 +84,7 @@ model = read_problem(file_name)
 solver = Solvers.Solver{T}(verbose = true)
 Solvers.load(solver, model)
 Solvers.solve(solver)
+
+println("Opt value: ", Solvers.get_primal_obj(solver))
+println("Solve time: ", Solvers.get_solve_time(solver))
+println("Abs gap: ", Solvers.get_primal_obj(solver) - Solvers.get_dual_obj(solver))
