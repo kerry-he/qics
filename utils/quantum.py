@@ -6,7 +6,7 @@ def randDensityMatrix(n, hermitian=False):
         X = np.random.normal(size=(n, n)) + np.random.normal(size=(n, n)) * 1j
     else:
         X = np.random.normal(size=(n, n))
-    rho = X @ X.T
+    rho = X @ X.conj().T
     return rho / np.trace(rho)
 
 def randUnitary(n):

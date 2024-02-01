@@ -56,7 +56,7 @@ class PosSemiDefinite():
             return self.grad
         
         self.X_chol_inv = np.linalg.inv(self.X_chol)
-        self.inv_X = self.X_chol_inv.T @ self.X_chol_inv
+        self.inv_X = self.X_chol_inv.conj().T @ self.X_chol_inv
         self.grad  = -sym.mat_to_vec(self.inv_X, hermitian=self.hermitian)
 
         self.grad_updated = True
@@ -82,7 +82,7 @@ class PosSemiDefinite():
 
         for j in range(p):
             H = sym.vec_to_mat(dirs[:, [j]], hermitian=self.hermitian)
-            out[:, [j]] = sym.mat_to_vec(self.X_chol_inv @ H @ self.X_chol_inv.T, hermitian=self.hermitian)
+            out[:, [j]] = sym.mat_to_vec(self.X_chol_inv @ H @ self.X_chol_inv.conj().T, hermitian=self.hermitian)
 
         return out
     
@@ -104,7 +104,7 @@ class PosSemiDefinite():
 
         for j in range(p):
             H = sym.vec_to_mat(dirs[:, [j]], hermitian=self.hermitian)
-            out[:, [j]] = sym.mat_to_vec(self.X_chol.T @ H @ self.X_chol, hermitian=self.hermitian)
+            out[:, [j]] = sym.mat_to_vec(self.X_chol.conj().T @ H @ self.X_chol, hermitian=self.hermitian)
 
         return out        
 
