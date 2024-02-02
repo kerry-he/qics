@@ -262,3 +262,14 @@ def lin_to_mat(lin, ni, no, hermitian=False):
         mat[:, [k]] = mat_to_vec(lin_H, rt2, hermitian=hermitian)
 
     return mat
+
+def apply_kraus(x, Klist):
+    no = Klist[0].shape[0]
+    if x.dtype == 'complex128':
+        KxK = np.zeros((no, no), 'complex128')
+    else:
+        KxK = np.zeros((no, no))
+
+    for K in Klist:
+        KxK += K @ x @ K.conj().T
+    return KxK

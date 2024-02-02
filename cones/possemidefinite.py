@@ -49,6 +49,10 @@ class PosSemiDefinite():
 
         return self.feas
     
+    def get_val(self):
+        (sign, logabsdet) = np.linalg.slogdet(self.X)
+        return -sign * logabsdet
+    
     def get_grad(self):
         assert self.feas_updated
 

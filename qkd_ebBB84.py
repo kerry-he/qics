@@ -18,20 +18,24 @@ np.set_printoptions(threshold=np.inf)
 # Obtained from https://math.uwaterloo.ca/~hwolkowi/henry/reports/ZGNQKDmainsolverUSEDforPUBLCNJuly31/
 
 # Problem data
-data = sp.io.loadmat('examples/ebBB84.mat')
+data = sp.io.loadmat('examples/DMCV.mat')
 gamma = data['gamma']
 Gamma = data['Gamma'][:, 0]
 Klist = data['Klist'][0, :]
 Zlist = data['Zlist'][0, :]
+hermitian = True
 
 no, ni = np.shape(Klist[0])
 nc = np.size(gamma)
 
-vni = sym.vec_dim(ni)
-vno = sym.vec_dim(no)
+vni = sym.vec_dim(ni, hermitian=hermitian)
+vno = sym.vec_dim(no, hermitian=hermitian)
 
-Gamma_op = np.array([sym.mat_to_vec(G).T[0] for G in Gamma])
+Gamma_op = np.array([sym.mat_to_vec(G, hermitian=hermitian).T[0] for G in Gamma])
 
+# nc -= 1
+# Gamma_op = Gamma_op[:-1, :]
+# gamma = gamma[:-1]
 
 # Build problem model
 A = np.hstack((np.zeros((nc, 1)), Gamma_op))
@@ -41,7 +45,7 @@ c = np.zeros((1 + vni, 1))
 c[0] = 1.
 
 # Input into model and solve
-cones = [quantkeydist.QuantKeyDist(Klist, Zlist)]
+cones = [quantkeydist.QuantKeyDist(Klist, Zlist, hermitian=hermitian)]
 model = model.Model(c, A, b, cones=cones)
 solver = solver.Solver(model)
 
