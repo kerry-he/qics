@@ -95,35 +95,58 @@ def scnd_frechet(D2, UHU, UXU=None, U=None):
     if D2.shape[0] <= 40:
         return scnd_frechet_single(D2, UHU, UXU, U)
     else:
-        return scnd_frechet_parallel(D2, UHU, UXU, U)
+        if (UHU.dtype == 'complex128') or (D2.dtype == 'complex128') or ((UXU is not None) and (UXU.dtype == 'complex128')):
+            return scnd_frechet_parallel_complex(D2, UHU, UXU, U)
+        else:
+            return scnd_frechet_parallel(D2, UHU, UXU, U)
 
 def scnd_frechet_single(D2, UHU, UXU=None, U=None):
     n = D2.shape[0]
 
     D2_UXU = (D2 * UXU) if (UXU is not None) else (D2)
-    out = D2_UXU @ UHU.reshape((n, n, 1))
+    out = UHU.reshape((n, 1, n)) @ D2_UXU
     out = out.reshape((n, n))
     out = out + out.conj().T
-    out = (U @ out @ U.T) if (U is not None) else (out)
+    out = (U @ out @ U.conj().T) if (U is not None) else (out)
 
     return out
 
 @nb.njit(parallel=True)
 def scnd_frechet_parallel(D2, UHU, UXU=None, U=None):
     n = D2.shape[0]
-    out = np.empty((n, n))
+    out = np.zeros((n, n))
 
     for k in nb.prange(n):
         D2_UXU = (D2[k] * UXU) if (UXU is not None) else (D2[k])
-        out[:, k] = D2_UXU @ UHU[k, :]
+        out[k] = UHU[k] @ D2_UXU
 
     out = out + out.conj().T
-    out = (U @ out @ U.T) if (U is not None) else (out)
+    out = (U @ out @ U.conj().T) if (U is not None) else (out)
 
     return out
 
-@nb.njit
+@nb.njit(parallel=True)
+def scnd_frechet_parallel_complex(D2, UHU, UXU=None, U=None):
+    n = D2.shape[0]
+    out = np.zeros((n, n), 'complex128')
+
+    for k in nb.prange(n):
+        D2_UXU = (D2[k] * UXU) if (UXU is not None) else (D2[k])
+        out[k] = UHU[k] @ D2_UXU
+
+    out = out + out.conj().T
+    out = (U @ out @ U.conj().T) if (U is not None) else (out)
+
+    return out
+
 def thrd_frechet(D2, D, U, H1, H2, H3):
+    if (H1.dtype == 'complex128') or (H2.dtype == 'complex128') or (H3.dtype == 'complex128'):
+        return thrd_frechet_complex(D2, D, U, H1, H2, H3)
+    else:
+        return thrd_frechet_real(D2, D, U, H1, H2, H3)
+
+@nb.njit
+def thrd_frechet_real(D2, D, U, H1, H2, H3):
     n = D.size
     out = np.zeros((n, n))
 
@@ -143,7 +166,30 @@ def thrd_frechet(D2, D, U, H1, H2, H3):
             
             out[j, i] = out[i, j]
 
-    return U @ out @ U.T
+    return U @ out @ U.conj().T
+
+@nb.njit
+def thrd_frechet_complex(D2, D, U, H1, H2, H3):
+    n = D.size
+    out = np.zeros((n, n), 'complex128')
+
+    for i in range(n):
+        for j in range(i + 1):
+            D3_ij = D3_log_ij(i, j, D2, D)
+
+            for k in range(n):
+                for l in range(n):
+                    temp  = H1[i, k] * H2[k, l] * H3[l, j] 
+                    temp += H1[i, k] * H3[k, l] * H2[l, j] 
+                    temp += H2[i, k] * H1[k, l] * H3[l, j] 
+                    temp += H2[i, k] * H3[k, l] * H1[l, j] 
+                    temp += H3[i, k] * H1[k, l] * H2[l, j] 
+                    temp += H3[i, k] * H2[k, l] * H1[l, j]
+                    out[i, j] = out[i, j] + D3_ij[k, l] * temp
+            
+            out[j, i] = out[i, j]
+
+    return U @ out @ U.conj().T
 
 def get_S_matrix(D2_UXU, rt2, hermitian=False):
     if hermitian:
@@ -212,51 +258,51 @@ def get_S_matrix_hermitian(D2_UXU, rt2):
             # Increment rows
             for k in range(j):
                 row = 2*k + j*j
-                S[row    , col] =  D2_UXU[j, k, i].real
-                S[row + 1, col] = -D2_UXU[j, k, i].imag
+                S[row    , col] = D2_UXU[j, k, i].real
+                S[row + 1, col] = D2_UXU[j, k, i].imag
             row = 2*j + j*j
             S[row, col] = D2_UXU[j, j, i].real * rt2
             for k in range(j + 1, n):
                 row = 2*j + k*k
-                S[row    , col] = D2_UXU[j, k, i].real
-                S[row + 1, col] = D2_UXU[j, k, i].imag
+                S[row    , col] =  D2_UXU[j, k, i].real
+                S[row + 1, col] = -D2_UXU[j, k, i].imag
 
             # Increment columns
             for k in range(i):
                 row = 2*k + i*i
-                S[row    , col] +=  D2_UXU[i, k, j].real
-                S[row + 1, col] += -D2_UXU[i, k, j].imag
+                S[row    , col] += D2_UXU[i, k, j].real
+                S[row + 1, col] += D2_UXU[i, k, j].imag
             row = 2*i + i*i
             S[row, col] = D2_UXU[i, j, i].real * rt2
             for k in range(i + 1, n):
                 row = 2*i + k*k
-                S[row    , col] += D2_UXU[i, k, j].real
-                S[row + 1, col] += D2_UXU[i, k, j].imag
+                S[row    , col] +=  D2_UXU[i, k, j].real
+                S[row + 1, col] += -D2_UXU[i, k, j].imag
 
             col += 1
 
             # Increment rows
             for k in range(j):
                 row = 2*k + j*j
-                S[row    , col] = D2_UXU[j, k, i].imag
-                S[row + 1, col] = D2_UXU[j, k, i].real
+                S[row    , col] = -D2_UXU[j, k, i].imag
+                S[row + 1, col] =  D2_UXU[j, k, i].real
             row = 2*j + j*j
-            S[row, col] = D2_UXU[j, j, i].imag * rt2
+            S[row, col] = -D2_UXU[j, j, i].imag * rt2
             for k in range(j + 1, n):
                 row = 2*j + k*k
-                S[row    , col] = D2_UXU[j, k, i].imag
+                S[row    , col] = -D2_UXU[j, k, i].imag
                 S[row + 1, col] = -D2_UXU[j, k, i].real
 
             # Increment columns
             for k in range(i):
                 row = 2*k + i*i
-                S[row    , col] += -D2_UXU[i, k, j].imag
+                S[row    , col] +=  D2_UXU[i, k, j].imag
                 S[row + 1, col] += -D2_UXU[i, k, j].real
             row = 2*i + i*i
-            S[row, col] = D2_UXU[i, j, i].imag * rt2
+            S[row, col] = -D2_UXU[i, j, i].imag * rt2
             for k in range(i + 1, n):
                 row = 2*i + k*k
-                S[row    , col] += -D2_UXU[i, k, j].imag
+                S[row    , col] += D2_UXU[i, k, j].imag
                 S[row + 1, col] += D2_UXU[i, k, j].real
 
             col += 1
@@ -264,14 +310,14 @@ def get_S_matrix_hermitian(D2_UXU, rt2):
         # Column corresponding to unit vector Hjj
         for k in range(j):
             row = 2*k + j*j
-            S[row    , col] = D2_UXU[j, j, k].real * rt2
-            S[row + 1, col] = D2_UXU[j, j, k].imag * rt2
+            S[row    , col] =  D2_UXU[j, j, k].real * rt2
+            S[row + 1, col] = -D2_UXU[j, j, k].imag * rt2
         row = 2*j + j*j
         S[row, col] = 2 * D2_UXU[j, j, j].real
         for k in range(j + 1, n):
             row = 2*j + k*k
-            S[row    , col] =  D2_UXU[j, j, k].real * rt2
-            S[row + 1, col] = -D2_UXU[j, j, k].imag * rt2
+            S[row    , col] = D2_UXU[j, j, k].real * rt2
+            S[row + 1, col] = D2_UXU[j, j, k].imag * rt2
 
         col += 1
 

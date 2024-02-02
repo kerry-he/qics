@@ -13,8 +13,8 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Problem data
-n = 2
-m = 2
+n = 6
+m = 6
 N = n * m
 vn = sym.vec_dim(n, hermitian=True)
 vN = sym.vec_dim(N, hermitian=True)

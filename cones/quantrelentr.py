@@ -81,7 +81,12 @@ class QuantRelEntropy():
 
         self.feas = (self.z > 0)
         return self.feas
-    
+
+    def get_val(self):
+        assert self.feas_updated
+
+        return -np.log(self.z) - np.sum(self.log_Dx) - np.sum(self.log_Dy)
+
     def get_grad(self):
         assert self.feas_updated
 
@@ -181,14 +186,14 @@ class QuantRelEntropy():
         self.UyUx = self.Uy.conj().T @ self.Ux
 
         # D2PhiYY
-        Hyy = -self.zi * mgrad.get_S_matrix(self.D2y_log * self.UyXUy, rt2, hermitian=self.hermitian)
+        Hyy = -mgrad.get_S_matrix(self.D2y_log * (self.zi * self.UyXUy + np.eye(self.n)), rt2, hermitian=self.hermitian)
 
         # @TODO: Investigate how to make these loops faster
         k = 0
         for j in range(self.n):
             for i in range(j + 1):
-                # Hyx @ Hxx @ Hyx
-                temp = np.outer(self.UyUx[i, :], self.UyUx[j, :])
+                # Hyx @ Hxx @ Hyx   np.outer(self.UyUx[i, :], self.UyUx[j, :])
+                temp = self.UyUx.conj().T[:, [i]] @ self.UyUx[[j], :]
                 temp = self.D1x_comb_inv * temp
                 temp = self.UyUx @ temp @ self.UyUx.conj().T
                 temp = self.D1y_log * temp
@@ -198,15 +203,13 @@ class QuantRelEntropy():
                     Hxy_Hxx_Hxy[:, [k]] = sym.mat_to_vec(temp + temp.conj().T, hermitian=self.hermitian)
 
                     if self.hermitian:
-                        Hyy[k, k] += np.reciprocal(self.Dy[i] * self.Dy[j])
-                        k = k + 1
-                        Hxy_Hxx_Hxy[:, [k]] = sym.mat_to_vec(temp - temp.conj().T, hermitian=self.hermitian)
+                        k += 1
+                        temp *= 1j
+                        Hxy_Hxx_Hxy[:, [k]] = sym.mat_to_vec(temp + temp.conj().T, hermitian=self.hermitian)
                 else:
                     temp *= (self.zi2 * self.D1y_log[i, j])
                     Hxy_Hxx_Hxy[:, [k]] = sym.mat_to_vec(temp, hermitian=self.hermitian)
 
-                # invYY
-                Hyy[k, k] += np.reciprocal(self.Dy[i] * self.Dy[j])
                 k += 1
 
         # Preparing other required variables
@@ -295,8 +298,6 @@ class QuantRelEntropy():
         Hy = sym.vec_to_mat(dirs[self.idx_Y, :], hermitian=self.hermitian)
 
         out = np.zeros((self.dim, 1))
-
-        return out
 
         chi = Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)
         chi2 = chi * chi
