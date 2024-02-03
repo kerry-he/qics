@@ -34,13 +34,13 @@ class QuantKeyDist():
         KKnzidx   = np.where(Dkk > 1e-12)[0]
         ZKKZnzidx = np.where(Dzkkz > 1e-12)[0]
 
-        Qkk   = Ukk[:, KKnzidx]
-        Qzkkz = Ukk[:, KKnzidx]
-
         self.nk   = np.size(KKnzidx)
-        self.nzk  = np.size(KKnzidx)
+        self.nzk  = np.size(ZKKZnzidx)
         self.vnk  = sym.vec_dim(self.nk, self.hermitian)
         self.vnzk = sym.vec_dim(self.nzk, self.hermitian)
+
+        self.Qkk   = np.eye(self.no) if (self.nk == self.no) else Ukk[:, KKnzidx]
+        self.Qzkkz = np.eye(self.no) if (self.nzk == self.no) else Uzkkz[:, ZKKZnzidx]
 
         # Build linear maps of quantum channels
         # self.K  = np.zeros((self.vnk, self.vni))
@@ -67,8 +67,8 @@ class QuantKeyDist():
         #         self.ZK[:, [k]] = sym.mat_to_vec(Qzkkz.T @ ZKHKZ @ Qzkkz)
 
 
-        self.K = sym.lin_to_mat(lambda x : Qkk.conj().T @ sym.apply_kraus(x, self.K_list) @ Qkk, self.ni, self.nk, hermitian=self.hermitian)
-        self.ZK = sym.lin_to_mat(lambda x : Qzkkz.conj().T @ sym.apply_kraus(sym.apply_kraus(x, self.K_list), self.Z_list) @ Qzkkz, self.ni, self.nzk, hermitian=self.hermitian)                
+        self.K = sym.lin_to_mat(lambda x : self.Qkk.conj().T @ sym.apply_kraus(x, self.K_list) @ self.Qkk, self.ni, self.nk, hermitian=self.hermitian)
+        self.ZK = sym.lin_to_mat(lambda x : self.Qzkkz.conj().T @ sym.apply_kraus(sym.apply_kraus(x, self.K_list), self.Z_list) @ self.Qzkkz, self.ni, self.nzk, hermitian=self.hermitian)                
         
 
         # Update flags
@@ -85,7 +85,7 @@ class QuantKeyDist():
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
-        point[0] = 1.
+        point[0] = 100.
         point[1:] = sym.mat_to_vec(np.eye(self.ni), hermitian=self.hermitian)
 
         self.set_point(point)
@@ -123,6 +123,11 @@ class QuantKeyDist():
         self.Dkx, self.Ukx   = np.linalg.eigh(self.KX)
         self.Dzkx, self.Uzkx = np.linalg.eigh(self.ZKX)
         
+        # Shouldn't be necessary as K and Z are both positive, but just to be safe against numerical imprecisions
+        if any(self.Dkx <= 0) or any(self.Dzkx <= 0):
+            self.feas = False
+            return self.feas
+
         self.log_Dkx  = np.log(self.Dkx)
         self.log_Dzkx = np.log(self.Dzkx)
 
@@ -147,8 +152,8 @@ class QuantKeyDist():
         
         log_KX  = (self.Ukx * self.log_Dkx) @ self.Ukx.conj().T
         log_ZKX = (self.Uzkx * self.log_Dzkx) @ self.Uzkx.conj().T
-        self.K_log_KX   = self.K.T @ sym.mat_to_vec(log_KX, hermitian=self.hermitian)
-        self.ZK_log_ZKX = self.ZK.T @ sym.mat_to_vec(log_ZKX, hermitian=self.hermitian)
+        self.K_log_KX   = self.K.T @ sym.mat_to_vec(log_KX + np.eye(self.nk), hermitian=self.hermitian)
+        self.ZK_log_ZKX = self.ZK.T @ sym.mat_to_vec(log_ZKX + np.eye(self.nzk), hermitian=self.hermitian)
 
         self.inv_Dx = np.reciprocal(self.Dx)
         self.inv_X  = (self.Ux * self.inv_Dx) @ self.Ux.conj().T
@@ -178,7 +183,7 @@ class QuantKeyDist():
         for j in range(self.ni):
             for i in range(j + 1):
                 # invXX
-                temp = np.outer(self.inv_X[i, :], self.inv_X[j, :])
+                temp = self.inv_X[:, [i]] @ self.inv_X[[j], :]
                 if i != j:
                     temp *= irt2
                     invXX[:, [k]] = sym.mat_to_vec(temp + temp.conj().T, hermitian=self.hermitian)
@@ -293,8 +298,8 @@ class QuantKeyDist():
         D2PhiH  = self.K.T  @ sym.mat_to_vec(self.Ukx @ (self.D1kx_log * UkxHkxUkx) @ self.Ukx.conj().T, hermitian=self.hermitian)
         D2PhiH -= self.ZK.T @ sym.mat_to_vec(self.Uzkx @ (self.D1zkx_log * UzkxHzkxUzkx) @ self.Uzkx.conj().T, hermitian=self.hermitian)
 
-        D3PhiHH  = self.K.T  @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2kx_log, UkxHkxUkx, UkxHkxUkx, self.Ukx), hermitian=self.hermitian)
-        D3PhiHH -= self.ZK.T @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2zkx_log, UzkxHzkxUzkx, UzkxHzkxUzkx, self.Uzkx), hermitian=self.hermitian)
+        D3PhiHH  = self.K.T  @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2kx_log * UkxHkxUkx, UkxHkxUkx, U=self.Ukx), hermitian=self.hermitian)
+        D3PhiHH -= self.ZK.T @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2zkx_log * UzkxHzkxUzkx, UzkxHzkxUzkx, U=self.Uzkx), hermitian=self.hermitian)
 
         # Third derivative of barrier
         DPhiH = lin.inp(self.DPhi, Hx_vec)
@@ -313,4 +318,5 @@ class QuantKeyDist():
         return dder3
     
     def norm_invhess(self, x):
-        return 0.0    
+        return 0.0
+    

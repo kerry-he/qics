@@ -159,6 +159,7 @@ def vec_to_mat_parallel(vec, irt2):
 
     return mat
 
+@nb.njit
 def vec_to_mat_complex_single(vec, irt2):
     irt2 = np.sqrt(0.5) if (irt2 is None) else irt2
 
