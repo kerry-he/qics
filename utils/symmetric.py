@@ -81,8 +81,8 @@ def mat_to_vec_complex_single(mat, rt2):
             vec[k] = mat[i, j].real * rt2
             k += 1
             vec[k] = mat[i, j].imag * rt2
-            k += 1            
-        
+            k += 1
+            
         vec[k] = mat[j, j].real
         k += 1
 
@@ -264,13 +264,23 @@ def lin_to_mat(lin, ni, no, hermitian=False):
 
     return mat
 
-def apply_kraus(x, Klist):
-    no = Klist[0].shape[0]
-    if x.dtype == 'complex128':
-        KxK = np.zeros((no, no), 'complex128')
-    else:
-        KxK = np.zeros((no, no))
+def congr_map(x, Klist, adjoint=False):
+    # Get dimension of output (depends on if map is adjoint or not)
+    no, ni = Klist[0].shape
+    dim = ni if adjoint else no
 
-    for K in Klist:
-        KxK += K @ x @ K.conj().T
+    # Create output in correct typing (real v complex)
+    if (x.dtype == 'complex128') or (Klist[0].dtype == 'complex128'):
+        KxK = np.zeros((dim, dim), 'complex128')
+    else:
+        KxK = np.zeros((dim, dim))
+
+    # Compute congruence map
+    if adjoint:
+        for K in Klist:
+            KxK += K.conj().T @ x @ K        
+    else:
+        for K in Klist:
+            KxK += K @ x @ K.conj().T
+            
     return KxK
