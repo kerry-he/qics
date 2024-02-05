@@ -9,8 +9,6 @@ from utils import mtxgrad   as mgrad
 class QuantKeyDist():
     def __init__(self, K_list, Z_list, hermitian=False):
         # Dimension properties
-        self.K_list = K_list                    # Get K Kraus operators
-        self.Z_list = Z_list                    # Get Z Kraus operators
         self.no, self.ni = np.shape(K_list[0])  # Get input and output dimension
         self.hermitian = hermitian
         
@@ -22,10 +20,10 @@ class QuantKeyDist():
 
         # Reduce systems
         KK = np.zeros((self.no, self.no), 'complex128')
-        for K in self.K_list:
+        for K in K_list:
             KK += K @ K.conj().T
         ZKKZ = np.zeros((self.no, self.no), 'complex128')
-        for Z in self.Z_list:
+        for Z in Z_list:
             ZKKZ += Z @ KK @ Z.conj().T
 
         Dkk, Ukk     = np.linalg.eigh(KK)
@@ -34,42 +32,21 @@ class QuantKeyDist():
         KKnzidx   = np.where(Dkk > 1e-12)[0]
         ZKKZnzidx = np.where(Dzkkz > 1e-12)[0]
 
-        Qkk   = Ukk[:, KKnzidx]
-        Qzkkz = Ukk[:, KKnzidx]
-
         self.nk   = np.size(KKnzidx)
-        self.nzk  = np.size(KKnzidx)
+        self.nzk  = np.size(ZKKZnzidx)
         self.vnk  = sym.vec_dim(self.nk, self.hermitian)
         self.vnzk = sym.vec_dim(self.nzk, self.hermitian)
 
-        # Build linear maps of quantum channels
-        # self.K  = np.zeros((self.vnk, self.vni))
-        # self.ZK = np.zeros((self.vnzk, self.vni))
+        self.Qkk   = np.eye(self.no) if (self.nk == self.no) else Ukk[:, KKnzidx]
+        self.Qzkkz = np.eye(self.no) if (self.nzk == self.no) else Uzkkz[:, ZKKZnzidx]
 
-        # k = -1
-        # for j in range(self.ni):
-        #     for i in range(j + 1):
-        #         k += 1
-                
-        #         KHK = np.zeros((self.no, self.no))
-        #         for K in self.K_list:
-        #             KHK += np.outer(K[:, i], K[:, j])
+        # Get reduced Kraus operators
+        self.K_list = [self.Qkk.conj().T @ K for K in K_list]
+        self.ZK_list = [self.Qzkkz.conj().T @ Z @ K for Z in Z_list for K in K_list]
 
-        #         if i != j:
-        #             KHK = KHK + KHK.T
-        #             KHK *= math.sqrt(0.5)
+        self.K = sym.lin_to_mat(lambda x : sym.congr_map(x, self.K_list), self.ni, self.nk, hermitian=self.hermitian)
+        self.ZK = sym.lin_to_mat(lambda x : sym.congr_map(x, self.ZK_list), self.ni, self.nzk, hermitian=self.hermitian)
 
-        #         self.K[:, [k]] = sym.mat_to_vec(Qkk.T @ KHK @ Qkk)
-                
-        #         ZKHKZ = np.zeros((self.no, self.no))
-        #         for Z in self.Z_list:
-        #             ZKHKZ += Z @ KHK @ Z.T
-        #         self.ZK[:, [k]] = sym.mat_to_vec(Qzkkz.T @ ZKHKZ @ Qzkkz)
-
-
-        self.K = sym.lin_to_mat(lambda x : Qkk.conj().T @ sym.apply_kraus(x, self.K_list) @ Qkk, self.ni, self.nk, hermitian=self.hermitian)
-        self.ZK = sym.lin_to_mat(lambda x : Qzkkz.conj().T @ sym.apply_kraus(sym.apply_kraus(x, self.K_list), self.Z_list) @ Qzkkz, self.ni, self.nzk, hermitian=self.hermitian)                
-        
 
         # Update flags
         self.feas_updated        = False
@@ -85,7 +62,7 @@ class QuantKeyDist():
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
-        point[0] = 1.
+        point[0] = 100.
         point[1:] = sym.mat_to_vec(np.eye(self.ni), hermitian=self.hermitian)
 
         self.set_point(point)
@@ -98,8 +75,8 @@ class QuantKeyDist():
 
         self.t   = point[0]
         self.X   = sym.vec_to_mat(point[1:], hermitian=self.hermitian)
-        self.KX  = sym.vec_to_mat(self.K @ point[1:], hermitian=self.hermitian)
-        self.ZKX = sym.vec_to_mat(self.ZK @ point[1:], hermitian=self.hermitian)
+        self.KX  = sym.congr_map(self.X, self.K_list)
+        self.ZKX = sym.congr_map(self.X, self.ZK_list)
 
         self.feas_updated        = False
         self.grad_updated        = False
@@ -123,6 +100,11 @@ class QuantKeyDist():
         self.Dkx, self.Ukx   = np.linalg.eigh(self.KX)
         self.Dzkx, self.Uzkx = np.linalg.eigh(self.ZKX)
         
+        # Shouldn't be necessary as K and Z are both positive, but just to be safe against numerical imprecisions
+        if any(self.Dkx <= 0) or any(self.Dzkx <= 0):
+            self.feas = False
+            return self.feas
+
         self.log_Dkx  = np.log(self.Dkx)
         self.log_Dzkx = np.log(self.Dzkx)
 
@@ -147,14 +129,15 @@ class QuantKeyDist():
         
         log_KX  = (self.Ukx * self.log_Dkx) @ self.Ukx.conj().T
         log_ZKX = (self.Uzkx * self.log_Dzkx) @ self.Uzkx.conj().T
-        self.K_log_KX   = self.K.T @ sym.mat_to_vec(log_KX, hermitian=self.hermitian)
-        self.ZK_log_ZKX = self.ZK.T @ sym.mat_to_vec(log_ZKX, hermitian=self.hermitian)
+
+        self.K_log_KX = sym.congr_map(log_KX + np.eye(self.nk), self.K_list, adjoint=True)
+        self.ZK_log_ZKX = sym.congr_map(log_ZKX + np.eye(self.nzk), self.ZK_list, adjoint=True)
 
         self.inv_Dx = np.reciprocal(self.Dx)
         self.inv_X  = (self.Ux * self.inv_Dx) @ self.Ux.conj().T
 
         self.zi   = np.reciprocal(self.z)
-        self.DPhi = self.K_log_KX - self.ZK_log_ZKX
+        self.DPhi = sym.mat_to_vec(self.K_log_KX - self.ZK_log_ZKX, hermitian=self.hermitian)
 
         self.grad     =  np.empty((self.dim, 1))
         self.grad[0]  = -self.zi
@@ -163,6 +146,7 @@ class QuantKeyDist():
         self.grad_updated = True
         return self.grad
     
+    @profile
     def update_hessprod_aux(self):
         assert not self.hess_aux_updated
         assert self.grad_updated
@@ -178,7 +162,7 @@ class QuantKeyDist():
         for j in range(self.ni):
             for i in range(j + 1):
                 # invXX
-                temp = np.outer(self.inv_X[i, :], self.inv_X[j, :])
+                temp = self.inv_X[:, [i]] @ self.inv_X[[j], :]
                 if i != j:
                     temp *= irt2
                     invXX[:, [k]] = sym.mat_to_vec(temp + temp.conj().T, hermitian=self.hermitian)
@@ -213,7 +197,7 @@ class QuantKeyDist():
             ZK = sym.vec_to_mat(self.ZK[:, [k]], hermitian=self.hermitian)
             UzkZKUzk = self.Uzkx.conj().T @ ZK @ self.Uzkx
             UxkUxkZK[[k], :] = (sym.mat_to_vec(UzkZKUzk, hermitian=self.hermitian) * sqrt_D1zkx_log).T
-        D2PhiZKX = UxkUxkZK @ UxkUxkZK.T
+        D2PhiZKX = UxkUxkZK @ UxkUxkZK.T 
 
         # Preparing other required variables
         zi2 = self.zi * self.zi
@@ -282,35 +266,35 @@ class QuantKeyDist():
 
         Ht   = dirs[0]
         Hx   = sym.vec_to_mat(dirs[1:, [0]], hermitian=self.hermitian)
-        Hkx  = sym.vec_to_mat(self.K  @ dirs[1:, [0]], hermitian=self.hermitian)
-        Hzkx = sym.vec_to_mat(self.ZK @ dirs[1:, [0]], hermitian=self.hermitian)
+        Hkx  = sym.congr_map(Hx, self.K_list)
+        Hzkx = sym.congr_map(Hx, self.ZK_list)        
         Hx_vec = dirs[1:, [0]]
 
         UkxHkxUkx    = self.Ukx.conj().T @ Hkx @ self.Ukx
         UzkxHzkxUzkx = self.Uzkx.conj().T @ Hzkx @ self.Uzkx
 
         # Quantum conditional entropy oracles
-        D2PhiH  = self.K.T  @ sym.mat_to_vec(self.Ukx @ (self.D1kx_log * UkxHkxUkx) @ self.Ukx.conj().T, hermitian=self.hermitian)
-        D2PhiH -= self.ZK.T @ sym.mat_to_vec(self.Uzkx @ (self.D1zkx_log * UzkxHzkxUzkx) @ self.Uzkx.conj().T, hermitian=self.hermitian)
+        D2PhiH  = sym.congr_map(self.Ukx @ (self.D1kx_log * UkxHkxUkx) @ self.Ukx.conj().T, self.K_list, adjoint=True)
+        D2PhiH -= sym.congr_map(self.Uzkx @ (self.D1zkx_log * UzkxHzkxUzkx) @ self.Uzkx.conj().T, self.ZK_list, adjoint=True)
 
-        D3PhiHH  = self.K.T  @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2kx_log, UkxHkxUkx, UkxHkxUkx, self.Ukx), hermitian=self.hermitian)
-        D3PhiHH -= self.ZK.T @ sym.mat_to_vec(mgrad.scnd_frechet(self.D2zkx_log, UzkxHzkxUzkx, UzkxHzkxUzkx, self.Uzkx), hermitian=self.hermitian)
+        D3PhiHH  = sym.congr_map(mgrad.scnd_frechet(self.D2kx_log * UkxHkxUkx, UkxHkxUkx, U=self.Ukx), self.K_list, adjoint=True)
+        D3PhiHH -= sym.congr_map(mgrad.scnd_frechet(self.D2zkx_log * UzkxHzkxUzkx, UzkxHzkxUzkx, U=self.Uzkx), self.ZK_list, adjoint=True)
 
         # Third derivative of barrier
         DPhiH = lin.inp(self.DPhi, Hx_vec)
-        D2PhiHH = lin.inp(D2PhiH, Hx_vec)
+        D2PhiHH = lin.inp(D2PhiH, Hx)
         chi = Ht - DPhiH
 
         dder3 = np.zeros((self.dim, 1))
         dder3[0] = -2 * (self.zi**3) * (chi**2) - (self.zi**2) * D2PhiHH
 
-        temp = -dder3[0] * self.DPhi
-        temp -= 2 * (self.zi**2) * chi * D2PhiH
+        dder3[1:] = -dder3[0] * self.DPhi
+        temp  = -2 * (self.zi**2) * chi * D2PhiH
         temp += self.zi * D3PhiHH
-        temp -= 2 * sym.mat_to_vec(self.inv_X @ Hx @ self.inv_X @ Hx @ self.inv_X, hermitian=self.hermitian)
-        dder3[1:] = temp
+        temp -= 2 * self.inv_X @ Hx @ self.inv_X @ Hx @ self.inv_X
+        dder3[1:] += sym.mat_to_vec(temp, hermitian=self.hermitian)
 
         return dder3
     
     def norm_invhess(self, x):
-        return 0.0    
+        return 0.0
