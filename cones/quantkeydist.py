@@ -7,24 +7,24 @@ from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 
 class QuantKeyDist():
-    def __init__(self, K_list, Z_list, hermitian=False):
+    def __init__(self, Klist, ZKlist, hermitian=False):
         # Dimension properties
-        self.no, self.ni = np.shape(K_list[0])  # Get input and output dimension
+        self.nk0, self.ni = np.shape(Klist[0])  # Get input and output dimension
+        self.nzk0, self.ni = np.shape(ZKlist[0])  # Get input and output dimension
         self.hermitian = hermitian
         
         self.vni = sym.vec_dim(self.ni, self.hermitian)     # Get input vector dimension
-        self.vno = sym.vec_dim(self.no, self.hermitian)     # Get output vector dimension
 
         self.dim = 1 + self.vni             # Total dimension of cone
         self.use_sqrt = False
 
         # Reduce systems
-        KK = np.zeros((self.no, self.no), 'complex128')
-        for K in K_list:
+        KK = np.zeros((self.nk0, self.nk0), 'complex128') if hermitian else np.zeros((self.nk0, self.nk0))
+        for K in Klist:
             KK += K @ K.conj().T
-        ZKKZ = np.zeros((self.no, self.no), 'complex128')
-        for Z in Z_list:
-            ZKKZ += Z @ KK @ Z.conj().T
+        ZKKZ = np.zeros((self.nzk0, self.nzk0), 'complex128') if hermitian else np.zeros((self.nzk0, self.nzk0))
+        for ZK in ZKlist:
+            ZKKZ += ZK @ ZK.conj().T
 
         Dkk, Ukk     = np.linalg.eigh(KK)
         Dzkkz, Uzkkz = np.linalg.eigh(ZKKZ)
@@ -37,12 +37,12 @@ class QuantKeyDist():
         self.vnk  = sym.vec_dim(self.nk, self.hermitian)
         self.vnzk = sym.vec_dim(self.nzk, self.hermitian)
 
-        self.Qkk   = np.eye(self.no) if (self.nk == self.no) else Ukk[:, KKnzidx]
-        self.Qzkkz = np.eye(self.no) if (self.nzk == self.no) else Uzkkz[:, ZKKZnzidx]
+        self.Qkk   = np.eye(self.nk) if (self.nk == self.nk0) else Ukk[:, KKnzidx]
+        self.Qzkkz = np.eye(self.nzk) if (self.nzk == self.nzk0) else Uzkkz[:, ZKKZnzidx]
 
         # Get reduced Kraus operators
-        self.K_list = [self.Qkk.conj().T @ K for K in K_list]
-        self.ZK_list = [self.Qzkkz.conj().T @ Z @ K for Z in Z_list for K in K_list]
+        self.K_list = [self.Qkk.conj().T @ K for K in Klist]
+        self.ZK_list = [self.Qzkkz.conj().T @ ZK for ZK in ZKlist]
 
         self.K = sym.lin_to_mat(lambda x : sym.congr_map(x, self.K_list), self.ni, self.nk, hermitian=self.hermitian)
         self.ZK = sym.lin_to_mat(lambda x : sym.congr_map(x, self.ZK_list), self.ni, self.nzk, hermitian=self.hermitian)
@@ -146,7 +146,6 @@ class QuantKeyDist():
         self.grad_updated = True
         return self.grad
     
-    @profile
     def update_hessprod_aux(self):
         assert not self.hess_aux_updated
         assert self.grad_updated

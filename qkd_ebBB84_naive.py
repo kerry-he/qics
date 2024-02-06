@@ -49,12 +49,13 @@ c[0] = 1.
 G1 = np.hstack((np.ones((1, 1)), np.zeros((1, vni))))
 G2 = np.hstack((np.zeros((vno, 1)), K_op))
 G3 = np.hstack((np.zeros((vno, 1)), ZK_op))
-G = -np.vstack((G1, G2, G3))
+G4 = np.hstack((np.zeros((vni, 1)), np.eye(vni)))
+G = -np.vstack((G1, G2, G3, G4))
 
-h = np.zeros((1 + 2 * vno, 1))
+h = np.zeros((1 + 2 * vno + vni, 1))
 
 # Input into model and solve
-cones = [quantrelentr.QuantRelEntropy(no, hermitian=hermitian)]
+cones = [quantrelentr.QuantRelEntropy(no, hermitian=hermitian), possemidefinite.PosSemiDefinite(ni, hermitian=hermitian)]
 model = model.Model(c, A, b, G, h, cones=cones)
 solver = solver.Solver(model)
 

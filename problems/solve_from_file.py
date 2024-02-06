@@ -39,23 +39,23 @@ def read_problem(file_name):
             cone_type = f['/cones/' + str(i)].asstr()[()]
 
             if cone_type == 'qre':
-                n       = f['/cones/' + str(i)].attrs['n']
-                complex = f['/cones/' + str(i)].attrs['complex']
-                cones.append(quantrelentr.QuantRelEntropy(n))
+                n         = f['/cones/' + str(i)].attrs['n']
+                hermitian = f['/cones/' + str(i)].attrs['complex']
+                cones.append(quantrelentr.QuantRelEntropy(n, hermitian=hermitian))
             elif cone_type == 'nn':
-                dim       = f['/cones/' + str(i)].attrs['dim']
+                dim = f['/cones/' + str(i)].attrs['dim']
                 cones.append(nonnegorthant.NonNegOrthant(dim))
             elif cone_type == 'psd':
-                n       = f['/cones/' + str(i)].attrs['n']
-                complex = f['/cones/' + str(i)].attrs['complex']
-                cones.append(possemidefinite.PosSemiDefinite(n))                
+                n         = f['/cones/' + str(i)].attrs['n']
+                hermitian = f['/cones/' + str(i)].attrs['complex']
+                cones.append(possemidefinite.PosSemiDefinite(n, hermitian=hermitian))                
 
     return model.Model(c, A, b, G, h, cones=cones, offset=offset)
 
 
 if __name__ == "__main__":
     # Input into model and solve
-    file_name = "problems/rel_entr_entanglement/ree_8_8_rand.hdf5"
+    file_name = "problems/quant_key_rate/qkd_mdiBB84.hdf5"
 
     model = read_problem(file_name)
     solver = solver.Solver(model)

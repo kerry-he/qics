@@ -5,7 +5,7 @@ import h5py
 
 from utils import symmetric as sym, quantum as quant
 
-def make_problem(file_name, hermitian, description=["", ""], optval=0.0):
+def make_problem(file_name, description=["", ""], optval=0.0):
     # Problem is of the type
     # (QKD)     min    f(rho) = D( K(rho) || Z(K(rho)) )  (quantum relative entropy)
     #           s.t.   Gamma(rho) = gamma                 (affine constraint)
@@ -13,16 +13,24 @@ def make_problem(file_name, hermitian, description=["", ""], optval=0.0):
     # Obtained from https://math.uwaterloo.ca/~hwolkowi/henry/reports/ZGNQKDmainsolverUSEDforPUBLCNJuly31/
 
     # Problem data
-    data = sp.io.loadmat(file_name)
-    gamma = data['gamma'] if (data['gamma'].dtype == 'complex128') else data['gamma'].astype('double')
-    Gamma = [G if G.dtype == 'complex128' else G.astype('double') for G in data['Gamma'][:, 0]]
-    Klist = [K if K.dtype == 'complex128' else K.astype('double') for K in data['VKVlist'][0, :]]
-    ZKlist = [ZK if ZK.dtype == 'complex128' else ZK.astype('double') for ZK in data['VZKVlist'][0, :]]
+    data = sp.io.loadmat(file_name)['Data']
+    gamma = data['gamma'] if (data['gamma'][0, 0].dtype == 'complex128') else data['gamma'][0, 0].astype('double')
+    Gamma = [G if G.dtype == 'complex128' else G.astype('double') for G in data['Gamma'][0, 0][0]]
+    Klist = [K if K.dtype == 'complex128' else K.astype('double') for K in data['Klist'][0, 0][0]]
+    Zlist = [Z if Z.dtype == 'complex128' else Z.astype('double') for Z in data['Zlist'][0, 0][0]]
+
+    # Facially reduced problem data
+    gamma_fr  = data['gamma_fr'] if (data['gamma_fr'][0, 0].dtype == 'complex128') else data['gamma_fr'][0, 0].astype('double')
+    Gamma_fr  = [G if G.dtype == 'complex128' else G.astype('double') for G in data['Gamma_fr'][0, 0][0]]
+    Klist_fr  = [K if K.dtype == 'complex128' else K.astype('double') for K in data['Klist_fr'][0, 0][0]]
+    ZKlist_fr = [Z if Z.dtype == 'complex128' else Z.astype('double') for Z in data['ZKlist_fr'][0, 0][0]]
+
+    optval = data['optval'][0, 0][0, 0]
     
     hermitian = any([g.dtype == 'complex128' for g in gamma])
     hermitian = any([G.dtype == 'complex128' for G in Gamma]) or hermitian
     hermitian = any([K.dtype == 'complex128' for K in Klist]) or hermitian
-    hermitian = any([ZK.dtype == 'complex128' for ZK in ZKlist]) or hermitian
+    hermitian = any([Z.dtype == 'complex128' for Z in Zlist]) or hermitian
 
     no, ni = Klist[0].shape
     nc = np.size(gamma)
@@ -30,8 +38,8 @@ def make_problem(file_name, hermitian, description=["", ""], optval=0.0):
     vni = sym.vec_dim(ni, hermitian=hermitian)
     vno = sym.vec_dim(no, hermitian=hermitian)
 
-    K_op = sym.lin_to_mat(lambda x : sym.apply_kraus(x, Klist), ni, no, hermitian=hermitian)
-    ZK_op = sym.lin_to_mat(lambda x : sym.apply_kraus(x, ZKlist), ni, no, hermitian=hermitian)
+    K_op = sym.lin_to_mat(lambda x : sym.congr_map(x, Klist), ni, no, hermitian=hermitian)
+    ZK_op = sym.lin_to_mat(lambda x : sym.congr_map(sym.congr_map(x, Klist), Zlist), ni, no, hermitian=hermitian)
     Gamma_op = np.array([sym.mat_to_vec(G, hermitian=hermitian).T[0] for G in Gamma])
 
     # Build problem model
@@ -65,10 +73,15 @@ def make_problem(file_name, hermitian, description=["", ""], optval=0.0):
 
         # Raw problem data
         raw = f.create_group('raw')
-        raw.create_dataset('gamma', data=gamma)      # Constraint vector
-        raw.create_dataset('Gamma', data=Gamma)      # Constraint matrix
-        raw.create_dataset('Klist', data=Klist)      # Post-selection channel
-        raw.create_dataset('ZKlist', data=ZKlist)    # Key map channel x Post-selection channel
+        raw.create_dataset('gamma', data=gamma)    # Constraint vector
+        raw.create_dataset('Gamma', data=Gamma)    # Constraint matrix
+        raw.create_dataset('Klist', data=Klist)    # Post-selection channel
+        raw.create_dataset('Zlist', data=Zlist)    # Key map channel
+
+        raw.create_dataset('gamma_fr',  data=gamma_fr)      # Constraint vector
+        raw.create_dataset('Gamma_fr',  data=Gamma_fr)      # Constraint matrix
+        raw.create_dataset('Klist_fr',  data=Klist_fr)      # Post-selection channel
+        raw.create_dataset('ZKlist_fr', data=ZKlist_fr)    # Key map channel        
         
         # List of cones
         cones = f.create_group('cones')
@@ -96,10 +109,9 @@ def make_problem(file_name, hermitian, description=["", ""], optval=0.0):
 
 
 if __name__ == "__main__":
-    file_name = 'problems/quant_key_rate/ebBB84.mat'
-    hermitian = False
+    file_name = 'problems/quant_key_rate/DMCV.mat'
 
-    description = ["ebBB84",       # Long description
-                   "ebBB84"]       # Short description
+    description = ["DMCV",       # Long description
+                   "DMCV"]       # Short description
 
-    make_problem(file_name, hermitian, description=description)
+    make_problem(file_name, description=description)
