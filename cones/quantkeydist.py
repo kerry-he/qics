@@ -199,18 +199,16 @@ class QuantKeyDist():
         D2PhiZKX = UxkUxkZK @ UxkUxkZK.T 
 
         # Preparing other required variables
-        zi2 = self.zi * self.zi
+        self.zi2 = self.zi * self.zi
         D2Phi = D2PhiKX - D2PhiZKX
 
+        self.hess = self.zi * D2Phi + invXX
 
-        self.hess_QRE = self.zi * D2Phi + invXX
-
-
-        self.hess = np.empty((self.dim, self.dim))
-        self.hess[0, 0] = zi2
-        self.hess[1:, [0]] = -zi2 * self.DPhi
-        self.hess[[0], 1:] = self.hess[1:, [0]].T
-        self.hess[1:, 1:] = zi2 * np.outer(self.DPhi, self.DPhi) + self.zi * D2Phi + invXX
+        # self.hess = np.empty((self.dim, self.dim))
+        # self.hess[0, 0] = self.zi2
+        # self.hess[1:, [0]] = -self.zi2 * self.DPhi
+        # self.hess[[0], 1:] = self.hess[1:, [0]].T
+        # self.hess[1:, 1:] = self.zi2 * np.outer(self.DPhi, self.DPhi) + self.zi * D2Phi + invXX
 
         self.hess_aux_updated = True
 
@@ -221,6 +219,32 @@ class QuantKeyDist():
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
 
+        p = np.size(dirs, 1)
+        out = np.empty((self.dim, p))
+
+        for k in range(p):
+            Ht = dirs[0, k]
+            Hx = sym.vec_to_mat(dirs[1:, [k]], hermitian=self.hermitian)
+            Hx_vec = dirs[1:, [k]]
+
+            K_H = sym.congr_map(Hx, self.K_list)
+            ZK_H = sym.congr_map(Hx, self.ZK_list)
+
+            UkKHUk    = self.Ukx.conj().T @ K_H @ self.Ukx
+            UkzZKHUkz = self.Uzkx.conj().T @ ZK_H @ self.Uzkx
+
+            # Hessian product of conditional entropy
+            D2PhiH  = sym.congr_map(self.Ukx @ (self.D1kx_log * UkKHUk) @ self.Ukx.conj().T, self.K_list, adjoint=True)
+            D2PhiH -= sym.congr_map(self.Uzkx @ (self.D1zkx_log * UkzZKHUkz) @ self.Uzkx.conj().T, self.ZK_list, adjoint=True)
+            
+            # Hessian product of barrier function
+            out[0, k] = (Ht - lin.inp(self.DPhi, Hx_vec)) * self.zi2
+
+            out[1:, [k]]  = -out[0, k] * self.DPhi
+            out[1:, [k]] +=  sym.mat_to_vec(self.zi * D2PhiH + self.inv_X @ Hx @ self.inv_X, hermitian=self.hermitian)
+
+        return out
+
         return self.hess @ dirs
     
     def update_invhessprod_aux(self):
@@ -228,8 +252,7 @@ class QuantKeyDist():
         assert self.grad_updated
         assert self.hess_aux_updated
 
-        self.hess_QRE_fact = lin.fact(self.hess_QRE)
-        # self.hess_fact = lin.fact(self.hess)
+        self.hess_fact = lin.fact(self.hess)
 
         self.invhess_aux_updated = True
 
@@ -245,25 +268,11 @@ class QuantKeyDist():
         p = np.size(dirs, 1)
         out = np.empty((self.dim, p))
 
+        Ht = dirs[[0], :]
+        Hx = dirs[1:, :]
 
-        for k in range(p):
-            Ht = dirs[0, k]
-            Hx = dirs[1:, [k]]
-
-            outX = lin.fact_solve(self.hess_QRE_fact, Hx + Ht * self.DPhi)
-            outt = self.z * self.z * Ht + lin.inp(outX, self.DPhi)
-
-            out[0, k] = outt
-            out[1:, [k]] = outX
-
-
-        # Ht = dirs[[0], :]
-        # Hx = dirs[1:, :]
-
-        # out[1:, :] = lin.fact_solve(self.hess_QRE_fact, Hx + Ht * self.DPhi)
-        # out[[0], :] = self.z * self.z * Ht + np.sum(out[1:, :] * Hx, axis=0)
-
-        # out = lin.fact_solve(self.hess_fact, dirs)
+        out[1:, :] = lin.fact_solve(self.hess_fact, Hx + Ht * self.DPhi)
+        out[[0], :] = self.z * self.z * Ht + np.sum(out[1:, :] * self.DPhi, axis=0)
 
         return out
 
