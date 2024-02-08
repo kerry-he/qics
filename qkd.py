@@ -18,7 +18,7 @@ np.set_printoptions(threshold=np.inf)
 # Obtained from https://math.uwaterloo.ca/~hwolkowi/henry/reports/ZGNQKDmainsolverUSEDforPUBLCNJuly31/
 
 # Problem data
-data   = sp.io.loadmat('problems/quant_key_rate/qkd_DMCV.mat')
+data   = sp.io.loadmat('problems/quant_key_rate/qkd_dprBB84_5_02_15.mat')
 gamma  = data['raw']['gamma_fr'][0, 0]
 Gamma  = data['raw']['Gamma_fr'][0, 0][0]
 Klist  = data['raw']['Klist_fr'][0, 0][0]

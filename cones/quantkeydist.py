@@ -62,7 +62,7 @@ class QuantKeyDist():
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
-        point[0] = 100.
+        point[0] = 1.
         point[1:] = sym.mat_to_vec(np.eye(self.ni), hermitian=self.hermitian)
 
         self.set_point(point)
@@ -202,6 +202,10 @@ class QuantKeyDist():
         zi2 = self.zi * self.zi
         D2Phi = D2PhiKX - D2PhiZKX
 
+
+        self.hess_QRE = self.zi * D2Phi + invXX
+
+
         self.hess = np.empty((self.dim, self.dim))
         self.hess[0, 0] = zi2
         self.hess[1:, [0]] = -zi2 * self.DPhi
@@ -224,7 +228,8 @@ class QuantKeyDist():
         assert self.grad_updated
         assert self.hess_aux_updated
 
-        self.hess_fact = lin.fact(self.hess)
+        self.hess_QRE_fact = lin.fact(self.hess_QRE)
+        # self.hess_fact = lin.fact(self.hess)
 
         self.invhess_aux_updated = True
 
@@ -240,8 +245,25 @@ class QuantKeyDist():
         p = np.size(dirs, 1)
         out = np.empty((self.dim, p))
 
-        for j in range(p):
-            out[:, j] = lin.fact_solve(self.hess_fact, dirs[:, j])
+
+        for k in range(p):
+            Ht = dirs[0, k]
+            Hx = dirs[1:, [k]]
+
+            outX = lin.fact_solve(self.hess_QRE_fact, Hx + Ht * self.DPhi)
+            outt = self.z * self.z * Ht + lin.inp(outX, self.DPhi)
+
+            out[0, k] = outt
+            out[1:, [k]] = outX
+
+
+        # Ht = dirs[[0], :]
+        # Hx = dirs[1:, :]
+
+        # out[1:, :] = lin.fact_solve(self.hess_QRE_fact, Hx + Ht * self.DPhi)
+        # out[[0], :] = self.z * self.z * Ht + np.sum(out[1:, :] * Hx, axis=0)
+
+        # out = lin.fact_solve(self.hess_fact, dirs)
 
         return out
 
