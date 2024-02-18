@@ -7,9 +7,9 @@ def inp(x, y):
 
 def fact(A):
     # Perform a Cholesky decomposition, or an LU factorization if Cholesky fails
-    while True:
+    while True:        
         try:
-            fact = sp.linalg.cho_factor(A)
+            fact = sp.linalg.cho_factor(A, check_finite=False)
             return (fact, "cho")
         except np.linalg.LinAlgError:
             diag_idx = np.diag_indices_from(A)
@@ -29,7 +29,7 @@ def fact_solve(A, x):
     (fact, type) = A
 
     if type == "cho":
-        return sp.linalg.cho_solve(fact, x)
+        return sp.linalg.cho_solve(fact, x, check_finite=False)
     elif type == "lu":
         return sp.linalg.lu_solve(fact, x)
 

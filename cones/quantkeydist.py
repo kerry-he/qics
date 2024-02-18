@@ -7,7 +7,7 @@ from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 
 class QuantKeyDist():
-    def __init__(self, Klist, ZKlist, hermitian=False):
+    def __init__(self, Klist, ZKlist, Klist_raw, Zlist_raw, hermitian=False):
         # Dimension properties
         self.nk0, self.ni = np.shape(Klist[0])  # Get input and output dimension
         self.nzk0, self.ni = np.shape(ZKlist[0])  # Get input and output dimension
@@ -47,6 +47,13 @@ class QuantKeyDist():
         self.K = sym.lin_to_mat(lambda x : sym.congr_map(x, self.K_list), self.ni, self.nk, hermitian=self.hermitian)
         self.ZK = sym.lin_to_mat(lambda x : sym.congr_map(x, self.ZK_list), self.ni, self.nzk, hermitian=self.hermitian)
 
+        # Stuff for dprBB84
+        self.Klist_raw  = Klist_raw
+        self.Zlist_raw  = Zlist_raw
+        self.ZKlist_raw = [Z @ K for K in Klist_raw for Z in Zlist_raw]
+
+        # Stuff for DMCV 
+        # self.ZKlist_reduced = [ZK[i::4, :] for (i, ZK) in enumerate(self.ZK_list)]
 
         # Update flags
         self.feas_updated        = False
@@ -62,7 +69,7 @@ class QuantKeyDist():
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
-        point[0] = 1.
+        point[0] = 100.
         point[1:] = sym.mat_to_vec(np.eye(self.ni), hermitian=self.hermitian)
 
         self.set_point(point)
@@ -99,6 +106,14 @@ class QuantKeyDist():
 
         self.Dkx, self.Ukx   = np.linalg.eigh(self.KX)
         self.Dzkx, self.Uzkx = np.linalg.eigh(self.ZKX)
+
+        # for K in self.ZKlist_reduced:
+        #     KX  = K @ self.X @ K.conj().T
+        #     Dkx, Ukx   = np.linalg.eigh(KX)
+
+        #     if any(Dkx <= 0):
+        #         self.feas = False
+        #         return self.feas
         
         # Shouldn't be necessary as K and Z are both positive, but just to be safe against numerical imprecisions
         if any(self.Dkx <= 0) or any(self.Dzkx <= 0):
@@ -210,6 +225,175 @@ class QuantKeyDist():
         # self.hess[[0], 1:] = self.hess[1:, [0]].T
         # self.hess[1:, 1:] = self.zi2 * np.outer(self.DPhi, self.DPhi) + self.zi * D2Phi + invXX
 
+        self.hess_aux_updated = True
+
+        return
+    
+    def update_hessprod_aux_dprBB84(self):
+        assert not self.hess_aux_updated
+        assert self.grad_updated
+
+        irt2 = math.sqrt(0.5)
+
+        self.zi2 = self.zi * self.zi
+        self.D1kx_log  = mgrad.D1_log(self.Dkx, self.log_Dkx)
+        self.D1zkx_log = mgrad.D1_log(self.Dzkx, self.log_Dzkx)
+
+        # Hessians of quantum relative entropy
+        self.hess = np.empty((self.vni, self.vni))
+        k = 0
+        for j in range(self.ni):
+            for i in range(j + 1):
+                # invXX
+                temp = self.inv_X[:, [i]] @ self.inv_X[[j], :]
+                if i != j:
+                    temp *= irt2
+                    self.hess[:, [k]] = sym.mat_to_vec(temp + temp.conj().T, hermitian=self.hermitian)
+                    k += 1
+                    if self.hermitian:
+                        temp *= 1j
+                        self.hess[:, [k]] = sym.mat_to_vec(temp + temp.conj().T, hermitian=self.hermitian)                        
+                        k += 1
+                else:
+                    self.hess[:, [k]] = sym.mat_to_vec(temp, hermitian=self.hermitian)
+                    k += 1
+                
+
+        def make_KHK(Klist, c, out):
+            for K in Klist:
+                (_, Kj, _) = sp.sparse.find(sp.sparse.coo_matrix(K))
+                Kj = np.sort(Kj)
+                nk = Kj.size
+                Kx = self.X[np.ix_(Kj, Kj)] / 2
+                Dkx, Ukx = np.linalg.eigh(Kx)
+                D1kx_log = mgrad.D1_log(Dkx, np.log(Dkx))
+
+                # Build matrix
+                Hkx = build_frechet(Ukx, D1kx_log) / 2 / 2
+
+                # Get indices
+                k = 0
+                K = np.zeros((nk * nk,), dtype='uint32')
+                for j in range(nk):
+                    for i in range(j):
+                        (I, J) = (Kj[i], Kj[j]) # Indices of full matrix
+                        K[k]     = 2*I + J*J
+                        K[k + 1] = 2*I + J*J + 1
+                        k += 2
+                    
+                    J = Kj[j]
+                    K[k] = 2*J + J*J
+                    k += 1
+
+                out[np.ix_(K, K)] += Hkx * c
+            
+            return out
+        
+        def build_frechet(U, D1, hermitian=True):
+            n = U.shape[0]
+            rt2 = np.sqrt(2.0)
+
+            Hess = np.zeros((n*n, n*n))
+
+            k = 0
+            for j in range(n):
+                for i in range(j):
+                    UHU = U.conj().T[:, [i]] @ U[[j], :] / rt2
+                    D_H = U @ (D1 * UHU) @ U.conj().T
+                    
+                    Hess[:, [k]]     = sym.mat_to_vec(D_H + D_H.conj().T, rt2, hermitian)
+                    D_H             *= 1j
+                    Hess[:, [k + 1]] = sym.mat_to_vec(D_H + D_H.conj().T, rt2, hermitian)
+                    k += 2
+
+                UHU          = U.conj().T[:, [j]] @ U[[j], :]
+                D_H          = U @ (D1 * UHU) @ U.conj().T
+                Hess[:, [k]] = sym.mat_to_vec(D_H, rt2, hermitian)
+                k += 1
+
+            return Hess
+
+        make_KHK(self.Klist_raw, self.zi, self.hess)
+        make_KHK(self.ZKlist_raw, -self.zi, self.hess)
+
+        # Preparing other required variables
+        self.hess_aux_updated = True
+
+        return
+
+    def update_hessprod_aux_DMCV(self):
+        assert not self.hess_aux_updated
+        assert self.grad_updated
+
+        irt2 = math.sqrt(0.5)
+
+        self.zi2 = self.zi * self.zi
+        self.D1kx_log  = mgrad.D1_log(self.Dkx, self.log_Dkx)
+        self.D1zkx_log = mgrad.D1_log(self.Dzkx, self.log_Dzkx)
+
+        # Hessians of quantum relative entropy
+        self.hess = np.empty((self.vni, self.vni))
+        k = 0
+        for j in range(self.ni):
+            for i in range(j + 1):
+                # invXX
+                temp = self.inv_X[:, [i]] @ self.inv_X[[j], :]
+                if i != j:
+                    temp *= irt2
+                    self.hess[:, [k]] = sym.mat_to_vec(temp + temp.conj().T, hermitian=self.hermitian)
+                    k += 1
+                    if self.hermitian:
+                        temp *= 1j
+                        self.hess[:, [k]] = sym.mat_to_vec(temp + temp.conj().T, hermitian=self.hermitian)                        
+                        k += 1
+                else:
+                    self.hess[:, [k]] = sym.mat_to_vec(temp, hermitian=self.hermitian)
+                    k += 1
+                
+
+        def make_KHK(Klist, c, out):
+            for K in Klist:
+                Kx = K @ self.X @ K.conj().T
+                Dkx, Ukx = np.linalg.eigh(Kx)
+                D1kx_log = mgrad.D1_log(Dkx, np.log(Dkx))
+
+                # Build matrix
+                Hkx = build_frechet(Ukx, D1kx_log, K)
+
+                out += Hkx * c
+            
+            return out
+        
+        def build_frechet(U, D1, K, hermitian=True):
+            n = K.shape[1]
+            rt2 = np.sqrt(2.0)
+
+            Hess = np.zeros((n*n, n*n))
+
+            KU = K.conj().T @ U
+
+            k = 0
+            for j in range(n):
+                for i in range(j):
+                    UHU = KU.conj().T[:, [i]] @ KU[[j], :] / rt2
+                    D_H = KU @ (D1 * UHU) @ KU.conj().T
+                    
+                    Hess[:, [k]]     = sym.mat_to_vec(D_H + D_H.conj().T, rt2, hermitian)
+                    D_H             *= 1j
+                    Hess[:, [k + 1]] = sym.mat_to_vec(D_H + D_H.conj().T, rt2, hermitian)
+                    k += 2
+
+                UHU          = KU.conj().T[:, [j]] @ KU[[j], :]
+                D_H          = KU @ (D1 * UHU) @ KU.conj().T
+                Hess[:, [k]] = sym.mat_to_vec(D_H, rt2, hermitian)
+                k += 1
+
+            return Hess
+
+        make_KHK(self.K_list, self.zi, self.hess)
+        make_KHK(self.ZKlist_reduced, -self.zi, self.hess)
+
+        # Preparing other required variables
         self.hess_aux_updated = True
 
         return
