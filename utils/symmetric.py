@@ -258,9 +258,9 @@ def lin_to_mat(lin, ni, no, hermitian=False):
         H = np.zeros((vni, 1))
         H[k] = 1.0
         H_mat = vec_to_mat(H, irt2, hermitian=hermitian)
-        lin_H = lin(vec_to_mat(H, irt2, hermitian=hermitian))
+        lin_H = lin(H_mat)
         vec_out = mat_to_vec(lin_H, rt2, hermitian=hermitian)
-        mat[:, [k]] = mat_to_vec(lin_H, rt2, hermitian=hermitian)
+        mat[:, [k]] = vec_out
 
     return mat
 

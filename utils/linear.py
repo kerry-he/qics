@@ -13,7 +13,7 @@ def fact(A):
             return (fact, "cho")
         except np.linalg.LinAlgError:
             diag_idx = np.diag_indices_from(A)
-            A[diag_idx] = np.max([A[diag_idx], np.ones_like(A[diag_idx]) * 1e-12], axis=0) * (1 + 1e-5)
+            A[diag_idx] = np.max([A[diag_idx], np.ones_like(A[diag_idx]) * 1e-12], axis=0) * (1 + 1e-8)
         else:
             break
 

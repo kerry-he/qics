@@ -69,7 +69,7 @@ class QuantKeyDist():
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
-        point[0] = 100.
+        point[0] = 1.
         point[1:] = sym.mat_to_vec(np.eye(self.ni), hermitian=self.hermitian)
 
         self.set_point(point)
@@ -320,6 +320,168 @@ class QuantKeyDist():
         self.hess_aux_updated = True
 
         return
+    
+    def update_hessprod_aux(self):
+        assert not self.hess_aux_updated
+        assert self.grad_updated
+
+        irt2 = math.sqrt(0.5)
+
+        self.zi2 = self.zi * self.zi
+        self.D1kx_log  = mgrad.D1_log(self.Dkx, self.log_Dkx)
+        self.D1zkx_log = mgrad.D1_log(self.Dzkx, self.log_Dzkx)
+
+
+        # Get indices for projection mappings
+        def small_to_big_idx(K_small):
+            # Get indices
+            k = 0
+            nk = K_small.size
+            K_big = np.zeros((nk * nk,), dtype='uint32')
+            for j in range(nk):
+                for i in range(j):
+                    (I, J) = (K_small[i], K_small[j]) # Indices of full matrix
+                    K_big[k]     = 2*I + J*J
+                    K_big[k + 1] = 2*I + J*J + 1
+                    k += 2
+                
+                J = K_small[j]
+                K_big[k] = 2*J + J*J
+                k += 1
+
+            return K_big
+        
+        K_small = [np.sort(sp.sparse.find(sp.sparse.coo_matrix(K))[1]) for K in self.Klist_raw]
+        K_big   = [small_to_big_idx(K) for K in K_small]
+        self.K_big_all = np.array(K_big).ravel()
+        nK = K_big[0].size
+
+
+        # Hessians of quantum relative entropy
+        X00 = self.X[np.ix_(K_small[0], K_small[0])]
+        X01 = self.X[np.ix_(K_small[1], K_small[0])]
+        X11 = self.X[np.ix_(K_small[1], K_small[1])]
+        
+        def make_XX(X, out):
+            k = 0
+            for j in range(X.shape[0]):
+                for i in range(j + 1):
+                    # invXX
+                    temp = X[:, [i]] @ X.conj().T[[j], :]
+                    if i != j:
+                        temp *= irt2
+                        out[:, [k]] = sym.mat_to_vec(temp + temp.conj().T, hermitian=True)
+                        k += 1
+                        if self.hermitian:
+                            temp *= 1j
+                            out[:, [k]] = sym.mat_to_vec(temp + temp.conj().T, hermitian=True)                        
+                            k += 1
+                    else:
+                        out[:, [k]] = sym.mat_to_vec(temp, hermitian=True)
+                        k += 1
+
+            return out    
+        
+        small_XX = np.empty((nK * 2, nK * 2))
+        make_XX(X00, small_XX[:nK, :nK])
+        make_XX(X11, small_XX[nK:, nK:])
+        make_XX(X01, small_XX[nK:, :nK])
+        small_XX[:nK, nK:] = small_XX[nK:, :nK].T
+                
+
+        def make_KHK(Klist, c, out):
+            for K in Klist:
+                (_, Kj, _) = sp.sparse.find(sp.sparse.coo_matrix(K))
+                Kj = np.sort(Kj)
+                nk = Kj.size
+                Kx = self.X[np.ix_(Kj, Kj)] / 2
+                Dkx, Ukx = np.linalg.eigh(Kx)
+                D1kx_log = mgrad.D1_log(Dkx, np.log(Dkx))
+
+                # Build matrix
+                Hkx = build_frechet(Ukx, D1kx_log) / 2 / 2
+
+                # Get indices
+                k = 0
+                K = np.zeros((nk * nk,), dtype='uint32')
+                for j in range(nk):
+                    for i in range(j):
+                        (I, J) = (Kj[i], Kj[j]) # Indices of full matrix
+                        K[k]     = 2*I + J*J
+                        K[k + 1] = 2*I + J*J + 1
+                        k += 2
+                    
+                    J = Kj[j]
+                    K[k] = 2*J + J*J
+                    k += 1
+
+                out[np.ix_(K, K)] += Hkx * c
+            
+            return out
+        
+        def build_frechet(U, D1, hermitian=True):
+            n = U.shape[0]
+            rt2 = np.sqrt(2.0)
+
+            Hess = np.zeros((n*n, n*n))
+
+            k = 0
+            for j in range(n):
+                for i in range(j):
+                    UHU = U.conj().T[:, [i]] @ U[[j], :] / rt2
+                    D_H = U @ (D1 * UHU) @ U.conj().T
+                    
+                    Hess[:, [k]]     = sym.mat_to_vec(D_H + D_H.conj().T, rt2, hermitian)
+                    D_H             *= 1j
+                    Hess[:, [k + 1]] = sym.mat_to_vec(D_H + D_H.conj().T, rt2, hermitian)
+                    k += 2
+
+                UHU          = U.conj().T[:, [j]] @ U[[j], :]
+                D_H          = U @ (D1 * UHU) @ U.conj().T
+                Hess[:, [k]] = sym.mat_to_vec(D_H, rt2, hermitian)
+                k += 1
+
+            return Hess
+
+        temp = np.zeros((self.vni, self.vni))
+
+        make_KHK(self.Klist_raw, self.zi, temp)
+        make_KHK(self.ZKlist_raw, -self.zi, temp)
+
+        temp = temp[np.ix_(self.K_big_all, self.K_big_all)]
+
+        M1 = temp[:nK, :nK]
+        M2 = temp[nK:, nK:]
+
+        D1, U1 = np.linalg.eigh(M1)
+        # cutoff = np.max(D1) * 1e-14
+        idx = np.where(D1 <= 1e-8)[0]
+        D1 = np.delete(D1, idx)
+        U1 = np.delete(U1, idx, 1)
+
+        D2, U2 = np.linalg.eigh(M2)
+        # cutoff = np.max(D2) * 1e-14
+        idx = np.where(D2 <= 1e-8)[0]
+        D2 = np.delete(D2, idx)
+        U2 = np.delete(U2, idx, 1)
+
+        # print()
+        # print(np.min(D1), np.max(D1))
+        # print(np.min(D2), np.max(D2))
+        # print()
+
+        self.U12 = sp.linalg.block_diag(U1, U2)
+        D12_inv = np.hstack((np.reciprocal(D1), np.reciprocal(D2)))
+
+        self.schur = self.U12.T @ small_XX @ self.U12
+        self.schur[np.diag_indices_from(self.schur)] += D12_inv
+
+        self.schur_fact = lin.fact(self.schur)
+        
+        # Preparing other required variables
+        self.hess_aux_updated = True
+
+        return    
 
     def update_hessprod_aux_DMCV(self):
         assert not self.hess_aux_updated
@@ -457,6 +619,48 @@ class QuantKeyDist():
 
         out[1:, :] = lin.fact_solve(self.hess_fact, Hx + Ht * self.DPhi)
         out[[0], :] = self.z * self.z * Ht + np.sum(out[1:, :] * self.DPhi, axis=0)
+
+        return out
+    
+    def invhess_prod(self, dirs):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+        # if not self.invhess_aux_updated:
+        #     self.update_invhessprod_aux()
+
+        p = np.size(dirs, 1)
+        out = np.empty((self.dim, p))
+
+        Ht = dirs[[0], :]
+        Hx = dirs[1:, :]
+        Wx = Hx + Ht * self.DPhi
+
+        temp_vec = np.zeros((self.K_big_all.size, p))
+
+        for k in range(p):
+            Wx_k = sym.vec_to_mat(Wx[:, [k]], hermitian=self.hermitian)
+
+            temp = self.X @ Wx_k @ self.X
+            temp = sym.mat_to_vec(temp, hermitian=self.hermitian)
+            temp_vec[:, [k]] = temp[self.K_big_all]
+
+        temp_vec = self.U12.T @ temp_vec
+        temp_vec = lin.fact_solve(self.schur_fact, temp_vec)
+        temp_vec = self.U12 @ temp_vec
+
+        Wx[self.K_big_all] -= temp_vec
+
+        for k in range(p):
+            Wx_k = sym.vec_to_mat(Wx[:, [k]], hermitian=self.hermitian)
+
+            temp = self.X @ Wx_k @ self.X
+
+            outX = sym.mat_to_vec(temp, hermitian=self.hermitian)
+            outt = self.z * self.z * Ht[0, k] + self.DPhi.T @ outX
+
+            out[0, k] = outt
+            out[1:, [k]] = outX
 
         return out
 
