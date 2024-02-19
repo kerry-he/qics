@@ -7,53 +7,38 @@ from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 
 class QuantKeyDist():
-    def __init__(self, Klist, ZKlist, Klist_raw, Zlist_raw, hermitian=False):
+    def __init__(self, K_list, Z_list=None, ZK_list=None, protocol=None, hermitian=False):
         # Dimension properties
-        self.nk0, self.ni = np.shape(Klist[0])  # Get input and output dimension
-        self.nzk0, self.ni = np.shape(ZKlist[0])  # Get input and output dimension
-        self.hermitian = hermitian
+        self.ni = K_list[0].shape[1]    # Get input dimension
+        self.hermitian = hermitian      # Is the problem complex-valued 
+        self.protocol = protocol        # Special oracles available for dprBB84 and DMCV protocols
         
         self.vni = sym.vec_dim(self.ni, self.hermitian)     # Get input vector dimension
 
         self.dim = 1 + self.vni             # Total dimension of cone
         self.use_sqrt = False
 
-        # Reduce systems
-        KK = np.zeros((self.nk0, self.nk0), 'complex128') if hermitian else np.zeros((self.nk0, self.nk0))
-        for K in Klist:
-            KK += K @ K.conj().T
-        ZKKZ = np.zeros((self.nzk0, self.nzk0), 'complex128') if hermitian else np.zeros((self.nzk0, self.nzk0))
-        for ZK in ZKlist:
-            ZKKZ += ZK @ ZK.conj().T
+        if protocol is None:
+            # If there is no protocol, then do standard facial reduction on both G and ZG 
+            ZK_list      = [Z @ K for K in K_list for Z in Z_list] if ZK_list is None else ZK_list
+            self.K_list,  self.nk  = facial_reduction(K_list, hermitian=hermitian)
+            self.ZK_list, self.nzk = facial_reduction(ZK_list, hermitian=hermitian)
 
-        Dkk, Ukk     = np.linalg.eigh(KK)
-        Dzkkz, Uzkkz = np.linalg.eigh(ZKKZ)
+            self.vnk = sym.vec_dim(self.nk, hermitian=hermitian)
+            self.vnzk = sym.vec_dim(self.nzk, hermitian=hermitian)
 
-        KKnzidx   = np.where(Dkk > 1e-12)[0]
-        ZKKZnzidx = np.where(Dzkkz > 1e-12)[0]
+            self.K = sym.lin_to_mat(lambda x : sym.congr_map(x, self.K_list), self.ni, self.nk, hermitian=self.hermitian)
+            self.ZK = sym.lin_to_mat(lambda x : sym.congr_map(x, self.ZK_list), self.ni, self.nzk, hermitian=self.hermitian)
 
-        self.nk   = np.size(KKnzidx)
-        self.nzk  = np.size(ZKKZnzidx)
-        self.vnk  = sym.vec_dim(self.nk, self.hermitian)
-        self.vnzk = sym.vec_dim(self.nzk, self.hermitian)
+        elif protocol == "dprBB84":
+            # For dprBB84 protocol, G and ZG are both projectors in the computational basis
+            self.K_list  = K_list
+            self.Z_list  = Z_list
+            self.ZKlist_raw = [Z @ K for K in K_list for Z in Z_list]
 
-        self.Qkk   = np.eye(self.nk) if (self.nk == self.nk0) else Ukk[:, KKnzidx]
-        self.Qzkkz = np.eye(self.nzk) if (self.nzk == self.nzk0) else Uzkkz[:, ZKKZnzidx]
-
-        # Get reduced Kraus operators
-        self.K_list = [self.Qkk.conj().T @ K for K in Klist]
-        self.ZK_list = [self.Qzkkz.conj().T @ ZK for ZK in ZKlist]
-
-        self.K = sym.lin_to_mat(lambda x : sym.congr_map(x, self.K_list), self.ni, self.nk, hermitian=self.hermitian)
-        self.ZK = sym.lin_to_mat(lambda x : sym.congr_map(x, self.ZK_list), self.ni, self.nzk, hermitian=self.hermitian)
-
-        # Stuff for dprBB84
-        self.Klist_raw  = Klist_raw
-        self.Zlist_raw  = Zlist_raw
-        self.ZKlist_raw = [Z @ K for K in Klist_raw for Z in Zlist_raw]
-
-        # Stuff for DMCV 
-        # self.ZKlist_reduced = [ZK[i::4, :] for (i, ZK) in enumerate(self.ZK_list)]
+        elif protocol == "DMCV":
+            # For DMCV protocol, Z maps onto block diagonal matrix with 4 blocks
+            self.ZKlist_reduced = [ZK[i::4, :] for (i, ZK) in enumerate(self.ZK_list)]
 
         # Update flags
         self.feas_updated        = False
@@ -321,7 +306,7 @@ class QuantKeyDist():
 
         return
     
-    def update_hessprod_aux(self):
+    def update_hessprod_aux_dprBB84_alt(self):
         assert not self.hess_aux_updated
         assert self.grad_updated
 
@@ -622,7 +607,7 @@ class QuantKeyDist():
 
         return out
     
-    def invhess_prod(self, dirs):
+    def invhess_prod_dprBB84_alt(self, dirs):
         assert self.grad_updated
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
@@ -716,3 +701,28 @@ class QuantKeyDist():
     
     def norm_invhess(self, x):
         return 0.0
+    
+
+def facial_reduction(K_list, hermitian=False):
+    # For a set of Kraus operators i.e., SUM_i K_i @ X @ K_i.T, returns a set of
+    # Kraus operators which preserves positive definiteness
+    nk = K_list[0].shape[0]
+
+    # Pass identity matrix (maximally mixed state) through the Kraus operators
+    KK = np.zeros((nk, nk), 'complex128') if hermitian else np.zeros((nk, nk))
+    for K in K_list:
+        KK += K @ K.conj().T
+
+    # Determine if output is low rank, in which case we need to perform facial reduction
+    Dkk, Ukk = np.linalg.eigh(KK)
+    KKnzidx = np.where(Dkk > 1e-12)[0]
+    nk_fr = np.size(KKnzidx)
+
+    if nk == nk_fr:
+        return K_list, nk
+    
+    # Perform facial reduction
+    Qkk = Ukk[:, KKnzidx]
+    K_list_fr = [Qkk.conj().T @ K for K in K_list]
+
+    return K_list_fr, nk_fr
