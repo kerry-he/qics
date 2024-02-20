@@ -17,7 +17,7 @@ np.set_printoptions(suppress=True, edgeitems=30, linewidth=100000, precision=5)
 # Obtained from https://math.uwaterloo.ca/~hwolkowi/henry/reports/ZGNQKDmainsolverUSEDforPUBLCNJuly31/
 
 # Problem data
-data   = sp.io.loadmat('problems/quant_key_rate/qkd_dprBB84_5_02_15.mat')
+data   = sp.io.loadmat('problems/quant_key_rate/qkd_DMCV.mat')
 gamma  = data['raw']['gamma_fr'][0, 0]
 Gamma  = data['raw']['Gamma_fr'][0, 0][0]
 Klist  = data['raw']['Klist_fr'][0, 0][0]
@@ -42,9 +42,9 @@ c = np.zeros((1 + vni, 1))
 c[0] = 1.
 
 # Input into model and solve
-cones = [quantkeydist.QuantKeyDist(Klist_raw, Zlist_raw, protocol="dprBB84_fast", hermitian=hermitian)]
+cones = [quantkeydist.QuantKeyDist(Klist_raw, Zlist_raw, protocol="DMCV", hermitian=hermitian)]
 model = model.Model(c, A, b, cones=cones)
-solver = solver.Solver(model, ir=False)
+solver = solver.Solver(model)
 
 profiler = cProfile.Profile()
 profiler.enable()
