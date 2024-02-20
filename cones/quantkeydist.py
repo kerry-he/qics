@@ -13,7 +13,7 @@ class QuantKeyDist():
         self.hermitian = hermitian      # Is the problem complex-valued 
         self.protocol = protocol        # Special oracles available for dprBB84 and DMCV protocols
         
-        self.vni = sym.vec_dim(self.ni, self.hermitian)     # Get input vector dimension
+        self.vni = sym.vec_dim(self.ni, hermitian)     # Get input vector dimension
 
         self.dim = 1 + self.vni             # Total dimension of cone
         self.use_sqrt = False
@@ -24,32 +24,30 @@ class QuantKeyDist():
             self.K_list,  self.nk  = facial_reduction(K_list,  hermitian=hermitian)
             self.ZK_list, self.nzk = facial_reduction(ZK_list, hermitian=hermitian)
 
-            self.vnk  = sym.vec_dim(self.nk,  hermitian=hermitian)
-            self.vnzk = sym.vec_dim(self.nzk, hermitian=hermitian)
-
-            self.K_op      = lambda x : sym.congr_map(x, self.K_list)
-            self.K_op_adj  = lambda x : sym.congr_map(x, self.K_list,  adjoint=True)
-            self.ZK_op     = lambda x : sym.congr_map(x, self.ZK_list)
-            self.ZK_op_adj = lambda x : sym.congr_map(x, self.ZK_list, adjoint=True)
-
-            self.K  = sym.lin_to_mat(lambda x : sym.congr_map(x, self.K_list),  self.ni, self.nk,  hermitian=self.hermitian)
-            self.ZK = sym.lin_to_mat(lambda x : sym.congr_map(x, self.ZK_list), self.ni, self.nzk, hermitian=self.hermitian)
-
-        elif protocol == "dprBB84":
+        elif protocol == "dprBB84" or protocol == "dprBB84_fast":
             # For dprBB84 protocol, G and ZG are both projectors in the computational basis
-            self.K_mat_idx  = np.array([np.sort(np.where(K)[1]) for K in K_list])
-            self.ZK_mat_idx = np.array([np.sort(np.where(ZK)[1]) for ZK in ZK_list])
-            self.K_vec_idx  = np.array([mat_to_vec_idx(mat_idx) for mat_idx in self.K_mat_idx])
-            self.ZK_vec_idx = np.array([mat_to_vec_idx(mat_idx) for mat_idx in self.ZK_mat_idx])
-
             # Facial reduction based on a priori knowledge of Z and K operators
-            span_idx     = np.sort(np.array([np.where(K)[0] for K in K_list]))
+            span_idx     = np.sort(np.array([np.where(K)[0] for K in K_list]).ravel())
             self.K_list  = [K[span_idx, :] for K in K_list]
             self.ZK_list = [(Z @ K)[span_idx, :] for K in K_list for Z in Z_list]
 
+            self.K_mat_idx  = np.array([np.sort(np.where(K)[1]) for K in self.K_list])
+            self.ZK_mat_idx = np.array([np.sort(np.where(ZK)[1]) for ZK in self.ZK_list])
+            self.K_vec_idx  = np.array([mat_to_vec_idx(mat_idx, hermitian=hermitian) for mat_idx in self.K_mat_idx])
+            self.ZK_vec_idx = np.array([mat_to_vec_idx(mat_idx, hermitian=hermitian) for mat_idx in self.ZK_mat_idx])
+            self.K_v        = [K[np.where(K)][0] for K in self.K_list]
+            self.ZK_v       = [ZK[np.where(ZK)][0] for ZK in self.ZK_list]
+
+            self.nk  = self.K_list[0].shape[0]
+            self.nzk = self.ZK_list[0].shape[0]
+
+            self.cond_est = 0.0
+
         elif protocol == "DMCV":
             # For DMCV protocol, Z maps onto block diagonal matrix with 4 blocks
-            self.ZKlist_reduced = [ZK[i::4, :] for (i, ZK) in enumerate(self.ZK_list)]
+            self.K_list,  self.nk  = facial_reduction(K_list, hermitian=hermitian)
+            self.ZK_list, self.nzk = [Z @ K for K in K_list for Z in Z_list], Z_list[0].shape[0]
+            self.ZK_list_block = [ZK[i::4, :] for (i, ZK) in enumerate(self.ZK_list)]
 
         # Update flags
         self.feas_updated        = False
@@ -65,7 +63,7 @@ class QuantKeyDist():
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
-        point[0] = 100.
+        point[0] = 1.
         point[1:] = sym.mat_to_vec(np.eye(self.ni), hermitian=self.hermitian)
 
         self.set_point(point)
@@ -87,6 +85,9 @@ class QuantKeyDist():
         self.invhess_aux_updated = False
         self.dder3_aux_updated   = False
 
+        if self.protocol == "dprBB84_fast" and self.cond_est >= 1e16:
+            self.protocol = "dprBB84"
+
         return
     
     def get_feas(self):
@@ -103,13 +104,14 @@ class QuantKeyDist():
         self.Dkx,  self.Ukx  = np.linalg.eigh(self.KX)
         self.Dzkx, self.Uzkx = np.linalg.eigh(self.ZKX)
 
-        # for K in self.ZKlist_reduced:
-        #     KX  = K @ self.X @ K.conj().T
-        #     Dkx, Ukx   = np.linalg.eigh(KX)
+        if self.protocol == "DMCV":
+            for K in self.ZK_list_block:
+                KX  = K @ self.X @ K.conj().T
+                Dkx, Ukx   = np.linalg.eigh(KX)
 
-        #     if any(Dkx <= 0):
-        #         self.feas = False
-        #         return self.feas
+                if any(Dkx <= 0):
+                    self.feas = False
+                    return self.feas
         
         # Shouldn't be necessary as K and Z are both positive, but just to be safe against numerical imprecisions
         if any(self.Dkx <= 0) or any(self.Dzkx <= 0):
@@ -161,6 +163,8 @@ class QuantKeyDist():
         assert not self.hess_aux_updated
         assert self.grad_updated
 
+        self.zi2 = self.zi * self.zi
+
         self.D1kx_log  = mgrad.D1_log(self.Dkx,  self.log_Dkx)
         self.D1zkx_log = mgrad.D1_log(self.Dzkx, self.log_Dzkx)
 
@@ -206,356 +210,155 @@ class QuantKeyDist():
 
         irt2 = math.sqrt(0.5)
 
-        # Hessians of quantum relative entropy
-        # @TODO Check if this method is faster when scaled to larger systems
-        invXX  = kronecker_matrix(self.inv_X, hermitian=self.hermitian)
-        D2PhiKX = frechet_matrix(self.Ukx, self.D1kx_log, K_list=self.K_list, hermitian=self.hermitian)
-        D2PhiZKX = frechet_matrix(self.Uzkx, self.D1zkx_log, K_list=self.ZK_list, hermitian=self.hermitian)
+        if self.protocol is None:
+            # Default computation of QKD Hessian
+            self.hess  = kronecker_matrix(self.inv_X, hermitian=self.hermitian)
+            self.hess += frechet_matrix_alt(self.Ukx, self.D1kx_log, K_list=self.K_list, hermitian=self.hermitian) * self.zi
+            self.hess -= frechet_matrix_alt(self.Uzkx, self.D1zkx_log, K_list=self.ZK_list, hermitian=self.hermitian) * self.zi
 
-        # if self.hermitian:
-        #     real_complex_factor = np.ones(self.nk) + (np.ones(self.nk) - np.eye(self.nk)) * 1j          # Ugly factor to get the correct diagonal matrix
-        # else:
-        #     real_complex_factor = np.ones(self.nk)
-        # sqrt_D1kx_log = np.sqrt(sym.mat_to_vec(self.D1kx_log * real_complex_factor, 1.0, hermitian=self.hermitian))
-        # UnUnK = np.empty((self.vni, self.vnk))
-        # for k in range(self.vni):
-        #     K = sym.vec_to_mat(self.K[:, [k]], hermitian=self.hermitian)
-        #     UnKUn = self.Ukx.conj().T @ K @ self.Ukx
-        #     UnUnK[[k], :] = (sym.mat_to_vec(UnKUn, hermitian=self.hermitian) * sqrt_D1kx_log).T
-        # D2PhiKX = UnUnK @ UnUnK.T
+            self.hess_fact = lin.fact(self.hess)
+        
+        elif self.protocol == "dprBB84":
+            self.update_invhessprod_aux_dprBB84()
 
-        # if self.hermitian:
-        #     real_complex_factor = np.ones(self.nzk) + (np.ones(self.nzk) - np.eye(self.nzk)) * 1j          # Ugly factor to get the correct diagonal matrix
-        # else:
-        #     real_complex_factor = np.ones(self.nzk)        
-        # sqrt_D1zkx_log = np.sqrt(sym.mat_to_vec(self.D1zkx_log * real_complex_factor, 1.0, hermitian=self.hermitian))
-        # UxkUxkZK = np.empty((self.vni, self.vnzk))
-        # for k in range(self.vni):
-        #     ZK = sym.vec_to_mat(self.ZK[:, [k]], hermitian=self.hermitian)
-        #     UzkZKUzk = self.Uzkx.conj().T @ ZK @ self.Uzkx
-        #     UxkUxkZK[[k], :] = (sym.mat_to_vec(UzkZKUzk, hermitian=self.hermitian) * sqrt_D1zkx_log).T
-        # D2PhiZKX = UxkUxkZK @ UxkUxkZK.T 
+        elif self.protocol == "dprBB84_fast":
+            self.update_invhessprod_aux_dprBB84_fast()
 
-        # Preparing other required variables
-        self.zi2 = self.zi * self.zi
-        D2Phi = D2PhiKX - D2PhiZKX
-
-        self.hess      = self.zi * D2Phi + invXX
-        self.hess_fact = lin.fact(self.hess)
+        elif self.protocol == "DMCV":
+            self.update_invhessprod_aux_DMCV()
 
         self.invhess_aux_updated = True
 
         return
     
     def update_invhessprod_aux_dprBB84(self):
-        assert not self.hess_aux_updated
+        assert not self.invhess_aux_updated
         assert self.grad_updated
-
-        irt2 = math.sqrt(0.5)
-
-        self.zi2 = self.zi * self.zi
-        self.D1kx_log  = mgrad.D1_log(self.Dkx, self.log_Dkx)
-        self.D1zkx_log = mgrad.D1_log(self.Dzkx, self.log_Dzkx)
+        assert self.hess_aux_updated
 
         # Hessians of quantum relative entropy
-        self.hess = np.empty((self.vni, self.vni))
-        k = 0
-        for j in range(self.ni):
-            for i in range(j + 1):
-                # invXX
-                temp = self.inv_X[:, [i]] @ self.inv_X[[j], :]
-                if i != j:
-                    temp *= irt2
-                    self.hess[:, [k]] = sym.mat_to_vec(temp + temp.conj().T, hermitian=self.hermitian)
-                    k += 1
-                    if self.hermitian:
-                        temp *= 1j
-                        self.hess[:, [k]] = sym.mat_to_vec(temp + temp.conj().T, hermitian=self.hermitian)                        
-                        k += 1
-                else:
-                    self.hess[:, [k]] = sym.mat_to_vec(temp, hermitian=self.hermitian)
-                    k += 1
-                
+        self.hess = kronecker_matrix(self.inv_X, hermitian=self.hermitian)
 
-        def make_KHK(Klist, c, out):
-            for K in Klist:
-                (_, Kj, _) = sp.sparse.find(sp.sparse.coo_matrix(K))
-                Kj = np.sort(Kj)
-                nk = Kj.size
-                Kx = self.X[np.ix_(Kj, Kj)] / 2
+        def block_frechet_matrix(mat_idx_list, vec_idx_list, v_list, c, out):
+            for (mat_idx, vec_idx, v) in zip(mat_idx_list, vec_idx_list, v_list):
+                v2 = v * v
+                v4 = v2 * v2
+
+                Kx = self.X[np.ix_(mat_idx, mat_idx)] * v2
                 Dkx, Ukx = np.linalg.eigh(Kx)
                 D1kx_log = mgrad.D1_log(Dkx, np.log(Dkx))
 
                 # Build matrix
-                Hkx = build_frechet(Ukx, D1kx_log) / 2 / 2
+                Hkx = frechet_matrix(Ukx, D1kx_log, hermitian=self.hermitian) * v4
 
-                # Get indices
-                k = 0
-                K = np.zeros((nk * nk,), dtype='uint32')
-                for j in range(nk):
-                    for i in range(j):
-                        (I, J) = (Kj[i], Kj[j]) # Indices of full matrix
-                        K[k]     = 2*I + J*J
-                        K[k + 1] = 2*I + J*J + 1
-                        k += 2
-                    
-                    J = Kj[j]
-                    K[k] = 2*J + J*J
-                    k += 1
-
-                out[np.ix_(K, K)] += Hkx * c
+                out[np.ix_(vec_idx, vec_idx)] += Hkx * c
             
             return out
-        
-        def build_frechet(U, D1, hermitian=True):
-            n = U.shape[0]
-            rt2 = np.sqrt(2.0)
 
-            Hess = np.zeros((n*n, n*n))
+        block_frechet_matrix(self.K_mat_idx,  self.K_vec_idx,  self.K_v,   self.zi, self.hess)
+        block_frechet_matrix(self.ZK_mat_idx, self.ZK_vec_idx, self.ZK_v, -self.zi, self.hess)
 
-            k = 0
-            for j in range(n):
-                for i in range(j):
-                    UHU = U.conj().T[:, [i]] @ U[[j], :] / rt2
-                    D_H = U @ (D1 * UHU) @ U.conj().T
-                    
-                    Hess[:, [k]]     = sym.mat_to_vec(D_H + D_H.conj().T, rt2, hermitian)
-                    D_H             *= 1j
-                    Hess[:, [k + 1]] = sym.mat_to_vec(D_H + D_H.conj().T, rt2, hermitian)
-                    k += 2
-
-                UHU          = U.conj().T[:, [j]] @ U[[j], :]
-                D_H          = U @ (D1 * UHU) @ U.conj().T
-                Hess[:, [k]] = sym.mat_to_vec(D_H, rt2, hermitian)
-                k += 1
-
-            return Hess
-
-        make_KHK(self.Klist_raw, self.zi, self.hess)
-        make_KHK(self.ZKlist_raw, -self.zi, self.hess)
-
-        # Preparing other required variables
-        self.hess_aux_updated = True
+        self.hess_fact = lin.fact(self.hess)
 
         return
     
-    def update_invhessprod_aux_dprBB84_alt(self):
-        assert not self.hess_aux_updated
+    def update_invhessprod_aux_dprBB84_fast(self):
+        assert not self.invhess_aux_updated
         assert self.grad_updated
-
-        irt2 = math.sqrt(0.5)
-
-        self.zi2 = self.zi * self.zi
-        self.D1kx_log  = mgrad.D1_log(self.Dkx, self.log_Dkx)
-        self.D1zkx_log = mgrad.D1_log(self.Dzkx, self.log_Dzkx)
+        assert self.hess_aux_updated
 
 
-        # Get indices for projection mappings
-        K_small = [np.sort(sp.sparse.find(sp.sparse.coo_matrix(K))[1]) for K in self.Klist_raw]
-        K_big   = [mat_to_vec_idx(K) for K in K_small]
-        self.K_big_all = np.array(K_big).ravel()
-        nK = K_big[0].size
+        # Get subblock of X kron X 
+        nK = self.K_vec_idx[0].size
 
-
-        # Hessians of quantum relative entropy
-        X00 = self.X[np.ix_(K_small[0], K_small[0])]
-        X01 = self.X[np.ix_(K_small[1], K_small[0])]
-        X11 = self.X[np.ix_(K_small[1], K_small[1])]
-        
-        def make_XX(X, out):
-            k = 0
-            for j in range(X.shape[0]):
-                for i in range(j + 1):
-                    # invXX
-                    temp = X[:, [i]] @ X.conj().T[[j], :]
-                    if i != j:
-                        temp *= irt2
-                        out[:, [k]] = sym.mat_to_vec(temp + temp.conj().T, hermitian=True)
-                        k += 1
-                        if self.hermitian:
-                            temp *= 1j
-                            out[:, [k]] = sym.mat_to_vec(temp + temp.conj().T, hermitian=True)                        
-                            k += 1
-                    else:
-                        out[:, [k]] = sym.mat_to_vec(temp, hermitian=True)
-                        k += 1
-
-            return out    
+        X00 = self.X[np.ix_(self.K_mat_idx[0], self.K_mat_idx[0])]
+        X01 = self.X[np.ix_(self.K_mat_idx[1], self.K_mat_idx[0])]
+        X11 = self.X[np.ix_(self.K_mat_idx[1], self.K_mat_idx[1])]
         
         small_XX = np.empty((nK * 2, nK * 2))
-        make_XX(X00, small_XX[:nK, :nK])
-        make_XX(X11, small_XX[nK:, nK:])
-        make_XX(X01, small_XX[nK:, :nK])
+        small_XX[:nK, :nK] = kronecker_matrix(X00, hermitian=self.hermitian)
+        small_XX[nK:, nK:] = kronecker_matrix(X11, hermitian=self.hermitian)
+        small_XX[nK:, :nK] = kronecker_matrix(X01, hermitian=self.hermitian)
         small_XX[:nK, nK:] = small_XX[nK:, :nK].T
 
-        def make_KHK(Klist, c, out):
-            for K in Klist:
-                (_, Kj, _) = sp.sparse.find(sp.sparse.coo_matrix(K))
-                Kj = np.sort(Kj)
-                nk = Kj.size
-                Kx = self.X[np.ix_(Kj, Kj)] / 2
+
+        # Get Hessian corresponding to QRE
+        def block_frechet_matrix(mat_idx_list, vec_idx_list, v_list, c, out):
+            for (mat_idx, vec_idx, v) in zip(mat_idx_list, vec_idx_list, v_list):
+                v2 = v * v
+                v4 = v2 * v2
+
+                Kx = self.X[np.ix_(mat_idx, mat_idx)] * v2
                 Dkx, Ukx = np.linalg.eigh(Kx)
                 D1kx_log = mgrad.D1_log(Dkx, np.log(Dkx))
 
                 # Build matrix
-                Hkx = build_frechet(Ukx, D1kx_log) / 2 / 2
+                Hkx = frechet_matrix(Ukx, D1kx_log, hermitian=self.hermitian) * v4
 
-                # Get indices
-                k = 0
-                K = np.zeros((nk * nk,), dtype='uint32')
-                for j in range(nk):
-                    for i in range(j):
-                        (I, J) = (Kj[i], Kj[j]) # Indices of full matrix
-                        K[k]     = 2*I + J*J
-                        K[k + 1] = 2*I + J*J + 1
-                        k += 2
-                    
-                    J = Kj[j]
-                    K[k] = 2*J + J*J
-                    k += 1
-
-                out[np.ix_(K, K)] += Hkx * c
+                out[np.ix_(vec_idx, vec_idx)] += Hkx * c
             
             return out
-        
-        def build_frechet(U, D1, hermitian=True):
-            n = U.shape[0]
-            rt2 = np.sqrt(2.0)
-
-            Hess = np.zeros((n*n, n*n))
-
-            k = 0
-            for j in range(n):
-                for i in range(j):
-                    UHU = U.conj().T[:, [i]] @ U[[j], :] / rt2
-                    D_H = U @ (D1 * UHU) @ U.conj().T
-                    
-                    Hess[:, [k]]     = sym.mat_to_vec(D_H + D_H.conj().T, rt2, hermitian)
-                    D_H             *= 1j
-                    Hess[:, [k + 1]] = sym.mat_to_vec(D_H + D_H.conj().T, rt2, hermitian)
-                    k += 2
-
-                UHU          = U.conj().T[:, [j]] @ U[[j], :]
-                D_H          = U @ (D1 * UHU) @ U.conj().T
-                Hess[:, [k]] = sym.mat_to_vec(D_H, rt2, hermitian)
-                k += 1
-
-            return Hess
 
         temp = np.zeros((self.vni, self.vni))
+        block_frechet_matrix(self.K_mat_idx,  self.K_vec_idx,  self.K_v,   self.zi, temp)
+        block_frechet_matrix(self.ZK_mat_idx, self.ZK_vec_idx, self.ZK_v, -self.zi, temp)
+        temp = temp[np.ix_(self.K_vec_idx.ravel(), self.K_vec_idx.ravel())]
 
-        make_KHK(self.Klist_raw, self.zi, temp)
-        make_KHK(self.ZKlist_raw, -self.zi, temp)
 
-        temp = temp[np.ix_(self.K_big_all, self.K_big_all)]
-
+        # Determine if low-rank component needs further reduction 
         M1 = temp[:nK, :nK]
         M2 = temp[nK:, nK:]
 
         D1, U1 = np.linalg.eigh(M1)
-        # cutoff = np.max(D1) * 1e-14
-        idx = np.where(D1 <= 1e-8)[0]
+        idx = np.where(D1 <= 1e-10)[0]
         D1 = np.delete(D1, idx)
         U1 = np.delete(U1, idx, 1)
 
         D2, U2 = np.linalg.eigh(M2)
-        # cutoff = np.max(D2) * 1e-14
-        idx = np.where(D2 <= 1e-8)[0]
+        idx = np.where(D2 <= 1e-10)[0]
         D2 = np.delete(D2, idx)
         U2 = np.delete(U2, idx, 1)
-
-        # print()
-        # print(np.min(D1), np.max(D1))
-        # print(np.min(D2), np.max(D2))
-        # print()
 
         self.U12 = sp.linalg.block_diag(U1, U2)
         D12_inv = np.hstack((np.reciprocal(D1), np.reciprocal(D2)))
 
+
+        # Compute and factor Schur complement
         self.schur = self.U12.T @ small_XX @ self.U12
         self.schur[np.diag_indices_from(self.schur)] += D12_inv
 
         self.schur_fact = lin.fact(self.schur)
-        
-        # Preparing other required variables
-        self.hess_aux_updated = True
+
+
+        # Estimate condition number
+        self.cond_est = (np.max(self.Dx) + np.max(D12_inv)) / (np.min(self.Dx) + np.min(D12_inv))
 
         return    
 
     def update_invhessprod_aux_DMCV(self):
-        assert not self.hess_aux_updated
+        assert not self.invhess_aux_updated
         assert self.grad_updated
-
-        irt2 = math.sqrt(0.5)
-
-        self.zi2 = self.zi * self.zi
-        self.D1kx_log  = mgrad.D1_log(self.Dkx, self.log_Dkx)
-        self.D1zkx_log = mgrad.D1_log(self.Dzkx, self.log_Dzkx)
+        assert self.hess_aux_updated
 
         # Hessians of quantum relative entropy
-        self.hess = np.empty((self.vni, self.vni))
-        k = 0
-        for j in range(self.ni):
-            for i in range(j + 1):
-                # invXX
-                temp = self.inv_X[:, [i]] @ self.inv_X[[j], :]
-                if i != j:
-                    temp *= irt2
-                    self.hess[:, [k]] = sym.mat_to_vec(temp + temp.conj().T, hermitian=self.hermitian)
-                    k += 1
-                    if self.hermitian:
-                        temp *= 1j
-                        self.hess[:, [k]] = sym.mat_to_vec(temp + temp.conj().T, hermitian=self.hermitian)                        
-                        k += 1
-                else:
-                    self.hess[:, [k]] = sym.mat_to_vec(temp, hermitian=self.hermitian)
-                    k += 1
+        self.hess = kronecker_matrix(self.inv_X, hermitian=self.hermitian)
                 
-
-        def make_KHK(Klist, c, out):
-            for K in Klist:
+        def block_frechet_matrix(K_list, c, out):
+            for K in K_list:
                 Kx = K @ self.X @ K.conj().T
                 Dkx, Ukx = np.linalg.eigh(Kx)
                 D1kx_log = mgrad.D1_log(Dkx, np.log(Dkx))
 
                 # Build matrix
-                Hkx = build_frechet(Ukx, D1kx_log, K)
-
+                Hkx = frechet_matrix_alt(Ukx, D1kx_log, K_list=[K], hermitian=True)
                 out += Hkx * c
             
             return out
-        
-        def build_frechet(U, D1, K, hermitian=True):
-            n = K.shape[1]
-            rt2 = np.sqrt(2.0)
 
-            Hess = np.zeros((n*n, n*n))
+        block_frechet_matrix(self.K_list,         self.zi, self.hess)
+        block_frechet_matrix(self.ZK_list_block, -self.zi, self.hess)
 
-            KU = K.conj().T @ U
-
-            k = 0
-            for j in range(n):
-                for i in range(j):
-                    UHU = KU.conj().T[:, [i]] @ KU[[j], :] / rt2
-                    D_H = KU @ (D1 * UHU) @ KU.conj().T
-                    
-                    Hess[:, [k]]     = sym.mat_to_vec(D_H + D_H.conj().T, rt2, hermitian)
-                    D_H             *= 1j
-                    Hess[:, [k + 1]] = sym.mat_to_vec(D_H + D_H.conj().T, rt2, hermitian)
-                    k += 2
-
-                UHU          = KU.conj().T[:, [j]] @ KU[[j], :]
-                D_H          = KU @ (D1 * UHU) @ KU.conj().T
-                Hess[:, [k]] = sym.mat_to_vec(D_H, rt2, hermitian)
-                k += 1
-
-            return Hess
-
-        make_KHK(self.K_list, self.zi, self.hess)
-        make_KHK(self.ZKlist_reduced, -self.zi, self.hess)
-
-        # Preparing other required variables
-        self.hess_aux_updated = True
+        self.hess_fact = lin.fact(self.hess)
 
         return
 
@@ -566,6 +369,9 @@ class QuantKeyDist():
         if not self.invhess_aux_updated:
             self.update_invhessprod_aux()
 
+        if self.protocol == "dprBB84_fast":
+            return self.invhess_prod_dprBB84_fast(dirs)
+        
         p = np.size(dirs, 1)
         out = np.empty((self.dim, p))
 
@@ -577,7 +383,7 @@ class QuantKeyDist():
 
         return out
     
-    def invhess_prod_dprBB84_alt(self, dirs):
+    def invhess_prod_dprBB84_fast(self, dirs):
         assert self.grad_updated
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
@@ -591,20 +397,20 @@ class QuantKeyDist():
         Hx = dirs[1:, :]
         Wx = Hx + Ht * self.DPhi
 
-        temp_vec = np.zeros((self.K_big_all.size, p))
+        temp_vec = np.zeros((self.K_vec_idx.ravel().size, p))
 
         for k in range(p):
             Wx_k = sym.vec_to_mat(Wx[:, [k]], hermitian=self.hermitian)
 
             temp = self.X @ Wx_k @ self.X
             temp = sym.mat_to_vec(temp, hermitian=self.hermitian)
-            temp_vec[:, [k]] = temp[self.K_big_all]
+            temp_vec[:, [k]] = temp[self.K_vec_idx.ravel()]
 
         temp_vec = self.U12.T @ temp_vec
         temp_vec = lin.fact_solve(self.schur_fact, temp_vec)
         temp_vec = self.U12 @ temp_vec
 
-        Wx[self.K_big_all] -= temp_vec
+        Wx[self.K_vec_idx.ravel()] -= temp_vec
 
         for k in range(p):
             Wx_k = sym.vec_to_mat(Wx[:, [k]], hermitian=self.hermitian)
@@ -699,19 +505,20 @@ def facial_reduction(K_list, hermitian=False):
 
 def mat_to_vec_idx(mat_idx, hermitian=False):
     # Get indices
-    n = mat_idx.size
-    vec_idx = np.zeros((n * n,), dtype='uint64')
+    n  = mat_idx.size
+    vn = sym.vec_dim(n, hermitian=hermitian)
+    vec_idx = np.zeros((vn,), dtype='uint64')
 
     k = 0
     for j in range(n):
         for i in range(j):
             (I, J) = (mat_idx[i], mat_idx[j])
-            vec_idx[k]     = 2*I + J*J
+            vec_idx[k] = 2*I + J*J
             k += 1
 
             if hermitian:
-                vec_idx[k + 1] = 2*I + J*J + 1
-                k += 2
+                vec_idx[k] = 2*I + J*J + 1
+                k += 1
         
         J = mat_idx[j]
         vec_idx[k] = 2*J + J*J
@@ -731,19 +538,50 @@ def frechet_matrix(U, D1, K_list=None, hermitian=True):
     k = 0
     for j in range(n):
         for i in range(j):
-            UHU = np.sum(np.array([KU.conj().T[:, [i]] @ KU[[j], :] for KU in KU_list]), 0) / rt2
+            UHU = sum([KU.conj().T[:, [i]] @ KU[[j], :] for KU in KU_list]) / rt2
             D_H = sym.congr_map(D1 * UHU, KU_list)
             out[:, [k]]     = sym.mat_to_vec(D_H + D_H.conj().T, rt2, hermitian)
             D_H            *= 1j
             out[:, [k + 1]] = sym.mat_to_vec(D_H + D_H.conj().T, rt2, hermitian)
             k += 2
 
-        UHU = np.sum(np.array([KU.conj().T[:, [j]] @ KU[[j], :] for KU in KU_list]), 0)
+        UHU         = sum([KU.conj().T[:, [j]] @ KU[[j], :] for KU in KU_list])
         D_H         = sym.congr_map(D1 * UHU, KU_list)
         out[:, [k]] = sym.mat_to_vec(D_H, rt2, hermitian)
         k += 1
 
     return out
+
+
+def frechet_matrix_alt(U, D1, K_list=None, hermitian=True):
+    # Build matrix corresponding to linear map H -> U @ [D1 * (U' @ H @ U)] @ U'
+    KU_list = [U] if (K_list is None) else [K.conj().T @ U for K in K_list]
+    D1_rt2 = np.sqrt(D1)
+    
+    n, m = KU_list[0].shape
+    vn   = sym.vec_dim(n, hermitian=hermitian)
+    vm   = sym.vec_dim(m, hermitian=hermitian)
+    rt2  = np.sqrt(2.0)
+
+    fact = np.zeros((vm, vn))
+
+    k = 0
+    for j in range(n):
+        for i in range(j):
+            UHU = sum([KU.conj().T[:, [i]] @ KU[[j], :] for KU in KU_list]) / rt2
+            D_H = D1_rt2 * UHU
+            fact[:, [k]]     = sym.mat_to_vec(D_H + D_H.conj().T, rt2, hermitian)
+            D_H            *= 1j
+            fact[:, [k + 1]] = sym.mat_to_vec(D_H + D_H.conj().T, rt2, hermitian)
+            k += 2
+
+        UHU         = sum([KU.conj().T[:, [j]] @ KU[[j], :] for KU in KU_list])
+        D_H         = D1_rt2 * UHU
+        fact[:, [k]] = sym.mat_to_vec(D_H, rt2, hermitian)
+        k += 1
+
+    return fact.T @ fact
+
 
 def kronecker_matrix(X, hermitian=False):
     # Build matrix corresponding to linear map H -> X @ H @ X'

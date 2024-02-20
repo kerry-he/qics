@@ -265,22 +265,8 @@ def lin_to_mat(lin, ni, no, hermitian=False):
     return mat
 
 def congr_map(x, Klist, adjoint=False):
-    # Get dimension of output (depends on if map is adjoint or not)
-    no, ni = Klist[0].shape
-    dim = ni if adjoint else no
-
-    # Create output in correct typing (real v complex)
-    if (x.dtype == 'complex128') or (Klist[0].dtype == 'complex128'):
-        KxK = np.zeros((dim, dim), 'complex128')
-    else:
-        KxK = np.zeros((dim, dim))
-
     # Compute congruence map
     if adjoint:
-        for K in Klist:
-            KxK += K.conj().T @ x @ K        
+        return sum([K.conj().T @ x @ K for K in Klist])   
     else:
-        for K in Klist:
-            KxK += K @ x @ K.conj().T
-            
-    return KxK
+        return sum([K @ x @ K.conj().T for K in Klist])
