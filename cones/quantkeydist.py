@@ -21,12 +21,11 @@ class QuantKeyDist():
         if protocol is None:
             # If there is no protocol, then do standard facial reduction on both G and ZG 
             ZK_list = [Z @ K for K in K_list for Z in Z_list] if ZK_list is None else ZK_list
-            self.K_list,  self.nk  = facial_reduction(K_list,  hermitian=hermitian)
-            self.ZK_list, self.nzk = facial_reduction(ZK_list, hermitian=hermitian)
+            self.K_list_blk  = [facial_reduction(K_list,  hermitian=hermitian)]
+            self.ZK_list_blk = [facial_reduction(ZK_list, hermitian=hermitian)]
 
         elif protocol == "dprBB84" or protocol == "dprBB84_fast":
             # For dprBB84 protocol, G and ZG are both projectors in the computational basis
-            # Facial reduction based on a priori knowledge of Z and K operators
             span_idx     = np.sort(np.array([np.where(K)[0] for K in K_list]).ravel())
             self.K_list  = [K[span_idx, :] for K in K_list]
             self.ZK_list = [(Z @ K)[span_idx, :] for K in K_list for Z in Z_list]
@@ -38,15 +37,16 @@ class QuantKeyDist():
             self.K_v        = [K[np.where(K)][0] for K in self.K_list]
             self.ZK_v       = [ZK[np.where(ZK)][0] for ZK in self.ZK_list]
 
-            self.nk  = self.K_list[0].shape[0]
-            self.nzk = self.ZK_list[0].shape[0]
-
+            ZK_list = [Z @ K for K in K_list for Z in Z_list] if ZK_list is None else ZK_list
+            self.K_list_blk  = [[K[np.where(K)[0], :]] for K in K_list]
+            self.ZK_list_blk = [[ZK[np.where(ZK)[0], :]] for ZK in ZK_list]
+            
             self.cond_est = 0.0
 
         elif protocol == "DMCV":
             # For DMCV protocol, Z maps onto block diagonal matrix with 4 blocks
-            self.K_list_blk,  self.nk  = facial_reduction(K_list, hermitian=hermitian)
-            self.ZK_list, self.nzk = [Z @ K for K in K_list for Z in Z_list], Z_list[0].shape[0]
+            self.K_list_blk = [facial_reduction(K_list, hermitian=hermitian)]
+            self.ZK_list = [Z @ K for K in K_list for Z in Z_list]
             self.ZK_list_blk = [[ZK[i::4, :]] for (i, ZK) in enumerate(self.ZK_list)]
 
         # Update flags
@@ -63,7 +63,7 @@ class QuantKeyDist():
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
-        point[0] = 100.
+        point[0] = 1.
         point[1:] = sym.mat_to_vec(np.eye(self.ni), hermitian=self.hermitian)
 
         self.set_point(point)
@@ -76,7 +76,7 @@ class QuantKeyDist():
 
         self.t   = point[0]
         self.X   = sym.vec_to_mat(point[1:], hermitian=self.hermitian)
-        self.KX_blk  = [sym.congr_map(self.X, K_list) for K_list in self.K_list_blk]
+        self.KX_blk  = [sym.congr_map(self.X, K_list)  for K_list  in self.K_list_blk]
         self.ZKX_blk = [sym.congr_map(self.X, ZK_list) for ZK_list in self.ZK_list_blk]
 
         self.feas_updated        = False
@@ -85,7 +85,7 @@ class QuantKeyDist():
         self.invhess_aux_updated = False
         self.dder3_aux_updated   = False
 
-        if self.protocol == "dprBB84_fast" and self.cond_est >= 1e16:
+        if self.protocol == "dprBB84_fast" and self.cond_est >= 1e15:
             self.protocol = "dprBB84"
 
         return
@@ -218,8 +218,10 @@ class QuantKeyDist():
         if self.protocol is None:
             # Default computation of QKD Hessian
             self.hess  = kronecker_matrix(self.inv_X, hermitian=self.hermitian)
-            self.hess += frechet_matrix_alt(self.Ukx, self.D1kx_log, K_list=self.K_list, hermitian=self.hermitian) * self.zi
-            self.hess -= frechet_matrix_alt(self.Uzkx, self.D1zkx_log, K_list=self.ZK_list, hermitian=self.hermitian) * self.zi
+            self.hess += sum([frechet_matrix_alt(U, D1, K_list=K_list, hermitian=self.hermitian) * self.zi
+                          for (U, D1, K_list) in zip(self.Ukx_blk, self.D1kx_log_blk, self.K_list_blk)])
+            self.hess -= sum([frechet_matrix_alt(U, D1, K_list=K_list, hermitian=self.hermitian) * self.zi
+                          for (U, D1, K_list) in zip(self.Uzkx_blk, self.D1zkx_log_blk, self.ZK_list_blk)])
 
             self.hess_fact = lin.fact(self.hess)
         
@@ -505,13 +507,13 @@ def facial_reduction(K_list, hermitian=False):
     nk_fr = np.size(KKnzidx)
 
     if nk == nk_fr:
-        return K_list, nk
+        return K_list
     
     # Perform facial reduction
     Qkk = Ukk[:, KKnzidx]
-    K_list_fr = [[Qkk.conj().T @ K] for K in K_list]
+    K_list_fr = [Qkk.conj().T @ K for K in K_list]
 
-    return K_list_fr, nk_fr
+    return K_list_fr
 
 def mat_to_vec_idx(mat_idx, hermitian=False):
     # Get indices
