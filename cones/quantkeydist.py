@@ -44,7 +44,7 @@ class QuantKeyDist():
             self.K_v        = [K[np.where(K)][0] for K in self.K_list]
             self.ZK_v       = [ZK[np.where(ZK)][0] for ZK in self.ZK_list]
 
-            ZK_list = [Z @ K for K in K_list for Z in Z_list] if ZK_list is None else ZK_list
+            ZK_list = [Z @ K for K in K_list for Z in Z_list]
             self.K_list_blk  = [[K[np.where(K)[0], :]] for K in K_list]
             self.ZK_list_blk = [[ZK[np.where(ZK)[0], :]] for ZK in ZK_list]
             
