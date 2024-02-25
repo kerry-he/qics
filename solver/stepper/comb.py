@@ -25,7 +25,6 @@ class CombinedStepper():
 
         # Get prediction direction
         self.update_rhs_pred(model, point)
-        res_norm = np.linalg.norm(self.res.vec)
         res_norm = self.syssolver.solve_system_ir(self.dir_p, self.res, self.rhs, model, mu, point.tau)
 
         # Get TOA prediction direction
