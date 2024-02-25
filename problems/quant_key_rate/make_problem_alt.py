@@ -91,7 +91,7 @@ def make_problem(file_name, description=["", ""], optval=0.0):
         {
             'type':   'psd',
             'complex': hermitian,
-            'dim':     1 + 2*vni,
+            'dim':     vni,
             'n':       ni
         }
     ]
@@ -113,7 +113,7 @@ def make_problem(file_name, description=["", ""], optval=0.0):
 
 
 if __name__ == "__main__":
-    problem = 'TFQKD'
+    problem = 'dprBB84_4_02_15'
     file_name = 'problems/quant_key_rate/' + problem + '.mat'
 
     description = [problem,       # Long description

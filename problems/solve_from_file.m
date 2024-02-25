@@ -1,78 +1,71 @@
 clear; close all; clc;
 
-file_name = "ncm_50_eye.hdf5";
+file_name = "qkd_dprBB84_4_02_15.mat";
 
 % Read data from file
-description = h5readatt(file_name, '/', 'description');
-offset = h5readatt(file_name, '/', 'offset');
+load(file_name)
 fprintf("Now solving: %s\n", description)
 
-
 % Objective and constraint matrices
-c = h5read(file_name, '/data/c');
-b = h5read(file_name, '/data/b')';
-h = h5read(file_name, '/data/h')';
-
-if h5readatt(file_name, '/data/A', 'sparse')
-    A_vij   = h5read(file_name, '/data/A');
-    A_v     = A_vij(:, 1);
-    A_i     = A_vij(:, 2) + 1;
-    A_j     = A_vij(:, 3) + 1;
-    A_shape = h5readatt(file_name, '/data/A', 'shape');
-
-    A       = sparse(A_i, A_j, A_v, A_shape(1), A_shape(2));
-    A       = full(A);
-else
-    A = h5read(file_name, '/data/A');
-end
-
-if h5readatt(file_name, '/data/G', 'sparse')
-    G_vij   = h5read(file_name, '/data/G');
-    G_v     = G_vij(:, 1);
-    G_i     = G_vij(:, 2) + 1;
-    G_j     = G_vij(:, 3) + 1;
-    G_shape = h5readatt(file_name, '/data/G', 'shape');
-
-    G       = sparse(G_i, G_j, G_v, G_shape(1), G_shape(2));
-    G       = full(G);
-else
-    G = h5read(file_name, '/data/G');
-end
-
+A = full(A);
+G = full(G);
 
 % List of cones
 total_dim = 1;
-for i = 1:length(h5info(file_name, '/cones').Datasets)
-    cone_name = strcat('/cones/', string(i - 1));
-    cone_type = h5read(file_name, cone_name);
+for i = 1:length(cones)
+    cone_k = cones{i};
+    cone_type = cone_k.type;
 
     if strcmp(cone_type, 'qre')
-        n           = h5readatt(file_name, cone_name, 'n');
-        dim         = h5readatt(file_name, cone_name, 'dim');
-        vn          = n * (n + 1) / 2;
-        cons{i, 1}  = 'QRE';
-        cons{i, 2}  = [double(n)];
-        A_DDS{i, 1} = -[          G(total_dim, :);
-                       expand_vec(G(total_dim+1    : total_dim+vn, :));
-                       expand_vec(G(total_dim+vn+1 : total_dim+dim-1, :))];
-        b_DDS{i, 1} =  [          h(total_dim);
-                       expand_vec(h(total_dim+1    : total_dim+vn));
-                       expand_vec(h(total_dim+vn+1 : total_dim+dim-1))];
+        n           = cone_k.n;
+        dim         = cone_k.dim;
+        hermitian   = cone_k.complex;
+
+        if ~hermitian
+            vn          = n * (n + 1) / 2;
+            cons{i, 1}  = 'QRE';
+            cons{i, 2}  = [double(n)];
+            A_DDS{i, 1} = -[          G(total_dim, :);
+                           expand_vec(G(total_dim+1    : total_dim+vn, :));
+                           expand_vec(G(total_dim+vn+1 : total_dim+dim-1, :))];
+            b_DDS{i, 1} =  [          h(total_dim);
+                           expand_vec(h(total_dim+1    : total_dim+vn));
+                           expand_vec(h(total_dim+vn+1 : total_dim+dim-1))];
+        else
+            vn = n * n;
+            cons{i, 1}  = 'QRE';
+            cons{i, 2}  = [2 * double(n)];
+            A_DDS{i, 1} = -[          G(total_dim, :);
+                           complex_to_real(G(total_dim+1    : total_dim+vn, :), n);
+                           complex_to_real(G(total_dim+vn+1 : total_dim+dim-1, :), n)];
+            b_DDS{i, 1} =  [          h(total_dim);
+                           complex_to_real(h(total_dim+1    : total_dim+vn), n);
+                           complex_to_real(h(total_dim+vn+1 : total_dim+dim-1), n)];
+        end
 
     elseif strcmp(cone_type, 'nn')
-        dim         = h5readatt(file_name, cone_name, 'dim');
+        dim         = cone_k.dim;
         cons{i, 1}  = 'LP';
         cons{i, 2}  = [double(dim)];
         A_DDS{i, 1} = -G(total_dim:total_dim+dim-1, :);
         b_DDS{i, 1} = h(total_dim:total_dim+dim-1);
 
     elseif strcmp(cone_type, 'psd')
-        n           = h5readatt(file_name, cone_name, 'n');
-        dim         = h5readatt(file_name, cone_name, 'dim');
-        cons{i, 1}  = 'SDP';
-        cons{i, 2}  = [double(n)];
-        A_DDS{i, 1} = -expand_vec(G(total_dim : total_dim+dim-1, :));
-        b_DDS{i, 1} =  expand_vec(h(total_dim : total_dim+dim-1));    
+        n           = cone_k.n;
+        dim         = cone_k.dim;
+        hermitian   = cone_k.complex;
+
+        if ~hermitian
+            cons{i, 1}  = 'SDP';
+            cons{i, 2}  = [double(n)];
+            A_DDS{i, 1} = -expand_vec(G(total_dim : total_dim+dim-1, :));
+            b_DDS{i, 1} =  expand_vec(h(total_dim : total_dim+dim-1));    
+        else
+            cons{i, 1}  = 'SDP';
+            cons{i, 2}  = [2 * double(n)];
+            A_DDS{i, 1} = -complex_to_real(G(total_dim : total_dim+dim-1, :), n);
+            b_DDS{i, 1} =  complex_to_real(h(total_dim : total_dim+dim-1), n);    
+        end
     end
 
     total_dim = total_dim + dim;
@@ -90,22 +83,6 @@ fprintf("Opt value: %.10f \t\n", c*x + offset);
 fprintf("Solve time: %.10f \t\n", info.time);
 
 %% Functions
-function mat = vec_to_mat(vec)
-    [vn, ~] = size(vec);
-    n = (sqrt(1 + 8 * vn) - 1) / 2;
-    mat = zeros(n, n);
-    t = 1;
-    for i = 1:n
-        for j = 1:i-1
-            mat(i, j) = vec(t) * sqrt(0.5);
-            mat(j, i) = vec(t) * sqrt(0.5);
-            t = t + 1;
-        end
-        mat(i, i) = vec(t);
-        t = t + 1;
-    end
-end
-
 function new_vecs = expand_vec(vecs)
     [vn, p] = size(vecs);
     n = (sqrt(1 + 8 * vn) - 1) / 2;
@@ -114,7 +91,83 @@ function new_vecs = expand_vec(vecs)
 
     for i = 1:p
         vec = vecs(:, i);
-        mat = vec_to_mat(vec);
+        mat = vec_to_mat(vec, false);
         new_vecs(:, i) = mat(:);
+    end
+end
+
+function vec = mat_to_vec(mat, hermitian)
+    if hermitian
+        [n, ~] = size(mat);
+        vn = n * n;
+        vec = zeros(vn, 1);
+        t = 1;
+        for j = 1:n
+            for i = 1:j-1
+                vec(t)     = real(mat(i, j)) * sqrt(2.0);
+                vec(t + 1) = imag(mat(i, j)) * sqrt(2.0);
+                t = t + 2;
+            end
+            vec(t) = real(mat(j, j));
+            t = t + 1;
+        end
+    else
+        [n, ~] = size(mat);
+        vn = n * (n + 1) / 2;
+        vec = zeros(vn, 1);
+        t = 1;
+        for j = 1:n
+            for i = 1:j-1
+                vec(t) = mat(i, j) * sqrt(2.0);
+                t = t + 1;
+            end
+            vec(t) = mat(j, j);
+            t = t + 1;
+        end
+    end
+end
+
+function mat = vec_to_mat(vec, hermitian)
+    if hermitian
+        [vn, ~] = size(vec);
+        n = sqrt(vn);
+        mat = zeros(n, n);
+        t = 1;
+        for j = 1:n
+            for i = 1:j-1
+                mat(i, j) = complex(vec(t),  vec(t + 1)) * sqrt(0.5);
+                mat(j, i) = complex(vec(t), -vec(t + 1)) * sqrt(0.5);
+                t = t + 2;
+            end
+            mat(j, j) = vec(t);
+            t = t + 1;
+        end
+    else
+        [vn, ~] = size(vec);
+        n = (sqrt(1 + 8*vn) - 1) / 2;
+        mat = zeros(n, n);
+        t = 1;
+        for j = 1:n
+            for i = 1:j-1
+                mat(i, j) = vec(t) * sqrt(0.5);
+                t = t + 1;
+            end
+            mat(j, j) = vec(t);
+            t = t + 1;
+        end    
+    end
+end
+
+function Gout = complex_to_real(Gin, n)
+    m = size(Gin, 2);
+    Gout = zeros(4*n*n, m);
+
+    for k = 1:m
+        Gk = vec_to_mat(Gin(:, k), true);
+        Gk_real = real(Gk);
+        Gk_imag = imag(Gk);
+        Gk = [Gk_real, -Gk_imag;
+              Gk_imag,  Gk_real];
+        Gout(:, k) = Gk(:);
     end
 end
