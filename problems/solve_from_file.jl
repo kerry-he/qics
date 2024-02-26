@@ -1,5 +1,5 @@
 import SparseArrays
-import HDF5
+import MAT
 
 import Hypatia
 import Hypatia.Cones
@@ -9,50 +9,39 @@ T = Float64
 
 function read_problem(file_name)
     # Read data from file
-    f = HDF5.h5open(file_name, "r")
+    f = MAT.matopen(file_name)
 
     # Auxiliary problem information
-    description = HDF5.attributes(f)["description"][]
-    offset = HDF5.attributes(f)["offset"][]
+    description = MAT.read(f, "description")
+    offset = MAT.read(f, "offset")
+    is_complex = MAT.read(f, "complex")
     print("Now solving: ", description)
 
     # Objective and constraint matrices
-    c = vec(f["/data/c"][])
-    b = vec(f["/data/b"][])
-    h = vec(f["/data/h"][])
+    c = vec(MAT.read(f, "c"))
+    b = vec(MAT.read(f, "b"))
+    A = collect(MAT.read(f, "A"))
 
-    if Bool(HDF5.attributes(f["/data/A"])["sparse"][])
-        A_v     = f["/data/A"][][:, 1]
-        A_i     = f["/data/A"][][:, 2] .+ 1
-        A_j     = f["/data/A"][][:, 3] .+ 1
-        A_shape = HDF5.attributes(f["/data/A"])["shape"][]
-        A       = SparseArrays.sparse(A_i, A_j, A_v, A_shape[1], A_shape[2])
-        A = collect(A)
+    if ~is_complex
+        h = vec(MAT.read(f, "h"))
+        G = collect(MAT.read(f, "G"))
+        cones_raw = MAT.read(f, "cones")
     else
-        A = f["/data/A"][]
+        h = vec(MAT.read(f, "h_alt"))
+        G = collect(MAT.read(f, "G_alt"))
+        cones_raw = MAT.read(f, "cones_alt")
     end
 
-    if Bool(HDF5.attributes(f["/data/G"])["sparse"][])
-        G_v     = f["/data/G"][][:, 1]
-        G_i     = f["/data/G"][][:, 2] .+ 1
-        G_j     = f["/data/G"][][:, 3] .+ 1
-        G_shape = HDF5.attributes(f["/data/G"])["shape"][]
-        G       = SparseArrays.sparse(G_i, G_j, G_v, G_shape[1], G_shape[2])
-        G       = collect(G)
-    else
-        G = f["/data/G"][]
-    end
 
     # List of cones
     cones = Cones.Cone{T}[]
     total_dim = 1
-    for i in 0:(length(HDF5.read(f["/cones"])) - 1)
-        cone_type = HDF5.read(f["/cones/" * string(i)])
+    for cone_i in cones_raw
+        cone_type = cone_i["type"]
 
         if cone_type == "qre"
-            n       = HDF5.attributes(f["/cones/" * string(i)])["n"][]
-            dim     = HDF5.attributes(f["/cones/" * string(i)])["dim"][]
-            complex = HDF5.attributes(f["/cones/" * string(i)])["complex"][]
+            n       = cone_i["n"]
+            dim     = cone_i["dim"]
             push!(cones, Cones.EpiTrRelEntropyTri{Float64}(Int64(dim)))
 
             # Swap X and Y around as Hypatia uses (t, Y, X) ordering for QRE
@@ -62,10 +51,10 @@ function read_problem(file_name)
                 h[total_dim + k], h[total_dim + vn + k] = h[total_dim + vn + k], h[total_dim + k]
             end
         elseif cone_type == "nn"
-            dim = HDF5.attributes(f["/cones/" * string(i)])["dim"][]
+            dim = cone_i["dim"]
             push!(cones, Cones.Nonnegative{T}(Int64(dim)))
         elseif cone_type == "psd"
-            dim = HDF5.attributes(f["/cones/" * string(i)])["dim"][]
+            dim = cone_i["dim"]
             push!(cones, Cones.PosSemidefTri{T, T}(Int64(dim)))         
         end
 
@@ -78,7 +67,7 @@ function read_problem(file_name)
 end
 
 # Input into model and solve
-file_name = "problems/ea_rate_distortion/ea-rd_6_ef.hdf5"
+file_name = "problems/quant_key_rate/qkd_DMCV_10_60_05_35.mat"
 
 model = read_problem(file_name)
 solver = Solvers.Solver{T}(verbose = true)
@@ -87,4 +76,4 @@ Solvers.solve(solver)
 
 println("Opt value: ", Solvers.get_primal_obj(solver))
 println("Solve time: ", Solvers.get_solve_time(solver))
-println("Abs gap: ", Solvers.get_primal_obj(solver) - Solvers.get_dual_obj(solver))
+println("Abs gap: ", (Solvers.get_primal_obj(solver) - Solvers.get_dual_obj(solver)) / Solvers.get_tau(solver))

@@ -1,61 +1,52 @@
+import numpy as np
 import scipy as sp
-import h5py
 
 from cones import *
 from solver import model, solver
 
 def read_problem(file_name):
     # Read data from file
-    with h5py.File(file_name, 'r') as f:
-        # Auxiliary problem information
-        description = f.attrs['description']
-        offset = f.attrs['offset']
-        print("Now solving: ", description)
+    f = sp.io.loadmat(file_name)
+
+    # Auxiliary problem information
+    description = f['description'][0]
+    offset = f['offset'][0, 0]
+    print("Now solving: ", description)
 
 
-        # Objective and constraint matrices
-        c = f['/data/c'][:]
-        b = f['/data/b'][:]
-        h = f['/data/h'][:]
+    # Objective and constraint matrices
+    c = np.array(f['c'])
+    b = np.array(f['b'])
+    h = np.array(f['h'])
 
-        if f['/data/A'].attrs['sparse']:
-            (A_v, A_i, A_j) = f['/data/A'][:]
-            A_shape         = f['/data/A'].attrs['shape']
-            A               = sp.sparse.coo_array((A_v, (A_i, A_j)), A_shape).todense()
-        else:
-            A = f['/data/A'][:]
-
-        if f['/data/G'].attrs['sparse']:
-            (G_v, G_i, G_j) = f['/data/G'][:]
-            G_shape         = f['/data/G'].attrs['shape']
-            G               = sp.sparse.coo_array((G_v, (G_i, G_j)), G_shape).todense()
-        else:
-            G = f['/data/A'][:]
+    A = np.array(f['A'].todense())
+    G = np.array(f['G'].todense())
 
 
-        # List of cones
-        cones = []
-        for i in range(len(f['/cones'])):
-            cone_type = f['/cones/' + str(i)].asstr()[()]
+    # List of cones
+    cones = []
+    for i in range(len(f['cones'][0])):
+        cone_i = f['cones'][0][i][0, 0]
+        cone_type = cone_i['type']
 
-            if cone_type == 'qre':
-                n         = f['/cones/' + str(i)].attrs['n']
-                hermitian = f['/cones/' + str(i)].attrs['complex']
-                cones.append(quantrelentr.QuantRelEntropy(n, hermitian=hermitian))
-            elif cone_type == 'nn':
-                dim = f['/cones/' + str(i)].attrs['dim']
-                cones.append(nonnegorthant.NonNegOrthant(dim))
-            elif cone_type == 'psd':
-                n         = f['/cones/' + str(i)].attrs['n']
-                hermitian = f['/cones/' + str(i)].attrs['complex']
-                cones.append(possemidefinite.PosSemiDefinite(n, hermitian=hermitian))                
+        if cone_type == 'qre':
+            n         = cone_i['n'][0, 0]
+            hermitian = bool(cone_i['hermitian'][0, 0])
+            cones.append(quantrelentr.QuantRelEntropy(n, hermitian=hermitian))
+        elif cone_type == 'nn':
+            dim = cone_i['dim'][0, 0]
+            cones.append(nonnegorthant.NonNegOrthant(dim))
+        elif cone_type == 'psd':
+            n         = cone_i['n'][0, 0]
+            hermitian = bool(cone_i['hermitian'][0, 0])
+            cones.append(possemidefinite.PosSemiDefinite(n, hermitian=hermitian))                
 
     return model.Model(c, A, b, G, h, cones=cones, offset=offset)
 
 
 if __name__ == "__main__":
     # Input into model and solve
-    file_name = "problems/quant_key_rate/qkd_mdiBB84.hdf5"
+    file_name = "problems/quant_key_rate/DMCV_10_60_05_35.mat"
 
     model = read_problem(file_name)
     solver = solver.Solver(model)
