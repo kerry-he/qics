@@ -15,7 +15,7 @@ class QuantRelEntropy():
         self.use_sqrt = False
 
         self.idx_X = slice(1, 1 + self.vn)
-        self.idx_Y = slice(1 + self.vn, 1 + 2 * self.vn)
+        self.idx_Y = slice(1 + self.vn, self.dim)
 
         # Update flags
         self.feas_updated        = False
