@@ -35,9 +35,9 @@ class QuantRateDist():
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
-        point[0]              = 1.
-        point[self.idx_y, 0] = np.ones(self.m)
-        point[self.idx_X, [0]]  = sym.mat_to_vec(np.eye(self.n))
+        point[0]               = 1 / self.n
+        point[self.idx_y, 0]   = np.ones(self.m) / (self.n)
+        point[self.idx_X, [0]] = sym.mat_to_vec(np.eye(self.n)) / (self.n)
 
         self.set_point(point)
 
@@ -228,7 +228,56 @@ class QuantRateDist():
         return
 
     def third_dir_deriv(self, dirs):
-        return 0
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+        if not self.dder3_aux_updated:
+            self.update_dder3_aux()
+
+        Ht = dirs[0, :]
+        Hx = sym.vec_to_mat(dirs[self.idx_X, :])
+        Hy = dirs[self.idx_y, :]
+        Hw = np.diag(Hx) + np.sum(Hy.reshape((self.n, self.n - 1)), 1)
+
+
+        # Quantum conditional entropy oracles
+        D2PhiwH  = Hw / self.w
+        D3PhiwHH = - (Hw / self.w) ** 2
+
+        UxHxUx   = self.Ux.T @ Hx @ self.Ux
+        D2PhiXH  = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T - np.diag(D2PhiwH)
+        D3PhiXHH = mgrad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux) - np.diag(D3PhiwHH)
+
+        D2PhiyH  = Hy / self.y - np.tile(D2PhiwH, (self.n - 1, 1)).T.reshape((-1, 1))
+        D3PhiyHH = - (Hy / self.y) ** 2 - np.tile(D3PhiwHH, (self.n - 1, 1)).T.reshape((-1, 1))
+
+        # Third derivative of barrier
+        DPhiXH = lin.inp(self.DPhiX, Hx)
+        DPhiyH = lin.inp(self.DPhiy, Hy)
+        D2PhiXHH = lin.inp(D2PhiXH, Hx)        
+        D2PhiyHH = lin.inp(D2PhiyH, Hy)        
+        chi = Ht - DPhiXH - DPhiyH
+        chi2 = chi * chi
+
+        # Third derivatives of barrier
+        dder3_t = -2 * (self.zi**3) * chi2 - (self.zi**2) * (D2PhiXHH + D2PhiyHH)
+
+        dder3_X  = -dder3_t * self.DPhiX
+        dder3_X -=  2 * (self.zi**2) * chi * D2PhiXH
+        dder3_X +=  self.zi * D3PhiXHH
+        dder3_X -=  2 * self.inv_X @ Hx @ self.inv_X @ Hx @ self.inv_X
+
+        dder3_y  = -dder3_t * self.DPhiy
+        dder3_y -=  2 * (self.zi**2) * chi * D2PhiyH
+        dder3_y +=  self.zi * D3PhiyHH
+        dder3_y -=  2 * (Hy**2) / (self.y**3)
+
+        dder3             = np.empty((self.dim, 1))
+        dder3[0]          = dder3_t
+        dder3[self.idx_X] = sym.mat_to_vec(dder3_X)
+        dder3[self.idx_y] = dder3_y
+
+        return dder3
 
     def norm_invhess(self, x):     
         return 0

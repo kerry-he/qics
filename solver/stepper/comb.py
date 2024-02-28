@@ -3,7 +3,7 @@ import math
 from utils.point import Point
 from utils import linear as lin
 
-alpha_sched = [0.99, 0.9, 0.8, 0.7, 0.5, 0.3, 0.2, 0.1, 0.001]
+alpha_sched = [0.99, 0.9, 0.8, 0.7, 0.5, 0.3, 0.2, 0.1, 0.01, 0.001]
 
 class CombinedStepper():
     def __init__(self, syssolver, model):
