@@ -31,7 +31,7 @@ class QuantKeyDist():
             self.K_list_blk = [facial_reduction(K_list, hermitian=hermitian)]
             self.ZK_list_blk = [facial_reduction([K[np.where(Z)[0], :] for K in K_list]) for Z in Z_list]
 
-        elif protocol == "dprBB84" or protocol == "dprBB84_fast":
+        elif protocol == "dprBB84" or protocol == "dprBB84_fast" or protocol == "dprBB84_fast_alt":
             # For dprBB84 protocol, G and ZG are both projectors in the computational basis
             span_idx     = np.sort(np.array([np.where(K)[0] for K in K_list]).ravel())
             self.K_list  = [K[span_idx, :] for K in K_list]
@@ -43,6 +43,11 @@ class QuantKeyDist():
             self.ZK_vec_idx = np.array([mat_to_vec_idx(mat_idx, hermitian=hermitian) for mat_idx in self.ZK_mat_idx])
             self.K_v        = [K[np.where(K)][0] for K in self.K_list]
             self.ZK_v       = [ZK[np.where(ZK)][0] for ZK in self.ZK_list]
+
+            self.Z_in_K_mat_idx = np.array([[np.where(self.K_mat_idx[0] == x)[0][0] for x in ZK_mat_idx] for ZK_mat_idx in self.ZK_mat_idx[:2]] \
+                                + [[np.where(self.K_mat_idx[1] == x)[0][0] for x in ZK_mat_idx] for ZK_mat_idx in self.ZK_mat_idx[2:]])
+            self.Z_in_K_vec_idx  = np.array([mat_to_vec_idx(mat_idx, hermitian=hermitian) for mat_idx in self.Z_in_K_mat_idx])
+
 
             ZK_list = [Z @ K for K in K_list for Z in Z_list]
             self.K_list_blk  = [[K[np.where(K)[0], :]] for K in K_list]
@@ -92,8 +97,8 @@ class QuantKeyDist():
         self.invhess_aux_updated = False
         self.dder3_aux_updated   = False
 
-        if self.protocol == "dprBB84_fast" and self.cond_est >= 1e15:
-            self.protocol = "dprBB84"
+        # if self.protocol == "dprBB84_fast" and self.cond_est >= 1e15:
+        #     self.protocol = "dprBB84"
 
         return
     
@@ -238,6 +243,9 @@ class QuantKeyDist():
         elif self.protocol == "dprBB84_fast":
             self.update_invhessprod_aux_dprBB84_fast()
 
+        elif self.protocol == "dprBB84_fast_alt":
+            self.update_invhessprod_aux_dprBB84_fast_alt()        
+
         self.invhess_aux_updated = True
 
         return
@@ -345,6 +353,138 @@ class QuantKeyDist():
         self.cond_est = (np.max(self.Dx) + np.max(D12_inv)) / (np.min(self.Dx) + np.min(D12_inv))
 
         return    
+    
+
+
+    def update_invhessprod_aux_dprBB84_fast_alt(self):
+        assert not self.invhess_aux_updated
+        assert self.grad_updated
+        assert self.hess_aux_updated
+
+
+        # Get subblock of X kron X 
+        nK = self.K_vec_idx[0].size
+
+        X00 = self.X[np.ix_(self.K_mat_idx[0], self.K_mat_idx[0])]
+        X01 = self.X[np.ix_(self.K_mat_idx[1], self.K_mat_idx[0])]
+        X10 = self.X[np.ix_(self.K_mat_idx[0], self.K_mat_idx[1])]
+        X11 = self.X[np.ix_(self.K_mat_idx[1], self.K_mat_idx[1])]
+        
+        small_XX = np.empty((nK * 2, nK * 2))
+        small_XX[:nK, :nK] = kronecker_matrix(X00, hermitian=self.hermitian)
+        small_XX[nK:, nK:] = kronecker_matrix(X11, hermitian=self.hermitian)
+        small_XX[nK:, :nK] = kronecker_matrix(X01, hermitian=self.hermitian)
+        small_XX[:nK, nK:] = small_XX[nK:, :nK].T
+
+
+        def build_matrix(X, p, hermitian=False):
+            # Build matrix corresponding to linear map H -> X @ H @ X'
+            n    = X.shape[0]
+            vn   = sym.vec_dim(n, hermitian=hermitian)
+            rt2 = np.sqrt(2.0)
+            out  = np.zeros((vn, vn))
+
+            k = 0
+            for j in range(n):
+                for i in range(j):
+                    # Do logdet
+                    temp = X[:, [i]] @ X.conj().T[[j], :] / rt2
+                    # Do trlog of G(X)
+                    temp2 = self.Ukx_blk[p].conj().T @ temp @ self.Ukx_blk[p]
+                    temp2 = self.Ukx_blk[p] @ (self.D1kx_log_blk[p] * temp2) @ self.Ukx_blk[p].conj().T
+                    # Do trlog of Z(G(X))
+                    temp3 = temp[np.ix_(self.Z_in_K_mat_idx[2*p], self.Z_in_K_mat_idx[2*p])]
+                    temp3 = self.Uzkx_blk[2*p].conj().T @ temp3 @ self.Uzkx_blk[2*p]
+                    temp3 = self.Uzkx_blk[2*p] @ (self.D1zkx_log_blk[2*p] * temp3) @ self.Uzkx_blk[2*p].conj().T
+                    temp2[np.ix_(self.Z_in_K_mat_idx[2*p], self.Z_in_K_mat_idx[2*p])] -= temp3
+
+                    temp3 = temp[np.ix_(self.Z_in_K_mat_idx[2*p + 1], self.Z_in_K_mat_idx[2*p + 1])]
+                    temp3 = self.Uzkx_blk[2*p + 1].conj().T @ temp3 @ self.Uzkx_blk[2*p + 1]
+                    temp3 = self.Uzkx_blk[2*p + 1] @ (self.D1zkx_log_blk[2*p + 1] * temp3) @ self.Uzkx_blk[2*p + 1].conj().T
+                    temp2[np.ix_(self.Z_in_K_mat_idx[2*p + 1], self.Z_in_K_mat_idx[2*p + 1])] -= temp3                    
+
+                    out[:, [k]] = sym.mat_to_vec(temp2 + temp2.conj().T, rt2, hermitian=hermitian)
+                    k += 1
+
+                    if hermitian:
+                        temp2 *= 1j
+                        out[:, [k]] = sym.mat_to_vec(temp2 + temp2.conj().T, rt2, hermitian=hermitian)                        
+                        k += 1
+
+                # Do logdet
+                temp = X[:, [j]] @ X.conj().T[[j], :]
+                # Do trlog of G(X)
+                temp2 = self.Ukx_blk[p].conj().T @ temp @ self.Ukx_blk[p]
+                temp2 = self.Ukx_blk[p] @ (self.D1kx_log_blk[p] * temp2) @ self.Ukx_blk[p].conj().T
+                # Do trlog of Z(G(X))
+                temp3 = temp[np.ix_(self.Z_in_K_mat_idx[2*p], self.Z_in_K_mat_idx[2*p])]
+                temp3 = self.Uzkx_blk[2*p].conj().T @ temp3 @ self.Uzkx_blk[2*p]
+                temp3 = self.Uzkx_blk[2*p] @ (self.D1zkx_log_blk[2*p] * temp3) @ self.Uzkx_blk[2*p].conj().T
+                temp2[np.ix_(self.Z_in_K_mat_idx[2*p], self.Z_in_K_mat_idx[2*p])] -= temp3
+
+                temp3 = temp[np.ix_(self.Z_in_K_mat_idx[2*p + 1], self.Z_in_K_mat_idx[2*p + 1])]
+                temp3 = self.Uzkx_blk[2*p + 1].conj().T @ temp3 @ self.Uzkx_blk[2*p + 1]
+                temp3 = self.Uzkx_blk[2*p + 1] @ (self.D1zkx_log_blk[2*p + 1] * temp3) @ self.Uzkx_blk[2*p + 1].conj().T
+                temp2[np.ix_(self.Z_in_K_mat_idx[2*p + 1], self.Z_in_K_mat_idx[2*p + 1])] -= temp3         
+
+                out[:, [k]] = sym.mat_to_vec(temp2, rt2, hermitian=hermitian)
+                k += 1
+
+            return out
+
+        
+
+        self.schurt = np.empty((nK * 2, nK * 2))
+        self.schurt[:nK, :nK] = build_matrix(X00, 0, hermitian=self.hermitian)
+        self.schurt[nK:, nK:] = build_matrix(X11, 1, hermitian=self.hermitian)
+        self.schurt[nK:, :nK] = build_matrix(X01, 0, hermitian=self.hermitian)
+        self.schurt[:nK, nK:] = build_matrix(X10, 1, hermitian=self.hermitian)
+        self.schurt += np.eye(2*nK)
+
+
+        # Get Hessian corresponding to QRE
+        def block_frechet_matrix(mat_idx_list, vec_idx_list, v_list, c, out):
+            for (mat_idx, vec_idx, v) in zip(mat_idx_list, vec_idx_list, v_list):
+                v2 = v * v
+                v4 = v2 * v2
+
+                Kx = self.X[np.ix_(mat_idx, mat_idx)] * v2
+                Dkx, Ukx = np.linalg.eigh(Kx)
+                D1kx_log = mgrad.D1_log(Dkx, np.log(Dkx))
+
+                # Build matrix
+                Hkx = frechet_matrix(Ukx, D1kx_log, hermitian=self.hermitian) * v4
+
+                out[np.ix_(vec_idx, vec_idx)] += Hkx * c
+            
+            return out
+
+        temp = np.zeros((self.vni, self.vni))
+        block_frechet_matrix(self.K_mat_idx,  self.K_vec_idx,  self.K_v,   self.zi, temp)
+        block_frechet_matrix(self.ZK_mat_idx, self.ZK_vec_idx, self.ZK_v, -self.zi, temp)
+        temp = temp[np.ix_(self.K_vec_idx.ravel(), self.K_vec_idx.ravel())]
+
+
+        # Determine if low-rank component needs further reduction 
+        M1 = temp[:nK, :nK]
+        M2 = temp[nK:, nK:]
+        self.M = sp.linalg.block_diag(M1, M2)
+
+        
+
+
+        
+        # Compute and factor Schur complement
+        self.schur = np.eye(2*nK) + self.M @ small_XX
+        self.schur_fact = (sp.linalg.lu_factor(self.schur), "lu")
+
+
+        print()
+        print(np.linalg.norm(self.schur - self.schurt))
+
+        return    
+
+
 
     def invhess_prod(self, dirs):
         assert self.grad_updated
@@ -355,6 +495,8 @@ class QuantKeyDist():
 
         if self.protocol == "dprBB84_fast":
             return self.invhess_prod_dprBB84_fast(dirs)
+        elif self.protocol == "dprBB84_fast_alt":
+            return self.invhess_prod_dprBB84_fast_alt(dirs)
         
         p = np.size(dirs, 1)
         out = np.empty((self.dim, p))
@@ -408,6 +550,48 @@ class QuantKeyDist():
             out[1:, [k]] = outX
 
         return out
+    
+
+    def invhess_prod_dprBB84_fast_alt(self, dirs):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+        # if not self.invhess_aux_updated:
+        #     self.update_invhessprod_aux()
+
+        p = np.size(dirs, 1)
+        out = np.empty((self.dim, p))
+
+        Ht = dirs[[0], :]
+        Hx = dirs[1:, :]
+        Wx = Hx + Ht * self.DPhi
+
+        temp_vec = np.zeros((self.K_vec_idx.ravel().size, p))
+
+        for k in range(p):
+            Wx_k = sym.vec_to_mat(Wx[:, [k]], hermitian=self.hermitian)
+
+            temp = self.X @ Wx_k @ self.X
+            temp = sym.mat_to_vec(temp, hermitian=self.hermitian)
+            temp_vec[:, [k]] = self.M @ temp[self.K_vec_idx.ravel()]
+
+        temp_vec = lin.fact_solve(self.schur_fact, temp_vec)
+        Wx[self.K_vec_idx.ravel()] -= temp_vec
+
+        for k in range(p):
+            Wx_k = sym.vec_to_mat(Wx[:, [k]], hermitian=self.hermitian)
+
+            temp = self.X @ Wx_k @ self.X
+
+            outX = sym.mat_to_vec(temp, hermitian=self.hermitian)
+            outt = self.z * self.z * Ht[0, k] + self.DPhi.T @ outX
+
+            out[0, k] = outt
+            out[1:, [k]] = outX
+
+        return out
+
+
 
     def update_dder3_aux(self):
         assert not self.dder3_aux_updated
