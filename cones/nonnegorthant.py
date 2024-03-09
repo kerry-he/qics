@@ -1,6 +1,6 @@
 import numpy as np
 
-class NonNegOrthant():
+class Cone():
     def __init__(self, dim):
         # Dimension properties
         self.dim = dim
@@ -22,6 +22,9 @@ class NonNegOrthant():
     
     def get_feas(self):
         return all(self.point > 0)
+    
+    def get_val(self):
+        return -sum(np.log(self.point))    
     
     def get_grad(self):
         return -1 / self.point

@@ -27,29 +27,12 @@ b = np.ones((1, 1))
 c = np.zeros((1 + vN, 1))
 c[0] = 1.0
 
+p_transpose = sym.lin_to_mat(lambda x : sym.p_transpose(x, 1, (n, m)), n*m, n*m)
+
 G0 = np.hstack((np.ones((1, 1)), np.zeros((1, vN))))
 G1 = np.hstack((np.zeros((vN, 1)), np.zeros((vN, vN))))
 G2 = np.hstack((np.zeros((vN, 1)), np.eye(vN)))
-G3 = np.zeros((vN, 1 + vN))
-for J in range(N):
-    for I in range(J + 1):
-        # Get product space indices
-        i = I // m
-        j = I - i * m
-
-        k = J // m
-        l = J - k * m
-
-        I_pt = i * m + l
-        J_pt = k * m + j
-
-        if I_pt > J_pt:
-            I_pt, J_pt = J_pt, I_pt
-
-        k_in  = I + (J * (J + 1)) // 2
-        k_out = I_pt + (J_pt * (J_pt + 1)) // 2
-
-        G3[k_out, 1 + k_in] = 1.0
+G3 = np.hstack((np.zeros((vN, 1)), p_transpose))
 G = -np.vstack((G0, G1, G2, G3))
 
 h = np.zeros((1 + 3*vN, 1))
@@ -57,7 +40,7 @@ h[1:1+vN] = sym.mat_to_vec(X)
 
 
 # Input into model and solve
-cones = [quantrelentr.QuantRelEntropy(N), possemidefinite.PosSemiDefinite(N)]
+cones = [quantrelentr.Cone(N), possemidefinite.Cone(N)]
 model = model.Model(c, A, b, G, h, cones=cones)
 solver = solver.Solver(model,)
 

@@ -95,7 +95,7 @@ h = np.zeros((1 + sN*2 + 1, 1))
 h[-1] = D
 
 # Input into model and solve
-cones = [quantrelentr.QuantRelEntropy(N), nonnegorthant.NonNegOrthant(1)]
+cones = [quantrelentr.Cone(N), nonnegorthant.Cone(1)]
 model = model.Model(c, A, b, G, h, cones=cones, offset=entr_A)
 solver = solver.Solver(model)
 

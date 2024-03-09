@@ -6,7 +6,7 @@ from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 from utils import quantum   as quant
 
-class QuantRelEntropyY():
+class Cone():
     def __init__(self, n, X, cg=False):
         # Dimension properties
         self.n = n                          # Side dimension of system

@@ -1,7 +1,7 @@
 import numpy as np
 from utils import linear as lin
 
-class ClassEntropy():
+class Cone():
     def __init__(self, n):
         # Dimension properties
         self.n = n                          # Dimension of system

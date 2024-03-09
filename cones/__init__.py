@@ -2,6 +2,7 @@ __all__ = [
     "classentr",
     "classrelentr",
     "quantcondentr", 
+    "quantratedist", 
     "nonnegorthant", 
     "possemidefinite", 
     "quantrelentr", 

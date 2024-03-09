@@ -6,7 +6,7 @@ from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 from utils import quantum   as quant
 
-class HolevoInf():
+class Cone():
     def __init__(self, X_list):
         # Dimension properties
         self.X_list = X_list                # List of quantum states
@@ -33,8 +33,8 @@ class HolevoInf():
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
-        point[0] = 1.
-        point[1:] = 1. / self.n
+        point[0] = 1 / self.n
+        point[1:] = 1.
 
         self.set_point(point)
 

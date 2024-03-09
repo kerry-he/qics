@@ -68,7 +68,7 @@ G = -np.vstack((G1, G2, G3, G4, G5, G6))
 h = np.zeros((1 + sout_env*2 + 1 + sout + sin, 1))
 
 # Input into model and solve
-cones = [quantrelentr.QuantRelEntropy(nout * nenv), quantentr.QuantEntropy(nout), possemidefinite.PosSemiDefinite(nin)]
+cones = [quantrelentr.Cone(nout * nenv), quantentr.Cone(nout), possemidefinite.Cone(nin)]
 model = model.Model(c, A, b, G, h, cones=cones)
 solver = solver.Solver(model)
 

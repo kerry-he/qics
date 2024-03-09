@@ -1,7 +1,7 @@
 import numpy as np
 from utils import linear as lin
 
-class ClassRelEntropy():
+class Cone():
     def __init__(self, n):
         # Dimension properties
         self.n = n                          # Dimension of system
@@ -69,6 +69,9 @@ class ClassRelEntropy():
 
         self.feas = (self.z > 0)
         return self.feas
+    
+    def get_val(self):
+        return -np.log(self.z) - np.sum(self.log_x) - np.sum(self.log_y)
     
     def get_grad(self):
         assert self.feas_updated

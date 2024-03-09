@@ -334,5 +334,4 @@ def blk_invhess_congruence(dirs, model):
             H_dir_k = cone_k.sqrt_invhess_prod(dirs[cone_idxs_k, :])
             out += H_dir_k.T @ H_dir_k
     
-
     return out    

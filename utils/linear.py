@@ -3,23 +3,33 @@ import scipy as sp
 
 def inp(x, y):
     # Standard inner product
-    return np.sum(x * y)
+    return np.sum(x * y.conj()).real
 
 def fact(A):
     # Perform a Cholesky decomposition, or an LU factorization if Cholesky fails
-    try:
-        fact = sp.linalg.cho_factor(A)
-        return (fact, "cho")
-    except np.linalg.LinAlgError:
-        fact = sp.linalg.lu_factor(A)
-        return (fact, "lu")
+    while True:        
+        try:
+            fact = sp.linalg.cho_factor(A, check_finite=False)
+            return (fact, "cho")
+        except np.linalg.LinAlgError:
+            diag_idx = np.diag_indices_from(A)
+            A[diag_idx] = np.max([A[diag_idx], np.ones_like(A[diag_idx]) * 1e-12], axis=0) * (1 + 1e-8)
+        else:
+            break
+
+    # try:
+    #     fact = sp.linalg.cho_factor(A)
+    #     return (fact, "cho")
+    # except np.linalg.LinAlgError:
+    #     fact = sp.linalg.lu_factor(A)
+    #     return (fact, "lu")
 
 def fact_solve(A, x):
     # Factor solve for either Cholesky or LU factorization of A
     (fact, type) = A
 
     if type == "cho":
-        return sp.linalg.cho_solve(fact, x)
+        return sp.linalg.cho_solve(fact, x, check_finite=False)
     elif type == "lu":
         return sp.linalg.lu_solve(fact, x)
 

@@ -37,7 +37,7 @@ G = -np.vstack((G1, G2, G3))
 h = np.zeros((n + 1 + sn, 1))
 
 # Input into model and solve
-cones = [nonnegorthant.NonNegOrthant(n), quantentr.QuantEntropy(n)]
+cones = [nonnegorthant.Cone(n), quantentr.Cone(n)]
 model = model.Model(c, A, b, G, h, cones=cones)
 solver = solver.Solver(model)
 

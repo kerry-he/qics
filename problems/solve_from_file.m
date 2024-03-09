@@ -1,55 +1,33 @@
 clear; close all; clc;
 
-file_name = "ncm_50_eye.hdf5";
+file_name = "qkd_dprBB84_4_02_15.mat";
 
 % Read data from file
-description = h5readatt(file_name, '/', 'description');
-offset = h5readatt(file_name, '/', 'offset');
+load(file_name)
 fprintf("Now solving: %s\n", description)
 
-
 % Objective and constraint matrices
-c = h5read(file_name, '/data/c');
-b = h5read(file_name, '/data/b')';
-h = h5read(file_name, '/data/h')';
+A = full(A);
 
-if h5readatt(file_name, '/data/A', 'sparse')
-    A_vij   = h5read(file_name, '/data/A');
-    A_v     = A_vij(:, 1);
-    A_i     = A_vij(:, 2) + 1;
-    A_j     = A_vij(:, 3) + 1;
-    A_shape = h5readatt(file_name, '/data/A', 'shape');
-
-    A       = sparse(A_i, A_j, A_v, A_shape(1), A_shape(2));
-    A       = full(A);
+if complex
+    G = full(G_alt);
+    h = h_alt;
+    cones = cones_alt;
 else
-    A = h5read(file_name, '/data/A');
+    G = full(G);
 end
-
-if h5readatt(file_name, '/data/G', 'sparse')
-    G_vij   = h5read(file_name, '/data/G');
-    G_v     = G_vij(:, 1);
-    G_i     = G_vij(:, 2) + 1;
-    G_j     = G_vij(:, 3) + 1;
-    G_shape = h5readatt(file_name, '/data/G', 'shape');
-
-    G       = sparse(G_i, G_j, G_v, G_shape(1), G_shape(2));
-    G       = full(G);
-else
-    G = h5read(file_name, '/data/G');
-end
-
 
 % List of cones
 total_dim = 1;
-for i = 1:length(h5info(file_name, '/cones').Datasets)
-    cone_name = strcat('/cones/', string(i - 1));
-    cone_type = h5read(file_name, cone_name);
+for i = 1:length(cones)
+    cone_k = cones{i};
+    cone_type = cone_k.type;
 
     if strcmp(cone_type, 'qre')
-        n           = h5readatt(file_name, cone_name, 'n');
-        dim         = h5readatt(file_name, cone_name, 'dim');
-        vn          = n * (n + 1) / 2;
+        n    = cone_k.n;
+        vn   = n * (n + 1) / 2;
+        dim  = cone_k.dim;     
+
         cons{i, 1}  = 'QRE';
         cons{i, 2}  = [double(n)];
         A_DDS{i, 1} = -[          G(total_dim, :);
@@ -60,15 +38,17 @@ for i = 1:length(h5info(file_name, '/cones').Datasets)
                        expand_vec(h(total_dim+vn+1 : total_dim+dim-1))];
 
     elseif strcmp(cone_type, 'nn')
-        dim         = h5readatt(file_name, cone_name, 'dim');
+        dim         = cone_k.dim;
         cons{i, 1}  = 'LP';
         cons{i, 2}  = [double(dim)];
         A_DDS{i, 1} = -G(total_dim:total_dim+dim-1, :);
         b_DDS{i, 1} = h(total_dim:total_dim+dim-1);
 
     elseif strcmp(cone_type, 'psd')
-        n           = h5readatt(file_name, cone_name, 'n');
-        dim         = h5readatt(file_name, cone_name, 'dim');
+        n    = cone_k.n;
+        vn   = n * (n + 1) / 2;
+        dim  = cone_k.dim;     
+
         cons{i, 1}  = 'SDP';
         cons{i, 2}  = [double(n)];
         A_DDS{i, 1} = -expand_vec(G(total_dim : total_dim+dim-1, :));
@@ -86,7 +66,7 @@ b_DDS{i + 1, 1} = b;
 
 [x, y, info] = DDS(c, A_DDS, b_DDS, cons);
 
-fprintf("Opt value: %.10f \t\n", c*x + offset);
+fprintf("Opt value: %.10f \t\n", c'*x + offset);
 fprintf("Solve time: %.10f \t\n", info.time);
 
 %% Functions
