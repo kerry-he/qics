@@ -68,7 +68,7 @@ c = np.zeros((1 + n*(n-1) + vn + 1, 1))
 c[0] = 1.
 
 # Input into model and solve
-cones = [quantratedist.QuantRateDist(n), nonnegorthant.NonNegOrthant(1)]
+cones = [quantratedist.Cone(n), nonnegorthant.Cone(1)]
 model = model.Model(c, A, b, cones=cones, offset=entr_A)
 solver = solver.Solver(model)
 

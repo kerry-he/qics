@@ -8,7 +8,7 @@ from utils import mtxgrad   as mgrad
 
 # Special cone for the symmetry reduced quantum rate distortion problem with entanglement fidelity distortion
 # Matrix is composed of a (n*n - n) dimensional diagonal component y, and a (n x n) dense block component X.
-class QuantRateDist():
+class Cone():
     def __init__(self, n):
         # Dimension properties
         self.n = n                       # Dimension of input

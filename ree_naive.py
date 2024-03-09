@@ -40,7 +40,7 @@ h[1:1+vN] = sym.mat_to_vec(X)
 
 
 # Input into model and solve
-cones = [quantrelentr.QuantRelEntropy(N), possemidefinite.PosSemiDefinite(N)]
+cones = [quantrelentr.Cone(N), possemidefinite.Cone(N)]
 model = model.Model(c, A, b, G, h, cones=cones)
 solver = solver.Solver(model,)
 

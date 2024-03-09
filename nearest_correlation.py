@@ -33,7 +33,7 @@ c = np.zeros((1 + vn, 1))
 c[0] = 1.0 / n
 
 # Input into model and solve
-cones = [quantrelentr_Y.QuantRelEntropyY(n, M)]
+cones = [quantrelentr_Y.Cone(n, M)]
 model = model.Model(c, A, b, cones=cones, offset=-np.trace(M) * np.log(n))
 solver = solver.Solver(model)
 

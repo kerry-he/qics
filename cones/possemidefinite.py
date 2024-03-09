@@ -2,7 +2,7 @@ import numpy as np
 import math
 from utils import symmetric as sym
 
-class PosSemiDefinite():
+class Cone():
     def __init__(self, n, hermitian=False):
         # Dimension properties
         self.n  = n                                    # Side length of matrix

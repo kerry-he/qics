@@ -6,7 +6,7 @@ from utils import symmetric as sym
 from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 
-class QuantMutualInf():
+class Cone():
     def __init__(self, V, no):
         # Dimension properties
         self.V = V                  # Define channel using Stinespring representation

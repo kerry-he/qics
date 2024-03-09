@@ -33,7 +33,7 @@ c = np.zeros((1 + sin, 1))
 c[0] = 1.
 
 # Input into model and solve
-cones = [quantmutualinf.QuantMutualInf(V, nout)]
+cones = [quantmutualinf.Cone(V, nout)]
 model = model.Model(c, A, b, cones=cones)
 solver = solver.Solver(model)
 

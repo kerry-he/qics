@@ -7,7 +7,7 @@ from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 from utils import quantum   as quant
 
-class QuantKeyDist():
+class Cone():
     def __init__(self, K_list, Z_list, protocol=None, hermitian=False):
         # Dimension properties
         self.ni = K_list[0].shape[1]    # Get input dimension

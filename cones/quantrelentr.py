@@ -5,7 +5,7 @@ from utils import symmetric as sym
 from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 
-class QuantRelEntropy():
+class Cone():
     def __init__(self, n, hermitian=False):
         # Dimension properties
         self.n = n                                      # Side dimension of system

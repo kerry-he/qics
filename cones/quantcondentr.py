@@ -6,7 +6,7 @@ from utils import symmetric as sym
 from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 
-class QuantCondEntropy():
+class Cone():
     def __init__(self, n0, n1, sys, hermitian=False):
         # Dimension properties
         self.n0 = n0          # Dimension of system 0

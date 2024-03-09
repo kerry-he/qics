@@ -42,7 +42,7 @@ h[1:vn+1] = sym.mat_to_vec(M)
 h[vn+1:]  = sym.mat_to_vec(np.eye(n))
 
 # Input into model and solve
-cones = [quantrelentr.QuantRelEntropy(n)]
+cones = [quantrelentr.Cone(n)]
 model = model.Model(c, A, b, G, h, cones=cones)
 solver = solver.Solver(model)
 

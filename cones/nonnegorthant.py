@@ -1,6 +1,6 @@
 import numpy as np
 
-class NonNegOrthant():
+class Cone():
     def __init__(self, dim):
         # Dimension properties
         self.dim = dim

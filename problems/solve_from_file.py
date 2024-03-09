@@ -32,14 +32,14 @@ def read_problem(file_name):
         if cone_type == 'qre':
             n         = cone_i['n'][0, 0]
             hermitian = bool(cone_i['hermitian'][0, 0])
-            cones.append(quantrelentr.QuantRelEntropy(n, hermitian=hermitian))
+            cones.append(quantrelentr.Cone(n, hermitian=hermitian))
         elif cone_type == 'nn':
             dim = cone_i['dim'][0, 0]
-            cones.append(nonnegorthant.NonNegOrthant(dim))
+            cones.append(nonnegorthant.Cone(dim))
         elif cone_type == 'psd':
             n         = cone_i['n'][0, 0]
             hermitian = bool(cone_i['hermitian'][0, 0])
-            cones.append(possemidefinite.PosSemiDefinite(n, hermitian=hermitian))                
+            cones.append(possemidefinite.Cone(n, hermitian=hermitian))                
 
     return model.Model(c, A, b, G, h, cones=cones, offset=offset)
 
