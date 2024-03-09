@@ -197,19 +197,20 @@ def vec_to_mat_complex_parallel(vec, irt2):
 
     return mat    
 
-def p_tr(mat, sys, dim):
+def p_tr(mat, sys, dim, hermitian=False):
     (n0, n1) = dim
     assert n0 * n1 == np.size(mat, 0)
     assert sys == 0 or sys == 1
 
     if sys == 1:
-        out = np.empty((n0, n0))
+        out = np.empty((n0, n0), 'complex128') if hermitian else np.empty((n0, n0))
         for j in range(n0):
-            for i in range(j + 1):
+            for i in range(j):
                 out[i, j] = np.trace( mat[i*n1 : (i+1)*n1, j*n1 : (j+1)*n1] )
-                out[j, i] = out[i, j]
+                out[j, i] = out[i, j].conj()
+            out[j, j] = np.trace( mat[j*n1 : (j+1)*n1, j*n1 : (j+1)*n1] )
     else:
-        out = np.zeros((n1, n1))
+        out = np.zeros((n1, n1), 'complex128') if hermitian else np.zeros((n1, n1))
         for i in range(n0):
             out += mat[i*n1 : (i+1)*n1, i*n1 : (i+1)*n1]
 

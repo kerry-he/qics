@@ -7,12 +7,13 @@ from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 
 class QuantEntropy():
-    def __init__(self, n):
+    def __init__(self, n, hermitian=False):
         # Dimension properties
         self.n = n                          # Side dimension of system
-        self.vn = sym.vec_dim(self.n)       # Vector dimension of system
+        self.vn = sym.vec_dim(self.n, hermitian=hermitian)       # Vector dimension of system
         self.dim = 1 + self.vn              # Total dimension of cone
         self.use_sqrt = False
+        self.hermitian = hermitian
 
         # Update flags
         self.feas_updated        = False
@@ -21,7 +22,7 @@ class QuantEntropy():
         self.invhess_aux_updated = False
         self.dder3_aux_updated   = False
 
-        self.tr = sym.mat_to_vec(np.eye(self.n)).T
+        self.tr = sym.mat_to_vec(np.eye(self.n), hermitian=hermitian).T
 
         return
         
@@ -34,7 +35,7 @@ class QuantEntropy():
         (t0, x0) = get_central_ray_entr(self.n)
 
         point[0]  = t0
-        point[1:] = sym.mat_to_vec(np.eye(self.n)) * x0
+        point[1:] = sym.mat_to_vec(np.eye(self.n), hermitian=self.hermitian) * x0
 
         self.set_point(point)
 
@@ -45,8 +46,8 @@ class QuantEntropy():
         self.point = point
 
         self.t   = point[0, 0]
-        self.X   = sym.vec_to_mat(point[1:])
-        self.trX = np.trace(self.X)
+        self.X   = sym.vec_to_mat(point[1:], hermitian=self.hermitian)
+        self.trX = np.trace(self.X).real
 
         self.feas_updated        = False
         self.grad_updated        = False
@@ -78,6 +79,9 @@ class QuantEntropy():
 
         self.feas = (self.z > 0)
         return self.feas
+
+    def get_val(self):
+        return -np.log(self.z) - np.sum(self.log_Dx)
     
     def get_grad(self):
         assert self.feas_updated
@@ -85,12 +89,12 @@ class QuantEntropy():
         if self.grad_updated:
             return self.grad
         
-        log_X           = (self.Ux * self.log_Dx) @ self.Ux.T
-        self.log_X      = sym.mat_to_vec(log_X)
+        log_X           = (self.Ux * self.log_Dx) @ self.Ux.conj().T
+        self.log_X      = sym.mat_to_vec(log_X, hermitian=self.hermitian)
         self.tr_log_trX = self.tr.T * self.log_trX
 
         self.inv_Dx = np.reciprocal(self.Dx)
-        self.inv_X  = (self.Ux * self.inv_Dx) @ self.Ux.T
+        self.inv_X  = (self.Ux * self.inv_Dx) @ self.Ux.conj().T
 
         self.zi   = np.reciprocal(self.z)
         self.DPhi = self.log_X - self.tr_log_trX
@@ -98,7 +102,7 @@ class QuantEntropy():
 
         self.grad     =  np.empty((self.dim, 1))
         self.grad[0]  = -self.zi
-        self.grad[1:] =  self.zi * self.DPhi - sym.mat_to_vec(self.inv_X)
+        self.grad[1:] =  self.zi * self.DPhi - sym.mat_to_vec(self.inv_X, hermitian=self.hermitian)
 
         self.grad_updated = True
         return self.grad
@@ -127,17 +131,17 @@ class QuantEntropy():
         for j in range(p):
             Ht     = dirs[0, j]
             Hx_vec = dirs[1:, [j]]
-            Hx     = sym.vec_to_mat(Hx_vec)
+            Hx     = sym.vec_to_mat(Hx_vec, hermitian=self.hermitian)
 
-            trH = np.trace(Hx)
+            trH = np.trace(Hx).real
             chi  = self.zi * self.zi * (Ht - lin.inp(Hx_vec, self.DPhi))
 
-            UxHUx = self.Ux.T @ Hx @ self.Ux
-            D2PhiH = self.Ux @ (self.D1x_comb * UxHUx) @ self.Ux.T
+            UxHUx = self.Ux.conj().T @ Hx @ self.Ux
+            D2PhiH = self.Ux @ (self.D1x_comb * UxHUx) @ self.Ux.conj().T
 
             # Hessian product of barrier function
             out[0, j]    =  chi
-            out[1:, [j]] = -chi * self.DPhi + sym.mat_to_vec(D2PhiH) - (self.zi * trH / self.trX) * self.tr.T
+            out[1:, [j]] = -chi * self.DPhi + sym.mat_to_vec(D2PhiH, hermitian=self.hermitian) - (self.zi * trH / self.trX) * self.tr.T
 
         return out
     
@@ -147,7 +151,7 @@ class QuantEntropy():
         assert self.hess_aux_updated
 
         self.D1x_comb_inv = np.reciprocal(self.D1x_comb)
-        self.Hinv_tr      = self.Ux @ np.diag(np.diag(self.D1x_comb_inv)) @ self.Ux.T
+        self.Hinv_tr      = self.Ux @ np.diag(np.diag(self.D1x_comb_inv)) @ self.Ux.conj().T
         self.tr_Hinv_tr   = np.trace(self.D1x_comb_inv)
 
         self.invhess_aux_updated = True
@@ -166,16 +170,16 @@ class QuantEntropy():
 
         for j in range(p):
             Ht = dirs[0, j]
-            Hx = sym.vec_to_mat(dirs[1:, [j]])
+            Hx = sym.vec_to_mat(dirs[1:, [j]], hermitian=self.hermitian)
 
             Wx = Hx + Ht * self.DPhi_mat
 
-            UxWUx = self.Ux.T @ Wx @ self.Ux
-            Hinv_W = self.Ux @ (self.D1x_comb_inv * UxWUx) @ self.Ux.T
+            UxWUx = self.Ux.conj().T @ Wx @ self.Ux
+            Hinv_W = self.Ux @ (self.D1x_comb_inv * UxWUx) @ self.Ux.conj().T
 
-            fac = self.zi * np.trace(Hinv_W) / (self.trX - self.zi * self.tr_Hinv_tr)
+            fac = self.zi * np.trace(Hinv_W).real / (self.trX - self.zi * self.tr_Hinv_tr)
             temp = Hinv_W + fac * self.Hinv_tr
-            temp = sym.mat_to_vec(temp)
+            temp = sym.mat_to_vec(temp, hermitian=self.hermitian)
 
             out[0, j] = Ht * self.z * self.z + lin.inp(temp, self.DPhi)
             out[1:, [j]] = temp
@@ -200,13 +204,13 @@ class QuantEntropy():
             self.update_dder3_aux()
 
         Ht = dirs[0]
-        Hx = sym.vec_to_mat(dirs[1:, [0]])
+        Hx = sym.vec_to_mat(dirs[1:, [0]], hermitian=self.hermitian)
         
-        trH = np.trace(Hx)
-        UxHxUx = self.Ux.T @ Hx @ self.Ux
+        trH = np.trace(Hx).real
+        UxHxUx = self.Ux.conj().T @ Hx @ self.Ux
 
         # Quantum conditional entropy oracles
-        D2PhiH  = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.T
+        D2PhiH  = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
         D2PhiH -= (trH / self.trX) * np.eye(self.n)
 
         D3PhiHH  = mgrad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
@@ -224,7 +228,7 @@ class QuantEntropy():
         temp -= 2 * (self.zi**2) * chi * D2PhiH
         temp += self.zi * D3PhiHH
         temp -= 2 * self.inv_X @ Hx @ self.inv_X @ Hx @ self.inv_X
-        dder3[1:] = sym.mat_to_vec(temp)
+        dder3[1:] = sym.mat_to_vec(temp, hermitian=self.hermitian)
 
         return dder3
 
