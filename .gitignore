@@ -162,3 +162,5 @@ cython_debug/
 # cProfile files
 *.stats
 *.lprof
+
+*.mat
