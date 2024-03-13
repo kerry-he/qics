@@ -52,7 +52,7 @@ b[-2] = 1.
 c = np.vstack((np.zeros((1, 1)), sym.mat_to_vec(H)))
 
 # Input into model and solve
-cones = [quantcondentr.QuantCondEntropy(m, 2, 1)]
+cones = [quantcondentr.Cone(m, 2, 1)]
 model = model.Model(c, A, b, cones=cones, offset=0.0)
 solver = solver.Solver(model)
 
