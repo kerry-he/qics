@@ -129,7 +129,7 @@ class Solver():
                   " | %10.3e" % (self.x_feas), " %10.3e" % (self.y_feas), " %10.3e" % (self.z_feas), end="")
             
         # Step
-        success = self.stepper.step(self.model, self.point, self.mu, self.verbose)
+        self.point, success = self.stepper.step(self.model, self.point, self.mu, self.verbose)
 
         if not success:
             if self.verbose:
@@ -175,7 +175,7 @@ class Solver():
         return
 
     def calc_mu(self):
-        self.mu = lin.inp(self.point.S, self.point.Z) / self.model.nu
+        self.mu = (lin.inp(self.point.S, self.point.Z) + self.point.tau*self.point.kappa) / self.model.nu
         return self.mu
 
     def get_gap_feas(self):

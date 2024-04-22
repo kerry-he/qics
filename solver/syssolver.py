@@ -19,10 +19,9 @@ class SysSolver():
         self.ir = ir                    # Use iterative refinement or not
 
         self.pnt_model = point.Point(model)
-        self.pnt_model.x[:] = model.c
-        self.pnt_model.y[:] = model.b
-        self.pnt_model.z[:] = model.h
         self.pnt_model.X = model.c_mtx
+        self.pnt_model.y = model.b
+        self.pnt_model.Z.fill(0.)
 
         self.pnt_res = point.Point(model)
 
@@ -112,32 +111,30 @@ class SysSolver():
 
         return
 
-    def solve_system_ir(self, dir, res, rhs, model, mu, tau):
+    def solve_system_ir(self, res, rhs, model, mu, tau):
         temp = point.Point(model)
 
         # Solve system
-        dir.vec[:] = self.solve_system(rhs, model, mu / tau / tau).vec
+        dir = self.solve_system(rhs, model, mu / tau / tau)
 
         # Check residuals of solve
-        res.vec[:] = rhs.vec - self.apply_system(dir, model, mu / tau / tau).vec
-        res.copy()
-        res_norm = np.linalg.norm(res.vec)
+        res = rhs - self.apply_system(dir, model, mu / tau / tau)
+        res_norm = res.norm()
 
         # Iterative refinement
         if self.ir:
             iter_refine_count = 0
             while res_norm > 1e-8:
-                self.solve_system(res, model, mu / tau / tau)
-                temp.vec[:] = dir.vec + self.sol.vec
-                res.vec[:] = rhs.vec - self.apply_system(temp, model, mu / tau / tau).vec
-                res.copy()
-                res_norm_new = np.linalg.norm(res.vec)
+                dir_res = self.solve_system(res, model, mu / tau / tau)
+                temp = dir + dir_res
+                res = rhs - self.apply_system(temp, model, mu / tau / tau)
+                res_norm_new = res.norm()
 
                 # Check if iterative refinement made things worse
                 if res_norm_new > res_norm:
                     break
 
-                dir.vec[:] = temp.vec
+                dir = temp
                 res_norm = res_norm_new
 
                 iter_refine_count += 1
@@ -145,11 +142,13 @@ class SysSolver():
                 if iter_refine_count > 5:
                     break
 
-        return res_norm
+        return dir, res_norm
 
     def solve_system(self, rhs, model, mu_tau2):
         # Solve Newton system using elimination
         # NOTE: mu has already been accounted for in H
+
+        sol = point.Point(model)
 
         x_r, y_r, z_r = self.solve_subsystem_elim(rhs, model)
         if self.ir:
@@ -180,18 +179,16 @@ class SysSolver():
                 if iter_refine_count > 5:
                     break        
 
-        self.sol.tau[0]   = rhs.tau + rhs.kappa + lin.inp(model.c_mtx, x_r) + lin.inp(model.b, y_r)
-        self.sol.tau[0]   = self.sol.tau[0] / (mu_tau2 + lin.inp(model.c_mtx, self.X_b) + lin.inp(model.b, self.y_b))
+        sol.tau   = rhs.tau + rhs.kappa + lin.inp(model.c_mtx, x_r) + lin.inp(model.b, y_r)
+        sol.tau  /= (mu_tau2 + lin.inp(model.c_mtx, self.X_b) + lin.inp(model.b, self.y_b))
 
-        self.sol.X        = x_r - self.sol.tau[0] * self.X_b
-        self.sol.y[:]     = y_r - self.sol.tau[0] * self.y_b
-        self.sol.Z        = z_r - self.sol.tau[0] * self.Z_b
-        self.sol.S        = self.sol.X - rhs.Z
-        self.sol.kappa[0] = rhs.kappa - mu_tau2 * self.sol.tau[0]
+        sol.X     = x_r - sol.tau * self.X_b
+        sol.y     = y_r - sol.tau * self.y_b
+        sol.Z     = z_r - sol.tau * self.Z_b
+        sol.S     = sol.X - rhs.Z
+        sol.kappa = rhs.kappa - mu_tau2 * sol.tau
 
-        self.sol.copy()
-
-        return self.sol
+        return sol
         
     def solve_subsystem(self, rx, ry, Hrz, model):
         if self.subsolver == "elim":
@@ -200,10 +197,10 @@ class SysSolver():
             return self.solve_subsystem_qrchol(rx, ry, Hrz, model)
 
     def solve_subsystem_elim(self, rhs, model):
-        rx = rhs.x
+        # rx = rhs.x
         ry = rhs.y
-        rz = rhs.z
-        rs = rhs.s
+        # rz = rhs.z
+        # rs = rhs.s
 
         rX = rhs.X
         rZ = rhs.Z
@@ -328,12 +325,14 @@ class SysSolver():
     def apply_system(self, rhs, model, mu_tau2):
         pnt = point.Point(model)
 
-        pnt.x[:]     =  model.A.T @ rhs.y + model.G.T @ rhs.z + model.c * rhs.tau
-        pnt.y[:]     = -model.A @ rhs.x + model.b * rhs.tau
-        pnt.z[:]     = -model.G @ rhs.x + model.h * rhs.tau - rhs.s
-        pnt.s[:]     =  blk_hess_prod(rhs.s, model) + rhs.z
-        pnt.tau[0]   = -lin.inp(model.c, rhs.x) - lin.inp(model.b, rhs.y) - lin.inp(model.h, rhs.z) - rhs.kappa
-        pnt.kappa[0] = mu_tau2 * rhs.tau + rhs.kappa
+        # pnt.x[:]     =  model.A.T @ rhs.y + model.G.T @ rhs.z + model.c * rhs.tau
+        for (i, Ai) in enumerate(model.A_mtx):
+            pnt.y[i] = -np.sum(Ai * rhs.X) + model.b[i] * rhs.tau        
+        # pnt.y[:]     = -model.A @ rhs.x + model.b * rhs.tau
+        # pnt.z[:]     = -model.G @ rhs.x + model.h * rhs.tau - rhs.s
+        # pnt.s[:]     =  blk_hess_prod(rhs.s, model) + rhs.z
+        pnt.tau   = -lin.inp(model.c_mtx, rhs.X) - lin.inp(model.b, rhs.y) - rhs.kappa
+        pnt.kappa = mu_tau2 * rhs.tau + rhs.kappa
 
         pnt.X = model.c_mtx * rhs.tau - rhs.Z
         for (i, Ai) in enumerate(model.A_mtx): 

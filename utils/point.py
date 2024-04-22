@@ -8,22 +8,22 @@ class Point():
 
         (n, p, q) = (model.n, model.p, model.q)
 
-        self.vec = np.zeros((n + p + q + q + 2, 1))
+        # self.vec = np.zeros((n + p + q + q + 2, 1))
 
         # self.x     = self.vec[:n]
-        self.y     = self.vec[n : n+p]
+        # self.y     = self.vec[n : n+p]
         # self.z     = self.vec[n+p : n+p+q]
         # self.s     = self.vec[n+p+q : n+p+q+q]
-        self.tau   = self.vec[n+p+q+q : n+p+q+q+1]
-        self.kappa = self.vec[n+p+q+q+1 : n+p+q+q+2]
+        # self.tau   = self.vec[n+p+q+q : n+p+q+q+1]
+        # self.kappa = self.vec[n+p+q+q+1 : n+p+q+q+2]
 
         self.y     = np.zeros((p, 1))
         self.tau   = 0.
         self.kappa = 0.
         
-        self.X = sym.vec_to_mat(self.x)
-        self.S = sym.vec_to_mat(self.s)
-        self.Z = sym.vec_to_mat(self.z)
+        self.X = sym.vec_to_mat(np.zeros((n, 1)))
+        self.S = sym.vec_to_mat(np.zeros((n, 1)))
+        self.Z = sym.vec_to_mat(np.zeros((n, 1)))
 
         return
     

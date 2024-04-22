@@ -55,10 +55,10 @@ class Cone():
         assert self.feas_updated
 
         if self.grad_updated:
-            return self.grad, -self.inv_X
+            return self.grad
         
         self.X_chol_inv = np.linalg.inv(self.X_chol)
-        self.inv_X = self.X_chol_inv.conj().T @ self.X_chol_inv
+        self.inv_X = self.X_chol_inv.T @ self.X_chol_inv
         self.grad  = -self.inv_X
 
         self.grad_updated = True
@@ -78,7 +78,8 @@ class Cone():
 
     def hess_prod_alt(self, H):
         assert self.grad_updated
-        return self.inv_X @ H @ self.inv_X
+        XHX = self.inv_X @ H @ self.inv_X
+        return (XHX + XHX.T) / 2
 
     def sqrt_hess_prod(self, dirs):
         assert self.grad_updated
@@ -103,7 +104,8 @@ class Cone():
         return out
     
     def invhess_prod_alt(self, H):
-        return self.X @ H @ self.X    
+        XHX = self.X @ H @ self.X
+        return (XHX + XHX.T) / 2
 
     def sqrt_invhess_prod(self, dirs):
         assert self.grad_updated
@@ -119,7 +121,8 @@ class Cone():
 
     def third_dir_deriv(self, H):
         assert self.grad_updated
-        return -2 * self.inv_X @ H @ self.inv_X @ H @ self.inv_X
+        XHXHX = self.inv_X @ H @ self.inv_X @ H @ self.inv_X
+        return -(XHXHX + XHXHX.T)
 
     def norm_invhess(self, x):
         return 0.0
