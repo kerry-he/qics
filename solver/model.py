@@ -1,6 +1,8 @@
 import numpy as np
 import scipy as sp
 
+from utils import symmetric as sym
+
 class Model():
     def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0):
         self.n = np.size(c)
@@ -21,6 +23,9 @@ class Model():
         self.nu = 0 if (len(cones) == 0) else sum((cone.get_nu() for cone in cones))
 
         self.offset = offset
+
+        self.c_mtx = sym.vec_to_mat(c)
+        self.A_mtx = [sym.vec_to_mat(ai[:, np.newaxis]) for ai in A]
 
         return
     

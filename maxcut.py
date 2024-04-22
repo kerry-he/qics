@@ -7,7 +7,7 @@ from solver import model, solver
 
 np.random.seed(1)
 
-n = 10
+n = 75
 
 A = np.zeros((n,n*(n+1)//2))
 for i in range(n):
@@ -22,13 +22,13 @@ model = model.Model(c, A, b, cones=cones)
 solver = solver.Solver(model)
 solver.solve()
 
-# Solve using MOSEK
-import sys
-from mosek.fusion import Model, Matrix, Domain, Expr, ObjectiveSense, ProblemStatus
-M = Model("maxcut")
-X = M.variable(Domain.inPSDCone(n))
-M.constraint(X.diag(),Domain.equalsTo(1.0))
-M.objective(ObjectiveSense.Minimize,Expr.sum(Expr.mulElm(C,X)))
-#M.setSolverParam("numThreads", 1)
-M.setLogHandler(sys.stdout)
-M.solve()
+# # Solve using MOSEK
+# import sys
+# from mosek.fusion import Model, Matrix, Domain, Expr, ObjectiveSense, ProblemStatus
+# M = Model("maxcut")
+# X = M.variable(Domain.inPSDCone(n))
+# M.constraint(X.diag(),Domain.equalsTo(1.0))
+# M.objective(ObjectiveSense.Minimize,Expr.sum(Expr.mulElm(C,X)))
+# #M.setSolverParam("numThreads", 1)
+# M.setLogHandler(sys.stdout)
+# M.solve()

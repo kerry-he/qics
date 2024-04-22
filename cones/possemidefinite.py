@@ -20,15 +20,13 @@ class Cone():
         return self.n
     
     def set_init_point(self):
-        point = sym.mat_to_vec(np.eye(self.n), hermitian=self.hermitian)
-        self.set_point(point)
-        return point
+        self.set_point(np.eye(self.n))
+        return self.X
     
     def set_point(self, point):
-        assert np.size(point) == self.dim
-        self.point = point
+        assert np.shape(point)[0] == self.n
 
-        self.X = sym.vec_to_mat(point[:, [0]], hermitian=self.hermitian)
+        self.X = point
 
         self.feas_updated = False
         self.grad_updated = False
@@ -57,11 +55,11 @@ class Cone():
         assert self.feas_updated
 
         if self.grad_updated:
-            return self.grad
+            return self.grad, -self.inv_X
         
         self.X_chol_inv = np.linalg.inv(self.X_chol)
         self.inv_X = self.X_chol_inv.conj().T @ self.X_chol_inv
-        self.grad  = -sym.mat_to_vec(self.inv_X, hermitian=self.hermitian)
+        self.grad  = -self.inv_X
 
         self.grad_updated = True
         return self.grad
@@ -77,6 +75,10 @@ class Cone():
             out[:, [j]] = sym.mat_to_vec(self.inv_X @ H @ self.inv_X, hermitian=self.hermitian)
 
         return out
+
+    def hess_prod_alt(self, H):
+        assert self.grad_updated
+        return self.inv_X @ H @ self.inv_X
 
     def sqrt_hess_prod(self, dirs):
         assert self.grad_updated
@@ -99,6 +101,9 @@ class Cone():
             out[:, [j]] = sym.mat_to_vec(self.X @ H @ self.X, hermitian=self.hermitian)
 
         return out
+    
+    def invhess_prod_alt(self, H):
+        return self.X @ H @ self.X    
 
     def sqrt_invhess_prod(self, dirs):
         assert self.grad_updated
@@ -110,12 +115,11 @@ class Cone():
             H = sym.vec_to_mat(dirs[:, [j]], hermitian=self.hermitian)
             out[:, [j]] = sym.mat_to_vec(self.X_chol.conj().T @ H @ self.X_chol, hermitian=self.hermitian)
 
-        return out        
+        return out
 
-    def third_dir_deriv(self, dirs):
+    def third_dir_deriv(self, H):
         assert self.grad_updated
-        H = sym.vec_to_mat(dirs, hermitian=self.hermitian)
-        return -2 * sym.mat_to_vec(self.inv_X @ H @ self.inv_X @ H @ self.inv_X, hermitian=self.hermitian)
+        return -2 * self.inv_X @ H @ self.inv_X @ H @ self.inv_X
 
     def norm_invhess(self, x):
         return 0.0

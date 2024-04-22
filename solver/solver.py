@@ -8,6 +8,8 @@ from solver.stepper.aggressive import AggressiveStepper
 from solver.stepper.comb import CombinedStepper
 from solver.syssolver import SysSolver
 
+from utils import symmetric as sym
+
 class Solver():
     def __init__(
         self, 
@@ -148,20 +150,23 @@ class Solver():
         model = self.model
         self.point = point.Point(model)
 
-        self.point.tau[0]   = 1.
-        self.point.kappa[0] = 1.
+        self.point.tau   = 1.
+        self.point.kappa = 1.
 
         for (k, cone_k) in enumerate(model.cones):
-            self.point.s[model.cone_idxs[k]] = cone_k.set_init_point()
+            self.point.S = cone_k.set_init_point()
             assert cone_k.get_feas()
-            self.point.z_views[k][:] = -cone_k.get_grad()
+            self.point.Z = -cone_k.get_grad()
 
-        if model.use_G:
-            self.point.x[:] = np.linalg.pinv(np.vstack((model.A, model.G))) @ np.vstack((model.b, model.h - self.point.s))
-            self.point.y[:] = np.linalg.pinv(model.A.T) @ (-model.G.T @ self.point.z - model.c)
-        else:
-            self.point.x[:] = -(model.h - self.point.s)
-            self.point.y[:] = np.linalg.pinv(model.A.T) @ (self.point.z - model.c)
+        # if model.use_G:
+        #     self.point.x[:] = np.linalg.pinv(np.vstack((model.A, model.G))) @ np.vstack((model.b, model.h - self.point.s))
+        #     self.point.y[:] = np.linalg.pinv(model.A.T) @ (-model.G.T @ self.point.z - model.c)
+        # else:
+        #     self.point.x[:] = -(model.h - self.point.s)
+        #     self.point.y[:] = np.linalg.pinv(model.A.T) @ (self.point.z - model.c)
+
+        self.point.y = np.linalg.pinv(model.A.T) @ sym.mat_to_vec(self.point.Z - model.c_mtx)
+        self.point.X = self.point.S
 
         self.calc_mu()
         if not math.isclose(self.mu, 1.):
@@ -170,7 +175,7 @@ class Solver():
         return
 
     def calc_mu(self):
-        self.mu = lin.inp(self.point.s, self.point.z) / self.model.nu
+        self.mu = lin.inp(self.point.S, self.point.Z) / self.model.nu
         return self.mu
 
     def get_gap_feas(self):
@@ -180,10 +185,10 @@ class Solver():
         A = self.model.A
         G = self.model.G
 
-        x   = self.point.x
+        x   = sym.mat_to_vec(self.point.X)
         y   = self.point.y
-        z   = self.point.z
-        s   = self.point.s
+        z   = sym.mat_to_vec(self.point.Z)
+        s   = sym.mat_to_vec(self.point.S)
         tau = self.point.tau
 
         c_max = np.linalg.norm(c, np.inf)

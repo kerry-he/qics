@@ -2,6 +2,7 @@ import numpy as np
 import math
 from utils.point import Point
 from utils import linear as lin
+from utils import symmetric as sym
 
 alpha_sched = [0.99, 0.9, 0.8, 0.7, 0.5, 0.3, 0.2, 0.1, 0.01, 0.001]
 
@@ -79,16 +80,16 @@ class CombinedStepper():
             alpha = alpha_sched[alpha_iter]
             # Step point in direction and step size
             if mode == "co_toa":
-                step = alpha * (dir_p.vec + alpha * dir_p_toa.vec) + (1.0 - alpha) * (dir_c.vec + (1.0 - alpha) * dir_c_toa.vec)
+                step = alpha * (dir_p + dir_p_toa * alpha) + (dir_c + dir_c_toa * (1.0 - alpha)) * (1.0 - alpha)
             elif mode == "comb":
-                step = alpha * dir_p.vec + (1.0 - alpha) * dir_c.vec
+                step = dir_p * alpha + dir_c * (1.0 - alpha)
             elif mode == "ce_toa":
-                step = alpha * (dir_p.vec + alpha * dir_p_toa.vec)
+                step = (dir_p + dir_p_toa * alpha) * alpha
             elif mode == "cent":
-                step = alpha * dir_c.vec
+                step = dir_c * alpha
 
-            next_point.vec[:] = point.vec + step
-            mu = lin.inp(next_point.s, next_point.z) / model.nu
+            next_point = point + step
+            mu = (lin.inp(next_point.S, next_point.Z) + next_point.tau*next_point.kappa) / model.nu
             if mu < 0 or next_point.tau < 0 or next_point.kappa < 0:
                 alpha_iter += 1
                 continue
@@ -102,33 +103,16 @@ class CombinedStepper():
             for (k, cone_k) in enumerate(model.cones):
                 in_prox = False
 
-                cone_k.set_point(next_point.s_views[k] * irtmu)
-
-                # Check cheap proximity conditions first
-                inp_s_z_k = lin.inp(next_point.z_views[k], next_point.s_views[k])
-                if inp_s_z_k <= 0:
-                    # print("inp_s_z_k break")
-                    break
-
-                nu_k = cone_k.get_nu()
-                rho_k = np.reciprocal(np.sqrt(nu_k)) * np.abs(inp_s_z_k / mu - nu_k)
-                if rho_k >= eta:
-                    # print("rho_k break")
-                    break
+                cone_k.set_point_alt(next_point.S * irtmu)
                 
                 # Check if feasible
                 if not cone_k.get_feas():
                     break
 
-                grad_k = cone_k.get_grad()
-                psi = next_point.z_views[k] * irtmu + grad_k
+                grad_k = cone_k.get_grad()[1]
+                psi = next_point.Z * irtmu + grad_k
 
-                # Check cheap inverse Hessian norm oracle
-                if cone_k.norm_invhess(psi) >= eta:
-                    # print("cheap hess break")
-                    break
-
-                prod = cone_k.invhess_prod(psi)
+                prod = cone_k.invhess_prod_alt(psi)
                 self.prox = max(self.prox, lin.inp(prod, psi))
                 in_prox = (self.prox < eta)
                 if not in_prox:
@@ -147,11 +131,15 @@ class CombinedStepper():
         self.rhs.y.fill(0.)
         self.rhs.z.fill(0.)
 
+        self.rhs.X.fill(0.)
+        self.rhs.Z.fill(0.)
+
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
             z_k = point.z_views[k]
-            grad_k = cone_k.get_grad()
+            grad_k, Grad_k = cone_k.get_grad()
             self.rhs.s_views[k][:] = -z_k - rtmu * grad_k
+            self.rhs.S = -point.Z - rtmu * Grad_k
 
         self.rhs.tau[0]   = 0.
         self.rhs.kappa[0] = -point.kappa + mu / point.tau
@@ -163,10 +151,15 @@ class CombinedStepper():
         self.rhs.y.fill(0.)
         self.rhs.z.fill(0.)
 
+        self.rhs.X.fill(0.)
+        self.rhs.Z.fill(0.)
+
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
             dir_c_s_k = dir_c.s_views[k]
-            self.rhs.s_views[k][:] = -0.5 * cone_k.third_dir_deriv(dir_c_s_k) / rtmu
+            tdd, TDD = cone_k.third_dir_deriv(dir_c_s_k)
+            self.rhs.s_views[k][:] = -0.5 * tdd / rtmu
+            self.rhs.S = -0.5 * TDD / rtmu
 
         self.rhs.tau[0]   = 0.
         self.rhs.kappa[0] = (dir_c.tau**2) / (point.tau**3) * mu
@@ -178,8 +171,15 @@ class CombinedStepper():
         self.rhs.y[:] = model.A @ point.x - model.b * point.tau
         self.rhs.z[:] = model.G @ point.x - model.h * point.tau + point.s
 
+        self.rhs.X = point.Z - model.c_mtx * point.tau
+        for (i, Ai) in enumerate(model.A_mtx):
+            self.rhs.X -= Ai * point.y[i]
+        
+        self.rhs.Z = point.S - point.X
+
         for (rhs_s_k, z_k) in zip(self.rhs.s_views, point.z_views):
             rhs_s_k[:] = -z_k
+        self.rhs.S = -point.Z
 
         self.rhs.tau[0]   = lin.inp(model.c, point.x) + lin.inp(model.b, point.y) + lin.inp(model.h, point.z) + point.kappa
         self.rhs.kappa[0] = -point.kappa
@@ -191,10 +191,16 @@ class CombinedStepper():
         self.rhs.y.fill(0.)
         self.rhs.z.fill(0.)
 
+        self.rhs.X.fill(0.)
+        self.rhs.Z.fill(0.)        
+
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
             dir_p_s_k = dir_p.s_views[k]
-            self.rhs.s_views[k][:] = cone_k.hess_prod(dir_p_s_k) - 0.5 * cone_k.third_dir_deriv(dir_p_s_k) / rtmu
+            tdd, TDD = cone_k.third_dir_deriv(dir_p_s_k)
+            self.rhs.s_views[k][:] = cone_k.hess_prod(dir_p_s_k) - 0.5 * tdd / rtmu
+        
+        self.rhs.S = cone_k.hess_prod_alt(dir_p.S) - 0.5 * TDD / rtmu
 
         self.rhs.tau[0]   = 0.
         self.rhs.kappa[0] = (dir_p.tau**2) / (point.tau**3) * mu
