@@ -166,7 +166,7 @@ class Solver():
         #     self.point.x[:] = -(model.h - self.point.s)
         #     self.point.y[:] = np.linalg.pinv(model.A.T) @ (self.point.z - model.c)
 
-        self.point.y.fill(0.)# = np.linalg.pinv(model.A.T) @ sym.mat_to_vec(self.point.Z - model.c_mtx)
+        self.point.y = model.get_A_mtx() @ sym.mat_to_vec((self.point.Z - model.c_mtx).data[0])
         self.point.X = self.point.S
 
         self.calc_mu()
@@ -180,43 +180,43 @@ class Solver():
         return self.mu
 
     def get_gap_feas(self):
-        c = self.model.c
+        c = self.model.c_mtx
         b = self.model.b
-        h = self.model.h
+        h = self.model.h_mtx
         A = self.model.A
         G = self.model.G
 
-        x   = sym.mat_to_vec(self.point.X.data[0])
+        x   = self.point.X
         y   = self.point.y
-        z   = sym.mat_to_vec(self.point.Z.data[0])
-        s   = sym.mat_to_vec(self.point.S.data[0])
+        z   = self.point.Z
+        s   = self.point.S
         tau = self.point.tau
 
-        c_max = np.linalg.norm(c, np.inf)
-        b_max = np.linalg.norm(b, np.inf)
-        h_max = np.linalg.norm(h, np.inf)
+        c_max = lin.norm(c.data, np.inf)
+        b_max = lin.norm(b.data, np.inf)
+        h_max = lin.norm(h.data, np.inf)
 
         # Get primal and dual objectives and optimality gap
-        p_obj_tau =  lin.inp(c, x)
-        d_obj_tau = -lin.inp(b, y) - lin.inp(h, z)
+        p_obj_tau =  c.inp(x)
+        d_obj_tau = -lin.inp(b, y) - h.inp(z)
 
         self.p_obj = p_obj_tau / tau + self.model.offset
         self.d_obj = d_obj_tau / tau + self.model.offset
-        self.gap   = min([lin.inp(z, s) / tau, abs(p_obj_tau - d_obj_tau)]) / max([tau, min([abs(p_obj_tau), abs(d_obj_tau)])])
+        self.gap   = min([z.inp(s) / tau, abs(p_obj_tau - d_obj_tau)]) / max([tau, min([abs(p_obj_tau), abs(d_obj_tau)])])
 
         # Get primal and dual feasibilities
-        x_res = A.T @ y + G.T @ z
-        y_res =   A @ x          
-        z_res =   G @ x       + s
+        x_res = self.model.apply_A_T(y) - z
+        y_res = self.model.apply_A(x)          
+        z_res = s - x
 
-        self.x_feas = np.linalg.norm(x_res + c * tau, np.inf) / (1. + c_max) / tau
-        self.y_feas = np.linalg.norm(y_res - b * tau, np.inf) / (1. + b_max) / tau if self.model.use_A else 0.0
-        self.z_feas = np.linalg.norm(z_res - h * tau, np.inf) / (1. + h_max) / tau
+        self.x_feas = lin.norm((x_res + c * tau).data, np.inf) / (1. + c_max) / tau
+        self.y_feas = lin.norm((y_res - b * tau).data, np.inf) / (1. + b_max) / tau if self.model.use_A else 0.0
+        self.z_feas = lin.norm((z_res - h * tau).data, np.inf) / (1. + h_max) / tau
 
         # Get primal and dual infeasibilities
-        self.x_infeas =  np.linalg.norm(x_res, np.inf) / d_obj_tau if (d_obj_tau > 0) else np.inf
-        self.y_infeas = -np.linalg.norm(y_res, np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
-        self.z_infeas = -np.linalg.norm(z_res, np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
+        self.x_infeas =  lin.norm(x_res.data, np.inf) / d_obj_tau if (d_obj_tau > 0) else np.inf
+        self.y_infeas = -lin.norm(y_res.data, np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
+        self.z_infeas = -lin.norm(z_res.data, np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
 
 
     def rescale_model(self):

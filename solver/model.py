@@ -44,6 +44,36 @@ class Model():
             for (i, Aji) in enumerate(Aj.data):
                 c.data[i] += y[j] * Aji
         return c
+    
+    def get_A_mtx(self):
+        # Convert list of A correspoding to linear constaints
+        # <x1, Ai1> + <x2, Ai2> + ... + <xn, Ain> = bi, for all i=1,...,p
+        # to its corresponding matrix expression
+
+        def vec_dim(c):
+            assert len(c.shape) == 2
+            n = c.shape[0]
+            if c.shape[1] == 1:
+                # Real vector
+                return n
+            elif np.issubdtype(c.dtype, complex):
+                # Hermitian matrix
+                return n * n
+            else:
+                # Symmetric matrix
+                return n * (n + 1) // 2
+
+        dims = [vec_dim(ci) for ci in self.c_mtx.data]   # Dimensions of vector spaces
+        p = len(self.A)                         # Number of constaints
+        n = sum(dims)                           # Total real vector dimension
+
+        out = np.zeros((p, n))
+
+        for (j, Aj) in enumerate(self.A_mtx):
+            for (i, Aji) in enumerate(Aj.data):
+                out[[j], :] = sym.mat_to_vec(Aji).T
+
+        return out 
 
 def build_cone_idxs(n, cones):
     cone_idxs = []
