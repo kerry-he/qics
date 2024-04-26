@@ -1,6 +1,40 @@
 import numpy as np
 import scipy as sp
 
+class Vector():
+    def __init__(self, data):
+        self.data = data
+
+    def __add__(self, other):
+        return Vector([x + y for (x, y) in zip(self.data, other.data)])
+    
+    def __sub__(self, other):
+        return Vector([x - y for (x, y) in zip(self.data, other.data)])    
+    
+    def __mul__(self, other):
+        if np.isscalar(other):
+            return Vector([x * other for x in self.data])
+        else:
+            return Vector([x * y for (x, y) in zip(self.data, other.data)])
+    
+    def __imul__(self, other):
+        if np.isscalar(other):
+            for x in self.data:
+                x *= other
+        else:
+            for (x, y) in zip(self.data, self.other):
+                x *= y
+        return self
+    
+    __rmul__ = __mul__
+
+    def inp(self, other):
+        return np.sum([np.sum(x * y.conj()).real for (x, y) in zip(self.data, other.data)])
+    
+    def zeros_like(self):
+        return self * 0
+
+
 def inp(x, y):
     # Standard inner product
     if isinstance(x, list) and isinstance(y, list):
@@ -24,7 +58,7 @@ def add(x, y):
 
 def fact(A):
     # Perform a Cholesky decomposition, or an LU factorization if Cholesky fails
-    while True:        
+    while True:
         try:
             fact = sp.linalg.cho_factor(A, check_finite=False)
             return (fact, "cho")

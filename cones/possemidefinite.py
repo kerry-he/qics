@@ -67,19 +67,19 @@ class Cone():
         self.grad_updated = True
         return self.grad
 
-    def hess_prod(self, dirs):
-        assert self.grad_updated
+    # def hess_prod(self, dirs):
+    #     assert self.grad_updated
 
-        p = np.size(dirs, 1)
-        out = np.empty((self.dim, p))
+    #     p = np.size(dirs, 1)
+    #     out = np.empty((self.dim, p))
 
-        for j in range(p):
-            H = sym.vec_to_mat(dirs[:, [j]], hermitian=self.hermitian)
-            out[:, [j]] = sym.mat_to_vec(self.inv_X @ H @ self.inv_X, hermitian=self.hermitian)
+    #     for j in range(p):
+    #         H = sym.vec_to_mat(dirs[:, [j]], hermitian=self.hermitian)
+    #         out[:, [j]] = sym.mat_to_vec(self.inv_X @ H @ self.inv_X, hermitian=self.hermitian)
 
-        return out
+    #     return out
 
-    def hess_prod_alt(self, H):
+    def hess_prod(self, H):
         assert self.grad_updated
         XHX = self.inv_X @ H @ self.inv_X
         return (XHX + XHX.T) / 2
@@ -96,17 +96,17 @@ class Cone():
 
         return out
     
-    def invhess_prod(self, dirs):
-        p = np.size(dirs, 1)
-        out = np.empty((self.dim, p))
+    # def invhess_prod(self, dirs):
+    #     p = np.size(dirs, 1)
+    #     out = np.empty((self.dim, p))
 
-        for j in range(p):
-            H = sym.vec_to_mat(dirs[:, [j]], hermitian=self.hermitian)
-            out[:, [j]] = sym.mat_to_vec(self.X @ H @ self.X, hermitian=self.hermitian)
+    #     for j in range(p):
+    #         H = sym.vec_to_mat(dirs[:, [j]], hermitian=self.hermitian)
+    #         out[:, [j]] = sym.mat_to_vec(self.X @ H @ self.X, hermitian=self.hermitian)
 
-        return out
+    #     return out
     
-    def invhess_prod_alt(self, H):
+    def invhess_prod(self, H):
         XHX = self.X @ H @ self.X
         return (XHX + XHX.T) / 2
 

@@ -154,9 +154,9 @@ class Solver():
         self.point.kappa = 1.
 
         for (k, cone_k) in enumerate(model.cones):
-            self.point.S[k] = cone_k.set_init_point()
+            self.point.S.data[k] = cone_k.set_init_point()
             assert cone_k.get_feas()
-            self.point.Z[k] = -cone_k.get_grad()
+            self.point.Z.data[k] = -cone_k.get_grad()
 
         # if model.use_G:
         #     self.point.x[:] = np.linalg.pinv(np.vstack((model.A, model.G))) @ np.vstack((model.b, model.h - self.point.s))
@@ -175,7 +175,7 @@ class Solver():
         return
 
     def calc_mu(self):
-        self.mu = (lin.inp(self.point.S, self.point.Z) + self.point.tau*self.point.kappa) / self.model.nu
+        self.mu = (self.point.S.inp(self.point.Z) + self.point.tau*self.point.kappa) / self.model.nu
         return self.mu
 
     def get_gap_feas(self):
@@ -185,10 +185,10 @@ class Solver():
         A = self.model.A
         G = self.model.G
 
-        x   = sym.mat_to_vec(self.point.X[0])
+        x   = sym.mat_to_vec(self.point.X.data[0])
         y   = self.point.y
-        z   = sym.mat_to_vec(self.point.Z[0])
-        s   = sym.mat_to_vec(self.point.S[0])
+        z   = sym.mat_to_vec(self.point.Z.data[0])
+        s   = sym.mat_to_vec(self.point.S.data[0])
         tau = self.point.tau
 
         c_max = np.linalg.norm(c, np.inf)

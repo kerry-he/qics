@@ -25,8 +25,8 @@ class Model():
 
         self.offset = offset
 
-        self.c_mtx = [c_mtx]
-        self.h_mtx = [np.zeros_like(c_mtx)]
+        self.c_mtx = lin.Vector([c_mtx])
+        self.h_mtx = lin.Vector([np.zeros_like(c_mtx)])
         self.A_mtx = A_mtx
 
         return
@@ -34,15 +34,15 @@ class Model():
     def apply_A(self, x):
         b = np.zeros((self.p, 1))
         for (j, Aj) in enumerate(self.A_mtx):
-            for (i, Aji) in enumerate(Aj):
-                b[j] += lin.inp(x[i], Aji)
+            for (i, Aji) in enumerate(Aj.data):
+                b[j] += lin.inp(x.data[i], Aji)
         return b
 
     def apply_A_T(self, y):
-        c = [cone_k.zeros() for cone_k in self.cones]
+        c = lin.Vector([cone_k.zeros() for cone_k in self.cones])
         for (j, Aj) in enumerate(self.A_mtx):
-            for (i, Aji) in enumerate(Aj):
-                c[i] += y[j] * Aji
+            for (i, Aji) in enumerate(Aj.data):
+                c.data[i] += y[j] * Aji
         return c
 
 def build_cone_idxs(n, cones):

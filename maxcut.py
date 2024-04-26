@@ -4,20 +4,20 @@ import scipy as sp
 import cProfile
 
 from cones import *
-from utils import symmetric as sym
+from utils import symmetric as sym, linear as lin
 from solver import model, solver
 
 np.random.seed(1)
 
-n = 2
+n = 101
 
 A = np.zeros((n,n*(n+1)//2))
 for i in range(n):
     A[i,i+i*(i+1)//2] = 1
 
-A_mtx = [[np.zeros((n, n))] for i in range(n)]
+A_mtx = [lin.Vector([np.zeros((n, n))]) for i in range(n)]
 for i in range(n):
-    A_mtx[i][0][i, i] = 1.
+    A_mtx[i].data[0][i, i] = 1.
 
 b = np.ones((n, 1))
 C = np.random.randn(n,n)

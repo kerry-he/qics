@@ -89,7 +89,7 @@ class CombinedStepper():
                 step = dir_c * alpha
 
             next_point = point + step
-            mu = (lin.inp(next_point.S, next_point.Z) + next_point.tau*next_point.kappa) / model.nu
+            mu = (next_point.S.inp(next_point.Z) + next_point.tau*next_point.kappa) / model.nu
             if mu < 0 or next_point.tau < 0 or next_point.kappa < 0:
                 alpha_iter += 1
                 continue
@@ -107,16 +107,16 @@ class CombinedStepper():
             for (k, cone_k) in enumerate(model.cones):
                 in_prox = False
 
-                cone_k.set_point(next_point.S[k] * irtmu)
+                cone_k.set_point(next_point.S.data[k] * irtmu)
                 
                 # Check if feasible
                 if not cone_k.get_feas():
                     break
 
                 grad_k = cone_k.get_grad()
-                psi = next_point.Z[k] * irtmu + grad_k
+                psi = next_point.Z.data[k] * irtmu + grad_k
 
-                prod = cone_k.invhess_prod_alt(psi)
+                prod = cone_k.invhess_prod(psi)
                 self.prox = max(self.prox, lin.inp(prod, psi))
                 in_prox = (self.prox < eta)
                 if not in_prox:
@@ -131,21 +131,17 @@ class CombinedStepper():
             alpha_iter += 1
 
     def update_rhs_cent(self, model, point, mu):
-        # self.rhs.x.fill(0.)
-        self.rhs.y.fill(0.)
-        # self.rhs.z.fill(0.)
-        for k in range(len(model.cones)):
-            self.rhs.X[k].fill(0.)
-            self.rhs.Z[k].fill(0.)
-        # self.rhs.X.fill(0.)
-        # self.rhs.Z.fill(0.)
+        self.rhs.X *= 0
+        self.rhs.y *= 0
+        self.rhs.Z *= 0
 
         rtmu = math.sqrt(mu)
-        # for (k, cone_k) in enumerate(model.cones):
+        for (k, cone_k) in enumerate(model.cones):
+            self.rhs.S.data[k] = -point.Z.data[k] - rtmu * cone_k.get_grad()
         #     z_k = point.z_views[k]
         #     grad_k, Grad_k = cone_k.get_grad()
         #     self.rhs.s_views[k][:] = -z_k - rtmu * grad_k
-        self.rhs.S = [-point.Z[0] - rtmu * model.cones[0].get_grad()]
+        # self.rhs.S = [-point.Z[0] - rtmu * model.cones[0].get_grad()]
 
         self.rhs.tau   = 0.
         self.rhs.kappa = -point.kappa + mu / point.tau
@@ -153,21 +149,17 @@ class CombinedStepper():
         return self.rhs
 
     def update_rhs_cent_toa(self, model, point, mu, dir_c):
-        # self.rhs.x.fill(0.)
-        self.rhs.y.fill(0.)
-        # self.rhs.z.fill(0.)
-        for k in range(len(model.cones)):
-            self.rhs.X[k].fill(0.)
-            self.rhs.Z[k].fill(0.)
-        # self.rhs.X.fill(0.)
-        # self.rhs.Z.fill(0.)
+        self.rhs.X *= 0
+        self.rhs.y *= 0
+        self.rhs.Z *= 0
 
         rtmu = math.sqrt(mu)
-        # for (k, cone_k) in enumerate(model.cones):
+        for (k, cone_k) in enumerate(model.cones):
+            self.rhs.S.data[k] = -0.5 * cone_k.third_dir_deriv(dir_c.S.data[k]) / rtmu
         #     dir_c_s_k = dir_c.s_views[k]
         #     tdd, TDD = cone_k.third_dir_deriv(dir_c_s_k)
         #     self.rhs.s_views[k][:] = -0.5 * tdd / rtmu
-        self.rhs.S = [-0.5 * model.cones[0].third_dir_deriv(dir_c.S[0]) / rtmu]
+        # self.rhs.S = [-0.5 * model.cones[0].third_dir_deriv(dir_c.S[0]) / rtmu]
 
         self.rhs.tau   = 0.
         self.rhs.kappa = (dir_c.tau**2) / (point.tau**3) * mu
@@ -176,43 +168,41 @@ class CombinedStepper():
 
     def update_rhs_pred(self, model, point):
         # self.rhs.x[:] = -model.A.T @ point.y - model.G.T @ point.z - model.c * point.tau
-        for (i, Ai) in enumerate(model.A_mtx):
-            self.rhs.y[i] = np.sum(Ai[0] * point.X[0]) - model.b[i] * point.tau
+        self.rhs.y = model.apply_A(point.X) - model.b * point.tau
+        # for (i, Ai) in enumerate(model.A_mtx):
+        #     self.rhs.y[i] = np.sum(Ai[0] * point.X[0]) - model.b[i] * point.tau
         # self.rhs.y = model.A @ point.x - model.b * point.tau
         # self.rhs.z[:] = model.G @ point.x - model.h * point.tau + point.s
 
-        self.rhs.X = [point.Z[0] - model.c_mtx[0] * point.tau]
-        for (i, Ai) in enumerate(model.A_mtx):
-            self.rhs.X[0] -= Ai[0] * point.y[i]
+        self.rhs.X = point.Z - model.c_mtx * point.tau - model.apply_A_T(point.y)
+        # self.rhs.X = [point.Z[0] - model.c_mtx[0] * point.tau]
+        # for (i, Ai) in enumerate(model.A_mtx):
+        #     self.rhs.X[0] -= Ai[0] * point.y[i]
         
-        self.rhs.Z = [point.S[0] - point.X[0]]
+        self.rhs.Z = point.S - point.X
 
         # for (rhs_s_k, z_k) in zip(self.rhs.s_views, point.z_views):
         #     rhs_s_k[:] = -z_k
-        self.rhs.S = [-point.Z[0]]
+        self.rhs.S = -1 * point.Z
 
-        self.rhs.tau   = lin.inp(model.c_mtx, point.X) + lin.inp(model.b, point.y) + point.kappa
+        self.rhs.tau   = model.c_mtx.inp(point.X) + lin.inp(model.b, point.y) + point.kappa
         self.rhs.kappa = -point.kappa
 
         return self.rhs
 
     def update_rhs_pred_toa(self, model, point, mu, dir_p):
-        # self.rhs.x.fill(0.)
-        self.rhs.y.fill(0.)
-        # self.rhs.z.fill(0.)
-        for k in range(len(model.cones)):
-            self.rhs.X[k].fill(0.)
-            self.rhs.Z[k].fill(0.)
-        # self.rhs.X.fill(0.)
-        # self.rhs.Z.fill(0.)        
+        self.rhs.X *= 0
+        self.rhs.y *= 0
+        self.rhs.Z *= 0 
 
         rtmu = math.sqrt(mu)
-        # for (k, cone_k) in enumerate(model.cones):
+        for (k, cone_k) in enumerate(model.cones):
+            self.rhs.S.data[k] = cone_k.hess_prod(dir_p.S.data[k]) - 0.5 * cone_k.third_dir_deriv(dir_p.S.data[k]) / rtmu
         #     dir_p_s_k = dir_p.s_views[k]
         #     tdd, TDD = cone_k.third_dir_deriv(dir_p_s_k)
         #     self.rhs.s_views[k][:] = cone_k.hess_prod(dir_p_s_k) - 0.5 * tdd / rtmu
         
-        self.rhs.S = [model.cones[0].hess_prod_alt(dir_p.S[0]) - 0.5 * model.cones[0].third_dir_deriv(dir_p.S[0]) / rtmu]
+        # self.rhs.S = [model.cones[0].hess_prod_alt(dir_p.S[0]) - 0.5 * model.cones[0].third_dir_deriv(dir_p.S[0]) / rtmu]
 
         self.rhs.tau   = 0.
         self.rhs.kappa = (dir_p.tau**2) / (point.tau**3) * mu

@@ -19,10 +19,10 @@ class Point():
         # self.z_views = [self.Z[idxs] for idxs in model.cone_idxs]
 
         #TODO: Make x allow for G neq -I
-        self.X     = [cone_k.zeros() for cone_k in model.cones]
+        self.X     = lin.Vector([cone_k.zeros() for cone_k in model.cones])
         self.y     = np.zeros((model.p, 1))
-        self.Z     = [cone_k.zeros() for cone_k in model.cones]
-        self.S     = [cone_k.zeros() for cone_k in model.cones]
+        self.Z     = lin.Vector([cone_k.zeros() for cone_k in model.cones])
+        self.S     = lin.Vector([cone_k.zeros() for cone_k in model.cones])
         self.tau   = 0.
         self.kappa = 0.
 
@@ -33,10 +33,10 @@ class Point():
     def __add__(self, other):
         point = Point(self.model)
 
-        point.X     = [x1 + x2 for (x1, x2) in zip(self.X, other.X)]
+        point.X     = self.X + other.X
         point.y     = self.y + other.y
-        point.Z     = [z1 + z2 for (z1, z2) in zip(self.Z, other.Z)]
-        point.S     = [s1 + s2 for (s1, s2) in zip(self.S, other.S)]
+        point.Z     = self.Z + other.Z
+        point.S     = self.S + other.S
         point.tau   = self.tau + other.tau
         point.kappa = self.kappa + other.kappa
 
@@ -45,10 +45,10 @@ class Point():
     def __sub__(self, other):
         point = Point(self.model)
 
-        point.X     = [x1 - x2 for (x1, x2) in zip(self.X, other.X)]
+        point.X     = self.X - other.X
         point.y     = self.y - other.y
-        point.Z     = [z1 - z2 for (z1, z2) in zip(self.Z, other.Z)]
-        point.S     = [s1 - s2 for (s1, s2) in zip(self.S, other.S)]
+        point.Z     = self.Z - other.Z
+        point.S     = self.S - other.S
         point.tau   = self.tau - other.tau
         point.kappa = self.kappa - other.kappa
 
@@ -57,12 +57,12 @@ class Point():
     def __mul__(self, a):
         point = Point(self.model)
 
-        point.X     = [a * x for x in self.X]
-        point.y     =  a * self.y
-        point.Z     = [a * z for z in self.Z]
-        point.S     = [a * s for s in self.S]
-        point.tau   =  a * self.tau
-        point.kappa =  a * self.kappa
+        point.X     = a * self.X
+        point.y     = a * self.y
+        point.Z     = a * self.Z
+        point.S     = a * self.S
+        point.tau   = a * self.tau
+        point.kappa = a * self.kappa
 
         return point
     
@@ -70,10 +70,10 @@ class Point():
     
     def norm(self):
         return np.linalg.norm(np.array([
-            lin.norm(self.X),
+            lin.norm(self.X.data),
             lin.norm(self.y),
-            lin.norm(self.Z),
-            lin.norm(self.S),
+            lin.norm(self.Z.data),
+            lin.norm(self.S.data),
             self.tau, 
             self.kappa
         ]))
