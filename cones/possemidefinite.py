@@ -15,6 +15,9 @@ class Cone():
         self.grad_updated = False
 
         return
+    
+    def zeros(self):
+        return np.zeros((self.n, self.n))
         
     def get_nu(self):
         return self.n
@@ -126,3 +129,12 @@ class Cone():
 
     def norm_invhess(self, x):
         return 0.0
+    
+    def invhess_congr(self, H):
+        p = len(H)
+        lhs = np.zeros((self.dim, p))
+
+        for (i, Hi) in enumerate(H):
+            lhs[:, [i]] = sym.mat_to_vec(self.X_chol.conj().T @ Hi @ self.X_chol)
+        
+        return lhs.T @ lhs    

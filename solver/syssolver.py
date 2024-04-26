@@ -21,7 +21,7 @@ class SysSolver():
         self.pnt_model = point.Point(model)
         self.pnt_model.X = model.c_mtx
         self.pnt_model.y = model.b
-        self.pnt_model.Z.fill(0.)
+        self.pnt_model.Z = model.h_mtx
 
         self.pnt_res = point.Point(model)
 
@@ -60,7 +60,7 @@ class SysSolver():
                     self.AGHGA_fact = lin.fact(AGHGA)
 
             elif model.use_A:
-                AHA = blk_invhess_congruence(model.A.T, model)
+                AHA = blk_invhess_congruence(model.A_mtx, model)
                 self.AHA_fact = lin.fact(AHA)
 
         if self.subsolver == "qrchol":
@@ -82,19 +82,19 @@ class SysSolver():
 
         # Iterative refinement
         c_est, b_est, h_est = self.forward_subsystem(self.X_b, self.y_b, self.Z_b, model)
-        (x_res, y_res, z_res) = (self.pnt_model.X - c_est, self.pnt_model.y - b_est, self.pnt_model.Z - h_est)
-        res_norm = np.linalg.norm(np.hstack((x_res.ravel(), y_res.ravel(), z_res.ravel())))
+        (x_res, y_res, z_res) = ([self.pnt_model.X[0] - c_est[0]], self.pnt_model.y - b_est, [self.pnt_model.Z[0] - h_est[0]])
+        res_norm = lin.norm(np.array([lin.norm(x_res), lin.norm(y_res), lin.norm(z_res)]))
 
         iter_refine_count = 0
         while res_norm > 1e-8:
             self.pnt_res.X = x_res
-            self.pnt_res.y[:] = y_res
+            self.pnt_res.y = y_res
             self.pnt_res.Z = z_res
             x_b2, y_b2, z_b2 = self.solve_subsystem_elim(self.pnt_res, model)      
-            (x_temp, y_temp, z_temp) = (self.X_b + x_b2, self.y_b + y_b2, self.Z_b + z_b2)
+            (x_temp, y_temp, z_temp) = ([self.X_b[0] + x_b2[0]], self.y_b + y_b2, [self.Z_b[0] + z_b2[0]])
             c_est, b_est, h_est = self.forward_subsystem(x_temp, y_temp, z_temp, model)
-            (x_res, y_res, z_res) = (self.pnt_model.X - c_est, self.pnt_model.y - b_est, self.pnt_model.Z - h_est)
-            res_norm_new = np.linalg.norm(np.hstack((x_res.ravel(), y_res.ravel(), z_res.ravel())))
+            (x_res, y_res, z_res) = ([self.pnt_model.X[0] - c_est[0]], self.pnt_model.y - b_est, [self.pnt_model.Z[0] - h_est[0]])
+            res_norm_new = lin.norm(np.array([lin.norm(x_res), lin.norm(y_res), lin.norm(z_res)]))
 
             # Check if iterative refinement made things worse
             if res_norm_new > res_norm:
@@ -111,6 +111,7 @@ class SysSolver():
 
         return
 
+    #@profile
     def solve_system_ir(self, res, rhs, model, mu, tau):
         temp = point.Point(model)
 
@@ -139,11 +140,12 @@ class SysSolver():
 
                 iter_refine_count += 1
 
-                if iter_refine_count > 5:
-                    break
+                # if iter_refine_count > 5:
+                #     break
 
         return dir, res_norm
 
+    #@profile
     def solve_system(self, rhs, model, mu_tau2):
         # Solve Newton system using elimination
         # NOTE: mu has already been accounted for in H
@@ -153,8 +155,8 @@ class SysSolver():
         x_r, y_r, z_r = self.solve_subsystem_elim(rhs, model)
         if self.ir:
             c_est, b_est, h_est = self.forward_subsystem(x_r, y_r, z_r, model)
-            (x_res, y_res, z_res) = (rhs.X - c_est, rhs.y - b_est, rhs.Z + model.cones[0].invhess_prod_alt(rhs.S) - h_est)
-            res_norm = np.linalg.norm(np.hstack((x_res.ravel(), y_res.ravel(), z_res.ravel())))
+            (x_res, y_res, z_res) = ([rhs.X[0] - c_est[0]], rhs.y - b_est, [rhs.Z[0] + model.cones[0].invhess_prod_alt(rhs.S[0]) - h_est[0]])
+            res_norm = lin.norm(np.array([lin.norm(x_res), lin.norm(y_res), lin.norm(z_res)]))
 
             iter_refine_count = 0
             while res_norm > 1e-8:
@@ -162,10 +164,10 @@ class SysSolver():
                 self.pnt_res.y[:] = y_res
                 self.pnt_res.Z = z_res                
                 x_b2, y_b2, z_b2 = self.solve_subsystem_elim(self.pnt_res, model)      
-                (x_temp, y_temp, z_temp) = (x_r + x_b2, y_r + y_b2, z_r + z_b2)
+                (x_temp, y_temp, z_temp) = ([x_r[0] + x_b2[0]], y_r + y_b2, [z_r[0] + z_b2[0]])
                 c_est, b_est, h_est = self.forward_subsystem(x_temp, y_temp, z_temp, model)
-                (x_res, y_res, z_res) = (rhs.X - c_est, rhs.y - b_est, rhs.Z + model.cones[0].invhess_prod_alt(rhs.S) - h_est)
-                res_norm_new = np.linalg.norm(np.hstack((x_res.ravel(), y_res.ravel(), z_res.ravel())))
+                (x_res, y_res, z_res) = ([rhs.X[0] - c_est[0]], rhs.y - b_est, [rhs.Z[0] + model.cones[0].invhess_prod_alt(rhs.S[0]) - h_est[0]])
+                res_norm_new = lin.norm(np.array([lin.norm(x_res), lin.norm(y_res), lin.norm(z_res)]))
 
                 # Check if iterative refinement made things worse
                 if res_norm_new > res_norm:
@@ -174,18 +176,18 @@ class SysSolver():
                 (x_r, y_r, z_r) = (x_temp, y_temp, z_temp)
                 res_norm = res_norm_new
 
-                iter_refine_count += 1
+                # iter_refine_count += 1
 
-                if iter_refine_count > 5:
-                    break        
+                # if iter_refine_count > 5:
+                #     break        
 
         sol.tau   = rhs.tau + rhs.kappa + lin.inp(model.c_mtx, x_r) + lin.inp(model.b, y_r)
         sol.tau  /= (mu_tau2 + lin.inp(model.c_mtx, self.X_b) + lin.inp(model.b, self.y_b))
 
-        sol.X     = x_r - sol.tau * self.X_b
+        sol.X     = [x_r[0] - sol.tau * self.X_b[0]]
         sol.y     = y_r - sol.tau * self.y_b
-        sol.Z     = z_r - sol.tau * self.Z_b
-        sol.S     = sol.X - rhs.Z
+        sol.Z     = [z_r[0] - sol.tau * self.Z_b[0]]
+        sol.S     = [sol.X[0] - rhs.Z[0]]
         sol.kappa = rhs.kappa - mu_tau2 * sol.tau
 
         return sol
@@ -196,6 +198,7 @@ class SysSolver():
         elif self.subsolver == "qrchol":
             return self.solve_subsystem_qrchol(rx, ry, Hrz, model)
 
+    #@profile
     def solve_subsystem_elim(self, rhs, model):
         # rx = rhs.x
         ry = rhs.y
@@ -216,20 +219,20 @@ class SysSolver():
             return x, y, z
         
         if model.use_A and not model.use_G:
-            Temp = rZ + model.cones[0].invhess_prod_alt(rX + rS)
+            Temp = rZ[0] + model.cones[0].invhess_prod_alt(rX[0] + rS[0])
             temp = np.zeros_like(ry)
             for (i, Ai) in enumerate(model.A_mtx):
-                temp[i] = ry[i] + np.sum(Ai * Temp)
+                temp[i] = ry[i] + np.sum(Ai[0] * Temp)
             # temp = model.A @ (rz + blk_invhess_prod(rx + rs, model)) + ry
             y = lin.fact_solve(self.AHA_fact, temp)
 
-            A_T_y = np.zeros_like(rZ)
+            A_T_y = np.zeros_like(rZ[0])
             for (i, Ai) in enumerate(model.A_mtx):
-                A_T_y += y[i] * Ai
-            X = rZ + model.cones[0].invhess_prod_alt(rX + rS - A_T_y)
+                A_T_y += y[i] * Ai[0]
+            X = [rZ[0] + model.cones[0].invhess_prod_alt(rX[0] + rS[0] - A_T_y)]
             # x = rz + blk_invhess_prod(rx + rs - model.A.T @ y, model)
 
-            Z = A_T_y - rX
+            Z = [A_T_y - rX[0]]
             # z = model.A.T @ y - rx
 
             return X, y, Z
@@ -304,17 +307,18 @@ class SysSolver():
 
         return x, y, z    
     
+    #@profile
     def forward_subsystem(self, rX, ry, rZ, model):
-        X = np.zeros_like(rX)
+        X = [np.zeros_like(rX[0])]
         for (i, Ai) in enumerate(model.A_mtx):
-            X += ry[i] * Ai
-        X -= rZ
+            X[0] += ry[i] * Ai[0]
+        X[0] -= rZ[0]
 
         y = np.zeros_like(ry)
         for (i, Ai) in enumerate(model.A_mtx):
-            y[i] = -np.sum(Ai * rX)
+            y[i] = -np.sum(Ai[0] * rX[0])
 
-        Z = rX + model.cones[0].invhess_prod_alt(rZ)
+        Z = [rX[0] + model.cones[0].invhess_prod_alt(rZ[0])]
 
         # x = model.A.T @ ry + model.G.T @ rz
         # y = -model.A @ rx
@@ -322,23 +326,24 @@ class SysSolver():
 
         return X, y, Z
     
+    #@profile
     def apply_system(self, rhs, model, mu_tau2):
         pnt = point.Point(model)
 
         # pnt.x[:]     =  model.A.T @ rhs.y + model.G.T @ rhs.z + model.c * rhs.tau
         for (i, Ai) in enumerate(model.A_mtx):
-            pnt.y[i] = -np.sum(Ai * rhs.X) + model.b[i] * rhs.tau        
+            pnt.y[i] = -np.sum(Ai[0] * rhs.X[0]) + model.b[i] * rhs.tau        
         # pnt.y[:]     = -model.A @ rhs.x + model.b * rhs.tau
         # pnt.z[:]     = -model.G @ rhs.x + model.h * rhs.tau - rhs.s
         # pnt.s[:]     =  blk_hess_prod(rhs.s, model) + rhs.z
         pnt.tau   = -lin.inp(model.c_mtx, rhs.X) - lin.inp(model.b, rhs.y) - rhs.kappa
         pnt.kappa = mu_tau2 * rhs.tau + rhs.kappa
 
-        pnt.X = model.c_mtx * rhs.tau - rhs.Z
+        pnt.X = [model.c_mtx[0] * rhs.tau - rhs.Z[0]]
         for (i, Ai) in enumerate(model.A_mtx): 
-            pnt.X += Ai * rhs.y[i]
-        pnt.Z = rhs.X - rhs.S
-        pnt.S = model.cones[0].hess_prod_alt(rhs.S) + rhs.Z
+            pnt.X[0] += Ai[0] * rhs.y[i]
+        pnt.Z = [rhs.X[0] - rhs.S[0]]
+        pnt.S = [model.cones[0].hess_prod_alt(rhs.S[0]) + rhs.Z[0]]
 
         return pnt
 
@@ -377,17 +382,11 @@ def blk_hess_congruence(dirs, model):
 
 def blk_invhess_congruence(dirs, model):
 
-    p = dirs.shape[1]
+    p = len(dirs)
     out = np.zeros((p, p))
 
-    for (cone_k, cone_idxs_k) in zip(model.cones, model.cone_idxs):
-        dirs_k = dirs[cone_idxs_k, :]
+    for (k, cone_k) in enumerate(model.cones):
+        dirs_k = [dirs[i][k] for i in range(p)]
+        out += cone_k.invhess_congr(dirs_k)
 
-        if not cone_k.use_sqrt:
-            H_dir_k = cone_k.invhess_prod(dirs[cone_idxs_k, :])
-            out += dirs_k.T @ H_dir_k
-        else:
-            H_dir_k = cone_k.sqrt_invhess_prod(dirs[cone_idxs_k, :])
-            out += H_dir_k.T @ H_dir_k
-    
-    return out    
+    return out

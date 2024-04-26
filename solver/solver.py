@@ -154,9 +154,9 @@ class Solver():
         self.point.kappa = 1.
 
         for (k, cone_k) in enumerate(model.cones):
-            self.point.S = cone_k.set_init_point()
+            self.point.S[k] = cone_k.set_init_point()
             assert cone_k.get_feas()
-            self.point.Z = -cone_k.get_grad()
+            self.point.Z[k] = -cone_k.get_grad()
 
         # if model.use_G:
         #     self.point.x[:] = np.linalg.pinv(np.vstack((model.A, model.G))) @ np.vstack((model.b, model.h - self.point.s))
@@ -165,7 +165,7 @@ class Solver():
         #     self.point.x[:] = -(model.h - self.point.s)
         #     self.point.y[:] = np.linalg.pinv(model.A.T) @ (self.point.z - model.c)
 
-        self.point.y = np.linalg.pinv(model.A.T) @ sym.mat_to_vec(self.point.Z - model.c_mtx)
+        self.point.y.fill(0.)# = np.linalg.pinv(model.A.T) @ sym.mat_to_vec(self.point.Z - model.c_mtx)
         self.point.X = self.point.S
 
         self.calc_mu()
@@ -185,10 +185,10 @@ class Solver():
         A = self.model.A
         G = self.model.G
 
-        x   = sym.mat_to_vec(self.point.X)
+        x   = sym.mat_to_vec(self.point.X[0])
         y   = self.point.y
-        z   = sym.mat_to_vec(self.point.Z)
-        s   = sym.mat_to_vec(self.point.S)
+        z   = sym.mat_to_vec(self.point.Z[0])
+        s   = sym.mat_to_vec(self.point.S[0])
         tau = self.point.tau
 
         c_max = np.linalg.norm(c, np.inf)

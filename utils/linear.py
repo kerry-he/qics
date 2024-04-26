@@ -3,7 +3,24 @@ import scipy as sp
 
 def inp(x, y):
     # Standard inner product
-    return np.sum(x * y.conj()).real
+    if isinstance(x, list) and isinstance(y, list):
+        return sum([np.sum(xi * yi.conj()).real for (xi, yi) in zip(x, y)])
+    else:
+        return np.sum(x * y.conj()).real
+
+def norm(x, ord=None):
+    # Standard inner product
+    if isinstance(x, list):
+        return np.linalg.norm(np.array([np.linalg.norm(xi, ord) for xi in x]), ord)
+    else:
+        return np.linalg.norm(x, ord)
+    
+def add(x, y):
+    # Standard inner product
+    if isinstance(x, list):
+        return [xi + yi for (xi, yi) in zip(x, y)]
+    else:
+        return x + y
 
 def fact(A):
     # Perform a Cholesky decomposition, or an LU factorization if Cholesky fails

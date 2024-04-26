@@ -4,7 +4,7 @@ import scipy as sp
 from utils import symmetric as sym
 
 class Model():
-    def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0):
+    def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0, c_mtx=None, A_mtx=None, h_mtx=None):
         self.n = np.size(c)
         self.p = np.size(b) if (b is not None) else 0
         self.q = np.size(h) if (h is not None) else self.n
@@ -24,8 +24,9 @@ class Model():
 
         self.offset = offset
 
-        self.c_mtx = sym.vec_to_mat(c)
-        self.A_mtx = [sym.vec_to_mat(ai[:, np.newaxis]) for ai in A]
+        self.c_mtx = [c_mtx]
+        self.h_mtx = [np.zeros_like(c_mtx)]
+        self.A_mtx = A_mtx
 
         return
     
