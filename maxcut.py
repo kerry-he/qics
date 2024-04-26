@@ -9,7 +9,7 @@ from solver import model, solver
 
 np.random.seed(1)
 
-n = 101
+n = 100
 
 A = np.zeros((n,n*(n+1)//2))
 for i in range(n):
@@ -26,7 +26,7 @@ c = sym.mat_to_vec(C)
 
 cones = [possemidefinite.Cone(n)]
 model = model.Model(c, A, b, cones=cones, c_mtx=C, A_mtx=A_mtx)
-solver = solver.Solver(model)
+solver = solver.Solver(model, sym=True)
 
 # profiler = cProfile.Profile()
 # profiler.enable()

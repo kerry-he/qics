@@ -26,21 +26,21 @@ class CombinedStepper():
 
         # Get prediction direction
         self.update_rhs_pred(model, point)
-        self.dir_p, res_norm = self.syssolver.solve_system_ir(self.res, self.rhs, model, mu, point.tau)
+        self.dir_p, res_norm = self.syssolver.solve_system_ir(self.res, self.rhs, model, mu, point.tau, point.kappa)
 
         # Get TOA prediction direction
         self.update_rhs_pred_toa(model, point, mu, self.dir_p)
-        self.dir_p_toa, temp_res_norm = self.syssolver.solve_system_ir(self.res, self.rhs, model, mu, point.tau)
+        self.dir_p_toa, temp_res_norm = self.syssolver.solve_system_ir(self.res, self.rhs, model, mu, point.tau, point.kappa)
         res_norm = max(temp_res_norm, res_norm)
 
         # Get centering direction
         self.update_rhs_cent(model, point, mu)
-        self.dir_c, temp_res_norm = self.syssolver.solve_system_ir(self.res, self.rhs, model, mu, point.tau)
+        self.dir_c, temp_res_norm = self.syssolver.solve_system_ir(self.res, self.rhs, model, mu, point.tau, point.kappa)
         res_norm = max(temp_res_norm, res_norm)
 
         # Get TOA centering direction
         self.update_rhs_cent_toa(model, point, mu, self.dir_c)
-        self.dir_c_toa, temp_res_norm = self.syssolver.solve_system_ir(self.res, self.rhs, model, mu, point.tau)
+        self.dir_c_toa, temp_res_norm = self.syssolver.solve_system_ir(self.res, self.rhs, model, mu, point.tau, point.kappa)
         res_norm = max(temp_res_norm, res_norm)
 
         step_mode = "co_toa"
@@ -107,7 +107,7 @@ class CombinedStepper():
             for (k, cone_k) in enumerate(model.cones):
                 in_prox = False
 
-                cone_k.set_point(next_point.S.data[k] * irtmu)
+                cone_k.set_point(next_point.S.data[k] * irtmu, next_point.Z.data[k] * irtmu)
                 
                 # Check if feasible
                 if not cone_k.get_feas():
@@ -167,22 +167,10 @@ class CombinedStepper():
         return self.rhs
 
     def update_rhs_pred(self, model, point):
-        # self.rhs.x[:] = -model.A.T @ point.y - model.G.T @ point.z - model.c * point.tau
-        self.rhs.y = model.apply_A(point.X) - model.b * point.tau
-        # for (i, Ai) in enumerate(model.A_mtx):
-        #     self.rhs.y[i] = np.sum(Ai[0] * point.X[0]) - model.b[i] * point.tau
-        # self.rhs.y = model.A @ point.x - model.b * point.tau
-        # self.rhs.z[:] = model.G @ point.x - model.h * point.tau + point.s
-
         self.rhs.X = point.Z - model.c_mtx * point.tau - model.apply_A_T(point.y)
-        # self.rhs.X = [point.Z[0] - model.c_mtx[0] * point.tau]
-        # for (i, Ai) in enumerate(model.A_mtx):
-        #     self.rhs.X[0] -= Ai[0] * point.y[i]
-        
+        self.rhs.y = model.apply_A(point.X) - model.b * point.tau
         self.rhs.Z = point.S - point.X
 
-        # for (rhs_s_k, z_k) in zip(self.rhs.s_views, point.z_views):
-        #     rhs_s_k[:] = -z_k
         self.rhs.S = -1 * point.Z
 
         self.rhs.tau   = model.c_mtx.inp(point.X) + lin.inp(model.b, point.y) + point.kappa
@@ -197,7 +185,10 @@ class CombinedStepper():
 
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
-            self.rhs.S.data[k] = cone_k.hess_prod(dir_p.S.data[k]) - 0.5 * cone_k.third_dir_deriv(dir_p.S.data[k]) / rtmu
+            if self.syssolver.sym:
+                self.rhs.S.data[k] = 0.5 * cone_k.third_dir_deriv(dir_p.S.data[k], dir_p.Z.data[k]) / rtmu
+            else:
+                self.rhs.S.data[k] = cone_k.hess_prod(dir_p.S.data[k]) - 0.5 * cone_k.third_dir_deriv(dir_p.S.data[k]) / rtmu
         #     dir_p_s_k = dir_p.s_views[k]
         #     tdd, TDD = cone_k.third_dir_deriv(dir_p_s_k)
         #     self.rhs.s_views[k][:] = cone_k.hess_prod(dir_p_s_k) - 0.5 * tdd / rtmu
@@ -205,6 +196,9 @@ class CombinedStepper():
         # self.rhs.S = [model.cones[0].hess_prod_alt(dir_p.S[0]) - 0.5 * model.cones[0].third_dir_deriv(dir_p.S[0]) / rtmu]
 
         self.rhs.tau   = 0.
-        self.rhs.kappa = (dir_p.tau**2) / (point.tau**3) * mu
+        if self.syssolver.sym:
+            self.rhs.kappa = -dir_p.tau * dir_p.kappa / point.tau
+        else:
+            self.rhs.kappa = (dir_p.tau**2) / (point.tau**3) * mu
 
         return self.rhs

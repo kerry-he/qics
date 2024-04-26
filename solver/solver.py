@@ -23,7 +23,8 @@ class Solver():
         verbose  = True,
         subsolver = None,
         stepper = None,
-        ir = True
+        ir = True,
+        sym = False
     ):
         self.max_iter = max_iter
         self.max_time = max_time        
@@ -35,7 +36,7 @@ class Solver():
         self.tol_ip = tol_ip
 
         self.model = model
-        syssolver = SysSolver(model, subsolver=subsolver, ir=ir)
+        syssolver = SysSolver(model, subsolver=subsolver, ir=ir, sym=sym)
         self.stepper = CombinedStepper(syssolver, model) if (stepper is None) else stepper
 
         return
