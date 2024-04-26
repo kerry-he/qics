@@ -2,6 +2,7 @@ import numpy as np
 import scipy as sp
 
 from utils import symmetric as sym
+from utils import linear as lin
 
 class Model():
     def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0, c_mtx=None, A_mtx=None, h_mtx=None):
@@ -30,6 +31,20 @@ class Model():
 
         return
     
+    def apply_A(self, x):
+        b = np.zeros((self.p, 1))
+        for (j, Aj) in enumerate(self.A_mtx):
+            for (i, Aji) in enumerate(Aj):
+                b[j] += lin.inp(x[i], Aji)
+        return b
+
+    def apply_A_T(self, y):
+        c = [cone_k.zeros() for cone_k in self.cones]
+        for (j, Aj) in enumerate(self.A_mtx):
+            for (i, Aji) in enumerate(Aj):
+                c[i] += y[j] * Aji
+        return c
+
 def build_cone_idxs(n, cones):
     cone_idxs = []
     prev_idx = 0

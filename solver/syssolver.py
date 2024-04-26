@@ -198,14 +198,9 @@ class SysSolver():
         elif self.subsolver == "qrchol":
             return self.solve_subsystem_qrchol(rx, ry, Hrz, model)
 
-    #@profile
     def solve_subsystem_elim(self, rhs, model):
-        # rx = rhs.x
-        ry = rhs.y
-        # rz = rhs.z
-        # rs = rhs.s
-
         rX = rhs.X
+        ry = rhs.y
         rZ = rhs.Z
         rS = rhs.S
 
@@ -219,20 +214,21 @@ class SysSolver():
             return x, y, z
         
         if model.use_A and not model.use_G:
-            Temp = rZ[0] + model.cones[0].invhess_prod_alt(rX[0] + rS[0])
-            temp = np.zeros_like(ry)
-            for (i, Ai) in enumerate(model.A_mtx):
-                temp[i] = ry[i] + np.sum(Ai[0] * Temp)
+            Temp = [rZ[0] + model.cones[0].invhess_prod_alt(rX[0] + rS[0])]
+            temp = model.apply_A(Temp) + ry
+            # for (i, Ai) in enumerate(model.A_mtx):
+            #     temp[i] = ry[i] + np.sum(Ai[0] * Temp)
             # temp = model.A @ (rz + blk_invhess_prod(rx + rs, model)) + ry
             y = lin.fact_solve(self.AHA_fact, temp)
 
-            A_T_y = np.zeros_like(rZ[0])
-            for (i, Ai) in enumerate(model.A_mtx):
-                A_T_y += y[i] * Ai[0]
-            X = [rZ[0] + model.cones[0].invhess_prod_alt(rX[0] + rS[0] - A_T_y)]
+            A_T_y = model.apply_A_T(y)
+            # np.zeros_like(rZ[0])
+            # for (i, Ai) in enumerate(model.A_mtx):
+            #     A_T_y += y[i] * Ai[0]
+            X = [rZ[0] + model.cones[0].invhess_prod_alt(rX[0] + rS[0] - A_T_y[0])]
             # x = rz + blk_invhess_prod(rx + rs - model.A.T @ y, model)
 
-            Z = [A_T_y - rX[0]]
+            Z = [A_T_y[0] - rX[0]]
             # z = model.A.T @ y - rx
 
             return X, y, Z
@@ -309,14 +305,16 @@ class SysSolver():
     
     #@profile
     def forward_subsystem(self, rX, ry, rZ, model):
-        X = [np.zeros_like(rX[0])]
-        for (i, Ai) in enumerate(model.A_mtx):
-            X[0] += ry[i] * Ai[0]
-        X[0] -= rZ[0]
+        X = [model.apply_A_T(ry)[0] - rZ[0]]
+        # X = [np.zeros_like(rX[0])]
+        # for (i, Ai) in enumerate(model.A_mtx):
+        #     X[0] += ry[i] * Ai[0]
+        # X[0] -= rZ[0]
 
-        y = np.zeros_like(ry)
-        for (i, Ai) in enumerate(model.A_mtx):
-            y[i] = -np.sum(Ai[0] * rX[0])
+        y = -model.apply_A(rX)
+        # y = np.zeros_like(ry)
+        # for (i, Ai) in enumerate(model.A_mtx):
+        #     y[i] = -np.sum(Ai[0] * rX[0])
 
         Z = [rX[0] + model.cones[0].invhess_prod_alt(rZ[0])]
 
@@ -331,17 +329,19 @@ class SysSolver():
         pnt = point.Point(model)
 
         # pnt.x[:]     =  model.A.T @ rhs.y + model.G.T @ rhs.z + model.c * rhs.tau
-        for (i, Ai) in enumerate(model.A_mtx):
-            pnt.y[i] = -np.sum(Ai[0] * rhs.X[0]) + model.b[i] * rhs.tau        
+        pnt.y = -model.apply_A(rhs.X) + model.b * rhs.tau
+        # for (i, Ai) in enumerate(model.A_mtx):
+        #     pnt.y[i] = -np.sum(Ai[0] * rhs.X[0]) + model.b[i] * rhs.tau        
         # pnt.y[:]     = -model.A @ rhs.x + model.b * rhs.tau
         # pnt.z[:]     = -model.G @ rhs.x + model.h * rhs.tau - rhs.s
         # pnt.s[:]     =  blk_hess_prod(rhs.s, model) + rhs.z
         pnt.tau   = -lin.inp(model.c_mtx, rhs.X) - lin.inp(model.b, rhs.y) - rhs.kappa
         pnt.kappa = mu_tau2 * rhs.tau + rhs.kappa
 
-        pnt.X = [model.c_mtx[0] * rhs.tau - rhs.Z[0]]
-        for (i, Ai) in enumerate(model.A_mtx): 
-            pnt.X[0] += Ai[0] * rhs.y[i]
+        pnt.X = [model.apply_A_T(rhs.y)[0] + model.c_mtx[0] * rhs.tau - rhs.Z[0]]
+        # pnt.X = [model.c_mtx[0] * rhs.tau - rhs.Z[0]]
+        # for (i, Ai) in enumerate(model.A_mtx): 
+        #     pnt.X[0] += Ai[0] * rhs.y[i]
         pnt.Z = [rhs.X[0] - rhs.S[0]]
         pnt.S = [model.cones[0].hess_prod_alt(rhs.S[0]) + rhs.Z[0]]
 
