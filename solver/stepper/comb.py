@@ -107,17 +107,17 @@ class CombinedStepper():
             for (k, cone_k) in enumerate(model.cones):
                 in_prox = False
 
-                cone_k.set_point(next_point.S.data[k] * irtmu, next_point.Z.data[k] * irtmu)
+                cone_k.set_point(next_point.S[k] * irtmu, next_point.Z[k] * irtmu)
                 
                 # Check if feasible
                 if not cone_k.get_feas():
                     break
 
                 grad_k = cone_k.get_grad()
-                psi = next_point.Z.data[k] * irtmu + grad_k
+                psi = next_point.Z[k] * irtmu + grad_k
 
                 prod = cone_k.invhess_prod(psi)
-                self.prox = max(self.prox, lin.inp(prod, psi))
+                self.prox = max(self.prox, prod.inp(psi))
                 in_prox = (self.prox < eta)
                 if not in_prox:
                     break
@@ -137,11 +137,7 @@ class CombinedStepper():
 
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
-            self.rhs.S.data[k] = -point.Z.data[k] - rtmu * cone_k.get_grad()
-        #     z_k = point.z_views[k]
-        #     grad_k, Grad_k = cone_k.get_grad()
-        #     self.rhs.s_views[k][:] = -z_k - rtmu * grad_k
-        # self.rhs.S = [-point.Z[0] - rtmu * model.cones[0].get_grad()]
+            self.rhs.S[k] = -1 * point.Z[k] - rtmu * cone_k.get_grad()
 
         self.rhs.tau   = 0.
         self.rhs.kappa = -point.kappa + mu / point.tau
@@ -155,7 +151,7 @@ class CombinedStepper():
 
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
-            self.rhs.S.data[k] = -0.5 * cone_k.third_dir_deriv(dir_c.S.data[k]) / rtmu
+            self.rhs.S[k] = -0.5 * cone_k.third_dir_deriv(dir_c.S[k]) / rtmu
         #     dir_c_s_k = dir_c.s_views[k]
         #     tdd, TDD = cone_k.third_dir_deriv(dir_c_s_k)
         #     self.rhs.s_views[k][:] = -0.5 * tdd / rtmu
@@ -186,14 +182,9 @@ class CombinedStepper():
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
             if self.syssolver.sym:
-                self.rhs.S.data[k] = 0.5 * cone_k.third_dir_deriv(dir_p.S.data[k], dir_p.Z.data[k]) / rtmu
+                self.rhs.S[k] = 0.5 * cone_k.third_dir_deriv(dir_p.S[k], dir_p.Z[k]) / rtmu
             else:
-                self.rhs.S.data[k] = cone_k.hess_prod(dir_p.S.data[k]) - 0.5 * cone_k.third_dir_deriv(dir_p.S.data[k]) / rtmu
-        #     dir_p_s_k = dir_p.s_views[k]
-        #     tdd, TDD = cone_k.third_dir_deriv(dir_p_s_k)
-        #     self.rhs.s_views[k][:] = cone_k.hess_prod(dir_p_s_k) - 0.5 * tdd / rtmu
-        
-        # self.rhs.S = [model.cones[0].hess_prod_alt(dir_p.S[0]) - 0.5 * model.cones[0].third_dir_deriv(dir_p.S[0]) / rtmu]
+                self.rhs.S[k] = cone_k.hess_prod(dir_p.S[k]) - 0.5 * cone_k.third_dir_deriv(dir_p.S[k]) / rtmu
 
         self.rhs.tau   = 0.
         if self.syssolver.sym:

@@ -1,9 +1,16 @@
 import numpy as np
 import scipy as sp
+from utils import symmetric as sym
 
 class Vector():
     def __init__(self, data):
         self.data = data
+
+    def __getitem__(self, key):
+        return self.data[key]
+    
+    def __setitem__(self, key, value):
+        self.data[key] = value
 
     def __add__(self, other):
         return Vector([x + y for (x, y) in zip(self.data, other.data)])
@@ -29,11 +36,131 @@ class Vector():
     __rmul__ = __mul__
 
     def inp(self, other):
-        return np.sum([np.sum(x * y.conj()).real for (x, y) in zip(self.data, other.data)])
+        return np.sum([x.inp(y) for (x, y) in zip(self.data, other.data)])
+    
+    def norm(self, order=None):
+        return np.linalg.norm([x.norm(order) for x in self.data])
+
+    def to_vec(self):
+        return np.hstack([x.to_vec() for x in self.data])
     
     def zeros_like(self):
         return self * 0
 
+class Real(Vector):
+    def __init__(self, data):
+        if np.isscalar(data):
+            self.data = np.zeros((data, 1))
+            self.n = data
+            self.n = data
+        else:
+            assert data.size == data.shape[0]
+            self.data = data
+            self.n = data.size
+            self.vn = self.n
+
+    def __add__(self, other):
+        return Real(self.data + other.data)
+
+    def __sub__(self, other):
+        return Real(self.data - other.data)
+
+    def __mul__(self, other):
+        if np.isscalar(other):
+            return Real(self.data * other)
+        else:
+            return Real(self.data * other.data)
+            
+    __rmul__ = __mul__
+
+    def __truediv__(self, other):
+        return Real(self.data / other)
+
+    def inp(self, other):
+        return np.sum(self.data * other.data)
+
+    def norm(self, order=None):
+        return np.linalg.norm(self.data, order)
+
+    def to_vec(self):
+        return self.data.ravel()
+
+class Symmetric(Vector):
+    def __init__(self, data):
+        if np.isscalar(data):
+            self.data = np.zeros((data, data))
+            self.n  = data
+            self.vn = self.n * (self.n + 1) // 2
+        else:
+            assert data.shape[0] == data.shape[1]
+            self.data = (data + data.T) / 2
+            self.n  = data.shape[0]
+            self.vn = self.n * (self.n + 1) // 2
+
+    def __add__(self, other):
+        return Symmetric(self.data + other.data)
+
+    def __sub__(self, other):
+        return Symmetric(self.data - other.data)
+
+    def __mul__(self, other):
+        if np.isscalar(other):
+            return Symmetric(self.data * other)
+        else:
+            return Symmetric(self.data * other.data)
+    
+    __rmul__ = __mul__
+
+    def __truediv__(self, other):
+        return Symmetric(self.data / other)    
+
+    def inp(self, other):
+        return np.sum(self.data * other.data)   
+
+    def norm(self, order=None):
+        return np.linalg.norm(self.data, order)
+    
+    def to_vec(self):
+        return sym.mat_to_vec(self.data, hermitian=False).ravel()
+    
+class Hermitian(Vector):
+    def __init__(self, data):
+        if np.isscalar(data):
+            self.data = np.zeros((data, data), dtype=np.complex128)
+            self.n  = data
+            self.vn = self.n * self.n
+        else:
+            assert data.shape[0] == data.shape[1]
+            assert np.issubdtype(data.dtype, complex)
+            self.data = (data + data.conj.T()) / 2
+            self.n  = data.shape[0]
+            self.vn = self.n * self.n
+
+    def __add__(self, other):
+        return Hermitian(self.data + other.data)
+
+    def __sub__(self, other):
+        return Hermitian(self.data - other.data)
+
+    def __mul__(self, other):
+        if np.isscalar(other):
+            return Hermitian(self.data * other)
+        else:
+            return Hermitian(self.data * other.data)
+    
+    __rmul__ = __mul__
+
+    def __truediv__(self, other):
+        return Hermitian(self.data / other)        
+
+    def inp(self, other):
+        return np.sum(self.data * other.data.conj()).real
+
+    def norm(self, order=None):
+        return np.linalg.norm(self.data, order)
+
+    def to_vec(self):
+        return sym.mat_to_vec(self.data, hermitian=True).ravel()
 
 def inp(x, y):
     # Standard inner product
@@ -127,3 +254,24 @@ def pcg(A, b, M, tol=1e-8, max_iter=20):
         r_z_k = r_z_k1
 
     return x_k1, (k + 1), abs_res
+
+if __name__ == "__main__":
+    PSD = Symmetric(np.ones((2, 2)))
+
+    QRE = Vector([
+        Real(np.ones(2)),
+        Symmetric(np.ones((2, 2))),
+        Symmetric(np.ones((2, 2)))
+    ])
+
+    A = Vector([
+        PSD,
+        QRE
+    ])
+
+
+    A.to_vec()
+
+    B = (A + A)
+
+    print(A)

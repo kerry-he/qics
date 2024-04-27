@@ -84,7 +84,7 @@ class SysSolver():
         # Iterative refinement
         c_est, b_est, h_est = self.forward_subsystem(self.X_b, self.y_b, self.Z_b, model)
         (x_res, y_res, z_res) = (self.pnt_model.X - c_est, self.pnt_model.y - b_est, self.pnt_model.Z - h_est)
-        res_norm = lin.norm(np.array([lin.norm(x_res.data), lin.norm(y_res.data), lin.norm(z_res.data)]))
+        res_norm = lin.norm(np.array([x_res.norm(), lin.norm(y_res.data), z_res.norm()]))
 
         iter_refine_count = 0
         while res_norm > 1e-8:
@@ -95,7 +95,7 @@ class SysSolver():
             (x_temp, y_temp, z_temp) = (self.X_b + x_b2, self.y_b + y_b2, self.Z_b + z_b2)
             c_est, b_est, h_est = self.forward_subsystem(x_temp, y_temp, z_temp, model)
             (x_res, y_res, z_res) = (self.pnt_model.X - c_est, self.pnt_model.y - b_est, self.pnt_model.Z - h_est)
-            res_norm_new = lin.norm(np.array([lin.norm(x_res.data), lin.norm(y_res.data), lin.norm(z_res.data)]))
+            res_norm_new = lin.norm(np.array([x_res.norm(), lin.norm(y_res.data), z_res.norm()]))
 
             # Check if iterative refinement made things worse
             if res_norm_new > res_norm:
@@ -156,7 +156,7 @@ class SysSolver():
         if self.ir:
             c_est, b_est, h_est = self.forward_subsystem(x_r, y_r, z_r, model)
             (x_res, y_res, z_res) = (rhs.X - c_est, rhs.y - b_est, rhs.Z + blk_invhess_prod(rhs.S, model, self.sym) - h_est)
-            res_norm = lin.norm(np.array([lin.norm(x_res.data), lin.norm(y_res.data), lin.norm(z_res.data)]))
+            res_norm = lin.norm(np.array([x_res.norm(), lin.norm(y_res.data), z_res.norm()]))
 
             iter_refine_count = 0
             while res_norm > 1e-8:
@@ -167,7 +167,7 @@ class SysSolver():
                 (x_temp, y_temp, z_temp) = (x_r + x_b2, y_r + y_b2, z_r + z_b2)
                 c_est, b_est, h_est = self.forward_subsystem(x_temp, y_temp, z_temp, model)
                 (x_res, y_res, z_res) = (rhs.X - c_est, rhs.y - b_est, rhs.Z + blk_invhess_prod(rhs.S, model, self.sym) - h_est)
-                res_norm_new = lin.norm(np.array([lin.norm(x_res.data), lin.norm(y_res.data), lin.norm(z_res.data)]))
+                res_norm_new = lin.norm(np.array([x_res.norm(), lin.norm(y_res.data), z_res.norm()]))
 
                 # Check if iterative refinement made things worse
                 if res_norm_new > res_norm:

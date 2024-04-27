@@ -26,7 +26,7 @@ class Model():
         self.offset = offset
 
         self.c_mtx = lin.Vector([c_mtx])
-        self.h_mtx = lin.Vector([np.zeros_like(c_mtx)])
+        self.h_mtx = lin.Vector([lin.Symmetric(c_mtx.n)])
         self.A_mtx = A_mtx
 
         return
@@ -34,15 +34,14 @@ class Model():
     def apply_A(self, x):
         b = np.zeros((self.p, 1))
         for (j, Aj) in enumerate(self.A_mtx):
-            for (i, Aji) in enumerate(Aj.data):
-                b[j] += lin.inp(x.data[i], Aji)
+            b[j] = x.inp(Aj)
         return b
 
     def apply_A_T(self, y):
         c = lin.Vector([cone_k.zeros() for cone_k in self.cones])
         for (j, Aj) in enumerate(self.A_mtx):
-            for (i, Aji) in enumerate(Aj.data):
-                c.data[i] += y[j] * Aji
+            for (i, Aji) in enumerate(Aj):
+                c[i] += y[j, 0] * Aji
         return c
     
     def get_A_mtx(self):
@@ -50,28 +49,13 @@ class Model():
         # <x1, Ai1> + <x2, Ai2> + ... + <xn, Ain> = bi, for all i=1,...,p
         # to its corresponding matrix expression
 
-        def vec_dim(c):
-            assert len(c.shape) == 2
-            n = c.shape[0]
-            if c.shape[1] == 1:
-                # Real vector
-                return n
-            elif np.issubdtype(c.dtype, complex):
-                # Hermitian matrix
-                return n * n
-            else:
-                # Symmetric matrix
-                return n * (n + 1) // 2
-
-        dims = [vec_dim(ci) for ci in self.c_mtx.data]   # Dimensions of vector spaces
+        dims = [ci.vn for ci in self.c_mtx]   # Dimensions of vector spaces
         p = len(self.A)                         # Number of constaints
         n = sum(dims)                           # Total real vector dimension
-
         out = np.zeros((p, n))
 
         for (j, Aj) in enumerate(self.A_mtx):
-            for (i, Aji) in enumerate(Aj.data):
-                out[[j], :] = sym.mat_to_vec(Aji).T
+            out[j, :] = Aj.to_vec()
 
         return out 
 

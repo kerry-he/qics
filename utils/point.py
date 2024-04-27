@@ -70,10 +70,10 @@ class Point():
     
     def norm(self):
         return np.linalg.norm(np.array([
-            lin.norm(self.X.data),
+            self.X.norm(),
             lin.norm(self.y),
-            lin.norm(self.Z.data),
-            lin.norm(self.S.data),
+            self.Z.norm(),
+            self.S.norm(),
             self.tau, 
             self.kappa
         ]))

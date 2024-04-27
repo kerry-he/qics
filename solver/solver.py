@@ -155,9 +155,9 @@ class Solver():
         self.point.kappa = 1.
 
         for (k, cone_k) in enumerate(model.cones):
-            self.point.S.data[k] = cone_k.set_init_point()
+            self.point.S[k] = cone_k.set_init_point()
             assert cone_k.get_feas()
-            self.point.Z.data[k] = -cone_k.get_grad()
+            self.point.Z[k] = -1 * cone_k.get_grad()
 
         # if model.use_G:
         #     self.point.x[:] = np.linalg.pinv(np.vstack((model.A, model.G))) @ np.vstack((model.b, model.h - self.point.s))
@@ -166,7 +166,7 @@ class Solver():
         #     self.point.x[:] = -(model.h - self.point.s)
         #     self.point.y[:] = np.linalg.pinv(model.A.T) @ (self.point.z - model.c)
 
-        self.point.y = model.get_A_mtx() @ sym.mat_to_vec((self.point.Z - model.c_mtx).data[0])
+        self.point.y[:, 0] = model.get_A_mtx() @ (self.point.Z - model.c_mtx).to_vec()
         self.point.X = self.point.S
 
         self.calc_mu()
@@ -192,9 +192,9 @@ class Solver():
         s   = self.point.S
         tau = self.point.tau
 
-        c_max = lin.norm(c.data, np.inf)
+        c_max = c.norm(np.inf)
         b_max = lin.norm(b.data, np.inf)
-        h_max = lin.norm(h.data, np.inf)
+        h_max = h.norm(np.inf)
 
         # Get primal and dual objectives and optimality gap
         p_obj_tau =  c.inp(x)
@@ -209,14 +209,14 @@ class Solver():
         y_res = self.model.apply_A(x)          
         z_res = s - x
 
-        self.x_feas = lin.norm((x_res + c * tau).data, np.inf) / (1. + c_max) / tau
-        self.y_feas = lin.norm((y_res - b * tau).data, np.inf) / (1. + b_max) / tau if self.model.use_A else 0.0
-        self.z_feas = lin.norm((z_res - h * tau).data, np.inf) / (1. + h_max) / tau
+        self.x_feas = (x_res + c * tau).norm(np.inf) / (1. + c_max) / tau
+        self.y_feas = lin.norm((y_res - b * tau), np.inf) / (1. + b_max) / tau if self.model.use_A else 0.0
+        self.z_feas = (z_res - h * tau).norm(np.inf) / (1. + h_max) / tau
 
         # Get primal and dual infeasibilities
-        self.x_infeas =  lin.norm(x_res.data, np.inf) / d_obj_tau if (d_obj_tau > 0) else np.inf
-        self.y_infeas = -lin.norm(y_res.data, np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
-        self.z_infeas = -lin.norm(z_res.data, np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
+        self.x_infeas =  x_res.norm(np.inf) / d_obj_tau if (d_obj_tau > 0) else np.inf
+        self.y_infeas = -lin.norm(y_res, np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
+        self.z_infeas = -z_res.norm(np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
 
 
     def rescale_model(self):

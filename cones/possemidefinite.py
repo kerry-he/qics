@@ -2,6 +2,7 @@ import numpy as np
 import scipy as sp
 import math
 from utils import symmetric as sym
+from utils import linear as lin
 
 class Cone():
     def __init__(self, n, hermitian=False):
@@ -19,20 +20,21 @@ class Cone():
         return
     
     def zeros(self):
-        return np.zeros((self.n, self.n))
+        return lin.Symmetric(self.n)
         
     def get_nu(self):
         return self.n
     
     def set_init_point(self):
-        self.set_point(np.eye(self.n), np.eye(self.n))
-        return self.X
+        self.set_point(
+            lin.Symmetric(np.eye(self.n)), 
+            lin.Symmetric(np.eye(self.n))
+        )
+        return lin.Symmetric(self.X)
     
     def set_point(self, point, dual=None):
-        assert np.shape(point)[0] == self.n
-
-        self.X = point
-        self.Z = dual
+        self.X = point.data
+        self.Z = dual.data
 
         self.feas_updated = False
         self.grad_updated = False
@@ -70,60 +72,32 @@ class Cone():
         assert self.feas_updated
 
         if self.grad_updated:
-            return self.grad
+            return lin.Symmetric(self.grad)
         
         self.X_chol_inv = np.linalg.inv(self.X_chol)
         self.inv_X = self.X_chol_inv.T @ self.X_chol_inv
         self.grad  = -self.inv_X
 
         self.grad_updated = True
-        return self.grad
+        return lin.Symmetric(self.grad)
 
     def hess_prod(self, H):
         assert self.grad_updated
-        XHX = self.inv_X @ H @ self.inv_X
-        return (XHX + XHX.T) / 2
-
-    def sqrt_hess_prod(self, dirs):
-        assert self.grad_updated
-
-        p = np.size(dirs, 1)
-        out = np.empty((self.dim, p))
-
-        for j in range(p):
-            H = sym.vec_to_mat(dirs[:, [j]], hermitian=self.hermitian)
-            out[:, [j]] = sym.mat_to_vec(self.X_chol_inv @ H @ self.X_chol_inv.conj().T, hermitian=self.hermitian)
-
-        return out
+        return lin.Symmetric(self.inv_X @ H.data @ self.inv_X)
     
     def invhess_prod(self, H):
-        XHX = self.X @ H @ self.X
-        return (XHX + XHX.T) / 2
-
-    def sqrt_invhess_prod(self, dirs):
-        assert self.grad_updated
-
-        p = np.size(dirs, 1)
-        out = np.empty((self.dim, p))
-
-        for j in range(p):
-            H = sym.vec_to_mat(dirs[:, [j]], hermitian=self.hermitian)
-            out[:, [j]] = sym.mat_to_vec(self.X_chol.conj().T @ H @ self.X_chol, hermitian=self.hermitian)
-
-        return out
+        return lin.Symmetric(self.X @ H.data @ self.X)
 
     def third_dir_deriv(self, dir1, dir2=None):
         assert self.grad_updated
         if dir2 is None:
-            H = dir1
-            XHXHX = self.inv_X @ H @ self.inv_X @ H @ self.inv_X
-            return -(XHXHX + XHXHX.T)
+            H = dir1.data
+            return lin.Symmetric(-2 * self.inv_X @ H @ self.inv_X @ H @ self.inv_X)
         else:
-            P = dir1
-            D = dir2
+            P = dir1.data
+            D = dir2.data
             PD = P @ D
-            temp = self.inv_X @ PD
-            return -(temp + temp.T)
+            return lin.Symmetric(-2 * self.inv_X @ PD)
 
     def norm_invhess(self, x):
         return 0.0
@@ -133,11 +107,10 @@ class Cone():
         lhs = np.zeros((self.dim, p))
 
         for (i, Hi) in enumerate(H):
-            lhs[:, [i]] = sym.mat_to_vec(self.X_chol.conj().T @ Hi @ self.X_chol)
+            lhs[:, [i]] = sym.mat_to_vec(self.X_chol.conj().T @ Hi.data @ self.X_chol)
         
         return lhs.T @ lhs    
     
-
     def nt_aux(self):
         assert not self.nt_aux_updated
 
@@ -153,18 +126,15 @@ class Cone():
 
         self.nt_aux_updated = True
 
-
     def nt_prod(self, H):
         if not self.nt_aux_updated:
             self.nt_aux()
-        WHW = self.W_inv @ H @ self.W_inv
-        return (WHW + WHW.T) / 2
+        return lin.Symmetric(self.W_inv @ H.data @ self.W_inv)
 
     def invnt_prod(self, H):
         if not self.nt_aux_updated:
             self.nt_aux()
-        WHW = self.W @ H @ self.W
-        return (WHW + WHW.T) / 2
+        return lin.Symmetric(self.W @ H.data @ self.W)
     
     def invnt_congr(self, H):
         if not self.nt_aux_updated:
@@ -173,6 +143,6 @@ class Cone():
         lhs = np.zeros((self.dim, p))
 
         for (i, Hi) in enumerate(H):
-            lhs[:, [i]] = sym.mat_to_vec(self.W_rt2.conj().T @ Hi @ self.W_rt2)
+            lhs[:, [i]] = sym.mat_to_vec(self.W_rt2.conj().T @ Hi.data @ self.W_rt2)
         
         return lhs.T @ lhs    
