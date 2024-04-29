@@ -34,6 +34,9 @@ class Vector():
         return self
     
     __rmul__ = __mul__
+    
+    def get_vn(self):
+        return sum([x.get_vn() for x in self.data])
 
     def inp(self, other):
         return np.sum([x.inp(y) for (x, y) in zip(self.data, other.data)])
@@ -44,8 +47,23 @@ class Vector():
     def to_vec(self):
         return np.hstack([x.to_vec() for x in self.data])
     
+    def from_vec(self, vec):
+        i_from = 0
+        
+        for x in self.data:
+            i_to = i_from + x.get_vn()
+            x.from_vec(vec[i_from:i_to])
+            i_from = i_to
+
+        return self 
+    
     def zeros_like(self):
         return self * 0
+    
+    def axpy(self, a, other):
+        for (xi, yi) in zip(other, self):
+            yi.axpy(a, xi)
+        
 
 class Real(Vector):
     def __init__(self, data):
@@ -72,6 +90,9 @@ class Real(Vector):
             return Real(self.data * other.data)
             
     __rmul__ = __mul__
+    
+    def get_vn(self):
+        return self.vn    
 
     def __truediv__(self, other):
         return Real(self.data / other)
@@ -84,6 +105,13 @@ class Real(Vector):
 
     def to_vec(self):
         return self.data.ravel()
+    
+    def from_vec(self, vec):
+        self.data = vec
+        return self
+    
+    def axpy(self, a, other):
+        self.data += a * other.data
 
 class Symmetric(Vector):
     def __init__(self, data):
@@ -111,6 +139,9 @@ class Symmetric(Vector):
     
     __rmul__ = __mul__
 
+    def get_vn(self):
+        return self.vn
+
     def __truediv__(self, other):
         return Symmetric(self.data / other)    
 
@@ -122,6 +153,13 @@ class Symmetric(Vector):
     
     def to_vec(self):
         return sym.mat_to_vec(self.data, hermitian=False).ravel()
+    
+    def from_vec(self, vec):
+        self.data = sym.vec_to_mat(vec, hermitian=False)
+        return self
+    
+    def axpy(self, a, other):
+        self.data += a * other.data    
     
 class Hermitian(Vector):
     def __init__(self, data):
@@ -150,6 +188,9 @@ class Hermitian(Vector):
     
     __rmul__ = __mul__
 
+    def get_vn(self):
+        return self.vn
+
     def __truediv__(self, other):
         return Hermitian(self.data / other)        
 
@@ -161,6 +202,13 @@ class Hermitian(Vector):
 
     def to_vec(self):
         return sym.mat_to_vec(self.data, hermitian=True).ravel()
+    
+    def from_vec(self, vec):
+        self.data = sym.vec_to_mat(vec, hermitian=True)
+        return self
+
+    def axpy(self, a, other):
+        self.data += a * other.data
 
 def inp(x, y):
     # Standard inner product

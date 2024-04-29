@@ -166,7 +166,7 @@ class Solver():
         #     self.point.x[:] = -(model.h - self.point.s)
         #     self.point.y[:] = np.linalg.pinv(model.A.T) @ (self.point.z - model.c)
 
-        self.point.y[:, 0] = model.get_A_mtx() @ (self.point.Z - model.c_mtx).to_vec()
+        self.point.y[:, 0] = model.A @ (self.point.Z - model.c_mtx).to_vec()
         self.point.X = self.point.S
 
         self.calc_mu()
