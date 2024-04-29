@@ -64,7 +64,7 @@ class CombinedStepper():
         return point, True
     
     def line_search(self, model, point, mode="co_toa"):
-        alpha_iter = 0
+        alpha_iter = -1
         eta = 0.99
 
         dir_p = self.dir_p
@@ -74,6 +74,7 @@ class CombinedStepper():
         next_point = Point(model)
 
         while True:
+            alpha_iter += 1
             if alpha_iter >= len(alpha_sched):
                 return point, alpha, False
 
@@ -89,14 +90,25 @@ class CombinedStepper():
                 step = dir_c * alpha
 
             next_point = point + step
-            mu = (next_point.S.inp(next_point.Z) + next_point.tau*next_point.kappa) / model.nu
-            if mu < 0 or next_point.tau < 0 or next_point.kappa < 0:
-                alpha_iter += 1
+            
+            # Check that tau, kappa, mu are well defined
+            # Make sure tau, kappa are positive
+            taukap = next_point.tau * next_point.kappa
+            if next_point.tau < 0 or next_point.kappa < 0 or taukap < 0:      
+                continue
+            # Compute barrier parameter mu, ensure it is positive
+            sz = [s_k.inp(z_k) for (s_k, z_k) in zip(next_point.S, next_point.Z)]  
+            mu = (sum(sz) + taukap) / model.nu
+            if any(np.array(sz) < 0) or mu < 0:
                 continue
 
-            if abs(next_point.tau * next_point.kappa / mu - 1) > eta:
-                alpha_iter += 1
-                continue            
+            # Check cheap proximity conditions first
+            if abs(taukap / mu - 1) > eta:
+                continue
+            nu  = [cone_k.get_nu() for cone_k in model.cones]
+            rho = [np.abs(sz_k / mu - nu_k) / np.sqrt(nu_k) for (sz_k, nu_k) in zip(sz, nu)]
+            if any(np.array(rho) > eta):
+                continue
 
             rtmu = math.sqrt(mu)
             irtmu = np.reciprocal(rtmu)
@@ -116,8 +128,9 @@ class CombinedStepper():
                 grad_k = cone_k.get_grad()
                 psi = next_point.Z[k] * irtmu + grad_k
 
-                prod = cone_k.invhess_prod(psi)
-                self.prox = max(self.prox, prod.inp(psi))
+                prox_k = cone_k.invhess_congr([psi])
+                self.prox = max(self.prox, prox_k)
+                cone_k.prox()
                 in_prox = (self.prox < eta)
                 if not in_prox:
                     break
@@ -128,7 +141,7 @@ class CombinedStepper():
                 return point, alpha, True
         
             # Otherwise backtrack
-            alpha_iter += 1
+            
 
     def update_rhs_cent(self, model, point, mu):
         self.rhs.X *= 0
