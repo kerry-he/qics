@@ -15,8 +15,18 @@ class Vector():
     def __add__(self, other):
         return Vector([x + y for (x, y) in zip(self.data, other.data)])
     
+    def __iadd__(self, other):
+        for (x, y) in zip(self.data, other.data):
+            x += y
+        return self
+    
     def __sub__(self, other):
         return Vector([x - y for (x, y) in zip(self.data, other.data)])    
+    
+    def __isub__(self, other):
+        for (x, y) in zip(self.data, other.data):
+            x -= y
+        return self    
     
     def __mul__(self, other):
         if np.isscalar(other):
@@ -29,7 +39,7 @@ class Vector():
             for x in self.data:
                 x *= other
         else:
-            for (x, y) in zip(self.data, self.other):
+            for (x, y) in zip(self.data, other.data):
                 x *= y
         return self
     
@@ -63,6 +73,10 @@ class Vector():
     def axpy(self, a, other):
         for (xi, yi) in zip(other, self):
             yi.axpy(a, xi)
+            
+    def copy(self, other):
+        for (xi, yi) in zip(other, self):
+            yi.copy(xi)
         
 
 class Real(Vector):
@@ -80,8 +94,16 @@ class Real(Vector):
     def __add__(self, other):
         return Real(self.data + other.data)
 
+    def __iadd__(self, other):
+        self.data += other.data
+        return self
+
     def __sub__(self, other):
         return Real(self.data - other.data)
+    
+    def __isub__(self, other):
+        self.data -= other.data
+        return self    
 
     def __mul__(self, other):
         if np.isscalar(other):
@@ -104,7 +126,7 @@ class Real(Vector):
         return np.linalg.norm(self.data, order)
 
     def to_vec(self):
-        return self.data.ravel()
+        return self.data
     
     def from_vec(self, vec):
         self.data = vec
@@ -112,6 +134,9 @@ class Real(Vector):
     
     def axpy(self, a, other):
         self.data += a * other.data
+        
+    def copy(self, other):
+        np.copyto(self.data, other.data)  
 
 class Symmetric(Vector):
     def __init__(self, data):
@@ -128,8 +153,16 @@ class Symmetric(Vector):
     def __add__(self, other):
         return Symmetric(self.data + other.data)
 
+    def __iadd__(self, other):
+        self.data += other.data
+        return self
+
     def __sub__(self, other):
         return Symmetric(self.data - other.data)
+
+    def __isub__(self, other):
+        self.data -= other.data
+        return self   
 
     def __mul__(self, other):
         if np.isscalar(other):
@@ -152,14 +185,18 @@ class Symmetric(Vector):
         return np.linalg.norm(self.data, order)
     
     def to_vec(self):
-        return sym.mat_to_vec(self.data, hermitian=False).ravel()
+        return sym.mat_to_vec(self.data, hermitian=False)
     
     def from_vec(self, vec):
         self.data = sym.vec_to_mat(vec, hermitian=False)
         return self
     
     def axpy(self, a, other):
-        self.data += a * other.data    
+        self.data += a * other.data
+        
+    def copy(self, other):
+        np.copyto(self.data, other.data)  
+        
     
 class Hermitian(Vector):
     def __init__(self, data):
@@ -177,8 +214,16 @@ class Hermitian(Vector):
     def __add__(self, other):
         return Hermitian(self.data + other.data)
 
+    def __iadd__(self, other):
+        self.data += other.data
+        return self
+
     def __sub__(self, other):
         return Hermitian(self.data - other.data)
+
+    def __isub__(self, other):
+        self.data -= other.data
+        return self   
 
     def __mul__(self, other):
         if np.isscalar(other):
@@ -201,7 +246,7 @@ class Hermitian(Vector):
         return np.linalg.norm(self.data, order)
 
     def to_vec(self):
-        return sym.mat_to_vec(self.data, hermitian=True).ravel()
+        return sym.mat_to_vec(self.data, hermitian=True)
     
     def from_vec(self, vec):
         self.data = sym.vec_to_mat(vec, hermitian=True)
@@ -209,6 +254,10 @@ class Hermitian(Vector):
 
     def axpy(self, a, other):
         self.data += a * other.data
+        
+    def copy(self, other):
+        np.copyto(self.data, other.data)  
+        
 
 def inp(x, y):
     # Standard inner product

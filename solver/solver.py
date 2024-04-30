@@ -159,15 +159,12 @@ class Solver():
             assert cone_k.get_feas()
             self.point.Z[k] = -1 * cone_k.get_grad()
 
-        # if model.use_G:
-        #     self.point.x[:] = np.linalg.pinv(np.vstack((model.A, model.G))) @ np.vstack((model.b, model.h - self.point.s))
-        #     self.point.y[:] = np.linalg.pinv(model.A.T) @ (-model.G.T @ self.point.z - model.c)
-        # else:
-        #     self.point.x[:] = -(model.h - self.point.s)
-        #     self.point.y[:] = np.linalg.pinv(model.A.T) @ (self.point.z - model.c)
-
-        self.point.y[:, 0] = model.A @ (self.point.Z - model.c_mtx).to_vec()
-        self.point.X = self.point.S
+        if model.use_G:
+            self.point.X[:] = np.linalg.pinv(np.vstack((model.A, model.G))) @ np.vstack((model.b, model.h - self.point.S.to_vec()))
+            self.point.y[:] = np.linalg.pinv(model.A.T) @ (-model.G.T @ self.point.Z.to_vec() - model.c)
+        else:
+            self.point.X[:] = -(model.h - self.point.S.to_vec())
+            self.point.y[:] = np.linalg.pinv(model.A.T) @ (self.point.Z.to_vec() - model.c)
 
         self.calc_mu()
         if not math.isclose(self.mu, 1.):
@@ -180,43 +177,43 @@ class Solver():
         return self.mu
 
     def get_gap_feas(self):
-        c = self.model.c_mtx
+        c = self.model.c
         b = self.model.b
-        h = self.model.h_mtx
+        h = self.model.h
         A = self.model.A
         G = self.model.G
 
         x   = self.point.X
         y   = self.point.y
-        z   = self.point.Z
-        s   = self.point.S
+        z   = self.point.Z.to_vec()
+        s   = self.point.S.to_vec()
         tau = self.point.tau
 
-        c_max = c.norm(np.inf)
-        b_max = lin.norm(b.data, np.inf)
-        h_max = h.norm(np.inf)
+        c_max = np.linalg.norm(c, np.inf)
+        b_max = np.linalg.norm(b, np.inf)
+        h_max = np.linalg.norm(h, np.inf)
 
         # Get primal and dual objectives and optimality gap
-        p_obj_tau =  c.inp(x)
-        d_obj_tau = -lin.inp(b, y) - h.inp(z)
+        p_obj_tau =  lin.inp(c, x)
+        d_obj_tau = -lin.inp(b, y) - lin.inp(h, z)
 
         self.p_obj = p_obj_tau / tau + self.model.offset
         self.d_obj = d_obj_tau / tau + self.model.offset
-        self.gap   = min([z.inp(s) / tau, abs(p_obj_tau - d_obj_tau)]) / max([tau, min([abs(p_obj_tau), abs(d_obj_tau)])])
+        self.gap   = min([self.point.Z.inp(self.point.S) / tau, abs(p_obj_tau - d_obj_tau)]) / max([tau, min([abs(p_obj_tau), abs(d_obj_tau)])])
 
         # Get primal and dual feasibilities
-        x_res = self.model.apply_A_T(y) - z
-        y_res = self.model.apply_A(x)          
-        z_res = s - x
+        x_res = A.T @ y + G.T @ z
+        y_res =   A @ x          
+        z_res =   G @ x       + s
 
-        self.x_feas = (x_res + c * tau).norm(np.inf) / (1. + c_max) / tau
-        self.y_feas = lin.norm((y_res - b * tau), np.inf) / (1. + b_max) / tau if self.model.use_A else 0.0
-        self.z_feas = (z_res - h * tau).norm(np.inf) / (1. + h_max) / tau
+        self.x_feas = np.linalg.norm(x_res + c * tau, np.inf) / (1. + c_max) / tau
+        self.y_feas = np.linalg.norm(y_res - b * tau, np.inf) / (1. + b_max) / tau if self.model.use_A else 0.0
+        self.z_feas = np.linalg.norm(z_res - h * tau, np.inf) / (1. + h_max) / tau
 
         # Get primal and dual infeasibilities
-        self.x_infeas =  x_res.norm(np.inf) / d_obj_tau if (d_obj_tau > 0) else np.inf
-        self.y_infeas = -lin.norm(y_res, np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
-        self.z_infeas = -z_res.norm(np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
+        self.x_infeas =  np.linalg.norm(x_res, np.inf) / d_obj_tau if (d_obj_tau > 0) else np.inf
+        self.y_infeas = -np.linalg.norm(y_res, np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
+        self.z_infeas = -np.linalg.norm(z_res, np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
 
 
     def rescale_model(self):

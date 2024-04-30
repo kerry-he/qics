@@ -11,6 +11,9 @@ class Cone():
         self.hermitian = hermitian                     # Hermitian or symmetric vector space
         self.dim = sym.vec_dim(n, self.hermitian)      # Dimension of the cone
         self.use_sqrt = True
+        
+        self.grad = lin.Symmetric(self.n)
+        self.temp = lin.Symmetric(self.n)
 
         # Update flags
         self.feas_updated = False
@@ -49,7 +52,7 @@ class Cone():
         self.feas_updated = True
 
         try:
-            self.X_chol = np.linalg.cholesky(self.X)
+            self.X_chol = sp.linalg.cholesky(self.X, lower=True, check_finite=False)
             self.feas = True
         except np.linalg.linalg.LinAlgError:
             self.feas = False
@@ -72,14 +75,14 @@ class Cone():
         assert self.feas_updated
 
         if self.grad_updated:
-            return lin.Symmetric(self.grad)
+            return self.grad
         
-        self.X_chol_inv = np.linalg.inv(self.X_chol)
+        self.X_chol_inv, info = sp.linalg.lapack.dtrtri(self.X_chol, lower=True)
         self.inv_X = self.X_chol_inv.T @ self.X_chol_inv
-        self.grad  = -self.inv_X
+        self.grad.data = -self.inv_X
 
         self.grad_updated = True
-        return lin.Symmetric(self.grad)
+        return self.grad
 
     def hess_prod(self, H):
         assert self.grad_updated
@@ -129,20 +132,23 @@ class Cone():
     def nt_prod(self, H):
         if not self.nt_aux_updated:
             self.nt_aux()
-        return lin.Symmetric(self.W_inv @ H.data @ self.W_inv)
+        self.temp.data = self.W_inv @ H.data @ self.W_inv
+        return self.temp
 
     def invnt_prod(self, H):
         if not self.nt_aux_updated:
             self.nt_aux()
-        return lin.Symmetric(self.W @ H.data @ self.W)
-    
+        self.temp.data = self.W @ H.data @ self.W
+        return self.temp
+
     def invnt_congr(self, H):
         if not self.nt_aux_updated:
-            self.nt_aux()        
+            self.nt_aux()
         p = len(H)
         lhs = np.zeros((self.dim, p))
 
         for (i, Hi) in enumerate(H):
-            lhs[:, [i]] = sym.mat_to_vec(self.W_rt2.conj().T @ Hi.data @ self.W_rt2)
+            WHW = self.W_rt2.conj().T @ Hi.data @ self.W_rt2
+            lhs[:, [i]] = sym.mat_to_vec(WHW, hermitian=self.hermitian)
         
-        return lhs.T @ lhs    
+        return lhs.T @ lhs

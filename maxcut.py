@@ -9,7 +9,7 @@ from solver import model, solver
 
 np.random.seed(1)
 
-n = 100
+n = 200
 
 A = np.zeros((n,n*(n+1)//2))
 for i in range(n):
@@ -28,13 +28,13 @@ cones = [possemidefinite.Cone(n)]
 model = model.Model(c, A, b, cones=cones, c_mtx=lin.Symmetric(C), A_mtx=A_mtx)
 solver = solver.Solver(model, sym=True)
 
-# profiler = cProfile.Profile()
-# profiler.enable()
+profiler = cProfile.Profile()
+profiler.enable()
 
 solver.solve()
 
-# profiler.disable()
-# profiler.dump_stats("example.stats")
+profiler.disable()
+profiler.dump_stats("example.stats")
 
 # # Solve using MOSEK
 # import sys

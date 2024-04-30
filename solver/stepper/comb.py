@@ -18,6 +18,7 @@ class CombinedStepper():
         self.dir_p_toa  = Point(model)
         self.res        = Point(model)
         self.temp       = Point(model)
+        self.next_point = Point(model)
         
         return
     
@@ -80,16 +81,26 @@ class CombinedStepper():
 
             alpha = alpha_sched[alpha_iter]
             # Step point in direction and step size
+            next_point.copy(point)
             if mode == "co_toa":
-                step = alpha * (dir_p + dir_p_toa * alpha) + (dir_c + dir_c_toa * (1.0 - alpha)) * (1.0 - alpha)
+                next_point.axpy(alpha             , dir_p)
+                next_point.axpy(alpha ** 2        , dir_p_toa)
+                next_point.axpy((1.0 - alpha)     , dir_c)
+                next_point.axpy((1.0 - alpha) ** 2, dir_c_toa)
+                # step = alpha * (dir_p + dir_p_toa * alpha) + (dir_c + dir_c_toa * (1.0 - alpha)) * (1.0 - alpha)
             elif mode == "comb":
-                step = dir_p * alpha + dir_c * (1.0 - alpha)
+                next_point.axpy(alpha        , dir_p)
+                next_point.axpy((1.0 - alpha), dir_c)
+                # step = dir_p * alpha + dir_c * (1.0 - alpha)
             elif mode == "ce_toa":
+                next_point.axpy(alpha     ,  dir_c)
+                next_point.axpy(alpha ** 2, dir_c_toa)                
                 step = (dir_p + dir_p_toa * alpha) * alpha
             elif mode == "cent":
-                step = dir_c * alpha
+                next_point.axpy(alpha, dir_c)
+                # step = dir_c * alpha
 
-            next_point = point + step
+            # next_point = point + step
             
             # Check that tau, kappa, mu are well defined
             # Make sure tau, kappa are positive
@@ -130,7 +141,6 @@ class CombinedStepper():
 
                 prox_k = cone_k.invhess_congr([psi])
                 self.prox = max(self.prox, prox_k)
-                cone_k.prox()
                 in_prox = (self.prox < eta)
                 if not in_prox:
                     break
@@ -165,10 +175,6 @@ class CombinedStepper():
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
             self.rhs.S[k] = -0.5 * cone_k.third_dir_deriv(dir_c.S[k]) / rtmu
-        #     dir_c_s_k = dir_c.s_views[k]
-        #     tdd, TDD = cone_k.third_dir_deriv(dir_c_s_k)
-        #     self.rhs.s_views[k][:] = -0.5 * tdd / rtmu
-        # self.rhs.S = [-0.5 * model.cones[0].third_dir_deriv(dir_c.S[0]) / rtmu]
 
         self.rhs.tau   = 0.
         self.rhs.kappa = (dir_c.tau**2) / (point.tau**3) * mu
@@ -176,13 +182,14 @@ class CombinedStepper():
         return self.rhs
 
     def update_rhs_pred(self, model, point):
-        self.rhs.X = point.Z - model.c_mtx * point.tau - model.apply_A_T(point.y)
-        self.rhs.y = model.apply_A(point.X) - model.b * point.tau
-        self.rhs.Z = point.S - point.X
+        self.rhs.X = -model.A.T @ point.y - model.G.T @ point.Z.to_vec() - model.c * point.tau
+        self.rhs.y = model.A @ point.X - model.b * point.tau
+        self.rhs.Z.from_vec(model.G @ point.X - model.h * point.tau)
+        self.rhs.Z += point.S
 
         self.rhs.S = -1 * point.Z
 
-        self.rhs.tau   = model.c_mtx.inp(point.X) + lin.inp(model.b, point.y) + point.kappa
+        self.rhs.tau   = lin.inp(model.c, point.X) + lin.inp(model.b, point.y) + lin.inp(model.h, point.Z.to_vec()) + point.kappa
         self.rhs.kappa = -point.kappa
 
         return self.rhs

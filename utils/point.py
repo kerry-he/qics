@@ -19,7 +19,7 @@ class Point():
         # self.z_views = [self.Z[idxs] for idxs in model.cone_idxs]
 
         #TODO: Make x allow for G neq -I
-        self.X     = lin.Vector([cone_k.zeros() for cone_k in model.cones])
+        self.X     = np.zeros((model.n, 1))
         self.y     = np.zeros((model.p, 1))
         self.Z     = lin.Vector([cone_k.zeros() for cone_k in model.cones])
         self.S     = lin.Vector([cone_k.zeros() for cone_k in model.cones])
@@ -41,6 +41,32 @@ class Point():
         point.kappa = self.kappa + other.kappa
 
         return point
+    
+    def __iadd__(self, other):
+        self.X     += other.X
+        self.y     += other.y
+        self.Z     += other.Z
+        self.S     += other.S
+        self.tau   += other.tau
+        self.kappa += other.kappa
+        return self
+    
+    def axpy(self, a, other):
+        self.X     += a * other.X
+        self.y     += a * other.y
+        self.Z.axpy(a, other.Z)
+        self.S.axpy(a, other.S)
+        self.tau   += a * other.tau
+        self.kappa += a * other.kappa
+        return self
+     
+    def copy(self, other):
+        np.copyto(self.X, other.X)
+        np.copyto(self.y, other.y)
+        self.Z.copy(other.Z)
+        self.S.copy(other.S)
+        self.tau   = other.tau
+        self.kappa = other.kappa
     
     def __sub__(self, other):
         point = Point(self.model)
@@ -70,7 +96,7 @@ class Point():
     
     def norm(self):
         return np.linalg.norm(np.array([
-            self.X.norm(),
+            lin.norm(self.X),
             lin.norm(self.y),
             self.Z.norm(),
             self.S.norm(),
