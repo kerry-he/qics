@@ -85,7 +85,7 @@ class SysSolver():
         # Iterative refinement
         c_est, b_est, h_est = self.forward_subsystem(self.X_b, self.y_b, self.Z_b, model)
         (x_res, y_res, z_res) = (self.pnt_model.X - c_est, self.pnt_model.y - b_est, self.pnt_model.Z - h_est)
-        res_norm = lin.norm(np.array([lin.norm(x_res.data), lin.norm(y_res.data), z_res.norm()]))
+        res_norm = lin.norm(np.array([lin.norm(x_res), lin.norm(y_res), z_res.norm()]))
 
         iter_refine_count = 0
         while res_norm > 1e-8:
@@ -96,7 +96,7 @@ class SysSolver():
             (x_temp, y_temp, z_temp) = (self.X_b + x_b2, self.y_b + y_b2, self.Z_b + z_b2)
             c_est, b_est, h_est = self.forward_subsystem(x_temp, y_temp, z_temp, model)
             (x_res, y_res, z_res) = (self.pnt_model.X - c_est, self.pnt_model.y - b_est, self.pnt_model.Z - h_est)
-            res_norm_new = lin.norm(np.array([lin.norm(x_res.data), lin.norm(y_res.data), z_res.norm()]))
+            res_norm_new = lin.norm(np.array([lin.norm(x_res), lin.norm(y_res), z_res.norm()]))
 
             # Check if iterative refinement made things worse
             if res_norm_new > res_norm:
@@ -117,7 +117,7 @@ class SysSolver():
         temp = point.Point(model)
 
         # Solve system
-        dir = self.solve_system(rhs, model, mu / tau / tau)
+        dir = self.solve_system(rhs, model, mu / tau / tau, tau, kappa)
 
         # Check residuals of solve
         res = rhs - self.apply_system(dir, model, mu / tau / tau, kappa, tau)
@@ -147,7 +147,7 @@ class SysSolver():
         return dir, res_norm
 
     #@profile
-    def solve_system(self, rhs, model, mu_tau2):
+    def solve_system(self, rhs, model, mu_tau2, tau, kappa):
         # Solve Newton system using elimination
         # NOTE: mu has already been accounted for in H
 
@@ -157,7 +157,7 @@ class SysSolver():
         if self.ir:
             c_est, b_est, h_est = self.forward_subsystem(x_r, y_r, z_r, model)
             (x_res, y_res, z_res) = (rhs.X - c_est, rhs.y - b_est, rhs.Z + blk_invhess_prod(rhs.S, model, self.sym) - h_est)
-            res_norm = lin.norm(np.array([lin.norm(x_res.data), lin.norm(y_res.data), z_res.norm()]))
+            res_norm = lin.norm(np.array([lin.norm(x_res), lin.norm(y_res), z_res.norm()]))
 
             iter_refine_count = 0
             while res_norm > 1e-8:
@@ -168,7 +168,7 @@ class SysSolver():
                 (x_temp, y_temp, z_temp) = (x_r + x_b2, y_r + y_b2, z_r + z_b2)
                 c_est, b_est, h_est = self.forward_subsystem(x_temp, y_temp, z_temp, model)
                 (x_res, y_res, z_res) = (rhs.X - c_est, rhs.y - b_est, rhs.Z + blk_invhess_prod(rhs.S, model, self.sym) - h_est)
-                res_norm_new = lin.norm(np.array([lin.norm(x_res.data), lin.norm(y_res.data), z_res.norm()]))
+                res_norm_new = lin.norm(np.array([lin.norm(x_res), lin.norm(y_res), z_res.norm()]))
 
                 # Check if iterative refinement made things worse
                 if res_norm_new > res_norm:
@@ -182,15 +182,23 @@ class SysSolver():
                 # if iter_refine_count > 5:
                 #     break        
 
-        sol.tau   = rhs.tau + rhs.kappa + lin.inp(model.c, x_r) + lin.inp(model.b, y_r) + lin.inp(model.h, z_r.to_vec())
-        sol.tau  /= (mu_tau2 + lin.inp(model.c, self.X_b) + lin.inp(model.b, self.y_b) + lin.inp(model.h, self.Z_b.to_vec()))
+        tau_num = rhs.tau + rhs.kappa + lin.inp(model.c, x_r) + lin.inp(model.b, y_r) + lin.inp(model.h, z_r.to_vec())
+        if self.sym:
+            tau_den = (kappa / tau + lin.inp(model.c, self.X_b) + lin.inp(model.b, self.y_b) + lin.inp(model.h, self.Z_b.to_vec()))
+        else:
+            tau_den  = (mu_tau2 + lin.inp(model.c, self.X_b) + lin.inp(model.b, self.y_b) + lin.inp(model.h, self.Z_b.to_vec()))
+        sol.tau = tau_num / tau_den
 
         sol.X     = x_r - sol.tau * self.X_b
         sol.y     = y_r - sol.tau * self.y_b
         sol.Z     = z_r - sol.tau * self.Z_b
         sol.S.from_vec(-model.G @ sol.X + sol.tau * model.h)
         sol.S -= rhs.Z
-        sol.kappa = rhs.kappa - mu_tau2 * sol.tau
+        
+        if self.sym:
+            sol.kappa = rhs.kappa - kappa / tau * sol.tau
+        else:
+            sol.kappa = rhs.kappa - mu_tau2 * sol.tau
 
         return sol
         
@@ -313,7 +321,7 @@ class SysSolver():
     
     # @profile
     def forward_subsystem(self, rX, ry, rZ, model):
-        X = model.A.T @ ry - model.G.T @ rZ.to_vec()
+        X = model.A.T @ ry + model.G.T @ rZ.to_vec()
         # X = [np.zeros_like(rX[0])]
         # for (i, Ai) in enumerate(model.A_mtx):
         #     X[0] += ry[i] * Ai[0]
