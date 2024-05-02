@@ -83,24 +83,22 @@ class CombinedStepper():
             # Step point in direction and step size
             next_point.copy(point)
             if mode == "co_toa":
+                # step = alpha * (dir_p + dir_p_toa * alpha) + (dir_c + dir_c_toa * (1.0 - alpha)) * (1.0 - alpha)
                 next_point.axpy(alpha             , dir_p)
                 next_point.axpy(alpha ** 2        , dir_p_toa)
                 next_point.axpy((1.0 - alpha)     , dir_c)
                 next_point.axpy((1.0 - alpha) ** 2, dir_c_toa)
-                # step = alpha * (dir_p + dir_p_toa * alpha) + (dir_c + dir_c_toa * (1.0 - alpha)) * (1.0 - alpha)
             elif mode == "comb":
+                # step = dir_p * alpha + dir_c * (1.0 - alpha)
                 next_point.axpy(alpha        , dir_p)
                 next_point.axpy((1.0 - alpha), dir_c)
-                # step = dir_p * alpha + dir_c * (1.0 - alpha)
             elif mode == "ce_toa":
+                # step = (dir_p + dir_p_toa * alpha) * alpha
                 next_point.axpy(alpha     ,  dir_c)
                 next_point.axpy(alpha ** 2, dir_c_toa)                
-                step = (dir_p + dir_p_toa * alpha) * alpha
             elif mode == "cent":
-                next_point.axpy(alpha, dir_c)
                 # step = dir_c * alpha
-
-            # next_point = point + step
+                next_point.axpy(alpha, dir_c)
             
             # Check that tau, kappa, mu are well defined
             # Make sure tau, kappa are positive
@@ -149,9 +147,6 @@ class CombinedStepper():
             if in_prox:
                 point = next_point
                 return point, alpha, True
-        
-            # Otherwise backtrack
-            
 
     def update_rhs_cent(self, model, point, mu):
         self.rhs.X *= 0

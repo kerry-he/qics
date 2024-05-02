@@ -1,6 +1,5 @@
 import numpy as np
 import scipy as sp
-import math
 from utils import symmetric as sym
 from utils import linear as lin
 
@@ -19,6 +18,7 @@ class Cone():
         self.feas_updated = False
         self.grad_updated = False
         self.nt_aux_updated = False
+        self.congr_aux_updated = False
 
         return
     
@@ -140,15 +140,50 @@ class Cone():
             self.nt_aux()
         self.temp.data = self.W @ H.data @ self.W
         return self.temp
+    
+    def congr_aux(self, A):
+        # Check if A matrix is sparse, and build data, col, row arrays if so
+        self.A_is_sparse = all([sp.sparse.issparse(Ai.data) for Ai in A])
+        if self.A_is_sparse:
+            self.A_data = np.array([Ai.data.tocoo().data for Ai in A])
+            self.A_cols = np.array([Ai.data.tocoo().col for Ai in A])
+            self.A_rows = np.array([Ai.data.tocoo().row for Ai in A])
 
-    def invnt_congr(self, H):
+    def invnt_congr(self, A):
         if not self.nt_aux_updated:
             self.nt_aux()
-        p = len(H)
+        if not self.congr_aux_updated:
+            self.congr_aux(A)
+                    
+        p = len(A)
+        
+        # If constraint matrix is sparse, then do:
+        #     For all j=1,...,p
+        #         Compute W Aj W
+        #         For all i=1,...j
+        #             M_ij = <Ai, W Aj W>
+        #         End
+        #     End
+        if self.A_is_sparse:
+            WAjW = np.zeros((self.n, self.n))
+            out = np.zeros((p, p))
+
+            for (j, Aj) in enumerate(A):
+                AjW  = Aj.data @ self.W
+                WAjW = self.W.conj().T @ AjW          #TODO: Use gemmt to only compute upper triangular 
+                out[:j+1, j] = np.sum(WAjW[self.A_rows[:j+1], self.A_cols[:j+1]] * self.A_data[:j+1], 1)                
+            return out
+
+        # If constraint matrix is not all sparse, then do:
+        #     For all j=1,...,p
+        #         (A W^1/2 ox W^1/2)_j = W^1/2 Aj W^1/2
+        #     End
+        #     (A W^1/2 ox W^1/2) @ (W^1/2 ox W^1/2 A)
         lhs = np.zeros((self.dim, p))
 
-        for (i, Hi) in enumerate(H):
-            WHW = self.W_rt2.conj().T @ Hi.data @ self.W_rt2
-            lhs[:, [i]] = sym.mat_to_vec(WHW, hermitian=self.hermitian)
+        for (j, Aj) in enumerate(A):
+            AjW  = Aj.data @ self.W_rt2
+            WAjW = self.W_rt2.conj().T @ AjW
+            lhs[:, [j]] = sym.mat_to_vec(WAjW, hermitian=self.hermitian)
         
         return lhs.T @ lhs

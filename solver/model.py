@@ -30,6 +30,9 @@ class Model():
         self.A_mtx = A_mtx
         # self.A_mtx_mtx = self.get_A_mtx()
         
+        self.A_T = self.A.T
+        self.G_T = self.G.T
+        
         self.temp_vec = lin.Vector([cone_k.zeros() for cone_k in cones])
 
         return
