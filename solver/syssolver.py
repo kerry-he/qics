@@ -19,14 +19,23 @@ class SysSolver():
         self.ir = ir                    # Use iterative refinement or not
         self.sym = sym
 
-        self.pnt_model = point.Point(model)
-        self.pnt_model.X = model.c
-        self.pnt_model.y = model.b
-        self.pnt_model.Z.from_vec(model.h)
+        self.cbh = point.PointXYZ(model)
+        self.cbh.X = model.c
+        self.cbh.y = model.b
+        self.cbh.Z.from_vec(model.h)        
+        
+        self.xyz_b = point.PointXYZ(model)
+        self.xyz_r = point.PointXYZ(model)
+        self.xyz_ir = point.PointXYZ(model)
+        self.xyz_res = point.PointXYZ(model)
 
+        self.rZ_HrS = lin.Vector([cone_k.zeros() for cone_k in model.cones])
         self.vec_temp = lin.Vector([cone_k.zeros() for cone_k in model.cones])
         self.vec_temp2 = lin.Vector([cone_k.zeros() for cone_k in model.cones])
         self.pnt_res = point.Point(model)
+        self.dir_ir = point.Point(model)
+        self.res = point.Point(model)
+        
 
         if subsolver is None:
             if not model.use_G:
@@ -81,65 +90,67 @@ class SysSolver():
 
 
         # Compute constant 3x3 subsystem
-        self.X_b, self.y_b, self.Z_b = self.solve_subsystem_elim(self.pnt_model, model)
+        self.solve_subsystem_elim(self.xyz_b, self.cbh, model)
 
-        if self.ir:
-            # Iterative refinement
-            c_est, b_est, h_est = self.forward_subsystem(self.X_b, self.y_b, self.Z_b, model)
-            (x_res, y_res, z_res) = (self.pnt_model.X - c_est, self.pnt_model.y - b_est, self.pnt_model.Z - h_est)
-            res_norm = lin.norm(np.array([lin.norm(x_res), lin.norm(y_res), z_res.norm()]))
+        # if self.ir:
+        #     # Iterative refinement
+        #     c_est, b_est, h_est = self.forward_subsystem(self.X_b, self.y_b, self.Z_b, model)
+        #     (x_res, y_res, z_res) = (self.pnt_model.X - c_est, self.pnt_model.y - b_est, self.pnt_model.Z - h_est)
+        #     res_norm = lin.norm(np.array([lin.norm(x_res), lin.norm(y_res), z_res.norm()]))
 
-            iter_refine_count = 0
-            while res_norm > 1e-8:
-                self.pnt_res.X = x_res
-                self.pnt_res.y = y_res
-                self.pnt_res.Z = z_res
-                x_b2, y_b2, z_b2 = self.solve_subsystem_elim(self.pnt_res, model)      
-                (x_temp, y_temp, z_temp) = (self.X_b + x_b2, self.y_b + y_b2, self.Z_b + z_b2)
-                c_est, b_est, h_est = self.forward_subsystem(x_temp, y_temp, z_temp, model)
-                (x_res, y_res, z_res) = (self.pnt_model.X - c_est, self.pnt_model.y - b_est, self.pnt_model.Z - h_est)
-                res_norm_new = lin.norm(np.array([lin.norm(x_res), lin.norm(y_res), z_res.norm()]))
+        #     iter_refine_count = 0
+        #     while res_norm > 1e-8:
+        #         self.pnt_res.X = x_res
+        #         self.pnt_res.y = y_res
+        #         self.pnt_res.Z = z_res
+        #         x_b2, y_b2, z_b2 = self.solve_subsystem_elim(self.pnt_res, model)      
+        #         (x_temp, y_temp, z_temp) = (self.X_b + x_b2, self.y_b + y_b2, self.Z_b + z_b2)
+        #         c_est, b_est, h_est = self.forward_subsystem(x_temp, y_temp, z_temp, model)
+        #         (x_res, y_res, z_res) = (self.pnt_model.X - c_est, self.pnt_model.y - b_est, self.pnt_model.Z - h_est)
+        #         res_norm_new = lin.norm(np.array([lin.norm(x_res), lin.norm(y_res), z_res.norm()]))
 
-                # Check if iterative refinement made things worse
-                if res_norm_new > res_norm:
-                    break
+        #         # Check if iterative refinement made things worse
+        #         if res_norm_new > res_norm:
+        #             break
 
-                (self.x_b, self.y_b, self.z_b) = (x_temp, y_temp, z_temp)
-                res_norm = res_norm_new
+        #         (self.x_b, self.y_b, self.z_b) = (x_temp, y_temp, z_temp)
+        #         res_norm = res_norm_new
 
-                iter_refine_count += 1
+        #         iter_refine_count += 1
 
-                if iter_refine_count > 1:
-                    break
+        #         if iter_refine_count > 1:
+        #             break
 
 
         return
 
-    def solve_system_ir(self, res, rhs, model, mu, tau, kappa):
-        temp = point.Point(model)
-
+    # @profile
+    def solve_system_ir(self, dir, rhs, model, mu, tau, kappa):
         # Solve system
-        dir = self.solve_system(rhs, model, mu / tau / tau, tau, kappa)
+        self.solve_system(dir, rhs, model, mu / tau / tau, tau, kappa)
         res_norm = 0.0
         
         # Check residuals of solve
         if self.ir:
-            res = rhs - self.apply_system(dir, model, mu / tau / tau, kappa, tau)
-            res_norm = res.norm()
+            self.apply_system(self.res, dir, model, mu / tau / tau, kappa, tau)
+            self.res -= rhs
+            res_norm = self.res.norm()
 
             # Iterative refinement
             iter_refine_count = 0
             while res_norm > 1e-8:
-                dir_res = self.solve_system(res, model, mu / tau / tau, tau, kappa)
-                temp = dir + dir_res
-                res = rhs - self.apply_system(temp, model, mu / tau / tau, kappa, tau)
-                res_norm_new = res.norm()
+                self.solve_system(self.dir_ir, self.res, model, mu / tau / tau, tau, kappa)
+                self.dir_ir *= -1
+                self.dir_ir += dir
+                self.apply_system(self.res, self.dir_ir, model, mu / tau / tau, kappa, tau)
+                self.res -= rhs
+                res_norm_new = self.res.norm()
 
                 # Check if iterative refinement made things worse
                 if res_norm_new > res_norm:
                     break
 
-                dir = temp
+                dir.copy(self.dir_ir)
                 res_norm = res_norm_new
 
                 iter_refine_count += 1
@@ -147,37 +158,46 @@ class SysSolver():
                 if iter_refine_count > 1:
                     break
 
-        return dir, res_norm
+        return res_norm
 
     #@profile
-    def solve_system(self, rhs, model, mu_tau2, tau, kappa):
+    def solve_system(self, sol, rhs, model, mu_tau2, tau, kappa):
         # Solve Newton system using elimination
         # NOTE: mu has already been accounted for in H
+        
+        self.xyz_res.X = rhs.X
+        self.xyz_res.y = rhs.y
+        self.xyz_res.Z.copy(rhs.Z)
 
-        sol = point.Point(model)
-
-        x_r, y_r, z_r = self.solve_subsystem_elim(rhs, model)
+        self.solve_subsystem_elim(self.xyz_r, self.xyz_res, model, rhs.S)
         if self.ir:
-            c_est, b_est, h_est = self.forward_subsystem(x_r, y_r, z_r, model)
-            (x_res, y_res, z_res) = (rhs.X - c_est, rhs.y - b_est, rhs.Z + blk_invhess_prod(rhs.S, model, self.sym) - h_est)
-            res_norm = lin.norm(np.array([lin.norm(x_res), lin.norm(y_res), z_res.norm()]))
-
+            # Precompute rZ + HrS residual
+            blk_invhess_prod_ip(self.rZ_HrS, rhs.S, model, self.sym)
+            self.rZ_HrS += rhs.Z            
+            
+            self.forward_subsystem(self.xyz_res, self.xyz_r, model)
+            self.xyz_res.X -= rhs.X
+            self.xyz_res.y -= rhs.y
+            self.xyz_res.Z -= self.rZ_HrS
+            res_norm = self.xyz_res.norm()
+            
             iter_refine_count = 0
             while res_norm > 1e-8:
-                self.pnt_res.X = x_res
-                self.pnt_res.y[:] = y_res
-                self.pnt_res.Z = z_res                
-                x_b2, y_b2, z_b2 = self.solve_subsystem_elim(self.pnt_res, model)      
-                (x_temp, y_temp, z_temp) = (x_r + x_b2, y_r + y_b2, z_r + z_b2)
-                c_est, b_est, h_est = self.forward_subsystem(x_temp, y_temp, z_temp, model)
-                (x_res, y_res, z_res) = (rhs.X - c_est, rhs.y - b_est, rhs.Z + blk_invhess_prod(rhs.S, model, self.sym) - h_est)
-                res_norm_new = lin.norm(np.array([lin.norm(x_res), lin.norm(y_res), z_res.norm()]))
+                self.solve_subsystem_elim(self.xyz_ir, self.xyz_res, model)
+                self.xyz_ir *= -1
+                self.xyz_ir += self.xyz_r
+                self.forward_subsystem(self.xyz_res, self.xyz_ir, model)
+
+                self.pnt_res.X -= rhs.X
+                self.pnt_res.y -= rhs.y
+                self.pnt_res.Z -= self.rZ_HrS      
+                res_norm_new = self.xyz_res.norm()
 
                 # Check if iterative refinement made things worse
                 if res_norm_new > res_norm:
                     break
 
-                (x_r, y_r, z_r) = (x_temp, y_temp, z_temp)
+                self.xyz_r.copy(self.xyz_res)
                 res_norm = res_norm_new
 
                 iter_refine_count += 1
@@ -185,16 +205,18 @@ class SysSolver():
                 if iter_refine_count > 1:
                     break        
 
-        tau_num = rhs.tau + rhs.kappa + lin.inp(model.c, x_r) + lin.inp(model.b, y_r) + lin.inp(model.h, z_r.to_vec())
+        tau_num = rhs.tau + rhs.kappa + self.cbh.inp(self.xyz_r)
         if self.sym:
-            tau_den = (kappa / tau + lin.inp(model.c, self.X_b) + lin.inp(model.b, self.y_b) + lin.inp(model.h, self.Z_b.to_vec()))
+            tau_den = (kappa / tau + self.cbh.inp(self.xyz_b))
         else:
-            tau_den  = (mu_tau2 + lin.inp(model.c, self.X_b) + lin.inp(model.b, self.y_b) + lin.inp(model.h, self.Z_b.to_vec()))
+            tau_den  = (mu_tau2 + self.cbh.inp(self.xyz_b))
         sol.tau = tau_num / tau_den
 
-        sol.X     = x_r - sol.tau * self.X_b
-        sol.y     = y_r - sol.tau * self.y_b
-        sol.Z     = z_r - sol.tau * self.Z_b
+        sol.X     = self.xyz_r.X - sol.tau * self.xyz_b.X
+        sol.y     = self.xyz_r.y - sol.tau * self.xyz_b.y
+        sol.Z.copy(self.xyz_b.Z)
+        sol.Z *= -sol.tau
+        sol.Z += self.xyz_r.Z
         sol.S.from_vec(-model.G @ sol.X + sol.tau * model.h)
         sol.S -= rhs.Z
         
@@ -211,11 +233,11 @@ class SysSolver():
         elif self.subsolver == "qrchol":
             return self.solve_subsystem_qrchol(rx, ry, Hrz, model)
 
-    def solve_subsystem_elim(self, rhs, model):
+    # @profile
+    def solve_subsystem_elim(self, out, rhs, model, rS=None):
         rX = rhs.X
         ry = rhs.y
         rZ = rhs.Z
-        rS = rhs.S
 
         if model.use_A and model.use_G:
             temp_vec = rx - model.G.T @ (blk_hess_prod(rz, model, self.sym) + rs)
@@ -229,24 +251,24 @@ class SysSolver():
         if model.use_A and not model.use_G:
             # Solve for y: AHA y = A(rz + H \ (rx + rs)) + ry
             self.vec_temp.from_vec(rX)
-            self.vec_temp += rS
+            if rS is not None:
+                self.vec_temp += rS
             blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym)
             self.vec_temp2 += rZ
-            x = self.vec_temp2.to_vec()
-            temp = model.A @ x + ry
-            y = lin.fact_solve(self.AHA_fact, temp)
+            out.X = self.vec_temp2.to_vec()
+            temp = model.A @ out.X + ry
+            out.y = lin.fact_solve(self.AHA_fact, temp)
             
             # Solve for x: x = rz + H \ (rx + rs - At y)
-            A_T_y = model.A_T @ y
+            A_T_y = model.A_T @ out.y
             self.vec_temp.from_vec(A_T_y)
             blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym)
-            x -= self.vec_temp2.to_vec()
+            out.X -= self.vec_temp2.to_vec()
             
             # Solve for z: z = At y - rx
-            z = lin.Vector([cone_k.zeros() for cone_k in model.cones])
-            z = z.from_vec(A_T_y - rX)
+            out.Z.from_vec(A_T_y - rX)
 
-            return x, y, z
+            return out
         
         if not model.use_A and model.use_G:
             x = lin.fact_solve(self.GHG_fact, rx - model.G.T @ (blk_hess_prod(rz, model, self.sym) + rs))
@@ -319,30 +341,32 @@ class SysSolver():
         return x, y, z    
     
     # @profile
-    def forward_subsystem(self, rX, ry, rZ, model):
-        X = model.A_T @ ry + model.G_T @ rZ.to_vec()
+    def forward_subsystem(self, out, rhs, model):
+        rX = rhs.X
+        ry = rhs.y
+        rZ = rhs.Z
+        
+        out.X = model.A_T @ ry + model.G_T @ rZ.to_vec()
         # X = [np.zeros_like(rX[0])]
         # for (i, Ai) in enumerate(model.A_mtx):
         #     X[0] += ry[i] * Ai[0]
         # X[0] -= rZ[0]
 
-        y = -model.A @ rX
+        out.y = -model.A @ rX
         # y = np.zeros_like(ry)
         # for (i, Ai) in enumerate(model.A_mtx):
         #     y[i] = -np.sum(Ai[0] * rX[0])
 
-        Z = lin.Vector([cone_k.zeros() for cone_k in model.cones])
-        Z.from_vec(-model.G @ rX)
-        Z += blk_invhess_prod_ip(self.vec_temp2, rZ, model, self.sym)
+        out.Z.from_vec(-model.G @ rX)
+        out.Z += blk_invhess_prod_ip(self.vec_temp2, rZ, model, self.sym)
 
         # x = model.A.T @ ry + model.G.T @ rz
         # y = -model.A @ rx
         # z = -model.G @ rx + blk_invhess_prod(rz, model)        
 
-        return X, y, Z
+        return out
     
-    def apply_system(self, rhs, model, mu_tau2, kappa, tau):
-        pnt = point.Point(model)
+    def apply_system(self, pnt, rhs, model, mu_tau2, kappa, tau):
         rhs_z_vec = rhs.Z.to_vec()
 
         # pnt.x[:]     =  model.A.T @ rhs.y + model.G.T @ rhs.z + model.c * rhs.tau
@@ -394,17 +418,17 @@ def blk_invhess_prod(dirs, model, sym):
 def blk_hess_prod_ip(out, dirs, model, sym):
     for (k, cone_k) in enumerate(model.cones):
         if sym:
-            out[k] = cone_k.nt_prod(dirs[k])
+            cone_k.nt_prod_ip(out[k], dirs[k])
         else:
-            out[k] = cone_k.hess_prod(dirs[k])
+            cone_k.hess_prod_ip(out[k], dirs[k])
     return out
 
 def blk_invhess_prod_ip(out, dirs, model, sym):
     for (k, cone_k) in enumerate(model.cones):
         if sym:
-            out[k] = cone_k.invnt_prod(dirs[k])
+            cone_k.invnt_prod_ip(out[k], dirs[k])
         else:
-            out[k] = cone_k.invhess_prod(dirs[k])
+            cone_k.invhess_prod_ip(out[k], dirs[k])
     return out
 
 # def blk_hess_congruence(dirs, model):

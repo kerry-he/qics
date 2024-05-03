@@ -13,6 +13,7 @@ class Cone():
         
         self.grad = lin.Symmetric(self.n)
         self.temp = lin.Symmetric(self.n)
+        self.temp_mat = np.zeros((n, n))
 
         # Update flags
         self.feas_updated = False
@@ -35,9 +36,9 @@ class Cone():
         )
         return lin.Symmetric(self.X)
     
-    def set_point(self, point, dual=None):
-        self.X = point.data
-        self.Z = dual.data
+    def set_point(self, point, dual=None, a=True):
+        self.X = point.data * a
+        self.Z = dual.data * a
 
         self.feas_updated = False
         self.grad_updated = False
@@ -57,13 +58,6 @@ class Cone():
         except np.linalg.linalg.LinAlgError:
             self.feas = False
             return self.feas
-
-        if self.Z is not None:
-            try:
-                self.Z_chol = sp.linalg.cholesky(self.Z, lower=True, check_finite=False)
-                self.feas = True
-            except sp.linalg.LinAlgError:
-                self.feas = False            
 
         return self.feas
     
@@ -92,7 +86,8 @@ class Cone():
         return lin.Symmetric(self.X @ H.data @ self.X)
 
     def third_dir_deriv(self, dir1, dir2=None):
-        assert self.grad_updated
+        if not self.grad_updated:
+            self.get_grad()
         if dir2 is None:
             H = dir1.data
             return lin.Symmetric(-2 * self.inv_X @ H @ self.inv_X @ H @ self.inv_X)
@@ -112,10 +107,20 @@ class Cone():
         for (i, Hi) in enumerate(H):
             lhs[:, [i]] = sym.mat_to_vec(self.X_chol.conj().T @ Hi.data @ self.X_chol)
         
-        return lhs.T @ lhs    
+        return lhs.T @ lhs
+    
+    def prox(self):
+        assert self.feas_updated
+        XZX_I = self.X_chol.conj().T @ self.Z @ self.X_chol
+        XZX_I.flat[::self.n+1] -= 1
+        return np.linalg.norm(XZX_I) ** 2
     
     def nt_aux(self):
         assert not self.nt_aux_updated
+        if not self.grad_updated:
+            grad_k = self.get_grad()   
+
+        self.Z_chol = sp.linalg.cholesky(self.Z, lower=True, check_finite=False)
 
         RL = self.Z_chol.T @ self.X_chol
         U, D, Vt = sp.linalg.svd(RL, check_finite=False)
@@ -134,6 +139,13 @@ class Cone():
             self.nt_aux()
         self.temp.data = self.W_inv @ H.data @ self.W_inv
         return self.temp
+    
+    def nt_prod_ip(self, out, H):
+        if not self.nt_aux_updated:
+            self.nt_aux()
+        WHW = self.W_inv @ H.data @ self.W_inv
+        out.data = (WHW + WHW.T) / 2
+        return out
 
     def invnt_prod(self, H):
         if not self.nt_aux_updated:
@@ -141,13 +153,29 @@ class Cone():
         self.temp.data = self.W @ H.data @ self.W
         return self.temp
     
+    def invnt_prod_ip(self, out, H):
+        if not self.nt_aux_updated:
+            self.nt_aux()
+        WHW = self.W @ H.data @ self.W
+        out.data = (WHW + WHW.T) / 2
+        return out    
+    
     def congr_aux(self, A):
+        assert not self.congr_aux_updated
         # Check if A matrix is sparse, and build data, col, row arrays if so
         self.A_is_sparse = all([sp.sparse.issparse(Ai.data) for Ai in A])
         if self.A_is_sparse:
             self.A_data = np.array([Ai.data.tocoo().data for Ai in A])
             self.A_cols = np.array([Ai.data.tocoo().col for Ai in A])
             self.A_rows = np.array([Ai.data.tocoo().row for Ai in A])
+            
+            # self.A_tril_2 = [Ai.data.tocoo()for Ai in A]
+            # for (j, Aj) in enumerate(self.A_tril_2):
+            #     Aj.setdiag(Aj.diagonal() / 2)
+            #     Aj.eliminate_zeros()
+            #     self.A_tril_2[j] = Aj.tocsc()
+                
+        self.congr_aux_updated = True
 
     def invnt_congr(self, A):
         if not self.nt_aux_updated:
@@ -165,9 +193,15 @@ class Cone():
         #         End
         #     End
         if self.A_is_sparse:
-            WAjW = np.zeros((self.n, self.n))
+            # WAjW = np.zeros((self.n, self.n))
+            # WAj = np.zeros((self.n, self.n))
             out = np.zeros((p, p))
 
+            #TODO: See if there is a way to speed up dsyr2k method
+            #      (computes W (tril(A) + triu(A)) W)
+            # for (j, Aj) in enumerate(self.A_tril_2):
+            #     WAj  = self.W @ Aj
+            #     WAjW = sp.linalg.blas.dsyr2k(True, self.W, WAj)
             for (j, Aj) in enumerate(A):
                 AjW  = Aj.data @ self.W
                 WAjW = self.W.conj().T @ AjW          #TODO: Use gemmt to only compute upper triangular 

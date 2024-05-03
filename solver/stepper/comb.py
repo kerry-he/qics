@@ -16,7 +16,6 @@ class CombinedStepper():
         self.dir_c_toa  = Point(model)
         self.dir_p      = Point(model)
         self.dir_p_toa  = Point(model)
-        self.res        = Point(model)
         self.temp       = Point(model)
         self.next_point = Point(model)
         
@@ -27,21 +26,21 @@ class CombinedStepper():
 
         # Get prediction direction
         self.update_rhs_pred(model, point)
-        self.dir_p, res_norm = self.syssolver.solve_system_ir(self.res, self.rhs, model, mu, point.tau, point.kappa)
+        res_norm = self.syssolver.solve_system_ir(self.dir_p, self.rhs, model, mu, point.tau, point.kappa)
 
         # Get TOA prediction direction
         self.update_rhs_pred_toa(model, point, mu, self.dir_p)
-        self.dir_p_toa, temp_res_norm = self.syssolver.solve_system_ir(self.res, self.rhs, model, mu, point.tau, point.kappa)
+        temp_res_norm = self.syssolver.solve_system_ir(self.dir_p_toa, self.rhs, model, mu, point.tau, point.kappa)
         res_norm = max(temp_res_norm, res_norm)
 
         # Get centering direction
         self.update_rhs_cent(model, point, mu)
-        self.dir_c, temp_res_norm = self.syssolver.solve_system_ir(self.res, self.rhs, model, mu, point.tau, point.kappa)
+        temp_res_norm = self.syssolver.solve_system_ir(self.dir_c, self.rhs, model, mu, point.tau, point.kappa)
         res_norm = max(temp_res_norm, res_norm)
 
         # Get TOA centering direction
         self.update_rhs_cent_toa(model, point, mu, self.dir_c)
-        self.dir_c_toa, temp_res_norm = self.syssolver.solve_system_ir(self.res, self.rhs, model, mu, point.tau, point.kappa)
+        temp_res_norm = self.syssolver.solve_system_ir(self.dir_c_toa, self.rhs, model, mu, point.tau, point.kappa)
         res_norm = max(temp_res_norm, res_norm)
 
         step_mode = "co_toa"
@@ -95,7 +94,7 @@ class CombinedStepper():
             elif mode == "ce_toa":
                 # step = (dir_p + dir_p_toa * alpha) * alpha
                 next_point.axpy(alpha     ,  dir_c)
-                next_point.axpy(alpha ** 2, dir_c_toa)                
+                next_point.axpy(alpha ** 2, dir_c_toa)
             elif mode == "cent":
                 # step = dir_c * alpha
                 next_point.axpy(alpha, dir_c)
@@ -128,16 +127,13 @@ class CombinedStepper():
             for (k, cone_k) in enumerate(model.cones):
                 in_prox = False
 
-                cone_k.set_point(next_point.S[k] * irtmu, next_point.Z[k] * irtmu)
+                cone_k.set_point(next_point.S[k], next_point.Z[k], irtmu)
                 
                 # Check if feasible
                 if not cone_k.get_feas():
                     break
 
-                grad_k = cone_k.get_grad()
-                psi = next_point.Z[k] * irtmu + grad_k
-
-                prox_k = cone_k.invhess_congr([psi])
+                prox_k = cone_k.prox()
                 self.prox = max(self.prox, prox_k)
                 in_prox = (self.prox < eta)
                 if not in_prox:

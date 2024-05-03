@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 from utils import symmetric as sym
+# import symmetric as sym
 
 class Vector():
     def __init__(self, data):
@@ -55,7 +56,7 @@ class Vector():
         return np.linalg.norm([x.norm(order) for x in self.data])
 
     def to_vec(self):
-        return np.hstack([x.to_vec() for x in self.data])
+        return np.vstack([x.to_vec() for x in self.data])
     
     def from_vec(self, vec):
         i_from = 0
@@ -356,7 +357,7 @@ if __name__ == "__main__":
     PSD = Symmetric(np.ones((2, 2)))
 
     QRE = Vector([
-        Real(np.ones(2)),
+        Real(np.ones((2, 1))),
         Symmetric(np.ones((2, 2))),
         Symmetric(np.ones((2, 2)))
     ])
