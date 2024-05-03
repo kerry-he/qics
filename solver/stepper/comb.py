@@ -195,7 +195,8 @@ class CombinedStepper():
             if self.syssolver.sym:
                 self.rhs.S[k] = 0.5 * cone_k.third_dir_deriv(dir_p.S[k], dir_p.Z[k]) / rtmu
             else:
-                self.rhs.S[k] = cone_k.hess_prod(dir_p.S[k]) - 0.5 * cone_k.third_dir_deriv(dir_p.S[k]) / rtmu
+                cone_k.hess_prod_ip(self.rhs.S[k], dir_p.S[k])
+                self.rhs.S[k] -= 0.5 * cone_k.third_dir_deriv(dir_p.S[k]) / rtmu
 
         self.rhs.tau   = 0.
         if self.syssolver.sym:

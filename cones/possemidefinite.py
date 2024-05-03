@@ -77,10 +77,18 @@ class Cone():
 
         self.grad_updated = True
         return self.grad
-
-    def hess_prod(self, H):
-        assert self.grad_updated
-        return lin.Symmetric(self.inv_X @ H.data @ self.inv_X)
+    
+    def hess_prod_ip(self, out, H):
+        if not self.nt_aux_updated:
+            self.nt_aux()
+        XHX = self.inv_X @ H.data @ self.inv_X
+        out.data = (XHX + XHX.T) / 2
+        return out    
+    
+    def invhess_prod_ip(self, out, H):
+        XHX = self.X @ H.data @ self.X
+        out.data = (XHX + XHX.T) / 2
+        return out
     
     def invhess_prod(self, H):
         return lin.Symmetric(self.X @ H.data @ self.X)
@@ -90,15 +98,13 @@ class Cone():
             self.get_grad()
         if dir2 is None:
             H = dir1.data
-            return lin.Symmetric(-2 * self.inv_X @ H @ self.inv_X @ H @ self.inv_X)
+            XHX_2 = self.inv_X @ H @ self.X_chol_inv.T
+            return lin.Symmetric(-2 * XHX_2 @ XHX_2.T)
         else:
             P = dir1.data
             D = dir2.data
             PD = P @ D
             return lin.Symmetric(-2 * self.inv_X @ PD)
-
-    def norm_invhess(self, x):
-        return 0.0
     
     def invhess_congr(self, H):
         p = len(H)
@@ -133,12 +139,6 @@ class Cone():
         self.W_inv = self.W_irt2 @ self.W_irt2.T
 
         self.nt_aux_updated = True
-
-    def nt_prod(self, H):
-        if not self.nt_aux_updated:
-            self.nt_aux()
-        self.temp.data = self.W_inv @ H.data @ self.W_inv
-        return self.temp
     
     def nt_prod_ip(self, out, H):
         if not self.nt_aux_updated:
@@ -146,12 +146,6 @@ class Cone():
         WHW = self.W_inv @ H.data @ self.W_inv
         out.data = (WHW + WHW.T) / 2
         return out
-
-    def invnt_prod(self, H):
-        if not self.nt_aux_updated:
-            self.nt_aux()
-        self.temp.data = self.W @ H.data @ self.W
-        return self.temp
     
     def invnt_prod_ip(self, out, H):
         if not self.nt_aux_updated:
@@ -193,18 +187,18 @@ class Cone():
         #         End
         #     End
         if self.A_is_sparse:
-            # WAjW = np.zeros((self.n, self.n))
+            WAjW = np.zeros((self.n, self.n))
             # WAj = np.zeros((self.n, self.n))
             out = np.zeros((p, p))
 
-            #TODO: See if there is a way to speed up dsyr2k method
+            #TODO: See if there is a way to speed up dsyr2k method, or use gemmt
             #      (computes W (tril(A) + triu(A)) W)
             # for (j, Aj) in enumerate(self.A_tril_2):
             #     WAj  = self.W @ Aj
             #     WAjW = sp.linalg.blas.dsyr2k(True, self.W, WAj)
             for (j, Aj) in enumerate(A):
-                AjW  = Aj.data @ self.W
-                WAjW = self.W.conj().T @ AjW          #TODO: Use gemmt to only compute upper triangular 
+                AjW  = Aj.data.dot(self.W)
+                np.matmul(self.W, AjW, WAjW)
                 out[:j+1, j] = np.sum(WAjW[self.A_rows[:j+1], self.A_cols[:j+1]] * self.A_data[:j+1], 1)                
             return out
 

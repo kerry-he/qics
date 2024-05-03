@@ -16,18 +16,13 @@ for i in range(n):
     A[i,i+i*(i+1)//2] = 1
 A = sp.sparse.csr_array(A)
 
-A_mtx = [lin.Vector([lin.Symmetric(n)]) for i in range(n)]
-for i in range(n):
-    # A_mtx[i][0][i, i] = 1.
-    A_mtx[i][0].data = sp.sparse.csr_array(([1], ([i], [i])), shape=(n, n))
-
 b = np.ones((n, 1))
 C = np.random.randn(n,n)
 C = C+C.T
 c = sym.mat_to_vec(C)
 
 cones = [possemidefinite.Cone(n)]
-model = model.Model(c, A, b, cones=cones, c_mtx=lin.Symmetric(C), A_mtx=A_mtx)
+model = model.Model(c, A, b, cones=cones)
 solver = solver.Solver(model, sym=True, ir=True)
 
 profiler = cProfile.Profile()

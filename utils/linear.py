@@ -60,12 +60,10 @@ class Vector():
     
     def from_vec(self, vec):
         i_from = 0
-        
         for x in self.data:
             i_to = i_from + x.get_vn()
             x.from_vec(vec[i_from:i_to])
             i_from = i_to
-
         return self 
     
     def zeros_like(self):
@@ -78,6 +76,11 @@ class Vector():
     def copy(self, other):
         for (xi, yi) in zip(other, self):
             yi.copy(xi)
+            
+    def to_sparse(self):
+        for x in self.data:
+            x.to_sparse()
+        return self                
         
 
 class Real(Vector):
@@ -132,6 +135,10 @@ class Real(Vector):
     def from_vec(self, vec):
         self.data = vec
         return self
+    
+    def to_sparse(self):
+        self.data = sp.sparse.csr_matrix(self.data)
+        return self    
     
     def axpy(self, a, other):
         self.data += a * other.data
@@ -192,6 +199,10 @@ class Symmetric(Vector):
         self.data = sym.vec_to_mat(vec, hermitian=False)
         return self
     
+    def to_sparse(self):
+        self.data = sp.sparse.csr_matrix(self.data)
+        return self    
+    
     def axpy(self, a, other):
         self.data += a * other.data
         
@@ -251,6 +262,10 @@ class Hermitian(Vector):
     
     def from_vec(self, vec):
         self.data = sym.vec_to_mat(vec, hermitian=True)
+        return self
+
+    def to_sparse(self):
+        self.data = sp.sparse.csr_matrix(self.data)
         return self
 
     def axpy(self, a, other):
@@ -352,24 +367,3 @@ def pcg(A, b, M, tol=1e-8, max_iter=20):
         r_z_k = r_z_k1
 
     return x_k1, (k + 1), abs_res
-
-if __name__ == "__main__":
-    PSD = Symmetric(np.ones((2, 2)))
-
-    QRE = Vector([
-        Real(np.ones((2, 1))),
-        Symmetric(np.ones((2, 2))),
-        Symmetric(np.ones((2, 2)))
-    ])
-
-    A = Vector([
-        PSD,
-        QRE
-    ])
-
-
-    A.to_vec()
-
-    B = (A + A)
-
-    print(A)

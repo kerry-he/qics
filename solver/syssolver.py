@@ -72,7 +72,7 @@ class SysSolver():
                     self.AGHGA_fact = lin.fact(AGHGA)
 
             elif model.use_A:
-                AHA = blk_invhess_congruence(model.A_mtx, model, self.sym)
+                AHA = blk_invhess_congruence(model.A_vec, model, self.sym)
                 self.AHA_fact = lin.fact(AHA)
 
         if self.subsolver == "qrchol":

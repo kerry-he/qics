@@ -5,7 +5,7 @@ from utils import symmetric as sym
 from utils import linear as lin
 
 class Model():
-    def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0, c_mtx=None, A_mtx=None, h_mtx=None):
+    def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0):
         self.n = np.size(c)
         self.p = np.size(b) if (b is not None) else 0
         self.q = np.size(h) if (h is not None) else self.n
@@ -24,24 +24,13 @@ class Model():
         self.nu = 1 if (len(cones) == 0) else (1 + sum([cone.get_nu() for cone in cones]))
 
         self.offset = offset
-
-        self.c_mtx = lin.Vector([c_mtx])
-        self.h_mtx = lin.Vector([lin.Symmetric(c_mtx.n)])
-        self.A_mtx = A_mtx
-        # self.A_mtx_mtx = self.get_A_mtx()
         
         self.A_T = self.A.T
         self.G_T = self.G.T
         
-        self.temp_vec = lin.Vector([cone_k.zeros() for cone_k in cones])
-
+        self.A_vec = op_vec_to_mat(A, cones)
+        
         return
-    
-    def apply_A(self, x):
-        return (self.A @ x.to_vec())[:, np.newaxis]
-
-    def apply_A_T(self, y):
-        return self.temp_vec.from_vec(self.A.T @ y)
 
 def build_cone_idxs(n, cones):
     cone_idxs = []
@@ -52,3 +41,40 @@ def build_cone_idxs(n, cones):
         prev_idx += dim
     assert prev_idx == n
     return cone_idxs
+
+def op_mat_to_vec(op_mat):
+    # Obtain the matrix representation of the linear map
+    #     <A_i1, x_1> + <A_i2, x_1> + ... + <A_in, x_1> = b_i
+    # for i=1,...,p.
+    
+    p = len(op_mat)
+    n = op_mat[0].get_vn()
+    
+    op_vec = np.zeros((p, n))
+    for i in range(p):
+        op_vec[[i], :] = op_mat[i].to_vec()
+        
+    if np.count_nonzero(op_vec) < p * n / 0.05:
+        op_vec = sp.sparse.csr_array(op_vec)
+        
+    return op_vec
+
+def op_vec_to_mat(op_vec, cones):
+    # Obtain the matrices A_ij for the matrix representation of
+    #     <A_i1, x_1> + <A_i2, x_1> + ... + <A_in, x_1> = b_i
+    # for i=1,...,p.
+    
+    p = op_vec.shape[0]
+    op_mat = [lin.Vector([cone_k.zeros() for cone_k in cones]) for _ in range(p)]
+    
+    if sp.sparse.issparse(op_vec):
+        op_vec_dense = op_vec.todense()        
+    
+    for i in range(p):
+        if not sp.sparse.issparse(op_vec):
+            op_mat[i].from_vec(op_vec[[i], :].T)
+        else:
+            op_mat[i].from_vec(op_vec_dense[[i], :].T)
+            op_mat[i].to_sparse()
+        
+    return op_mat
