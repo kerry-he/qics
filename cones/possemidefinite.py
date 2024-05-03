@@ -9,7 +9,6 @@ class Cone():
         self.n  = n                                    # Side length of matrix
         self.hermitian = hermitian                     # Hermitian or symmetric vector space
         self.dim = sym.vec_dim(n, self.hermitian)      # Dimension of the cone
-        self.use_sqrt = True
         
         self.grad = lin.Symmetric(self.n)
         self.temp = lin.Symmetric(self.n)
@@ -90,9 +89,6 @@ class Cone():
         out.data = (XHX + XHX.T) / 2
         return out
     
-    def invhess_prod(self, H):
-        return lin.Symmetric(self.X @ H.data @ self.X)
-
     def third_dir_deriv(self, dir1, dir2=None):
         if not self.grad_updated:
             self.get_grad()
@@ -105,15 +101,6 @@ class Cone():
             D = dir2.data
             PD = P @ D
             return lin.Symmetric(-2 * self.inv_X @ PD)
-    
-    def invhess_congr(self, H):
-        p = len(H)
-        lhs = np.zeros((self.dim, p))
-
-        for (i, Hi) in enumerate(H):
-            lhs[:, [i]] = sym.mat_to_vec(self.X_chol.conj().T @ Hi.data @ self.X_chol)
-        
-        return lhs.T @ lhs
     
     def prox(self):
         assert self.feas_updated
@@ -213,5 +200,42 @@ class Cone():
             AjW  = Aj.data @ self.W_rt2
             WAjW = self.W_rt2.conj().T @ AjW
             lhs[:, [j]] = sym.mat_to_vec(WAjW, hermitian=self.hermitian)
+        
+        return lhs.T @ lhs
+    
+    def invhess_congr(self, A):
+        if not self.congr_aux_updated:
+            self.congr_aux(A)
+                    
+        p = len(A)
+        
+        # If constraint matrix is sparse, then do:
+        #     For all j=1,...,p
+        #         Compute W Aj W
+        #         For all i=1,...j
+        #             M_ij = <Ai, W Aj W>
+        #         End
+        #     End
+        if self.A_is_sparse:
+            XAjX = np.zeros((self.n, self.n))
+            out = np.zeros((p, p))
+            
+            for (j, Aj) in enumerate(A):
+                AjX  = Aj.data.dot(self.X)
+                np.matmul(self.X, AjX, XAjX)
+                out[:j+1, j] = np.sum(XAjX[self.A_rows[:j+1], self.A_cols[:j+1]] * self.A_data[:j+1], 1)                
+            return out
+
+        # If constraint matrix is not all sparse, then do:
+        #     For all j=1,...,p
+        #         (A W^1/2 ox W^1/2)_j = W^1/2 Aj W^1/2
+        #     End
+        #     (A W^1/2 ox W^1/2) @ (W^1/2 ox W^1/2 A)
+        lhs = np.zeros((self.dim, p))
+
+        for (j, Aj) in enumerate(A):
+            AjX  = Aj.data @ self.X_chol
+            XAjX = self.X_chol.conj().T @ AjX
+            lhs[:, [j]] = sym.mat_to_vec(XAjX, hermitian=self.hermitian)
         
         return lhs.T @ lhs

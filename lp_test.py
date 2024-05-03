@@ -13,6 +13,6 @@ c = np.array([[1.], [2.], [0.], [-1.]])
 
 cones = [nonnegorthant.Cone(4)]
 model = model.Model(c, A, b, cones=cones)
-solver = solver.Solver(model)
+solver = solver.Solver(model, sym=True)
 
 solver.solve()

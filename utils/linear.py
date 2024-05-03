@@ -88,7 +88,7 @@ class Real(Vector):
         if np.isscalar(data):
             self.data = np.zeros((data, 1))
             self.n = data
-            self.n = data
+            self.vn = data
         else:
             assert data.size == data.shape[0]
             self.data = data
@@ -133,7 +133,7 @@ class Real(Vector):
         return self.data
     
     def from_vec(self, vec):
-        self.data = vec
+        np.copyto(self.data, vec)
         return self
     
     def to_sparse(self):
