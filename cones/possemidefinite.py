@@ -146,16 +146,34 @@ class Cone():
         # Check if A matrix is sparse, and build data, col, row arrays if so
         self.A_is_sparse = all([sp.sparse.issparse(Ai.data) for Ai in A])
         if self.A_is_sparse:
-            self.A_data = np.array([Ai.data.tocoo().data for Ai in A])
-            self.A_cols = np.array([Ai.data.tocoo().col for Ai in A])
-            self.A_rows = np.array([Ai.data.tocoo().row for Ai in A])
-            
-            # self.A_tril_2 = [Ai.data.tocoo()for Ai in A]
-            # for (j, Aj) in enumerate(self.A_tril_2):
-            #     Aj.setdiag(Aj.diagonal() / 2)
-            #     Aj.eliminate_zeros()
-            #     self.A_tril_2[j] = Aj.tocsc()
+            # Check aggregate sparsity structure
+            if sum([Ai.data for Ai in A]).nnz > self.n ** 1.5:
+                # If aggregate structure is not sparse enough
+                self.A_data = np.array([Ai.data.tocoo().data for Ai in A])
+                self.A_cols = np.array([Ai.data.tocoo().col for Ai in A])
+                self.A_rows = np.array([Ai.data.tocoo().row for Ai in A])
                 
+                self.congr_mode = 1
+            else:
+                # If aggergate structure is sparse
+                # Construct sparse marix representation of A
+                self.A = sp.sparse.vstack([Ai.data.reshape((1, -1)) for Ai in A], format="csr")
+                
+                # Find where zero columns in A are
+                A_where_nz = np.where(self.A.getnnz(0))[0]
+                self.A = self.A[:, A_where_nz]
+                
+                # Get corresponding coordinates to nonzero columns of A
+                ijs = [(i, j) for j in range(self.n) for i in range(self.n)]
+                ijs = [ijs[idx] for idx in A_where_nz]
+                self.A_is = [ij[0] for ij in ijs]
+                self.A_js = [ij[1] for ij in ijs]
+                
+                self.congr_mode = 2
+        else:
+            # Otherwise just use dense linear algebra
+            self.congr_mode = 0
+
         self.congr_aux_updated = True
 
     def invnt_congr(self, A):
@@ -166,76 +184,82 @@ class Cone():
                     
         p = len(A)
         
-        # If constraint matrix is sparse, then do:
-        #     For all j=1,...,p
-        #         Compute W Aj W
-        #         For all i=1,...j
-        #             M_ij = <Ai, W Aj W>
-        #         End
-        #     End
-        if self.A_is_sparse:
-            WAjW = np.zeros((self.n, self.n))
-            # WAj = np.zeros((self.n, self.n))
-            out = np.zeros((p, p))
+        if self.congr_mode == 0:
+            # If constraint matrix is dense, then do:
+            #     For all j=1,...,p
+            #         (A W^1/2 ox W^1/2)_j = W^1/2 Aj W^1/2
+            #     End
+            #     (A W^1/2 ox W^1/2) @ (W^1/2 ox W^1/2 A)
+            lhs = np.zeros((self.dim, p))
 
-            #TODO: See if there is a way to speed up dsyr2k method, or use gemmt
-            #      (computes W (tril(A) + triu(A)) W)
-            # for (j, Aj) in enumerate(self.A_tril_2):
-            #     WAj  = self.W @ Aj
-            #     WAjW = sp.linalg.blas.dsyr2k(True, self.W, WAj)
+            for (j, Aj) in enumerate(A):
+                AjW  = Aj.data @ self.W_rt2
+                WAjW = self.W_rt2.conj().T @ AjW
+                lhs[:, [j]] = sym.mat_to_vec(WAjW, hermitian=self.hermitian)
+            
+            return lhs.T @ lhs
+
+        elif self.congr_mode == 1:
+            # If constraint matrix is sparse, then do:
+            #     For all j=1,...,p
+            #         Compute W Aj W
+            #         For all i=1,...j
+            #             M_ij = <Ai, W Aj W>
+            #         End
+            #     End            
+            out = np.zeros((p, p))
+            
             for (j, Aj) in enumerate(A):
                 AjW  = Aj.data.dot(self.W)
-                np.matmul(self.W, AjW, WAjW)
+                WAjW = self.W @ AjW
                 out[:j+1, j] = np.sum(WAjW[self.A_rows[:j+1], self.A_cols[:j+1]] * self.A_data[:j+1], 1)                
             return out
-
-        # If constraint matrix is not all sparse, then do:
-        #     For all j=1,...,p
-        #         (A W^1/2 ox W^1/2)_j = W^1/2 Aj W^1/2
-        #     End
-        #     (A W^1/2 ox W^1/2) @ (W^1/2 ox W^1/2 A)
-        lhs = np.zeros((self.dim, p))
-
-        for (j, Aj) in enumerate(A):
-            AjW  = Aj.data @ self.W_rt2
-            WAjW = self.W_rt2.conj().T @ AjW
-            lhs[:, [j]] = sym.mat_to_vec(WAjW, hermitian=self.hermitian)
         
-        return lhs.T @ lhs
-    
+        elif self.congr_mode == 2:
+            # If constraint matrix is has sparse aggregate structure
+            WW = self.W[np.ix_(self.A_is, self.A_is)] * self.W[np.ix_(self.A_js, self.A_js)]
+            return self.A @ WW @ self.A.T
+        
     def invhess_congr(self, A):
+        if not self.nt_aux_updated:
+            self.nt_aux()
         if not self.congr_aux_updated:
             self.congr_aux(A)
                     
         p = len(A)
         
-        # If constraint matrix is sparse, then do:
-        #     For all j=1,...,p
-        #         Compute W Aj W
-        #         For all i=1,...j
-        #             M_ij = <Ai, W Aj W>
-        #         End
-        #     End
-        if self.A_is_sparse:
-            XAjX = np.zeros((self.n, self.n))
+        if self.congr_mode == 0:
+            # If constraint matrix is dense, then do:
+            #     For all j=1,...,p
+            #         (A X^1/2 ox X^1/2)_j = X^1/2 Aj X^1/2
+            #     End
+            #     (A X^1/2 ox X^1/2) @ (X^1/2 ox X^1/2 A)
+            lhs = np.zeros((self.dim, p))
+
+            for (j, Aj) in enumerate(A):
+                AjX  = Aj.data @ self.X_chol
+                XAjX = self.X_chol.conj().T @ AjX
+                lhs[:, [j]] = sym.mat_to_vec(XAjX, hermitian=self.hermitian)
+            
+            return lhs.T @ lhs
+
+        elif self.congr_mode == 1:
+            # If constraint matrix is sparse, then do:
+            #     For all j=1,...,p
+            #         Compute X Aj X
+            #         For all i=1,...j
+            #             M_ij = <Ai, X Aj X>
+            #         End
+            #     End            
             out = np.zeros((p, p))
             
             for (j, Aj) in enumerate(A):
                 AjX  = Aj.data.dot(self.X)
-                np.matmul(self.X, AjX, XAjX)
-                out[:j+1, j] = np.sum(XAjX[self.A_rows[:j+1], self.A_cols[:j+1]] * self.A_data[:j+1], 1)                
+                XAjX = self.X @ AjX
+                out[:j+1, j] = np.sum(XAjX[self.A_roXs[:j+1], self.A_cols[:j+1]] * self.A_data[:j+1], 1)                
             return out
-
-        # If constraint matrix is not all sparse, then do:
-        #     For all j=1,...,p
-        #         (A W^1/2 ox W^1/2)_j = W^1/2 Aj W^1/2
-        #     End
-        #     (A W^1/2 ox W^1/2) @ (W^1/2 ox W^1/2 A)
-        lhs = np.zeros((self.dim, p))
-
-        for (j, Aj) in enumerate(A):
-            AjX  = Aj.data @ self.X_chol
-            XAjX = self.X_chol.conj().T @ AjX
-            lhs[:, [j]] = sym.mat_to_vec(XAjX, hermitian=self.hermitian)
         
-        return lhs.T @ lhs
+        elif self.congr_mode == 2:
+            # If constraint matrix is has sparse aggregate structure
+            XX = self.X[np.ix_(self.A_is, self.A_is)] * self.X[np.ix_(self.A_js, self.A_js)]
+            return self.A @ XX @ self.A.T

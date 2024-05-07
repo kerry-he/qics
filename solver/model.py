@@ -68,7 +68,7 @@ def op_vec_to_mat(op_vec, cones):
     op_mat = [lin.Vector([cone_k.zeros() for cone_k in cones]) for _ in range(p)]
     
     if sp.sparse.issparse(op_vec):
-        op_vec_dense = op_vec.todense()        
+        op_vec_dense = op_vec.toarray()        
     
     for i in range(p):
         if not sp.sparse.issparse(op_vec):

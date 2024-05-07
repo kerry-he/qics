@@ -164,7 +164,7 @@ class Solver():
             self.point.y[:] = np.linalg.pinv(model.A.T) @ (-model.G.T @ self.point.Z.to_vec() - model.c)
         else:
             self.point.X[:] = -(model.h - self.point.S.to_vec())
-            # self.point.y[:] = np.linalg.pinv(model.A.todense().T) @ (self.point.Z.to_vec() - model.c)
+            # self.point.y[:] = np.linalg.pinv(model.A.toarray().T) @ (self.point.Z.to_vec() - model.c)
 
         self.calc_mu()
         if not math.isclose(self.mu, 1.):
