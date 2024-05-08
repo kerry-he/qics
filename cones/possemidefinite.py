@@ -1,5 +1,6 @@
 import numpy as np
 import scipy as sp
+import numba as nb
 from utils import symmetric as sym
 from utils import linear as lin
 
@@ -149,9 +150,9 @@ class Cone():
             # Check aggregate sparsity structure
             if sum([Ai.data for Ai in A]).nnz > self.n ** 1.5:
                 # If aggregate structure is not sparse enough
-                self.A_data = np.array([Ai.data.tocoo().data for Ai in A])
-                self.A_cols = np.array([Ai.data.tocoo().col for Ai in A])
-                self.A_rows = np.array([Ai.data.tocoo().row for Ai in A])
+                self.A_data = ragged_to_array([Ai.data.tocoo().data for Ai in A])
+                self.A_cols = ragged_to_array([Ai.data.tocoo().col for Ai in A])
+                self.A_rows = ragged_to_array([Ai.data.tocoo().row for Ai in A])
                 
                 self.congr_mode = 1
             else:
@@ -212,7 +213,7 @@ class Cone():
             for (j, Aj) in enumerate(A):
                 AjW  = Aj.data.dot(self.W)
                 WAjW = self.W @ AjW
-                out[:j+1, j] = np.sum(WAjW[self.A_rows[:j+1], self.A_cols[:j+1]] * self.A_data[:j+1], 1)                
+                out[:j+1, j] = np.sum(WAjW[self.A_rows[:j+1], self.A_cols[:j+1]] * self.A_data[:j+1], 1)
             return out
         
         elif self.congr_mode == 2:
@@ -256,10 +257,25 @@ class Cone():
             for (j, Aj) in enumerate(A):
                 AjX  = Aj.data.dot(self.X)
                 XAjX = self.X @ AjX
-                out[:j+1, j] = np.sum(XAjX[self.A_roXs[:j+1], self.A_cols[:j+1]] * self.A_data[:j+1], 1)                
+                out[:j+1, j] = np.sum(XAjX[self.A_roXs[:j+1], self.A_cols[:j+1]] * self.A_data[:j+1], 1)
             return out
         
         elif self.congr_mode == 2:
             # If constraint matrix is has sparse aggregate structure
             XX = self.X[np.ix_(self.A_is, self.A_is)] * self.X[np.ix_(self.A_js, self.A_js)]
             return self.A @ XX @ self.A.T
+
+def ragged_to_array(ragged):
+    p = len(ragged)
+    ns = [xi.size for xi in ragged]
+    n = max(ns)
+    array = np.zeros((p, n), dtype=ragged[0].dtype)
+    mask = np.ones((p, n), dtype=bool)
+    
+    for i in range(p):
+        array[i, :ns[i]] = ragged[i]
+        mask[i, :ns[i]] = 0
+        
+    # array = np.ma.masked_array(array, mask)
+        
+    return array
