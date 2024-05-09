@@ -11,7 +11,7 @@ np.random.seed(1)
 
 n = 400
 m = 4
-vn = n * (n + 1) // 2
+vn = n * n
 vm = m * (m + 1) // 2
 p = n // m
 
@@ -24,20 +24,20 @@ for k in range(p):
             H = np.zeros((n, n))
             H[k*m + i, k*m + j] = 1
             H[k*m + j, k*m + i] = 1
-            A[[t]] = sym.mat_to_vec(H).T
+            A[[t]] = H.ravel().copy()
             b[t] = 0
             t += 1
             
         H = np.zeros((n, n))
         H[k*m + j, k*m + j] = 1
-        A[[t]] = sym.mat_to_vec(H).T
+        A[[t]] = H.ravel().copy()
         b[t] = 1
         t += 1
 A = sp.sparse.csr_array(A)
 
 C = np.random.randn(n,n)
 C = C+C.T
-c = sym.mat_to_vec(C)
+c = C.reshape((-1, 1))
 
 cones = [possemidefinite.Cone(n)]
 model = model.Model(c, A, b, cones=cones)

@@ -10,6 +10,7 @@ class Cone():
         self.n  = n                                    # Side length of matrix
         self.hermitian = hermitian                     # Hermitian or symmetric vector space
         self.dim = sym.vec_dim(n, self.hermitian)      # Dimension of the cone
+        self.dim = n * n
         
         self.grad = lin.Symmetric(self.n)
         self.temp = lin.Symmetric(self.n)
@@ -196,7 +197,7 @@ class Cone():
             for (j, Aj) in enumerate(A):
                 AjW  = Aj.data @ self.W_rt2
                 WAjW = self.W_rt2.conj().T @ AjW
-                lhs[:, [j]] = sym.mat_to_vec(WAjW, hermitian=self.hermitian)
+                lhs[:, j] = WAjW.flat
             
             return lhs.T @ lhs
 

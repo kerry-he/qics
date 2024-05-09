@@ -193,10 +193,12 @@ class Symmetric(Vector):
         return np.linalg.norm(self.data, order)
     
     def to_vec(self):
-        return sym.mat_to_vec(self.data, hermitian=False)
+        return self.data.reshape((-1, 1)).copy()
+        # return sym.mat_to_vec(self.data, hermitian=False)
     
     def from_vec(self, vec):
-        self.data = sym.vec_to_mat(vec, hermitian=False)
+        self.data = vec.reshape((self.n, self.n)).copy()
+        # self.data = sym.vec_to_mat(vec, hermitian=False)
         return self
     
     def to_sparse(self):

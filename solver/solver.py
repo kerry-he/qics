@@ -162,8 +162,9 @@ class Solver():
         if model.use_G:
             self.point.X[:] = np.linalg.pinv(np.vstack((model.A, model.G))) @ np.vstack((model.b, model.h - self.point.S.to_vec()))
             self.point.y[:] = np.linalg.pinv(model.A.T) @ (-model.G.T @ self.point.Z.to_vec() - model.c)
-        else:
-            self.point.X[:] = -(model.h - self.point.S.to_vec())
+        # else:
+            # self.point.X[:] = -(model.h - self.point.S.to_vec())
+            # self.point.X[:] = np.linalg.pinv(np.vstack((model.A, model.G.toarray()))) @ np.vstack((model.b, model.h - self.point.S.to_vec()))
             # self.point.y[:] = np.linalg.pinv(model.A.toarray().T) @ (self.point.Z.to_vec() - model.c)
 
         self.calc_mu()

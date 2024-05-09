@@ -92,6 +92,33 @@ class SysSolver():
         # Compute constant 3x3 subsystem
         self.solve_subsystem_elim(self.xyz_b, self.cbh, model)
 
+        if self.ir:            
+            self.forward_subsystem(self.xyz_res, self.xyz_b, model)
+            self.xyz_res -= self.cbh
+            res_norm = self.xyz_res.norm()
+            
+            iter_refine_count = 0
+            while res_norm > 1e-8:
+                self.solve_subsystem_elim(self.xyz_ir, self.xyz_res, model)
+                self.xyz_ir *= -1
+                self.xyz_ir += self.xyz_b
+                self.forward_subsystem(self.xyz_res, self.xyz_ir, model)
+
+                self.xyz_res -= self.cbh    
+                res_norm_new = self.xyz_res.norm()
+
+                # Check if iterative refinement made things worse
+                if res_norm_new > res_norm:
+                    break
+
+                self.xyz_b.copy(self.xyz_ir)
+                res_norm = res_norm_new
+
+                iter_refine_count += 1
+
+                if iter_refine_count > 1:
+                    break        
+
         # if self.ir:
         #     # Iterative refinement
         #     c_est, b_est, h_est = self.forward_subsystem(self.X_b, self.y_b, self.Z_b, model)
@@ -160,7 +187,6 @@ class SysSolver():
 
         return res_norm
 
-    #@profile
     def solve_system(self, sol, rhs, model, mu_tau2, tau, kappa):
         # Solve Newton system using elimination
         # NOTE: mu has already been accounted for in H
@@ -197,7 +223,7 @@ class SysSolver():
                 if res_norm_new > res_norm:
                     break
 
-                self.xyz_r.copy(self.xyz_res)
+                self.xyz_r.copy(self.xyz_ir)
                 res_norm = res_norm_new
 
                 iter_refine_count += 1
