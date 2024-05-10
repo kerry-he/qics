@@ -23,8 +23,8 @@ A = sp.sparse.csr_array(A)
 
 
 b = np.ones((n, 1))
-C = np.random.randn(n,n)
-C = C+C.T
+C = np.random.randn(n, n)
+C = C + C.T
 # c = sym.mat_to_vec(C)
 c = C.reshape((-1, 1))
 

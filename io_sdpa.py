@@ -1,6 +1,7 @@
 import cProfile
 
 import numpy as np
+import scipy as sp
 from utils import symmetric as sym
 from cones import *
 from solver import model, solver
@@ -82,7 +83,7 @@ def read_sdpa(filename):
 
 
 if __name__ == "__main__":
-    C_sdpa, b_sdpa, A_sdpa, blockStruct = read_sdpa("/home/kerry/qce-ipm/problems/sdp/theta2.dat-s")
+    C_sdpa, b_sdpa, A_sdpa, blockStruct = read_sdpa("/home/kerry/qce-ipm/problems/sdp/arch0.dat-s")
     
     # Vectorize C
     dims = []
@@ -119,10 +120,11 @@ if __name__ == "__main__":
             if blockStruct[i] >= 0:
                 A[j, t : t+dims[i]] = Aji.flat
                 # A[[j], t : t+dims[i]] = sym.mat_to_vec(Aji).T
-                print("Rank: ", np.linalg.matrix_rank(Aji), "  nnz: ", np.count_nonzero(Aji))
+                # print("Rank: ", np.linalg.matrix_rank(Aji), "  nnz: ", np.count_nonzero(Aji))
             else:
                 A[j, t : t+dims[i]] = Aji
             t += dims[i]
+    A = sp.sparse.coo_array(A)
             
     model = model.Model(c, A, b, cones=cones)
     solver = solver.Solver(model, sym=True, ir=True)
