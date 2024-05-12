@@ -19,8 +19,8 @@ def read_problem(file_name):
     b = np.array(f['b'])
     h = np.array(f['h'])
 
-    A = np.array(f['A'].todense())
-    G = np.array(f['G'].todense())
+    A = np.array(f['A'].toarray())
+    G = np.array(f['G'].toarray())
 
 
     # List of cones

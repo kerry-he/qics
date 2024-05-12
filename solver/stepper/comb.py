@@ -145,9 +145,9 @@ class CombinedStepper():
                 return point, alpha, True
 
     def update_rhs_cent(self, model, point, mu):
-        self.rhs.X *= 0
-        self.rhs.y *= 0
-        self.rhs.Z *= 0
+        self.rhs.X.fill(0.)
+        self.rhs.y.fill(0.)
+        self.rhs.Z.fill(0.)
 
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
@@ -159,9 +159,9 @@ class CombinedStepper():
         return self.rhs
 
     def update_rhs_cent_toa(self, model, point, mu, dir_c):
-        self.rhs.X *= 0
-        self.rhs.y *= 0
-        self.rhs.Z *= 0
+        self.rhs.X.fill(0.)
+        self.rhs.y.fill(0.)
+        self.rhs.Z.fill(0.)
 
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
@@ -186,9 +186,9 @@ class CombinedStepper():
         return self.rhs
 
     def update_rhs_pred_toa(self, model, point, mu, dir_p):
-        self.rhs.X *= 0
-        self.rhs.y *= 0
-        self.rhs.Z *= 0 
+        self.rhs.X.fill(0.)
+        self.rhs.y.fill(0.)
+        self.rhs.Z.fill(0.)
 
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):

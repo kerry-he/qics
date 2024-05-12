@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 from utils import linear as lin
 
 class Cone():
@@ -67,11 +68,20 @@ class Cone():
         assert not self.congr_aux_updated
         # Check if A matrix is sparse, and build data, col, row arrays if so
         p = len(A)
-        n = A[0].data.size
+        n = A[0].data.shape[0]
         
+        nnz = 0
         self.A = np.zeros((p, n))
         for i in range(p):
-            self.A[[i], :] = A[i].data.T
+            if sp.sparse.issparse(A[i].data):
+                self.A[[i], :] = A[i].data.toarray().T
+                nnz += A[i].data.nnz
+            else:
+                self.A[[i], :] = A[i].data.T
+                nnz += n
+                
+        if nnz < n * p * 0.05:
+            self.A = sp.sparse.csr_matrix(self.A)
                 
         self.congr_aux_updated = True 
             
@@ -81,10 +91,23 @@ class Cone():
         
         Ax = self.x * self.A.T
         return Ax.T @ Ax
-        
+    
     def invnt_congr(self, A):
         if not self.congr_aux_updated:
             self.congr_aux(A)
+            
+        if sp.sparse.issparse(self.A):
+            d = sp.sparse.diags_array(np.sqrt(self.x / self.z).ravel())
+            # Ad = self.A @ d
+            # return Ad.tocsc()
+            Ax = d @ self.A.T
+            return sp.sparse.csc_matrix(Ax.T @ Ax)
+        else:
+            Ax = np.sqrt(self.x / self.z) * self.A.T
+            return Ax.T @ Ax 
+
+    def sp_invhess_congr(self, A, sp_is, sp_js):
+        return self.invnt_congr(A)
         
-        Ax = np.sqrt(self.x / self.z) * self.A.T
-        return Ax.T @ Ax 
+    def sp_invnt_congr(self, A, sp_is, sp_js):
+        return self.invnt_congr(A)

@@ -36,6 +36,8 @@ class SysSolver():
         self.dir_ir = point.Point(model)
         self.res = point.Point(model)
         
+        self.AHA_fact = None
+        
 
         if subsolver is None:
             if not model.use_G:
@@ -72,8 +74,11 @@ class SysSolver():
                     self.AGHGA_fact = lin.fact(AGHGA)
 
             elif model.use_A:
+                # Check sparisty of 
+                self.AHA_sparsity(model)
+                
                 AHA = blk_invhess_congruence(model.A_vec, model, self.sym)
-                self.AHA_fact = lin.fact(AHA)
+                self.AHA_fact = lin.fact(AHA, self.AHA_fact)
 
         if self.subsolver == "qrchol":
             if model.use_A and model.use_G:
@@ -418,6 +423,33 @@ class SysSolver():
         pnt.S += rhs.Z
 
         return pnt
+    
+    def AHA_sparsity(self, model):
+        # Check if A is sparse
+        if not sp.sparse.issparse(model.A):
+            return False
+        
+        # Check if AHA has a significant sparsity pattern
+        H_dummy = sp.sparse.block_diag([np.random.rand(cone_k.dim, cone_k.dim) for cone_k in model.cones])
+        AHA_dummy = model.A @ H_dummy @ model.A.T
+        if AHA_dummy.nnz > model.p ** 1.5:
+            return False
+        
+        # Get sparsity pattern for each cone
+        self.AHA_sp_is = []
+        self.AHA_sp_js = []
+        
+        for (k, cone_k) in enumerate(model.cones):
+            Ak = model.A[:, model.cone_idxs[k]]
+            Hk = sp.sparse.rand(cone_k.dim, cone_k.dim, 1)
+            AHAk = (Ak @ Hk @ Ak.T).tocoo()
+            
+            self.AHA_sp_is.append(AHAk.col)
+            self.AHA_sp_js.append(AHAk.row)
+        
+        return True
+            
+            
 
 def blk_hess_prod(dirs, model, sym):
     out = dirs.zeros_like()
@@ -485,5 +517,19 @@ def blk_invhess_congruence(dirs, model, sym):
             out += cone_k.invnt_congr(dirs_k)
         else:
             out += cone_k.invhess_congr(dirs_k) 
+
+    return out
+
+def sp_blk_invhess_congruence(dirs, model, sp_is, sp_js, sym):
+
+    p = len(dirs)
+    out = np.zeros((p, p))
+
+    for (k, cone_k) in enumerate(model.cones):
+        dirs_k = [dirs[i].data[k] for i in range(p)]
+        if sym:
+            out += cone_k.sp_invnt_congr(dirs_k, sp_is, sp_js)
+        else:
+            out += cone_k.sp_invhess_congr(dirs_k, sp_is, sp_js) 
 
     return out

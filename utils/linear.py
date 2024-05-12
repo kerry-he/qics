@@ -1,5 +1,7 @@
 import numpy as np
 import scipy as sp
+import sksparse.cholmod as cholmod
+
 from utils import symmetric as sym
 # import symmetric as sym
 
@@ -80,7 +82,12 @@ class Vector():
     def to_sparse(self):
         for x in self.data:
             x.to_sparse()
-        return self                
+        return self
+    
+    def fill(self, a):
+        for x in self.data:
+            x.fill(a)
+        return self
         
 
 class Real(Vector):
@@ -114,6 +121,10 @@ class Real(Vector):
             return Real(self.data * other)
         else:
             return Real(self.data * other.data)
+        
+    def __imul__(self, other):
+        self.data *= other
+        return self        
             
     __rmul__ = __mul__
     
@@ -144,19 +155,22 @@ class Real(Vector):
         self.data += a * other.data
         
     def copy(self, other):
-        np.copyto(self.data, other.data)  
+        np.copyto(self.data, other.data)
+        
+    def fill(self, a):
+        self.data.fill(a)
 
 class Symmetric(Vector):
     def __init__(self, data):
         if np.isscalar(data):
             self.data = np.zeros((data, data))
             self.n  = data
-            self.vn = self.n * (self.n + 1) // 2
+            self.vn = self.n * self.n
         else:
             assert data.shape[0] == data.shape[1]
             self.data = (data + data.T) / 2
             self.n  = data.shape[0]
-            self.vn = self.n * (self.n + 1) // 2
+            self.vn = self.n * self.n
 
     def __add__(self, other):
         return Symmetric(self.data + other.data)
@@ -177,6 +191,10 @@ class Symmetric(Vector):
             return Symmetric(self.data * other)
         else:
             return Symmetric(self.data * other.data)
+        
+    def __imul__(self, other):
+        self.data *= other
+        return self          
     
     __rmul__ = __mul__
 
@@ -194,7 +212,7 @@ class Symmetric(Vector):
     
     def to_vec(self):
         return self.data.reshape((-1, 1)).copy()
-        # return sym.mat_to_vec(self.data, hermitian=False)
+        return sym.mat_to_vec(self.data, hermitian=False)
     
     def from_vec(self, vec):
         self.data = vec.reshape((self.n, self.n)).copy()
@@ -209,7 +227,10 @@ class Symmetric(Vector):
         self.data += a * other.data
         
     def copy(self, other):
-        np.copyto(self.data, other.data)  
+        np.copyto(self.data, other.data)
+        
+    def fill(self, a):
+        self.data.fill(a)        
         
     
 class Hermitian(Vector):
@@ -244,6 +265,10 @@ class Hermitian(Vector):
             return Hermitian(self.data * other)
         else:
             return Hermitian(self.data * other.data)
+        
+    def __imul__(self, other):
+        self.data *= other
+        return self          
     
     __rmul__ = __mul__
 
@@ -274,7 +299,10 @@ class Hermitian(Vector):
         self.data += a * other.data
         
     def copy(self, other):
-        np.copyto(self.data, other.data)  
+        np.copyto(self.data, other.data)
+        
+    def fill(self, a):
+        self.data.fill(a)        
         
 
 def inp(x, y):
@@ -298,8 +326,17 @@ def add(x, y):
     else:
         return x + y
 
-def fact(A):
+# @profile
+def fact(A, fact=None):
     # Perform a Cholesky decomposition, or an LU factorization if Cholesky fails
+    if sp.sparse.issparse(A):
+        if fact is None:
+            fact = cholmod.cholesky(A)
+        else:
+            fact = fact[0]
+            fact.cholesky_inplace(A)
+        return (fact, "spcho")
+    
     while True:
         try:
             fact = sp.linalg.cho_factor(A, check_finite=False)
@@ -325,6 +362,8 @@ def fact_solve(A, x):
         return sp.linalg.cho_solve(fact, x, check_finite=False)
     elif type == "lu":
         return sp.linalg.lu_solve(fact, x)
+    elif type == "spcho":
+        return fact.solve_A(x)
 
 def pcg(A, b, M, tol=1e-8, max_iter=20):
 
