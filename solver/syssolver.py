@@ -2,6 +2,7 @@ import numpy as np
 import scipy as sp
 from utils import point, linear as lin
 from utils import symmetric as sym
+from cones import *
 
 
 # Solves the following square Newton system
@@ -37,7 +38,7 @@ class SysSolver():
         self.res = point.Point(model)
         
         self.AHA_fact = None
-        
+        self.AHA_is_sparse = None
 
         if subsolver is None:
             if not model.use_G:
@@ -75,9 +76,14 @@ class SysSolver():
 
             elif model.use_A:
                 # Check sparisty of 
-                self.AHA_sparsity(model)
+                if self.AHA_is_sparse is None:
+                    self.AHA_is_sparse = self.AHA_sparsity(model)
+
+                if self.AHA_is_sparse:
+                    AHA = sp_blk_invhess_congruence(model.A_vec, model, self.AHA_sp_is, self.AHA_sp_js, self.sym)
+                else:
+                    AHA = blk_invhess_congruence(model.A_vec, model, self.sym)
                 
-                AHA = blk_invhess_congruence(model.A_vec, model, self.sym)
                 self.AHA_fact = lin.fact(AHA, self.AHA_fact)
 
         if self.subsolver == "qrchol":
@@ -429,10 +435,22 @@ class SysSolver():
         if not sp.sparse.issparse(model.A):
             return False
         
+        # Check if blocks are "small"
+        H_block = []
+        for cone_k in model.cones:
+            dim_k = cone_k.dim
+            # Cone is too big
+            if isinstance(cone_k, nonnegorthant.Cone):
+                H_block.append(sp.sparse.diags(np.random.rand(dim_k)))
+            elif dim_k > model.q * 0.1:         # TODO: Determine a good threshold
+                return False
+            else:
+                H_block.append(np.random.rand(dim_k, dim_k))
+
         # Check if AHA has a significant sparsity pattern
-        H_dummy = sp.sparse.block_diag([np.random.rand(cone_k.dim, cone_k.dim) for cone_k in model.cones])
+        H_dummy = sp.sparse.block_diag(H_block)
         AHA_dummy = model.A @ H_dummy @ model.A.T
-        if AHA_dummy.nnz > model.p ** 1.5:
+        if AHA_dummy.nnz > model.q ** 1.5:              # TODO: Determine a good threshold
             return False
         
         # Get sparsity pattern for each cone
@@ -441,7 +459,7 @@ class SysSolver():
         
         for (k, cone_k) in enumerate(model.cones):
             Ak = model.A[:, model.cone_idxs[k]]
-            Hk = sp.sparse.rand(cone_k.dim, cone_k.dim, 1)
+            Hk = sp.sparse.csr_array(H_block[k])
             AHAk = (Ak @ Hk @ Ak.T).tocoo()
             
             self.AHA_sp_is.append(AHAk.col)
@@ -523,13 +541,13 @@ def blk_invhess_congruence(dirs, model, sym):
 def sp_blk_invhess_congruence(dirs, model, sp_is, sp_js, sym):
 
     p = len(dirs)
-    out = np.zeros((p, p))
+    out = sp.sparse.csc_matrix((p, p))
 
     for (k, cone_k) in enumerate(model.cones):
         dirs_k = [dirs[i].data[k] for i in range(p)]
         if sym:
-            out += cone_k.sp_invnt_congr(dirs_k, sp_is, sp_js)
+            out += cone_k.sp_invnt_congr(dirs_k, sp_is[k], sp_js[k])
         else:
-            out += cone_k.sp_invhess_congr(dirs_k, sp_is, sp_js) 
+            out += cone_k.sp_invhess_congr(dirs_k, sp_is[k], sp_js[k]) 
 
     return out

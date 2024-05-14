@@ -7,10 +7,10 @@ from cones import *
 from utils import symmetric as sym
 from solver import model, solver
 
-np.random.seed(1)
+np.random.seed(3)
 
-n = 5000
-p = 200
+n = 50000
+p = 2000
 
 A = sp.sparse.random(p, n, 0.0001).tocsr()#.toarray()
 A = A[A.getnnz(1)>0]

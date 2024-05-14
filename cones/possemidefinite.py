@@ -80,8 +80,8 @@ class Cone():
         return self.grad
     
     def hess_prod_ip(self, out, H):
-        if not self.nt_aux_updated:
-            self.nt_aux()
+        if not self.grad_updated:
+            self.get_grad()
         XHX = self.inv_X @ H.data @ self.inv_X
         out.data = (XHX + XHX.T) / 2
         return out    
@@ -122,7 +122,7 @@ class Cone():
         D_rt2 = np.sqrt(D)
 
         self.W_rt2 = self.X_chol @ (Vt.T / D_rt2)
-        self.W = self.W_rt2 @ self.W_rt2.T
+        self.W = self.W_rt2 @ self.W_rt2.conj().T
 
         self.W_irt2 = self.X_chol_inv.T @ (Vt.T * D_rt2)
         self.W_inv = self.W_irt2 @ self.W_irt2.T
@@ -240,54 +240,79 @@ class Cone():
             return out
 
         elif self.congr_mode == 1:
+
+            # W_sub_((i,j), (k,l)) = W_(i,l)
+            # WW_((i,j), (k,l)) = W_(i,l) * W_(j,k)
+            # for all (i,j) in the aggregate sparsity pattern
+
             # If constraint matrix has sparse aggregate structure
             W_sub = self.W[np.ix_(self.A_is, self.A_js)]
             WW = W_sub * W_sub.T
             return self.A @ WW @ self.A.T
         
     def invhess_congr(self, A):
-        if not self.nt_aux_updated:
-            self.nt_aux()
         if not self.congr_aux_updated:
             self.congr_aux(A)
                     
         p = len(A)
         
         if self.congr_mode == 0:
-            # If constraint matrix is dense, then do:
-            #     For all j=1,...,p
-            #         (A X^1/2 ox X^1/2)_j = X^1/2 Aj X^1/2
-            #     End
-            #     (A X^1/2 ox X^1/2) @ (X^1/2 ox X^1/2 A)
-            lhs = np.zeros((self.dim, p))
-
-            for (j, Aj) in enumerate(A):
-                AjX  = Aj.data @ self.X_chol
-                XAjX = self.X_chol.conj().T @ AjX
-                lhs[:, j] = XAjX.flat
-            
-            return lhs.T @ lhs
-
-        elif self.congr_mode == 1:
-            # If constraint matrix is sparse, then do:
-            #     For all j=1,...,p
-            #         Compute X Aj X
-            #         For all i=1,...j
-            #             M_ij = <Ai, X Aj X>
-            #         End
-            #     End            
             out = np.zeros((p, p))
             
-            for (j, Aj) in enumerate(A):
-                AjX  = Aj.data.dot(self.X)
-                XAjX = self.X @ AjX
-                out[:j+1, j] = np.sum(XAjX[self.A_rows[:j+1], self.A_cols[:j+1]] * self.A_data[:j+1], 1)
+            # Compute SPARSE x SPARSE     
+            if len(self.A_sp_idxs) > 0:        
+                for (j, t) in enumerate(self.A_sp_idxs):
+                    ts = self.A_sp_idxs[:j+1]
+                    
+                    AjX  = A[t].data.dot(self.X)
+                    XAjX = self.X @ AjX
+                    out[ts, t] = np.sum(XAjX[self.A_sp_rows[:j+1], self.A_sp_cols[:j+1]] * self.A_sp_data[:j+1], 1)
+            
+            lhs = np.zeros((self.dim, len(self.A_ds_idxs)))
+            
+            # Compute SPARSE x DENSE
+            if len(self.A_sp_idxs) > 0 and len(self.A_ds_idxs) > 0:
+                for (j, t) in enumerate(self.A_ds_idxs):
+                    AjX  = A[t].data @ self.X
+                    XAjX = self.X.conj().T @ AjX
+                    
+                    out[self.A_sp_idxs, t] = np.sum(XAjX[self.A_sp_rows, self.A_sp_cols] * self.A_sp_data, 1)
+                    out[t, self.A_sp_idxs] = out[self.A_sp_idxs, t]
+                
+                    lhs[:, j] = XAjX.flat
+                    
+                out[np.ix_(self.A_ds_idxs, self.A_ds_idxs)] = self.A_ds_mtx @ lhs
+                
+            # Compute DENSE x DENSE
+            if len(self.A_ds_idxs) > 0 and len(self.A_sp_idxs) == 0:
+                for (j, t) in enumerate(self.A_ds_idxs):
+                    AjX  = A[j].data @ self.X_chol
+                    XAjX = self.X_chol.conj().T @ AjX
+                    lhs[:, j] = XAjX.flat   
+                out = lhs.T @ lhs
+                
             return out
-        
-        elif self.congr_mode == 2:
+
+        elif self.congr_mode == 1:
             # If constraint matrix has sparse aggregate structure
-            XX = self.X[np.ix_(self.A_is, self.A_is)] * self.X[np.ix_(self.A_js, self.A_js)]
+            X_sub = self.X[np.ix_(self.A_is, self.A_js)]
+            XX = X_sub * X_sub.T
             return self.A @ XX @ self.A.T
+        
+    def sp_invnt_congr(self, A, sp_is, sp_js):
+        if not self.nt_aux_updated:
+            self.nt_aux()
+
+        p = len(A)
+
+        sp_vs = [0.0 for _ in sp_is]
+
+        for (k, (i, j)) in enumerate(zip(sp_is, sp_js)):
+            AiW = A[i].data @ self.W
+            AjW = A[j].data @ self.W
+            sp_vs[k] = np.sum(AiW * AjW.T)
+        
+        return sp.sparse.coo_matrix((sp_vs, (sp_is, sp_js)), shape=(p, p)).tocsc()
 
 def ragged_to_array(ragged):
     p = len(ragged)

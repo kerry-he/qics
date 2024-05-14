@@ -30,10 +30,10 @@ class Cone():
         return
     
     def get_feas(self):
-        return all(self.x > 0)
+        return np.all(np.greater(self.x, 0))
     
     def get_val(self):
-        return -sum(np.log(self.x))    
+        return -np.sum(np.log(self.x))    
     
     def get_grad(self):
         self.grad.data = -np.reciprocal(self.x)
@@ -49,7 +49,7 @@ class Cone():
     
     def third_dir_deriv(self, dir1, dir2=None):
         if dir2 is None:
-            return lin.Real(-2 * (dir1.data**2) / (self.x**3))
+            return lin.Real(-2 * (dir1.data*dir1.data) / (self.x*self.x*self.x))
         else:
             return lin.Real(-2 * dir1.data * dir2.data / self.x)
     

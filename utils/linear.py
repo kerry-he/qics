@@ -152,7 +152,8 @@ class Real(Vector):
         return self    
     
     def axpy(self, a, other):
-        self.data += a * other.data
+        self.data = sp.linalg.blas.daxpy(other.data, self.data, a=a)
+        # self.data += a * other.data
         
     def copy(self, other):
         np.copyto(self.data, other.data)
@@ -224,7 +225,8 @@ class Symmetric(Vector):
         return self    
     
     def axpy(self, a, other):
-        self.data += a * other.data
+        self.data = sp.linalg.blas.daxpy(other.data.ravel(), self.data.ravel(), a=a).reshape((self.n, self.n))
+        # self.data += a * other.data
         
     def copy(self, other):
         np.copyto(self.data, other.data)

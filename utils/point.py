@@ -1,4 +1,6 @@
 import numpy as np
+import scipy as sp
+import numba as nb
 from utils import linear as lin
 
 class Point():
@@ -52,8 +54,8 @@ class Point():
         return self
     
     def axpy(self, a, other):
-        self.X     += a * other.X
-        self.y     += a * other.y
+        self.X = sp.linalg.blas.daxpy(other.X, self.X, a=a)
+        self.y += a * other.y
         self.Z.axpy(a, other.Z)
         self.S.axpy(a, other.S)
         self.tau   += a * other.tau
@@ -150,7 +152,7 @@ class PointXYZ():
         return self
     
     def axpy(self, a, other):
-        self.X     += a * other.X
+        self.X = sp.linalg.blas.daxpy(other.X, self.X, a=a)
         self.y     += a * other.y
         self.Z.axpy(a, other.Z)
         return self
