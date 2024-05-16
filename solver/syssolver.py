@@ -40,13 +40,14 @@ class SysSolver():
         self.AHA_fact = None
         self.AHA_is_sparse = None
 
-        if subsolver is None:
-            if not model.use_G:
-                self.subsolver = "elim"
-            else:
-                self.subsolver = "qrchol"
-        else:
-            self.subsolver = subsolver
+        self.subsolver = "elim"
+        # if subsolver is None:
+        #     if not model.use_G:
+        #         self.subsolver = "elim"
+        #     else:
+        #         self.subsolver = "qrchol"
+        # else:
+        #     self.subsolver = subsolver
 
         if self.subsolver == "qrchol" and model.use_A:
             self.Q, self.R = sp.linalg.qr(model.A.T)
@@ -64,7 +65,8 @@ class SysSolver():
 
         if self.subsolver == "elim":
             if model.use_G:
-                GHG = blk_hess_congruence(model.G, model)
+                # TODO: Check sparsity and if we can use CHOLMOD
+                GHG = blk_hess_congruence(model.G_T_vec, model, self.sym)
                 self.GHG_fact = lin.fact(GHG)
 
                 if model.use_A:
@@ -96,7 +98,7 @@ class SysSolver():
                 self.Q2HQ2_fact = lin.fact(Q2HQ2)
             
             elif model.use_G:
-                GHG = blk_hess_congruence(model.G, model)
+                GHG = blk_hess_congruence(model.G_T_vec, model, self.sym)
                 self.GHG_fact = lin.fact(GHG)
 
 
@@ -308,11 +310,24 @@ class SysSolver():
             return out
         
         if not model.use_A and model.use_G:
-            x = lin.fact_solve(self.GHG_fact, rx - model.G.T @ (blk_hess_prod(rz, model, self.sym) + rs))
-            z = rs + blk_hess_prod(model.G @ x + rz, model, self.sym)
+            # Solve for x: GHG x = rx - G'(H rz + rs)
+            blk_hess_prod_ip(self.vec_temp, rZ, model, self.sym)
+            if rS is not None:
+                self.vec_temp += rS
+            temp = rX - model.G_T @ self.vec_temp.to_vec()
+            out.X = lin.fact_solve(self.GHG_fact, temp)
+
+            # Solve for z: z = H(rz + Gx) + rs
+            self.vec_temp.from_vec(model.G @ out.X)
+            self.vec_temp += rZ
+            blk_hess_prod_ip(out.Z, self.vec_temp, model, self.sym)
+            if rS is not None:
+                out.Z += rS
+
+            # y is empty vector as p=0
             y = np.zeros_like(model.b)
 
-            return x, y, z
+            return out
         
         if not model.use_A and not model.use_G:
             x = rz + blk_invhess_prod(rx + rs, model, self.sym)
@@ -507,22 +522,19 @@ def blk_invhess_prod_ip(out, dirs, model, sym):
             cone_k.invhess_prod_ip(out[k], dirs[k])
     return out
 
-# def blk_hess_congruence(dirs, model):
+def blk_hess_congruence(dirs, model, sym):
 
-#     p = dirs.shape[1]
-#     out = np.zeros((p, p))
+    p = len(dirs)
+    out = np.zeros((p, p))
 
-#     for (cone_k, cone_idxs_k) in zip(model.cones, model.cone_idxs):
-#         dirs_k = dirs[cone_idxs_k, :]
+    for (k, cone_k) in enumerate(model.cones):
+        dirs_k = [dirs[i].data[k] for i in range(p)]
+        if sym:
+            out += cone_k.nt_congr(dirs_k)
+        else:
+            out += cone_k.hess_congr(dirs_k) 
 
-#         if not cone_k.use_sqrt:
-#             H_dir_k = cone_k.hess_prod(dirs[cone_idxs_k, :])
-#             out += dirs_k.T @ H_dir_k
-#         else:
-#             H_dir_k = cone_k.sqrt_hess_prod(dirs[cone_idxs_k, :])
-#             out += H_dir_k.T @ H_dir_k
-
-#     return out
+    return out
 
 def blk_invhess_congruence(dirs, model, sym):
 

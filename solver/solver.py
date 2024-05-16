@@ -159,13 +159,13 @@ class Solver():
             assert cone_k.get_feas()
             self.point.Z[k] = -1 * cone_k.get_grad()
 
-        if model.use_G:
-            self.point.X[:] = np.linalg.pinv(np.vstack((model.A, model.G))) @ np.vstack((model.b, model.h - self.point.S.to_vec()))
-            self.point.y[:] = np.linalg.pinv(model.A.T) @ (-model.G.T @ self.point.Z.to_vec() - model.c)
+        # if model.use_G:
+        #     self.point.X[:] = np.linalg.pinv(np.vstack((model.A, model.G))) @ np.vstack((model.b, model.h - self.point.S.to_vec()))
+        #     self.point.y[:] = np.linalg.pinv(model.A.T) @ (-model.G.T @ self.point.Z.to_vec() - model.c)
         # else:
-            # self.point.X[:] = -(model.h - self.point.S.to_vec())
-            # self.point.X[:] = np.linalg.pinv(np.vstack((model.A, model.G.toarray()))) @ np.vstack((model.b, model.h - self.point.S.to_vec()))
-            # self.point.y[:] = np.linalg.pinv(model.A.toarray().T) @ (self.point.Z.to_vec() - model.c)
+        #     self.point.X[:] = -(model.h - self.point.S.to_vec())
+        #     self.point.X[:] = np.linalg.pinv(np.vstack((model.A, model.G.toarray()))) @ np.vstack((model.b, model.h - self.point.S.to_vec()))
+        #     self.point.y[:] = np.linalg.pinv(model.A.toarray().T) @ (self.point.Z.to_vec() - model.c)
 
         self.calc_mu()
         if not math.isclose(self.mu, 1.):
@@ -191,7 +191,7 @@ class Solver():
         tau = self.point.tau
 
         c_max = np.linalg.norm(c, np.inf)
-        b_max = np.linalg.norm(b, np.inf)
+        b_max = abs(b).max(initial=0.0)
         h_max = np.linalg.norm(h, np.inf)
 
         # Get primal and dual objectives and optimality gap
@@ -213,7 +213,7 @@ class Solver():
 
         # Get primal and dual infeasibilities
         self.x_infeas =  np.linalg.norm(x_res, np.inf) / d_obj_tau if (d_obj_tau > 0) else np.inf
-        self.y_infeas = -np.linalg.norm(y_res, np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
+        self.y_infeas = -abs(y_res).max(initial=0.0) / p_obj_tau if (p_obj_tau < 0) else np.inf
         self.z_infeas = -np.linalg.norm(z_res, np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
 
 

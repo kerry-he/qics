@@ -28,7 +28,10 @@ class Model():
         self.A_T = self.A.T
         self.G_T = self.G.T
         
-        self.A_vec = op_vec_to_mat(A, cones)
+        if self.use_G:
+            self.G_T_vec = op_vec_to_mat(G.T, cones)
+        elif self.use_A:
+            self.A_vec = op_vec_to_mat(A, cones)
         
         return
 

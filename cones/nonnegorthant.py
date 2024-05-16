@@ -84,22 +84,49 @@ class Cone():
             self.A = sp.sparse.csr_matrix(self.A)
                 
         self.congr_aux_updated = True 
+
+    def hess_congr(self, A):
+        if not self.congr_aux_updated:
+            self.congr_aux(A)
             
+        if sp.sparse.issparse(self.A):
+            d = sp.sparse.diags_array(np.reciprocal(self.x.ravel()))
+            Ax = d @ self.A.T
+            return sp.sparse.csc_matrix(Ax.T @ Ax)
+        else:
+            Ax = self.A.T / self.x
+            return Ax.T @ Ax     
+
     def invhess_congr(self, A):
         if not self.congr_aux_updated:
             self.congr_aux(A)
-        
-        Ax = self.x * self.A.T
-        return Ax.T @ Ax
-    
+            
+        if sp.sparse.issparse(self.A):
+            d = sp.sparse.diags_array(self.x.ravel())
+            Ax = d @ self.A.T
+            return sp.sparse.csc_matrix(Ax.T @ Ax)
+        else:
+            Ax = self.x * self.A.T
+            return Ax.T @ Ax     
+
+    def nt_congr(self, A):
+        if not self.congr_aux_updated:
+            self.congr_aux(A)
+            
+        if sp.sparse.issparse(self.A):
+            d = sp.sparse.diags_array(np.sqrt(self.z / self.x).ravel())
+            Ax = d @ self.A.T
+            return sp.sparse.csc_matrix(Ax.T @ Ax)
+        else:
+            Ax = np.sqrt(self.z / self.x) * self.A.T
+            return Ax.T @ Ax 
+
     def invnt_congr(self, A):
         if not self.congr_aux_updated:
             self.congr_aux(A)
             
         if sp.sparse.issparse(self.A):
             d = sp.sparse.diags_array(np.sqrt(self.x / self.z).ravel())
-            # Ad = self.A @ d
-            # return Ad.tocsc()
             Ax = d @ self.A.T
             return sp.sparse.csc_matrix(Ax.T @ Ax)
         else:
