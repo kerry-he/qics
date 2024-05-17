@@ -55,13 +55,13 @@ def cvxopt_solve_sdp(C, b, A, blockStruct):
             # SDP
             A_k = A[:, t:t+n*n].tocoo()
             Gs.append(cvxopt.spmatrix(A_k.data, A_k.col, A_k.row, (n*n, p), 'd'))
-            hs.append(cvxopt.matrix(C[k]))
+            hs.append(cvxopt.matrix(-C[k]))
             t += n*n
         else:
             # LP
             A_k = A[:, t:t-n].tocoo()
             Gl = cvxopt.spmatrix(A_k.data, A_k.col, A_k.row, (-n, p), 'd')
-            hl = cvxopt.matrix(C[k])
+            hl = cvxopt.matrix(-C[k])
 
     # Solve with cvxopt
     # Fit the form max -<h1,z> s.t. G1'*z + c == 0, z >= 0
