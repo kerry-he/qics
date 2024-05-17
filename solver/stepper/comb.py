@@ -39,9 +39,10 @@ class CombinedStepper():
         res_norm = max(temp_res_norm, res_norm)
 
         # Get TOA centering direction
-        self.update_rhs_cent_toa(model, point, mu, self.dir_c)
-        temp_res_norm = self.syssolver.solve_system_ir(self.dir_c_toa, self.rhs, model, mu, point.tau, point.kappa)
-        res_norm = max(temp_res_norm, res_norm)
+        if not (model.sym and self.syssolver.sym):
+            self.update_rhs_cent_toa(model, point, mu, self.dir_c)
+            temp_res_norm = self.syssolver.solve_system_ir(self.dir_c_toa, self.rhs, model, mu, point.tau, point.kappa)
+            res_norm = max(temp_res_norm, res_norm)
 
         step_mode = "co_toa"
         point, alpha, success = self.line_search(model, point, step_mode)
@@ -86,7 +87,8 @@ class CombinedStepper():
                 next_point.axpy(alpha             , dir_p)
                 next_point.axpy(alpha ** 2        , dir_p_toa)
                 next_point.axpy((1.0 - alpha)     , dir_c)
-                next_point.axpy((1.0 - alpha) ** 2, dir_c_toa)
+                if not (model.sym and self.syssolver.sym):
+                    next_point.axpy((1.0 - alpha) ** 2, dir_c_toa)
             elif mode == "comb":
                 # step = dir_p * alpha + dir_c * (1.0 - alpha)
                 next_point.axpy(alpha        , dir_p)
@@ -102,42 +104,44 @@ class CombinedStepper():
             # Check that tau, kappa, mu are well defined
             # Make sure tau, kappa are positive
             taukap = next_point.tau * next_point.kappa
-            if next_point.tau < 0 or next_point.kappa < 0 or taukap < 0:      
+            if next_point.tau <= 0 or next_point.kappa <= 0 or taukap <= 0:      
                 continue
             # Compute barrier parameter mu, ensure it is positive
             sz = [s_k.inp(z_k) for (s_k, z_k) in zip(next_point.S, next_point.Z)]  
             mu = (sum(sz) + taukap) / model.nu
-            if any(np.array(sz) < 0) or mu < 0:
+            if any(np.array(sz) <= 0) or mu <= 0:
                 continue
 
-            # Check cheap proximity conditions first
-            if abs(taukap / mu - 1) > eta:
-                continue
-            nu  = [cone_k.get_nu() for cone_k in model.cones]
-            rho = [np.abs(sz_k / mu - nu_k) / np.sqrt(nu_k) for (sz_k, nu_k) in zip(sz, nu)]
-            if any(np.array(rho) > eta):
-                continue
+            # Check cheap proximity conditions first (skip if using NT symmetric stepping)
+            if not (model.sym and self.syssolver.sym):
+                if abs(taukap / mu - 1) > eta:
+                    continue
+                nu  = [cone_k.get_nu() for cone_k in model.cones]
+                rho = [np.abs(sz_k / mu - nu_k) / np.sqrt(nu_k) for (sz_k, nu_k) in zip(sz, nu)]
+                if any(np.array(rho) > eta):
+                    continue
 
             rtmu = math.sqrt(mu)
             irtmu = np.reciprocal(rtmu)
             self.prox = 0.
 
             # Check feasibility
-            in_prox = False
+            in_prox = True
             for (k, cone_k) in enumerate(model.cones):
-                in_prox = False
-
                 cone_k.set_point(next_point.S[k], next_point.Z[k], irtmu)
                 
                 # Check if feasible
                 if not cone_k.get_feas():
+                    in_prox = False
                     break
 
-                prox_k = cone_k.prox()
-                self.prox = max(self.prox, prox_k)
-                in_prox = (self.prox < eta)
-                if not in_prox:
-                    break
+                # Check if close enough to central path
+                if not (model.sym and self.syssolver.sym):
+                    prox_k = cone_k.prox()
+                    self.prox = max(self.prox, prox_k)
+                    in_prox = (self.prox < eta)
+                    if not in_prox:
+                        break
         
             # If feasible, return point
             if in_prox:

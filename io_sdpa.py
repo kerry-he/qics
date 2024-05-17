@@ -6,7 +6,7 @@ from utils import symmetric as sym
 from cones import *
 from solver import model, solver
 
-from utils.other_solvers import cvxopt_solve_sdp
+from utils.other_solvers import cvxopt_solve_sdp, mosek_solve_sdp
 
 def read_sdpa(filename):
     fp = open(filename, "r")
@@ -85,7 +85,7 @@ def read_sdpa(filename):
 
 
 if __name__ == "__main__":
-    C_sdpa, b_sdpa, A_sdpa, blockStruct = read_sdpa("./problems/sdp/arch0.dat-s")
+    C_sdpa, b_sdpa, A_sdpa, blockStruct = read_sdpa("./problems/sdp/arch2.dat-s")
     
     # Vectorize C
     dims = []
@@ -98,7 +98,7 @@ if __name__ == "__main__":
         else:
             cones.append(nonnegorthant.Cone(-bi))
             dims.append(-bi)
-            
+    
     n = sum(dims)
     p = len(A_sdpa)
     
@@ -140,5 +140,7 @@ if __name__ == "__main__":
     profiler.dump_stats("example.stats")
 
     sol = cvxopt_solve_sdp(C_sdpa, b, A, blockStruct)
-    print(sol['primal'])
-    print(sol['dual'])
+    print("optval: ", sol['primal']) 
+    print("time:   ", sol['time'])   
+
+    sol = mosek_solve_sdp(C_sdpa, b, A, blockStruct)
