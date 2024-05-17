@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 import math
 import time
 
@@ -6,6 +7,7 @@ from utils import point, linear as lin
 from solver.stepper.basic import BasicStepper
 from solver.stepper.aggressive import AggressiveStepper
 from solver.stepper.comb import CombinedStepper
+from solver.stepper.cvxopt import CVXOPTStepper
 from solver.syssolver import SysSolver
 
 from utils import symmetric as sym
@@ -153,6 +155,64 @@ class Solver():
 
         self.point.tau   = 1.
         self.point.kappa = 1.
+
+        # # Precompute
+        # if model.use_G:
+        #     GG = model.G_T @ model.G
+        #     if sp.sparse.issparse(GG):
+        #         GG = sp.sparse.csc_matrix(GG)
+        #     GG_fact = lin.fact(GG)
+
+        #     # Initialize primal variables x and s
+        #     x = lin.fact_solve(GG_fact, model.G_T @ model.h)
+        #     s = model.h - model.G @ x
+
+        #     self.point.S.from_vec(s)
+        #     eig = min(np.linalg.eigvalsh(self.point.S[0].data))
+        #     if eig < 0:
+        #         self.point.S[0].data[np.diag_indices_from(self.point.S[0].data)] += -eig + 1            
+        #     self.point.X = x
+            
+
+        #     # Initialize dual variables y and z
+        #     x = lin.fact_solve(GG_fact, -model.c)
+        #     z = model.G @ x
+
+        #     self.point.Z.from_vec(z)
+        #     eig = min(np.linalg.eigvalsh(self.point.Z[0].data))
+        #     if eig < 0:
+        #         self.point.Z[0].data[np.diag_indices_from(self.point.Z[0].data)] += -eig + 1
+        # else:
+        #     AA = model.A @ model.A_T
+        #     if sp.sparse.issparse(AA):
+        #         AA = sp.sparse.csc_matrix(AA)
+        #     AA_fact = lin.fact(AA)
+
+        #     # Initialize primal variables x and s
+        #     y = lin.fact_solve(AA_fact, -model.A @ model.h - model.b)
+        #     s = -model.A.T @ y
+        #     x = s - model.h
+
+        #     self.point.S.from_vec(s)
+        #     self.point.X = x
+            
+
+        #     # Initialize dual variables y and z
+        #     y = lin.fact_solve(AA_fact, -model.A @ model.c)
+        #     z = model.A.T @ y
+
+        #     self.point.Z.from_vec(z)
+        #     eig = min(np.linalg.eigvalsh(self.point.Z[0].data))
+        #     if eig < 0:
+        #         self.point.Z[0].data[np.diag_indices_from(self.point.Z[0].data)] += -eig + 1
+        #     self.point.y = y
+
+        
+        # for (k, cone_k) in enumerate(model.cones):
+        #     cone_k.set_point(self.point.S[k], self.point.Z[k], 1.0)
+        #     assert cone_k.get_feas()
+        #     cone_k.get_grad()
+
 
         for (k, cone_k) in enumerate(model.cones):
             self.point.S[k] = cone_k.set_init_point()

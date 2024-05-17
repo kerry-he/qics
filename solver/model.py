@@ -3,6 +3,7 @@ import scipy as sp
 
 from utils import symmetric as sym
 from utils import linear as lin
+from cones import *
 
 class Model():
     def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0):
@@ -32,6 +33,10 @@ class Model():
             self.G_T_vec = op_vec_to_mat(G.T, cones)
         elif self.use_A:
             self.A_vec = op_vec_to_mat(A, cones)
+
+        self.sym = True
+        for cone_k in cones:
+            self.sym = self.sym and (isinstance(cone_k, nonnegorthant.Cone) or isinstance(cone_k, possemidefinite.Cone))
         
         return
 

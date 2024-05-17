@@ -59,6 +59,13 @@ class Cone():
         except np.linalg.linalg.LinAlgError:
             self.feas = False
             return self.feas
+        
+        try:
+            self.Z_chol = sp.linalg.cholesky(self.Z, lower=True, check_finite=False)
+            self.feas = True
+        except np.linalg.linalg.LinAlgError:
+            self.feas = False
+            return self.feas        
 
         return self.feas
     
@@ -114,8 +121,6 @@ class Cone():
         assert not self.nt_aux_updated
         if not self.grad_updated:
             grad_k = self.get_grad()   
-
-        self.Z_chol = sp.linalg.cholesky(self.Z, lower=True, check_finite=False)
 
         RL = self.Z_chol.T @ self.X_chol
         U, D, Vt = sp.linalg.svd(RL, check_finite=False)
@@ -420,6 +425,30 @@ class Cone():
             sp_vs[k] = np.sum(AiW * AjW.T)
         
         return sp.sparse.coo_matrix((sp_vs, (sp_is, sp_js)), shape=(p, p)).tocsc()
+    
+    def comb_dir(self, dS, dZ, sigma, mu):
+        if not self.nt_aux_updated:
+            self.nt_aux()
+
+        # V = W^-T x = W z where W z = R^T Z R
+        V = self.W_rt2.T @ self.Z @ self.W_rt2
+
+        # lhs = -VoV - (W^-T ds)o(W dz) + sigma*mu*I
+        WdS = self.W_irt2.T @ dS.data @ self.W_irt2
+        WdZ = self.W_rt2.T @ dZ.data @ self.W_rt2
+        temp = WdS @ WdZ
+
+        lhs = -V @ V.T - 0.5*(temp + temp.T) + sigma*mu*np.eye(self.n)
+        
+        eig, vec = np.linalg.eigh(V)
+
+        temp = vec.T @ lhs @ vec
+        temp = 2 * temp / np.add.outer(eig, eig)
+        temp = vec @ temp @ vec.T
+
+        return lin.Symmetric(self.W_irt2 @ temp @ self.W_irt2.T)
+        
+
 
 def ragged_to_array(ragged):
     p = len(ragged)

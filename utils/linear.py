@@ -217,6 +217,7 @@ class Symmetric(Vector):
     
     def from_vec(self, vec):
         self.data = vec.reshape((self.n, self.n)).copy()
+        self.data = 0.5*(self.data + self.data.T)
         # self.data = sym.vec_to_mat(vec, hermitian=False)
         return self
     
