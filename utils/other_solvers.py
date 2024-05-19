@@ -130,4 +130,7 @@ def mosek_solve_sdp(C, b, A, blockStruct):
     msk_time = time.perf_counter() - msk_t0
     msk_status = msk_M.getProblemStatus()
 
-    return {'primal': msk_M.primalObjValue(), 'dual': msk_M.dualObjValue(), 'X': msk_X.level(), 'time': msk_time, 'status': msk_status}
+    return {'primal': msk_M.primalObjValue(), 
+            'dual': msk_M.dualObjValue(), 
+            'time': msk_time, 
+            'status': msk_status}

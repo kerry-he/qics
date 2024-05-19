@@ -30,7 +30,7 @@ class Cone():
         return
     
     def get_feas(self):
-        return np.all(np.greater(self.x, 0))
+        return np.all(np.greater(self.x, 0)) and np.all(np.greater(self.z, 0))
     
     def get_val(self):
         return -np.sum(np.log(self.x))    
