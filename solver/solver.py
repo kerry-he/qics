@@ -215,9 +215,9 @@ class Solver():
 
 
         for (k, cone_k) in enumerate(model.cones):
-            self.point.S[k] = cone_k.set_init_point()
+            np.copyto(self.point.S[k], cone_k.set_init_point())
             assert cone_k.get_feas()
-            self.point.Z[k] = -1 * cone_k.get_grad()
+            np.copyto(self.point.Z[k], -cone_k.get_grad())
 
         # if model.use_G:
         #     self.point.X[:] = np.linalg.pinv(np.vstack((model.A, model.G))) @ np.vstack((model.b, model.h - self.point.S.to_vec()))
@@ -246,8 +246,8 @@ class Solver():
 
         x   = self.point.X
         y   = self.point.y
-        z   = self.point.Z.to_vec()
-        s   = self.point.S.to_vec()
+        z   = self.point.Z.vec
+        s   = self.point.S.vec
         tau = self.point.tau
 
         c_max = np.linalg.norm(c, np.inf)

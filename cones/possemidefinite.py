@@ -11,6 +11,7 @@ class Cone():
         self.hermitian = hermitian                     # Hermitian or symmetric vector space
         self.dim = sym.vec_dim(n, self.hermitian)      # Dimension of the cone
         self.dim = n * n
+        self.type = ['s']
         
         self.grad = lin.Symmetric(self.n)
         self.temp = lin.Symmetric(self.n)
@@ -35,7 +36,7 @@ class Cone():
             lin.Symmetric(np.eye(self.n)), 
             lin.Symmetric(np.eye(self.n))
         )
-        return lin.Symmetric(self.X)
+        return self.X
     
     def set_point(self, point, dual=None, a=True):
         self.X = point.data * a
@@ -81,10 +82,10 @@ class Cone():
         
         self.X_chol_inv, info = sp.linalg.lapack.dtrtri(self.X_chol, lower=True)
         self.X_inv = self.X_chol_inv.T @ self.X_chol_inv
-        self.grad.data = -self.X_inv
+        # self.grad.data = -self.X_inv
 
         self.grad_updated = True
-        return self.grad
+        return -self.X_inv
     
     def hess_prod_ip(self, out, H):
         if not self.grad_updated:
@@ -104,12 +105,13 @@ class Cone():
         if dir2 is None:
             H = dir1.data
             XHX_2 = self.X_inv @ H @ self.X_chol_inv.T
-            return lin.Symmetric(-2 * XHX_2 @ XHX_2.T)
+            return -2 * XHX_2 @ XHX_2.T
         else:
             P = dir1.data
             D = dir2.data
             PD = P @ D
-            return lin.Symmetric(-2 * self.X_inv @ PD)
+            XiPD = self.X_inv @ PD
+            return -XiPD - XiPD.T
     
     def prox(self):
         assert self.feas_updated
@@ -137,15 +139,15 @@ class Cone():
     def nt_prod_ip(self, out, H):
         if not self.nt_aux_updated:
             self.nt_aux()
-        WHW = self.W_inv @ H.data @ self.W_inv
-        out.data = (WHW + WHW.T) / 2
+        WHW = self.W_inv @ H @ self.W_inv
+        out[:] = (WHW + WHW.T) / 2
         return out
     
     def invnt_prod_ip(self, out, H):
         if not self.nt_aux_updated:
             self.nt_aux()
-        WHW = self.W @ H.data @ self.W
-        out.data = (WHW + WHW.T) / 2
+        WHW = self.W @ H @ self.W
+        out[:] = (WHW + WHW.T) / 2
         return out
     
     def invhess_mtx(self):
@@ -196,7 +198,7 @@ class Cone():
                     if sp.sparse.issparse(Ai.data):
                         self.A_ds_mtx.append(Ai.data.toarray().ravel())
                     else:
-                        self.A_ds_mtx.append(Ai.data.ravel())
+                        self.A_ds_mtx.append(Ai.ravel())
                     
             self.A_sp_data = ragged_to_array(self.A_sp_data)
             self.A_sp_cols = ragged_to_array(self.A_sp_cols)
@@ -455,9 +457,7 @@ class Cone():
         temp = vec @ temp @ vec.T
 
         return lin.Symmetric(self.W_irt2 @ temp @ self.W_irt2.T)
-        
-
-
+    
 def ragged_to_array(ragged):
     p = len(ragged)
     if p == 0:
@@ -472,7 +472,5 @@ def ragged_to_array(ragged):
     for i in range(p):
         array[i, :ns[i]] = ragged[i]
         mask[i, :ns[i]] = 0
-        
-    # array = np.ma.masked_array(array, mask)
         
     return array

@@ -5,91 +5,182 @@ import sksparse.cholmod as cholmod
 from utils import symmetric as sym
 # import symmetric as sym
 
-class Vector():
-    
 
-    def __init__(self, data):
-        self.data = data
+class Vector():
+    def __init__(self, cones):
+        self.dims  = []
+        self.types = []
+        for cone_k in cones:
+            self.dims.append(cone_k.dim)
+            self.types.extend(cone_k.type)
+        self.dim = sum(self.dims)
+
+        # Initialize vector
+        self.vec = np.zeros((self.dim, 1))
+
+        # Build views of vector
+        self.mat = []
+        t = 0
+        for (dim_k, type_k) in zip(self.dims, self.types):
+            if type_k == 'r':
+                self.mat.append(self.vec[t:t+dim_k])
+            elif type_k == 's':
+                n_k = int(np.sqrt(dim_k))
+                self.mat.append(self.vec[t:t+dim_k].reshape((n_k, n_k)))
+            elif type_k == 'h':
+                n_k = int(np.sqrt(dim_k // 2))
+                self.mat.append(self.vec[t:t+dim_k].reshape((-1, 2)).view(dtype=np.complex128).reshape(n_k, n_k))
+            t += dim_k
 
     def __getitem__(self, key):
-        return self.data[key]
-    
-    def __setitem__(self, key, value):
-        self.data[key] = value
+        return self.mat[key]
 
     def __add__(self, other):
-        return Vector([x + y for (x, y) in zip(self.data, other.data)])
+        return #TODO
     
     def __iadd__(self, other):
-        for (x, y) in zip(self.data, other.data):
-            x += y
+        self.vec = sp.linalg.blas.daxpy(other.vec, self.vec, a=1)
         return self
     
     def __sub__(self, other):
-        return Vector([x - y for (x, y) in zip(self.data, other.data)])    
+        return #TODO
     
     def __isub__(self, other):
-        for (x, y) in zip(self.data, other.data):
-            x -= y
+        self.vec = sp.linalg.blas.daxpy(other.vec, self.vec, a=-1)
         return self    
     
     def __mul__(self, other):
-        if np.isscalar(other):
-            return Vector([x * other for x in self.data])
-        else:
-            return Vector([x * y for (x, y) in zip(self.data, other.data)])
+        return #TODO
     
     def __imul__(self, other):
-        if np.isscalar(other):
-            for x in self.data:
-                x *= other
-        else:
-            for (x, y) in zip(self.data, other.data):
-                x *= y
+        self.vec *= other
         return self
     
     __rmul__ = __mul__
     
     def get_vn(self):
-        return sum([x.get_vn() for x in self.data])
+        return self.dim
 
     def inp(self, other):
-        return np.sum([x.inp(y) for (x, y) in zip(self.data, other.data)])
+        return self.vec.T @ other.vec
     
     def norm(self, order=None):
-        return np.linalg.norm([x.norm(order) for x in self.data])
-
-    def to_vec(self):
-        return np.vstack([x.to_vec() for x in self.data])
+        return np.linalg.norm(self.vec, ord=order)
     
-    def from_vec(self, vec):
-        i_from = 0
-        for x in self.data:
-            i_to = i_from + x.get_vn()
-            x.from_vec(vec[i_from:i_to])
-            i_from = i_to
+    def copy_from(self, other):
+        if isinstance(other, np.ndarray):
+            np.copyto(self.vec, other)
+        else:
+            np.copyto(self.vec, other.vec)
         return self 
     
     def zeros_like(self):
         return self * 0
     
     def axpy(self, a, other):
-        for (xi, yi) in zip(other, self):
-            yi.axpy(a, xi)
+        self.vec = sp.linalg.blas.daxpy(other.vec, self.vec, a=a)
+        return self
             
     def copy(self, other):
         for (xi, yi) in zip(other, self):
             yi.copy(xi)
             
     def to_sparse(self):
-        for x in self.data:
+        for x in self.vec:
             x.to_sparse()
         return self
     
     def fill(self, a):
-        for x in self.data:
-            x.fill(a)
+        self.vec.fill(a)
         return self
+
+
+
+# class Vector():
+    
+
+#     def __init__(self, data):
+#         self.data = data
+
+#     def __getitem__(self, key):
+#         return self.data[key]
+    
+#     def __setitem__(self, key, value):
+#         self.data[key] = value
+
+#     def __add__(self, other):
+#         return Vector([x + y for (x, y) in zip(self.data, other.data)])
+    
+#     def __iadd__(self, other):
+#         for (x, y) in zip(self.data, other.data):
+#             x += y
+#         return self
+    
+#     def __sub__(self, other):
+#         return Vector([x - y for (x, y) in zip(self.data, other.data)])    
+    
+#     def __isub__(self, other):
+#         for (x, y) in zip(self.data, other.data):
+#             x -= y
+#         return self    
+    
+#     def __mul__(self, other):
+#         if np.isscalar(other):
+#             return Vector([x * other for x in self.data])
+#         else:
+#             return Vector([x * y for (x, y) in zip(self.data, other.data)])
+    
+#     def __imul__(self, other):
+#         if np.isscalar(other):
+#             for x in self.data:
+#                 x *= other
+#         else:
+#             for (x, y) in zip(self.data, other.data):
+#                 x *= y
+#         return self
+    
+#     __rmul__ = __mul__
+    
+#     def get_vn(self):
+#         return sum([x.get_vn() for x in self.data])
+
+#     def inp(self, other):
+#         return np.sum([x.inp(y) for (x, y) in zip(self.data, other.data)])
+    
+#     def norm(self, order=None):
+#         return np.linalg.norm([x.norm(order) for x in self.data])
+
+#     def to_vec(self):
+#         return np.vstack([x.to_vec() for x in self.data])
+    
+#     def from_vec(self, vec):
+#         i_from = 0
+#         for x in self.data:
+#             i_to = i_from + x.get_vn()
+#             x.from_vec(vec[i_from:i_to])
+#             i_from = i_to
+#         return self 
+    
+#     def zeros_like(self):
+#         return self * 0
+    
+#     def axpy(self, a, other):
+#         for (xi, yi) in zip(other, self):
+#             yi.axpy(a, xi)
+            
+#     def copy(self, other):
+#         for (xi, yi) in zip(other, self):
+#             yi.copy(xi)
+            
+#     def to_sparse(self):
+#         for x in self.data:
+#             x.to_sparse()
+#         return self
+    
+#     def fill(self, a):
+#         for x in self.data:
+#             x.fill(a)
+#         return self
         
 
 class Real(Vector):

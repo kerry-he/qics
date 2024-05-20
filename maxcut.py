@@ -9,7 +9,7 @@ from solver import model, solver
 
 np.random.seed(1)
 
-n = 1000
+n = 3
 
 # A = np.zeros((n,n*(n+1)//2))
 # for i in range(n):

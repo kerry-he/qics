@@ -73,7 +73,7 @@ def op_vec_to_mat(op_vec, cones):
     # for i=1,...,p.
     
     p = op_vec.shape[0]
-    op_mat = [lin.Vector([cone_k.zeros() for cone_k in cones]) for _ in range(p)]
+    op_mat = [lin.Vector(cones) for _ in range(p)]
     
     if sp.sparse.issparse(op_vec):
         op_vec_dense = op_vec.toarray()        
@@ -82,7 +82,8 @@ def op_vec_to_mat(op_vec, cones):
         if not sp.sparse.issparse(op_vec):
             op_mat[i].from_vec(op_vec[[i], :].T)
         else:
-            op_mat[i].from_vec(op_vec_dense[[i], :].T)
-            op_mat[i].to_sparse()
+            np.copyto(op_mat[i].vec, op_vec_dense[[i], :].T)
+            # op_mat[i].from_vec(op_vec_dense[[i], :].T)
+            # op_mat[i].to_sparse()
         
     return op_mat

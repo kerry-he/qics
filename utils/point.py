@@ -23,8 +23,8 @@ class Point():
         #TODO: Make x allow for G neq -I
         self.X     = np.zeros((model.n, 1))
         self.y     = np.zeros((model.p, 1))
-        self.Z     = lin.Vector([cone_k.zeros() for cone_k in model.cones])
-        self.S     = lin.Vector([cone_k.zeros() for cone_k in model.cones])
+        self.Z     = lin.Vector(model.cones)
+        self.S     = lin.Vector(model.cones)
         self.tau   = 0.
         self.kappa = 0.
 
@@ -130,7 +130,7 @@ class PointXYZ():
         #TODO: Make x allow for G neq -I
         self.X     = np.zeros((model.n, 1))
         self.y     = np.zeros((model.p, 1))
-        self.Z     = lin.Vector([cone_k.zeros() for cone_k in model.cones])
+        self.Z     = lin.Vector(model.cones)
 
         self.model = model
 
@@ -160,7 +160,7 @@ class PointXYZ():
     def copy(self, other):
         np.copyto(self.X, other.X)
         np.copyto(self.y, other.y)
-        self.Z.copy(other.Z)
+        self.Z.copy_from(other.Z)
     
     def __sub__(self, other):
         point = Point(self.model)

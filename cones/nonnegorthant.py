@@ -6,6 +6,7 @@ class Cone():
     def __init__(self, dim):
         # Dimension properties
         self.dim = dim
+        self.type = ['r']
         self.grad = lin.Real(self.dim)
         
         self.congr_aux_updated = False

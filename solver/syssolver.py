@@ -23,16 +23,16 @@ class SysSolver():
         self.cbh = point.PointXYZ(model)
         self.cbh.X = model.c
         self.cbh.y = model.b
-        self.cbh.Z.from_vec(model.h)        
+        np.copyto(self.cbh.Z.vec, model.h)
         
         self.xyz_b = point.PointXYZ(model)
         self.xyz_r = point.PointXYZ(model)
         self.xyz_ir = point.PointXYZ(model)
         self.xyz_res = point.PointXYZ(model)
 
-        self.rZ_HrS = lin.Vector([cone_k.zeros() for cone_k in model.cones])
-        self.vec_temp = lin.Vector([cone_k.zeros() for cone_k in model.cones])
-        self.vec_temp2 = lin.Vector([cone_k.zeros() for cone_k in model.cones])
+        self.rZ_HrS = lin.Vector(model.cones)
+        self.vec_temp = lin.Vector(model.cones)
+        self.vec_temp2 = lin.Vector(model.cones)
         self.pnt_res = point.Point(model)
         self.dir_ir = point.Point(model)
         self.res = point.Point(model)
@@ -291,7 +291,7 @@ class SysSolver():
         
         if model.use_A and not model.use_G:
             # Solve for y: AHA y = A(rz + H \ (rx + rs)) + ry
-            self.vec_temp.from_vec(rX.copy())
+            self.vec_temp.copy_from(rX)
             if rS is not None:
                 self.vec_temp += rS
             blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym)
@@ -546,7 +546,7 @@ def blk_invhess_congruence(dirs, model, sym):
     out = np.zeros((p, p))
 
     for (k, cone_k) in enumerate(model.cones):
-        dirs_k = [dirs[i].data[k] for i in range(p)]
+        dirs_k = [dirs[i].mat[k] for i in range(p)]
         if sym:
             out += cone_k.invnt_congr(dirs_k)
         else:
