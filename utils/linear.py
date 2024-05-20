@@ -7,7 +7,7 @@ from utils import symmetric as sym
 
 
 class Vector():
-    def __init__(self, cones):
+    def __init__(self, cones, vec=None):
         self.dims  = []
         self.types = []
         for cone_k in cones:
@@ -16,53 +16,52 @@ class Vector():
         self.dim = sum(self.dims)
 
         # Initialize vector
-        self.vec = np.zeros((self.dim, 1))
+        if vec is None:
+            self.vec = np.zeros((self.dim, 1))
+        else:
+            assert vec.size == self.dim
+            self.vec = vec
 
         # Build views of vector
+        self.vec_views = []
         self.mat = []
         t = 0
         for (dim_k, type_k) in zip(self.dims, self.types):
+            self.vec_views.append(self.vec[t:t+dim_k])
+
             if type_k == 'r':
-                self.mat.append(self.vec[t:t+dim_k])
+                # Real vector
+                self.mat.append(self.vec_views[-1])
             elif type_k == 's':
+                # Symmetric matrix
                 n_k = int(np.sqrt(dim_k))
-                self.mat.append(self.vec[t:t+dim_k].reshape((n_k, n_k)))
+                self.mat.append(self.vec_views[-1].reshape((n_k, n_k)))
             elif type_k == 'h':
+                # Hermitian matrix
                 n_k = int(np.sqrt(dim_k // 2))
-                self.mat.append(self.vec[t:t+dim_k].reshape((-1, 2)).view(dtype=np.complex128).reshape(n_k, n_k))
+                self.mat.append(self.vec_views[-1].reshape((-1, 2)).view(dtype=np.complex128).reshape(n_k, n_k))
             t += dim_k
 
     def __getitem__(self, key):
         return self.mat[key]
-
-    def __add__(self, other):
-        return #TODO
     
     def __iadd__(self, other):
         self.vec = sp.linalg.blas.daxpy(other.vec, self.vec, a=1)
         return self
     
-    def __sub__(self, other):
-        return #TODO
-    
     def __isub__(self, other):
         self.vec = sp.linalg.blas.daxpy(other.vec, self.vec, a=-1)
         return self    
-    
-    def __mul__(self, other):
-        return #TODO
     
     def __imul__(self, other):
         self.vec *= other
         return self
     
-    __rmul__ = __mul__
-    
     def get_vn(self):
         return self.dim
 
     def inp(self, other):
-        return self.vec.T @ other.vec
+        return (self.vec.T @ other.vec)[0, 0]
     
     def norm(self, order=None):
         return np.linalg.norm(self.vec, ord=order)
@@ -74,331 +73,13 @@ class Vector():
             np.copyto(self.vec, other.vec)
         return self 
     
-    def zeros_like(self):
-        return self * 0
-    
     def axpy(self, a, other):
         self.vec = sp.linalg.blas.daxpy(other.vec, self.vec, a=a)
-        return self
-            
-    def copy(self, other):
-        for (xi, yi) in zip(other, self):
-            yi.copy(xi)
-            
-    def to_sparse(self):
-        for x in self.vec:
-            x.to_sparse()
         return self
     
     def fill(self, a):
         self.vec.fill(a)
         return self
-
-
-
-# class Vector():
-    
-
-#     def __init__(self, data):
-#         self.data = data
-
-#     def __getitem__(self, key):
-#         return self.data[key]
-    
-#     def __setitem__(self, key, value):
-#         self.data[key] = value
-
-#     def __add__(self, other):
-#         return Vector([x + y for (x, y) in zip(self.data, other.data)])
-    
-#     def __iadd__(self, other):
-#         for (x, y) in zip(self.data, other.data):
-#             x += y
-#         return self
-    
-#     def __sub__(self, other):
-#         return Vector([x - y for (x, y) in zip(self.data, other.data)])    
-    
-#     def __isub__(self, other):
-#         for (x, y) in zip(self.data, other.data):
-#             x -= y
-#         return self    
-    
-#     def __mul__(self, other):
-#         if np.isscalar(other):
-#             return Vector([x * other for x in self.data])
-#         else:
-#             return Vector([x * y for (x, y) in zip(self.data, other.data)])
-    
-#     def __imul__(self, other):
-#         if np.isscalar(other):
-#             for x in self.data:
-#                 x *= other
-#         else:
-#             for (x, y) in zip(self.data, other.data):
-#                 x *= y
-#         return self
-    
-#     __rmul__ = __mul__
-    
-#     def get_vn(self):
-#         return sum([x.get_vn() for x in self.data])
-
-#     def inp(self, other):
-#         return np.sum([x.inp(y) for (x, y) in zip(self.data, other.data)])
-    
-#     def norm(self, order=None):
-#         return np.linalg.norm([x.norm(order) for x in self.data])
-
-#     def to_vec(self):
-#         return np.vstack([x.to_vec() for x in self.data])
-    
-#     def from_vec(self, vec):
-#         i_from = 0
-#         for x in self.data:
-#             i_to = i_from + x.get_vn()
-#             x.from_vec(vec[i_from:i_to])
-#             i_from = i_to
-#         return self 
-    
-#     def zeros_like(self):
-#         return self * 0
-    
-#     def axpy(self, a, other):
-#         for (xi, yi) in zip(other, self):
-#             yi.axpy(a, xi)
-            
-#     def copy(self, other):
-#         for (xi, yi) in zip(other, self):
-#             yi.copy(xi)
-            
-#     def to_sparse(self):
-#         for x in self.data:
-#             x.to_sparse()
-#         return self
-    
-#     def fill(self, a):
-#         for x in self.data:
-#             x.fill(a)
-#         return self
-        
-
-class Real(Vector):
-    def __init__(self, data):
-        if np.isscalar(data):
-            self.data = np.zeros((data, 1))
-            self.n = data
-            self.vn = data
-        else:
-            assert data.size == data.shape[0]
-            self.data = data
-            self.n = data.size
-            self.vn = self.n
-
-    def __add__(self, other):
-        return Real(self.data + other.data)
-
-    def __iadd__(self, other):
-        self.data += other.data
-        return self
-
-    def __sub__(self, other):
-        return Real(self.data - other.data)
-    
-    def __isub__(self, other):
-        self.data -= other.data
-        return self    
-
-    def __mul__(self, other):
-        if np.isscalar(other):
-            return Real(self.data * other)
-        else:
-            return Real(self.data * other.data)
-        
-    def __imul__(self, other):
-        self.data *= other
-        return self        
-            
-    __rmul__ = __mul__
-    
-    def get_vn(self):
-        return self.vn    
-
-    def __truediv__(self, other):
-        return Real(self.data / other)
-
-    def inp(self, other):
-        return np.sum(self.data * other.data)
-
-    def norm(self, order=None):
-        return np.linalg.norm(self.data, order)
-
-    def to_vec(self):
-        return self.data
-    
-    def from_vec(self, vec):
-        np.copyto(self.data, vec)
-        return self
-    
-    def to_sparse(self):
-        self.data = sp.sparse.csr_matrix(self.data)
-        return self    
-    
-    def axpy(self, a, other):
-        self.data = sp.linalg.blas.daxpy(other.data, self.data, a=a)
-        # self.data += a * other.data
-        
-    def copy(self, other):
-        np.copyto(self.data, other.data)
-        
-    def fill(self, a):
-        self.data.fill(a)
-
-class Symmetric(Vector):
-    def __init__(self, data):
-        if np.isscalar(data):
-            self.data = np.zeros((data, data))
-            self.n  = data
-            self.vn = self.n * self.n
-        else:
-            assert data.shape[0] == data.shape[1]
-            self.data = (data + data.T) / 2
-            self.n  = data.shape[0]
-            self.vn = self.n * self.n
-
-    def __add__(self, other):
-        return Symmetric(self.data + other.data)
-
-    def __iadd__(self, other):
-        self.data += other.data
-        return self
-
-    def __sub__(self, other):
-        return Symmetric(self.data - other.data)
-
-    def __isub__(self, other):
-        self.data -= other.data
-        return self   
-
-    def __mul__(self, other):
-        if np.isscalar(other):
-            return Symmetric(self.data * other)
-        else:
-            return Symmetric(self.data * other.data)
-        
-    def __imul__(self, other):
-        self.data *= other
-        return self          
-    
-    __rmul__ = __mul__
-
-    def get_vn(self):
-        return self.vn
-
-    def __truediv__(self, other):
-        return Symmetric(self.data / other)    
-
-    def inp(self, other):
-        return np.sum(self.data * other.data)   
-
-    def norm(self, order=None):
-        return np.linalg.norm(self.data, order)
-    
-    def to_vec(self):
-        return self.data.reshape((-1, 1)).copy()
-        return sym.mat_to_vec(self.data, hermitian=False)
-    
-    def from_vec(self, vec):
-        self.data = vec.reshape((self.n, self.n))
-        # self.data = sym.vec_to_mat(vec, hermitian=False)
-        return self
-    
-    def to_sparse(self):
-        self.data = sp.sparse.csr_matrix(self.data)
-        return self    
-    
-    def axpy(self, a, other):
-        self.data = sp.linalg.blas.daxpy(other.data.ravel(), self.data.ravel(), a=a).reshape((self.n, self.n))
-        # self.data += a * other.data
-        
-    def copy(self, other):
-        np.copyto(self.data, other.data)
-        
-    def fill(self, a):
-        self.data.fill(a)        
-        
-    
-class Hermitian(Vector):
-    def __init__(self, data):
-        if np.isscalar(data):
-            self.data = np.zeros((data, data), dtype=np.complex128)
-            self.n  = data
-            self.vn = self.n * self.n
-        else:
-            assert data.shape[0] == data.shape[1]
-            assert np.issubdtype(data.dtype, complex)
-            self.data = (data + data.conj.T()) / 2
-            self.n  = data.shape[0]
-            self.vn = self.n * self.n
-
-    def __add__(self, other):
-        return Hermitian(self.data + other.data)
-
-    def __iadd__(self, other):
-        self.data += other.data
-        return self
-
-    def __sub__(self, other):
-        return Hermitian(self.data - other.data)
-
-    def __isub__(self, other):
-        self.data -= other.data
-        return self   
-
-    def __mul__(self, other):
-        if np.isscalar(other):
-            return Hermitian(self.data * other)
-        else:
-            return Hermitian(self.data * other.data)
-        
-    def __imul__(self, other):
-        self.data *= other
-        return self          
-    
-    __rmul__ = __mul__
-
-    def get_vn(self):
-        return self.vn
-
-    def __truediv__(self, other):
-        return Hermitian(self.data / other)        
-
-    def inp(self, other):
-        return np.sum(self.data * other.data.conj()).real
-
-    def norm(self, order=None):
-        return np.linalg.norm(self.data, order)
-
-    def to_vec(self):
-        return sym.mat_to_vec(self.data, hermitian=True)
-    
-    def from_vec(self, vec):
-        self.data = sym.vec_to_mat(vec, hermitian=True)
-        return self
-
-    def to_sparse(self):
-        self.data = sp.sparse.csr_matrix(self.data)
-        return self
-
-    def axpy(self, a, other):
-        self.data += a * other.data
-        
-    def copy(self, other):
-        np.copyto(self.data, other.data)
-        
-    def fill(self, a):
-        self.data.fill(a)        
-        
 
 def inp(x, y):
     # Standard inner product

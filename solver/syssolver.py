@@ -21,8 +21,8 @@ class SysSolver():
         self.sym = sym
 
         self.cbh = point.PointXYZ(model)
-        self.cbh.X = model.c
-        self.cbh.y = model.b
+        self.cbh.X[:] = model.c
+        self.cbh.y[:] = model.b
         np.copyto(self.cbh.Z.vec, model.h)
         
         self.xyz_b = point.PointXYZ(model)
@@ -66,7 +66,7 @@ class SysSolver():
         if self.subsolver == "elim":
             if model.use_G:
                 # TODO: Check sparsity and if we can use CHOLMOD
-                GHG = blk_hess_congruence(model.G_T_vec, model, self.sym)
+                GHG = blk_hess_congruence(model.G_T_views, model, self.sym)
                 self.GHG_fact = lin.fact(GHG)
 
                 if model.use_A:
@@ -86,7 +86,7 @@ class SysSolver():
                     AHA = (model.A @ H @ model.A_T).tocsc()
                     # AHA = sp_blk_invhess_congruence(model.A_vec, model, self.AHA_sp_is, self.AHA_sp_js, self.sym)
                 else:
-                    AHA = blk_invhess_congruence(model.A_vec, model, self.sym)
+                    AHA = blk_invhess_congruence(model.A_views, model, self.sym)
                 
                 self.AHA_fact = lin.fact(AHA, self.AHA_fact)
 
@@ -100,7 +100,7 @@ class SysSolver():
                 self.Q2HQ2_fact = lin.fact(Q2HQ2)
             
             elif model.use_G:
-                GHG = blk_hess_congruence(model.G_T_vec, model, self.sym)
+                GHG = blk_hess_congruence(model.G_T_views, model, self.sym)
                 self.GHG_fact = lin.fact(GHG)
 
 
@@ -126,43 +126,13 @@ class SysSolver():
                 if res_norm_new > res_norm:
                     break
 
-                self.xyz_b.copy(self.xyz_ir)
+                self.xyz_b.copy_from(self.xyz_ir)
                 res_norm = res_norm_new
 
                 iter_refine_count += 1
 
                 if iter_refine_count > 1:
-                    break        
-
-        # if self.ir:
-        #     # Iterative refinement
-        #     c_est, b_est, h_est = self.forward_subsystem(self.X_b, self.y_b, self.Z_b, model)
-        #     (x_res, y_res, z_res) = (self.pnt_model.X - c_est, self.pnt_model.y - b_est, self.pnt_model.Z - h_est)
-        #     res_norm = lin.norm(np.array([lin.norm(x_res), lin.norm(y_res), z_res.norm()]))
-
-        #     iter_refine_count = 0
-        #     while res_norm > 1e-8:
-        #         self.pnt_res.X = x_res
-        #         self.pnt_res.y = y_res
-        #         self.pnt_res.Z = z_res
-        #         x_b2, y_b2, z_b2 = self.solve_subsystem_elim(self.pnt_res, model)      
-        #         (x_temp, y_temp, z_temp) = (self.X_b + x_b2, self.y_b + y_b2, self.Z_b + z_b2)
-        #         c_est, b_est, h_est = self.forward_subsystem(x_temp, y_temp, z_temp, model)
-        #         (x_res, y_res, z_res) = (self.pnt_model.X - c_est, self.pnt_model.y - b_est, self.pnt_model.Z - h_est)
-        #         res_norm_new = lin.norm(np.array([lin.norm(x_res), lin.norm(y_res), z_res.norm()]))
-
-        #         # Check if iterative refinement made things worse
-        #         if res_norm_new > res_norm:
-        #             break
-
-        #         (self.x_b, self.y_b, self.z_b) = (x_temp, y_temp, z_temp)
-        #         res_norm = res_norm_new
-
-        #         iter_refine_count += 1
-
-        #         if iter_refine_count > 1:
-        #             break
-
+                    break
 
         return
 
@@ -192,7 +162,7 @@ class SysSolver():
                 if res_norm_new > res_norm:
                     break
 
-                dir.copy(self.dir_ir)
+                dir.copy_from(self.dir_ir)
                 res_norm = res_norm_new
 
                 iter_refine_count += 1
@@ -206,9 +176,9 @@ class SysSolver():
         # Solve Newton system using elimination
         # NOTE: mu has already been accounted for in H
         
-        self.xyz_res.X = rhs.X
-        self.xyz_res.y = rhs.y
-        self.xyz_res.Z.copy(rhs.Z)
+        self.xyz_res.X[:] = rhs.X
+        self.xyz_res.y[:] = rhs.y
+        self.xyz_res.Z.copy_from(rhs.Z)
 
         self.solve_subsystem_elim(self.xyz_r, self.xyz_res, model, rhs.S)
         if self.ir:
@@ -238,7 +208,7 @@ class SysSolver():
                 if res_norm_new > res_norm:
                     break
 
-                self.xyz_r.copy(self.xyz_ir)
+                self.xyz_r.copy_from(self.xyz_ir)
                 res_norm = res_norm_new
 
                 iter_refine_count += 1
@@ -251,20 +221,20 @@ class SysSolver():
             tau_den = (kappa / tau + self.cbh.inp(self.xyz_b))
         else:
             tau_den  = (mu_tau2 + self.cbh.inp(self.xyz_b))
-        sol.tau = tau_num / tau_den
+        sol.tau[:] = tau_num / tau_den
 
-        sol.X     = self.xyz_r.X - sol.tau * self.xyz_b.X
-        sol.y     = self.xyz_r.y - sol.tau * self.xyz_b.y
-        sol.Z.copy(self.xyz_b.Z)
+        sol.X[:]     = self.xyz_r.X - sol.tau * self.xyz_b.X
+        sol.y[:]     = self.xyz_r.y - sol.tau * self.xyz_b.y
+        sol.Z.copy_from(self.xyz_b.Z)
         sol.Z *= -sol.tau
         sol.Z += self.xyz_r.Z
-        sol.S.from_vec(-model.G @ sol.X + sol.tau * model.h)
+        sol.S.copy_from(-model.G @ sol.X + sol.tau * model.h)
         sol.S -= rhs.Z
         
         if self.sym:
-            sol.kappa = rhs.kappa - kappa / tau * sol.tau
+            sol.kappa[:] = rhs.kappa - kappa / tau * sol.tau
         else:
-            sol.kappa = rhs.kappa - mu_tau2 * sol.tau
+            sol.kappa[:] = rhs.kappa - mu_tau2 * sol.tau
 
         return sol
         
@@ -296,20 +266,18 @@ class SysSolver():
                 self.vec_temp += rS
             blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym)
             self.vec_temp2 += rZ
-            out.X = self.vec_temp2.to_vec()
+            out.X[:] = self.vec_temp2.vec
             temp = model.A @ out.X + ry
-            out.y = lin.fact_solve(self.AHA_fact, temp)
+            out.y[:] = lin.fact_solve(self.AHA_fact, temp)
             
             # Solve for z: z = At y - rx
             A_T_y = model.A_T @ out.y
-            out.Z.from_vec(A_T_y - rX)
+            out.Z.copy_from(A_T_y - rX)
 
             # Solve for x: x = rz + H \ (rx + rs - At y)
-            self.vec_temp.from_vec(A_T_y)
+            self.vec_temp.copy_from(A_T_y)
             blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym)
-            out.X -= self.vec_temp2.to_vec()
-            
-
+            out.X[:] -= self.vec_temp2.vec
 
             return out
         
@@ -318,18 +286,15 @@ class SysSolver():
             blk_hess_prod_ip(self.vec_temp, rZ, model, self.sym)
             if rS is not None:
                 self.vec_temp += rS
-            temp = rX - model.G_T @ self.vec_temp.to_vec()
-            out.X = lin.fact_solve(self.GHG_fact, temp)
+            temp = rX - model.G_T @ self.vec_temp.vec
+            out.X[:] = lin.fact_solve(self.GHG_fact, temp)
 
             # Solve for z: z = H(rz + Gx) + rs
-            self.vec_temp.from_vec(model.G @ out.X)
+            self.vec_temp.copy_from(model.G @ out.X)
             self.vec_temp += rZ
             blk_hess_prod_ip(out.Z, self.vec_temp, model, self.sym)
             if rS is not None:
                 out.Z += rS
-
-            # y is empty vector as p=0
-            y = np.zeros_like(model.b)
 
             return out
         
@@ -402,18 +367,18 @@ class SysSolver():
         ry = rhs.y
         rZ = rhs.Z
         
-        out.X = model.A_T @ ry + model.G_T @ rZ.to_vec()
+        out.X[:] = model.A_T @ ry + model.G_T @ rZ.vec
         # X = [np.zeros_like(rX[0])]
         # for (i, Ai) in enumerate(model.A_mtx):
         #     X[0] += ry[i] * Ai[0]
         # X[0] -= rZ[0]
 
-        out.y = -model.A @ rX
+        out.y[:] = -model.A @ rX
         # y = np.zeros_like(ry)
         # for (i, Ai) in enumerate(model.A_mtx):
         #     y[i] = -np.sum(Ai[0] * rX[0])
 
-        out.Z.from_vec(-model.G @ rX)
+        out.Z.copy_from(-model.G @ rX)
         out.Z += blk_invhess_prod_ip(self.vec_temp2, rZ, model, self.sym)
 
         # x = model.A.T @ ry + model.G.T @ rz
@@ -423,26 +388,26 @@ class SysSolver():
         return out
     
     def apply_system(self, pnt, rhs, model, mu_tau2, kappa, tau):
-        rhs_z_vec = rhs.Z.to_vec()
+        rhs_z_vec = rhs.Z.vec
 
         # pnt.x[:]     =  model.A.T @ rhs.y + model.G.T @ rhs.z + model.c * rhs.tau
-        pnt.y = -model.A @ rhs.X + model.b * rhs.tau
+        pnt.y[:] = -model.A @ rhs.X + model.b * rhs.tau
         # for (i, Ai) in enumerate(model.A_mtx):
         #     pnt.y[i] = -np.sum(Ai[0] * rhs.X[0]) + model.b[i] * rhs.tau        
         # pnt.y[:]     = -model.A @ rhs.x + model.b * rhs.tau
         # pnt.z[:]     = -model.G @ rhs.x + model.h * rhs.tau - rhs.s
         # pnt.s[:]     =  blk_hess_prod(rhs.s, model) + rhs.z
-        pnt.tau   = -lin.inp(model.c, rhs.X) - lin.inp(model.b, rhs.y) - lin.inp(model.h, rhs_z_vec) - rhs.kappa
+        pnt.tau[:]   = -lin.inp(model.c, rhs.X) - lin.inp(model.b, rhs.y) - lin.inp(model.h, rhs_z_vec) - rhs.kappa
         if self.sym:
-            pnt.kappa = (kappa / tau) * rhs.tau + rhs.kappa
+            pnt.kappa[:] = (kappa / tau) * rhs.tau + rhs.kappa
         else:
-            pnt.kappa = mu_tau2 * rhs.tau + rhs.kappa
+            pnt.kappa[:] = mu_tau2 * rhs.tau + rhs.kappa
 
-        pnt.X = model.A_T @ rhs.y + model.G_T @ rhs_z_vec + model.c * rhs.tau
+        pnt.X[:] = model.A_T @ rhs.y + model.G_T @ rhs_z_vec + model.c * rhs.tau
         # pnt.X = [model.c_mtx[0] * rhs.tau - rhs.Z[0]]
         # for (i, Ai) in enumerate(model.A_mtx): 
         #     pnt.X[0] += Ai[0] * rhs.y[i]
-        pnt.Z.from_vec(-model.G @ rhs.X + model.h * rhs.tau)
+        pnt.Z.copy_from(-model.G @ rhs.X + model.h * rhs.tau)
         pnt.Z -= rhs.S
         blk_hess_prod_ip(pnt.S, rhs.S, model, self.sym)
         pnt.S += rhs.Z
@@ -527,30 +492,26 @@ def blk_invhess_prod_ip(out, dirs, model, sym):
     return out
 
 def blk_hess_congruence(dirs, model, sym):
-
-    p = len(dirs)
-    out = np.zeros((p, p))
+    n = model.n
+    out = np.zeros((n, n))
 
     for (k, cone_k) in enumerate(model.cones):
-        dirs_k = [dirs[i].data[k] for i in range(p)]
         if sym:
-            out += cone_k.nt_congr(dirs_k)
+            out += cone_k.nt_congr(dirs[k])
         else:
-            out += cone_k.hess_congr(dirs_k) 
+            out += cone_k.hess_congr(dirs[k]) 
 
     return out
 
 def blk_invhess_congruence(dirs, model, sym):
-
-    p = len(dirs)
+    p = model.p
     out = np.zeros((p, p))
 
     for (k, cone_k) in enumerate(model.cones):
-        dirs_k = [dirs[i].mat[k] for i in range(p)]
         if sym:
-            out += cone_k.invnt_congr(dirs_k)
+            out += cone_k.invnt_congr(dirs[k])
         else:
-            out += cone_k.invhess_congr(dirs_k) 
+            out += cone_k.invhess_congr(dirs[k]) 
 
     return out
 

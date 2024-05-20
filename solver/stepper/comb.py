@@ -81,7 +81,7 @@ class CombinedStepper():
 
             alpha = alpha_sched[alpha_iter]
             # Step point in direction and step size
-            next_point.copy(point)
+            next_point.copy_from(point)
             if mode == "co_toa":
                 # step = alpha * (dir_p + dir_p_toa * alpha) + (dir_c + dir_c_toa * (1.0 - alpha)) * (1.0 - alpha)
                 next_point.axpy(alpha             , dir_p)
@@ -107,7 +107,7 @@ class CombinedStepper():
             if next_point.tau <= 0 or next_point.kappa <= 0 or taukap <= 0:      
                 continue
             # Compute barrier parameter mu, ensure it is positive
-            sz = [s_k.inp(z_k) for (s_k, z_k) in zip(next_point.S, next_point.Z)]  
+            sz = [s_k.T @ z_k for (s_k, z_k) in zip(next_point.S.vec_views, next_point.Z.vec_views)]  
             mu = (sum(sz) + taukap) / model.nu
             if any(np.array(sz) <= 0) or mu <= 0:
                 continue
@@ -135,7 +135,7 @@ class CombinedStepper():
                     in_prox = False
                     break
 
-                # Check if close enough to central path
+                # Check if close enough to central path (skip if using NT symmetric stepping)
                 if not (model.sym and self.syssolver.sym):
                     prox_k = cone_k.prox()
                     self.prox = max(self.prox, prox_k)
@@ -155,10 +155,10 @@ class CombinedStepper():
 
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
-            self.rhs.S[k] = -1 * point.Z[k] - rtmu * cone_k.get_grad()
+            np.copyto(self.rhs.S[k], -point.Z[k] - rtmu*cone_k.get_grad())
 
-        self.rhs.tau   = 0.
-        self.rhs.kappa = -point.kappa + mu / point.tau
+        self.rhs.tau[:]   = 0.
+        self.rhs.kappa[:] = -point.kappa + mu / point.tau
 
         return self.rhs
 
@@ -169,23 +169,23 @@ class CombinedStepper():
 
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
-            self.rhs.S[k] = -0.5 * cone_k.third_dir_deriv(dir_c.S[k]) / rtmu
+            np.copyto(self.rhs.S[k], -0.5 * cone_k.third_dir_deriv(dir_c.S[k]) / rtmu)
 
-        self.rhs.tau   = 0.
-        self.rhs.kappa = (dir_c.tau**2) / (point.tau**3) * mu
+        self.rhs.tau[:]   = 0.
+        self.rhs.kappa[:] = (dir_c.tau**2) / (point.tau**3) * mu
 
         return self.rhs
 
     def update_rhs_pred(self, model, point):
-        self.rhs.X = -model.A.T @ point.y - model.G.T @ point.Z.to_vec() - model.c * point.tau
-        self.rhs.y = model.A @ point.X - model.b * point.tau
-        self.rhs.Z.from_vec(model.G @ point.X - model.h * point.tau)
+        self.rhs.X[:] = -model.A.T @ point.y - model.G.T @ point.Z.vec - model.c * point.tau
+        self.rhs.y[:] = model.A @ point.X - model.b * point.tau
+        self.rhs.Z.copy_from(model.G @ point.X - model.h * point.tau)
         self.rhs.Z += point.S
 
-        self.rhs.S = -1 * point.Z
+        np.copyto(self.rhs.S.vec, -point.Z.vec)
 
-        self.rhs.tau   = lin.inp(model.c, point.X) + lin.inp(model.b, point.y) + lin.inp(model.h, point.Z.to_vec()) + point.kappa
-        self.rhs.kappa = -point.kappa
+        self.rhs.tau[:]   = lin.inp(model.c, point.X) + lin.inp(model.b, point.y) + lin.inp(model.h, point.Z.vec) + point.kappa
+        self.rhs.kappa[:] = -point.kappa
 
         return self.rhs
 
@@ -197,15 +197,15 @@ class CombinedStepper():
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
             if self.syssolver.sym:
-                self.rhs.S[k] = 0.5 * cone_k.third_dir_deriv(dir_p.S[k], dir_p.Z[k]) / rtmu
+                np.copyto(self.rhs.S[k], 0.5 * cone_k.third_dir_deriv(dir_p.S[k], dir_p.Z[k]) / rtmu)
             else:
                 cone_k.hess_prod_ip(self.rhs.S[k], dir_p.S[k])
                 self.rhs.S[k] -= 0.5 * cone_k.third_dir_deriv(dir_p.S[k]) / rtmu
 
-        self.rhs.tau   = 0.
+        self.rhs.tau[:]   = 0.
         if self.syssolver.sym:
-            self.rhs.kappa = -dir_p.tau * dir_p.kappa / point.tau
+            self.rhs.kappa[:] = -dir_p.tau * dir_p.kappa / point.tau
         else:
-            self.rhs.kappa = (dir_p.tau**2) / (point.tau**3) * mu
+            self.rhs.kappa[:] = (dir_p.tau**2) / (point.tau**3) * mu
 
         return self.rhs

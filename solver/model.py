@@ -30,9 +30,9 @@ class Model():
         self.G_T = self.G.T
         
         if self.use_G:
-            self.G_T_vec = op_vec_to_mat(G.T, cones)
+            self.G_T_views = [self.G_T[:, idxs_k] for idxs_k in self.cone_idxs]
         elif self.use_A:
-            self.A_vec = op_vec_to_mat(A, cones)
+            self.A_views = [self.A[:, idxs_k] for idxs_k in self.cone_idxs]
 
         self.sym = True
         for cone_k in cones:
@@ -43,47 +43,9 @@ class Model():
 def build_cone_idxs(n, cones):
     cone_idxs = []
     prev_idx = 0
-    for (i, cone) in enumerate(cones):
-        dim = cone.dim
-        cone_idxs.append(slice(prev_idx, prev_idx + dim))
-        prev_idx += dim
+    for cone in cones:
+        dim_k = cone.dim
+        cone_idxs.append(slice(prev_idx, prev_idx + dim_k))
+        prev_idx += dim_k
     assert prev_idx == n
     return cone_idxs
-
-def op_mat_to_vec(op_mat):
-    # Obtain the matrix representation of the linear map
-    #     <A_i1, x_1> + <A_i2, x_1> + ... + <A_in, x_1> = b_i
-    # for i=1,...,p.
-    
-    p = len(op_mat)
-    n = op_mat[0].get_vn()
-    
-    op_vec = np.zeros((p, n))
-    for i in range(p):
-        op_vec[[i], :] = op_mat[i].to_vec()
-        
-    if np.count_nonzero(op_vec) < p * n / 0.05:
-        op_vec = sp.sparse.csr_array(op_vec)
-        
-    return op_vec
-
-def op_vec_to_mat(op_vec, cones):
-    # Obtain the matrices A_ij for the matrix representation of
-    #     <A_i1, x_1> + <A_i2, x_1> + ... + <A_in, x_1> = b_i
-    # for i=1,...,p.
-    
-    p = op_vec.shape[0]
-    op_mat = [lin.Vector(cones) for _ in range(p)]
-    
-    if sp.sparse.issparse(op_vec):
-        op_vec_dense = op_vec.toarray()        
-    
-    for i in range(p):
-        if not sp.sparse.issparse(op_vec):
-            op_mat[i].from_vec(op_vec[[i], :].T)
-        else:
-            np.copyto(op_mat[i].vec, op_vec_dense[[i], :].T)
-            # op_mat[i].from_vec(op_vec_dense[[i], :].T)
-            # op_mat[i].to_sparse()
-        
-    return op_mat

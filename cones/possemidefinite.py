@@ -13,10 +13,6 @@ class Cone():
         self.dim = n * n
         self.type = ['s']
         
-        self.grad = lin.Symmetric(self.n)
-        self.temp = lin.Symmetric(self.n)
-        self.temp_mat = np.zeros((n, n))
-
         # Update flags
         self.feas_updated = False
         self.grad_updated = False
@@ -24,23 +20,20 @@ class Cone():
         self.congr_aux_updated = False
 
         return
-    
-    def zeros(self):
-        return lin.Symmetric(self.n)
-        
+
     def get_nu(self):
         return self.n
     
     def set_init_point(self):
         self.set_point(
-            lin.Symmetric(np.eye(self.n)), 
-            lin.Symmetric(np.eye(self.n))
+            np.eye(self.n), 
+            np.eye(self.n)
         )
         return self.X
     
     def set_point(self, point, dual=None, a=True):
-        self.X = point.data * a
-        self.Z = dual.data * a
+        self.X = point * a
+        self.Z = dual * a
 
         self.feas_updated = False
         self.grad_updated = False
@@ -82,33 +75,33 @@ class Cone():
         
         self.X_chol_inv, info = sp.linalg.lapack.dtrtri(self.X_chol, lower=True)
         self.X_inv = self.X_chol_inv.T @ self.X_chol_inv
-        # self.grad.data = -self.X_inv
+        self.grad = -self.X_inv
 
         self.grad_updated = True
-        return -self.X_inv
+        return self.grad
     
     def hess_prod_ip(self, out, H):
         if not self.grad_updated:
             self.get_grad()
-        XHX = self.X_inv @ H.data @ self.X_inv
-        out.data = (XHX + XHX.T) / 2
+        XHX = self.X_inv @ H @ self.X_inv
+        out[:] = (XHX + XHX.T) / 2
         return out    
     
     def invhess_prod_ip(self, out, H):
-        XHX = self.X @ H.data @ self.X
-        out.data = (XHX + XHX.T) / 2
+        XHX = self.X @ H @ self.X
+        out[:] = (XHX + XHX.T) / 2
         return out
     
     def third_dir_deriv(self, dir1, dir2=None):
         if not self.grad_updated:
             self.get_grad()
         if dir2 is None:
-            H = dir1.data
+            H = dir1
             XHX_2 = self.X_inv @ H @ self.X_chol_inv.T
             return -2 * XHX_2 @ XHX_2.T
         else:
-            P = dir1.data
-            D = dir2.data
+            P = dir1
+            D = dir2
             PD = P @ D
             XiPD = self.X_inv @ PD
             return -XiPD - XiPD.T
@@ -161,22 +154,19 @@ class Cone():
     def congr_aux(self, A):
         assert not self.congr_aux_updated
         # Check if A matrix is sparse, and build data, col, row arrays if so
-        if all([sp.sparse.issparse(Ai.data) for Ai in A]) and sum([Ai.data for Ai in A]).nnz < self.n ** 1.5:
-                # If aggergate structure is sparse
-                # Construct sparse marix representation of A
-                self.A = sp.sparse.vstack([Ai.data.reshape((1, -1)) for Ai in A], format="csr")
-                
-                # Find where zero columns in A are
-                A_where_nz = np.where(self.A.getnnz(0))[0]
-                self.A = self.A[:, A_where_nz]
-                
-                # Get corresponding coordinates to nonzero columns of A
-                ijs = [(i, j) for j in range(self.n) for i in range(self.n)]
-                ijs = [ijs[idx] for idx in A_where_nz]
-                self.A_is = [ij[0] for ij in ijs]
-                self.A_js = [ij[1] for ij in ijs]
-                
-                self.congr_mode = 1
+        if sp.sparse.issparse(A) and sum(A.getnnz(0) > 0) < self.n ** 1.5:
+            # If aggergate structure is sparse
+            # Find where zero columns in A are
+            A_where_nz = np.where(A.getnnz(0))[0]
+            self.A_nz = A[:, A_where_nz]
+            
+            # Get corresponding coordinates to nonzero columns of A
+            ijs = [(i, j) for j in range(self.n) for i in range(self.n)]
+            ijs = [ijs[idx] for idx in A_where_nz]
+            self.A_is = [ij[0] for ij in ijs]
+            self.A_js = [ij[1] for ij in ijs]
+            
+            self.congr_mode = 1
         else:
             # Loop through, get sparse and non-sparse structures
             self.A_sp_data = []
@@ -215,7 +205,7 @@ class Cone():
         if not self.congr_aux_updated:
             self.congr_aux(A)
                     
-        p = len(A)
+        p = A.shape[0]
         
         if self.congr_mode == 0:
             out = np.zeros((p, p))
@@ -263,7 +253,7 @@ class Cone():
             # If constraint matrix has sparse aggregate structure
             W_sub = self.W_inv[np.ix_(self.A_is, self.A_js)]
             WW = W_sub * W_sub.T
-            return self.A @ WW @ self.A.T        
+            return self.A_nz @ WW @ self.A_nz.T
 
     def invnt_congr(self, A):
         if not self.nt_aux_updated:
@@ -271,7 +261,7 @@ class Cone():
         if not self.congr_aux_updated:
             self.congr_aux(A)
                     
-        p = len(A)
+        p = A.shape[0]
         
         if self.congr_mode == 0:
             out = np.zeros((p, p))
@@ -319,7 +309,7 @@ class Cone():
             # If constraint matrix has sparse aggregate structure
             W_sub = self.W[np.ix_(self.A_is, self.A_js)]
             WW = W_sub * W_sub.T
-            return self.A @ WW @ self.A.T
+            return self.A_nz @ WW @ self.A_nz.T
 
     def hess_congr(self, A):
         if not self.grad_updated:
@@ -327,7 +317,7 @@ class Cone():
         if not self.congr_aux_updated:
             self.congr_aux(A)
                     
-        p = len(A)
+        p = A.shape[0]
         
         if self.congr_mode == 0:
             out = np.zeros((p, p))
@@ -370,13 +360,13 @@ class Cone():
             # If constraint matrix has sparse aggregate structure
             X_sub = self.X_inv[np.ix_(self.A_is, self.A_js)]
             XX = X_sub * X_sub.T
-            return self.A @ XX @ self.A.T
+            return self.A_nz @ XX @ self.A_nz.T
 
     def invhess_congr(self, A):
         if not self.congr_aux_updated:
             self.congr_aux(A)
                     
-        p = len(A)
+        p = A.shape[0]
         
         if self.congr_mode == 0:
             out = np.zeros((p, p))
@@ -419,7 +409,7 @@ class Cone():
             # If constraint matrix has sparse aggregate structure
             X_sub = self.X[np.ix_(self.A_is, self.A_js)]
             XX = X_sub * X_sub.T
-            return self.A @ XX @ self.A.T
+            return self.A_nz @ XX @ self.A_nz.T
         
     def sp_invnt_congr(self, A, sp_is, sp_js):
         if not self.nt_aux_updated:

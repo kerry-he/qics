@@ -153,8 +153,8 @@ class Solver():
         model = self.model
         self.point = point.Point(model)
 
-        self.point.tau   = 1.
-        self.point.kappa = 1.
+        self.point.tau[:]   = 1.
+        self.point.kappa[:] = 1.
 
         # # Precompute
         # if model.use_G:
@@ -234,7 +234,7 @@ class Solver():
         return
 
     def calc_mu(self):
-        self.mu = (self.point.S.inp(self.point.Z) + self.point.tau*self.point.kappa) / self.model.nu
+        self.mu = (self.point.S.inp(self.point.Z) + self.point.tau[0, 0]*self.point.kappa[0, 0]) / self.model.nu
         return self.mu
 
     def get_gap_feas(self):
@@ -248,7 +248,7 @@ class Solver():
         y   = self.point.y
         z   = self.point.Z.vec
         s   = self.point.S.vec
-        tau = self.point.tau
+        tau = self.point.tau[0, 0]
 
         c_max = np.linalg.norm(c, np.inf)
         b_max = abs(b).max(initial=0.0)
