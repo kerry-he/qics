@@ -9,9 +9,9 @@ from solver import model, solver
 
 np.random.seed(2)
 
-n = 2          # Size of SDP blocks
+n = 3          # Size of SDP blocks
 L = 2500      # Number of SDP blocks
-p = 200       # Number of constraints
+p = 400       # Number of constraints
 # n = 10
 # L = 500
 # p = 200
@@ -28,9 +28,10 @@ for i in range(p):
         
         t += vn
         u += n*(n+1) // 2
-A = sp.sparse.csr_array(A)
+A = sp.sparse.csr_matrix(A)
 A = A[A.getnnz(1)>0]
 p = A.shape[0]
+A = A.toarray()
 
 b = np.random.rand(p, 1)
 

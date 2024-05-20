@@ -82,7 +82,9 @@ class SysSolver():
                     self.AHA_is_sparse = self.AHA_sparsity(model)
 
                 if self.AHA_is_sparse:
-                    AHA = sp_blk_invhess_congruence(model.A_vec, model, self.AHA_sp_is, self.AHA_sp_js, self.sym)
+                    H = blk_invhess_mtx(model)
+                    AHA = (model.A @ H @ model.A_T).tocsc()
+                    # AHA = sp_blk_invhess_congruence(model.A_vec, model, self.AHA_sp_is, self.AHA_sp_js, self.sym)
                 else:
                     AHA = blk_invhess_congruence(model.A_vec, model, self.sym)
                 
@@ -289,7 +291,7 @@ class SysSolver():
         
         if model.use_A and not model.use_G:
             # Solve for y: AHA y = A(rz + H \ (rx + rs)) + ry
-            self.vec_temp.from_vec(rX)
+            self.vec_temp.from_vec(rX.copy())
             if rS is not None:
                 self.vec_temp += rS
             blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym)
@@ -298,14 +300,16 @@ class SysSolver():
             temp = model.A @ out.X + ry
             out.y = lin.fact_solve(self.AHA_fact, temp)
             
-            # Solve for x: x = rz + H \ (rx + rs - At y)
+            # Solve for z: z = At y - rx
             A_T_y = model.A_T @ out.y
+            out.Z.from_vec(A_T_y - rX)
+
+            # Solve for x: x = rz + H \ (rx + rs - At y)
             self.vec_temp.from_vec(A_T_y)
             blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym)
             out.X -= self.vec_temp2.to_vec()
             
-            # Solve for z: z = At y - rx
-            out.Z.from_vec(A_T_y - rX)
+
 
             return out
         
@@ -563,3 +567,15 @@ def sp_blk_invhess_congruence(dirs, model, sp_is, sp_js, sym):
             out += cone_k.sp_invhess_congr(dirs_k, sp_is[k], sp_js[k]) 
 
     return out
+
+def blk_invhess_mtx(model):
+
+    H_blk = []
+
+    for cone_k in model.cones:
+        if sym:
+            H_blk.append(cone_k.invnt_mtx())
+        else:
+            H_blk.append(cone_k.invhess_mtx())
+
+    return sp.sparse.block_diag(H_blk, 'bsr')

@@ -85,7 +85,7 @@ def read_sdpa(filename):
 
 
 if __name__ == "__main__":
-    C_sdpa, b_sdpa, A_sdpa, blockStruct = read_sdpa("./problems/sdp/arch2.dat-s")
+    C_sdpa, b_sdpa, A_sdpa, blockStruct = read_sdpa("./problems/sdp/truss7.dat-s")
     
     # Vectorize C
     dims = []
@@ -126,7 +126,7 @@ if __name__ == "__main__":
             else:
                 A[j, t : t+dims[i]] = Aji
             t += dims[i]
-    A = sp.sparse.coo_array(A)
+    A = sp.sparse.csr_matrix(A)
             
     model = model.Model(c, A, b, cones=cones)
     solver = solver.Solver(model, sym=True, ir=True)
@@ -140,6 +140,7 @@ if __name__ == "__main__":
     profiler.dump_stats("example.stats")
 
     sol = cvxopt_solve_sdp(C_sdpa, b, A, blockStruct)
+
     print("optval: ", sol['primal']) 
     print("time:   ", sol['time'])   
 

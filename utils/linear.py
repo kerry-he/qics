@@ -6,6 +6,8 @@ from utils import symmetric as sym
 # import symmetric as sym
 
 class Vector():
+    
+
     def __init__(self, data):
         self.data = data
 
@@ -216,8 +218,7 @@ class Symmetric(Vector):
         return sym.mat_to_vec(self.data, hermitian=False)
     
     def from_vec(self, vec):
-        self.data = vec.reshape((self.n, self.n)).copy()
-        self.data = 0.5*(self.data + self.data.T)
+        self.data = vec.reshape((self.n, self.n))
         # self.data = sym.vec_to_mat(vec, hermitian=False)
         return self
     
@@ -333,12 +334,18 @@ def add(x, y):
 def fact(A, fact=None):
     # Perform a Cholesky decomposition, or an LU factorization if Cholesky fails
     if sp.sparse.issparse(A):
-        if fact is None:
-            fact = cholmod.cholesky(A)
-        else:
-            fact = fact[0]
-            fact.cholesky_inplace(A)
-        return (fact, "spcho")
+        while True:
+            try:
+                if fact is None:
+                    fact = cholmod.cholesky(A)
+                    return (fact, "spcho")
+                else:
+                    fact[0].cholesky_inplace(A)
+                    return (fact[0], "spcho")
+            except cholmod.CholmodNotPositiveDefiniteError:
+                A_diag = A.diagonal()
+                A.setdiag(np.max([A_diag, np.ones_like(A_diag) * 1e-12], axis=0) * (1 + 1e-8))
+        
     
     while True:
         try:
@@ -347,8 +354,6 @@ def fact(A, fact=None):
         except np.linalg.LinAlgError:
             diag_idx = np.diag_indices_from(A)
             A[diag_idx] = np.max([A[diag_idx], np.ones_like(A[diag_idx]) * 1e-12], axis=0) * (1 + 1e-8)
-        else:
-            break
 
     # try:
     #     fact = sp.linalg.cho_factor(A)

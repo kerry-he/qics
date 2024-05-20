@@ -9,7 +9,7 @@ from solver import model, solver
 
 np.random.seed(1)
 
-n = 300
+n = 1000
 
 # A = np.zeros((n,n*(n+1)//2))
 # for i in range(n):
@@ -30,7 +30,7 @@ c = C.reshape((-1, 1))
 
 cones = [possemidefinite.Cone(n)]
 model = model.Model(c, A, b, cones=cones)
-solver = solver.Solver(model, sym=True, ir=True)
+solver = solver.Solver(model, sym=True, ir=False)
 
 profiler = cProfile.Profile()
 profiler.enable()

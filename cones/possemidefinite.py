@@ -146,7 +146,15 @@ class Cone():
             self.nt_aux()
         WHW = self.W @ H.data @ self.W
         out.data = (WHW + WHW.T) / 2
-        return out    
+        return out
+    
+    def invhess_mtx(self):
+        return np.kron(self.X, self.X)
+    
+    def invnt_mtx(self):
+        if not self.nt_aux_updated:
+            self.nt_aux()        
+        return np.kron(self.W, self.W)    
     
     def congr_aux(self, A):
         assert not self.congr_aux_updated
