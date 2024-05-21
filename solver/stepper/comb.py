@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from utils.point import Point
+from utils.vector import Point
 from utils import linear as lin
 from utils import symmetric as sym
 
@@ -26,22 +26,22 @@ class CombinedStepper():
 
         # Get prediction direction
         self.update_rhs_pred(model, point)
-        res_norm = self.syssolver.solve_system_ir(self.dir_p, self.rhs, model, mu, point.tau, point.kappa)
+        res_norm = self.syssolver.solve_system_ir(self.dir_p, self.rhs, model, mu, point.tau, point.kap)
 
         # Get TOA prediction direction
         self.update_rhs_pred_toa(model, point, mu, self.dir_p)
-        temp_res_norm = self.syssolver.solve_system_ir(self.dir_p_toa, self.rhs, model, mu, point.tau, point.kappa)
+        temp_res_norm = self.syssolver.solve_system_ir(self.dir_p_toa, self.rhs, model, mu, point.tau, point.kap)
         res_norm = max(temp_res_norm, res_norm)
 
         # Get centering direction
         self.update_rhs_cent(model, point, mu)
-        temp_res_norm = self.syssolver.solve_system_ir(self.dir_c, self.rhs, model, mu, point.tau, point.kappa)
+        temp_res_norm = self.syssolver.solve_system_ir(self.dir_c, self.rhs, model, mu, point.tau, point.kap)
         res_norm = max(temp_res_norm, res_norm)
 
         # Get TOA centering direction
         if not (model.sym and self.syssolver.sym):
             self.update_rhs_cent_toa(model, point, mu, self.dir_c)
-            temp_res_norm = self.syssolver.solve_system_ir(self.dir_c_toa, self.rhs, model, mu, point.tau, point.kappa)
+            temp_res_norm = self.syssolver.solve_system_ir(self.dir_c_toa, self.rhs, model, mu, point.tau, point.kap)
             res_norm = max(temp_res_norm, res_norm)
 
         step_mode = "co_toa"
@@ -101,13 +101,13 @@ class CombinedStepper():
                 # step = dir_c * alpha
                 next_point.axpy(alpha, dir_c)
             
-            # Check that tau, kappa, mu are well defined
-            # Make sure tau, kappa are positive
-            taukap = next_point.tau * next_point.kappa
-            if next_point.tau <= 0 or next_point.kappa <= 0 or taukap <= 0:      
+            # Check that tau, kap, mu are well defined
+            # Make sure tau, kap are positive
+            taukap = next_point.tau * next_point.kap
+            if next_point.tau <= 0 or next_point.kap <= 0 or taukap <= 0:      
                 continue
             # Compute barrier parameter mu, ensure it is positive
-            sz = [s_k.T @ z_k for (s_k, z_k) in zip(next_point.S.vec_views, next_point.Z.vec_views)]  
+            sz = [s_k.T @ z_k for (s_k, z_k) in zip(next_point.s.vecs, next_point.z.vecs)]  
             mu = (sum(sz) + taukap) / model.nu
             if any(np.array(sz) <= 0) or mu <= 0:
                 continue
@@ -128,7 +128,7 @@ class CombinedStepper():
             # Check feasibility
             in_prox = True
             for (k, cone_k) in enumerate(model.cones):
-                cone_k.set_point(next_point.S[k], next_point.Z[k], irtmu)
+                cone_k.set_point(next_point.s[k], next_point.z[k], irtmu)
                 
                 # Check if feasible
                 if not cone_k.get_feas():
@@ -149,63 +149,63 @@ class CombinedStepper():
                 return point, alpha, True
 
     def update_rhs_cent(self, model, point, mu):
-        self.rhs.X.fill(0.)
+        self.rhs.x.fill(0.)
         self.rhs.y.fill(0.)
-        self.rhs.Z.fill(0.)
+        self.rhs.z.fill(0.)
 
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
-            np.copyto(self.rhs.S[k], -point.Z[k] - rtmu*cone_k.get_grad())
+            np.copyto(self.rhs.s[k], -point.z[k] - rtmu*cone_k.get_grad())
 
         self.rhs.tau[:]   = 0.
-        self.rhs.kappa[:] = -point.kappa + mu / point.tau
+        self.rhs.kap[:] = -point.kap + mu / point.tau
 
         return self.rhs
 
     def update_rhs_cent_toa(self, model, point, mu, dir_c):
-        self.rhs.X.fill(0.)
+        self.rhs.x.fill(0.)
         self.rhs.y.fill(0.)
-        self.rhs.Z.fill(0.)
+        self.rhs.z.fill(0.)
 
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
-            np.copyto(self.rhs.S[k], -0.5 * cone_k.third_dir_deriv(dir_c.S[k]) / rtmu)
+            np.copyto(self.rhs.s[k], -0.5 * cone_k.third_dir_deriv(dir_c.s[k]) / rtmu)
 
         self.rhs.tau[:]   = 0.
-        self.rhs.kappa[:] = (dir_c.tau**2) / (point.tau**3) * mu
+        self.rhs.kap[:] = (dir_c.tau**2) / (point.tau**3) * mu
 
         return self.rhs
 
     def update_rhs_pred(self, model, point):
-        self.rhs.X[:] = -model.A.T @ point.y - model.G.T @ point.Z.vec - model.c * point.tau
-        self.rhs.y[:] = model.A @ point.X - model.b * point.tau
-        self.rhs.Z.copy_from(model.G @ point.X - model.h * point.tau)
-        self.rhs.Z += point.S
+        self.rhs.x[:] = -model.A.T @ point.y - model.G.T @ point.z.vec - model.c * point.tau
+        self.rhs.y[:] = model.A @ point.x - model.b * point.tau
+        self.rhs.z.copy_from(model.G @ point.x - model.h * point.tau)
+        self.rhs.z += point.s
 
-        np.copyto(self.rhs.S.vec, -point.Z.vec)
+        np.copyto(self.rhs.s.vec, -point.z.vec)
 
-        self.rhs.tau[:]   = lin.inp(model.c, point.X) + lin.inp(model.b, point.y) + lin.inp(model.h, point.Z.vec) + point.kappa
-        self.rhs.kappa[:] = -point.kappa
+        self.rhs.tau[:]   = lin.inp(model.c, point.x) + lin.inp(model.b, point.y) + lin.inp(model.h, point.z.vec) + point.kap
+        self.rhs.kap[:] = -point.kap
 
         return self.rhs
 
     def update_rhs_pred_toa(self, model, point, mu, dir_p):
-        self.rhs.X.fill(0.)
+        self.rhs.x.fill(0.)
         self.rhs.y.fill(0.)
-        self.rhs.Z.fill(0.)
+        self.rhs.z.fill(0.)
 
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
             if self.syssolver.sym:
-                np.copyto(self.rhs.S[k], 0.5 * cone_k.third_dir_deriv(dir_p.S[k], dir_p.Z[k]) / rtmu)
+                np.copyto(self.rhs.s[k], 0.5 * cone_k.third_dir_deriv(dir_p.s[k], dir_p.z[k]) / rtmu)
             else:
-                cone_k.hess_prod_ip(self.rhs.S[k], dir_p.S[k])
-                self.rhs.S[k] -= 0.5 * cone_k.third_dir_deriv(dir_p.S[k]) / rtmu
+                cone_k.hess_prod_ip(self.rhs.s[k], dir_p.s[k])
+                self.rhs.s[k] -= 0.5 * cone_k.third_dir_deriv(dir_p.s[k]) / rtmu
 
         self.rhs.tau[:]   = 0.
         if self.syssolver.sym:
-            self.rhs.kappa[:] = -dir_p.tau * dir_p.kappa / point.tau
+            self.rhs.kap[:] = -dir_p.tau * dir_p.kap / point.tau
         else:
-            self.rhs.kappa[:] = (dir_p.tau**2) / (point.tau**3) * mu
+            self.rhs.kap[:] = (dir_p.tau**2) / (point.tau**3) * mu
 
         return self.rhs

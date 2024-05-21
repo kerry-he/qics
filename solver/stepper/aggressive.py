@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from utils.point import Point
+from utils.vector import Point
 from utils import linear as lin
 
 class AggressiveStepper():
@@ -103,7 +103,7 @@ class AggressiveStepper():
             self.rhs.s_views[k][:] = -z_k - rtmu * grad_k
 
         self.rhs.tau[0]   = 0.
-        self.rhs.kappa[0] = -point.kappa + mu / point.tau
+        self.rhs.kap[0] = -point.kap + mu / point.tau
 
         return self.rhs
 
@@ -115,7 +115,7 @@ class AggressiveStepper():
         for (rhs_s_k, z_k) in zip(self.rhs.s_views, point.z_views):
             rhs_s_k[:] = -z_k
 
-        self.rhs.tau[0]   = lin.inp(model.c, point.x) + lin.inp(model.b, point.y) + lin.inp(model.h, point.z) + point.kappa
-        self.rhs.kappa[0] = -point.kappa
+        self.rhs.tau[0]   = lin.inp(model.c, point.x) + lin.inp(model.b, point.y) + lin.inp(model.h, point.z) + point.kap
+        self.rhs.kap[0] = -point.kap
 
         return self.rhs

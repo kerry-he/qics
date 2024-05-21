@@ -3,7 +3,8 @@ import scipy as sp
 import math
 import time
 
-from utils import point, linear as lin
+from utils import linear as lin
+from utils import vector as vec
 from solver.stepper.basic import BasicStepper
 from solver.stepper.aggressive import AggressiveStepper
 from solver.stepper.comb import CombinedStepper
@@ -57,7 +58,7 @@ class Solver():
 
         if self.verbose:
             if not self.status == "step_failure":
-                print("%5d" % (self.num_iters), " %8.1e" % (self.mu), " %8.1e" % (self.point.tau), " %8.1e" % (self.point.kappa),
+                print("%5d" % (self.num_iters), " %8.1e" % (self.mu), " %8.1e" % (self.point.tau), " %8.1e" % (self.point.kap),
                     " | %10.3e" % (self.p_obj), " %10.3e" % (self.d_obj), " %10.3e" % (self.gap), 
                     " | %10.3e" % (self.x_feas), " %10.3e" % (self.y_feas), " %10.3e" % (self.z_feas), end="")
 
@@ -112,7 +113,7 @@ class Solver():
             return True            
             
         # Check ill-posedness
-        if self.mu <= self.tol_ip and self.point.tau <= self.tol_ip * min([1., self.point.kappa]):
+        if self.mu <= self.tol_ip and self.point.tau <= self.tol_ip * min([1., self.point.kap]):
             self.status = "ill_posed"
             if self.verbose:
                 print("Detected ill-posed problem")     
@@ -121,13 +122,13 @@ class Solver():
         if self.verbose:
             if self.num_iters % 20 == 0:
                 print("===================================================================================================================================================================")
-                print("%5s" % "iter", " %8s" % "mu", " %8s" % "tau", " %8s" % "kappa",
+                print("%5s" % "iter", " %8s" % "mu", " %8s" % "tau", " %8s" % "kap",
                     " | %10s" % "p_obj", " %10s" % "d_obj", " %10s" % "gap", 
                     " | %10s" % "x_feas", " %10s" % "y_feas", " %10s" % "z_feas",
                     " | %6s" % "step", "%10s" % "dir_tol", "%10s" % "prox", " %5s" % "alpha")
                 print("===================================================================================================================================================================")                
             
-            print("%5d" % (self.num_iters), " %8.1e" % (self.mu), " %8.1e" % (self.point.tau), " %8.1e" % (self.point.kappa),
+            print("%5d" % (self.num_iters), " %8.1e" % (self.mu), " %8.1e" % (self.point.tau), " %8.1e" % (self.point.kap),
                   " | %10.3e" % (self.p_obj), " %10.3e" % (self.d_obj), " %10.3e" % (self.gap),
                   " | %10.3e" % (self.x_feas), " %10.3e" % (self.y_feas), " %10.3e" % (self.z_feas), end="")
             
@@ -151,10 +152,10 @@ class Solver():
 
     def setup_point(self):
         model = self.model
-        self.point = point.Point(model)
+        self.point = vec.Point(model)
 
         self.point.tau[:]   = 1.
-        self.point.kappa[:] = 1.
+        self.point.kap[:] = 1.
 
         # # Precompute
         # if model.use_G:
@@ -167,21 +168,21 @@ class Solver():
         #     x = lin.fact_solve(GG_fact, model.G_T @ model.h)
         #     s = model.h - model.G @ x
 
-        #     self.point.S.from_vec(s)
-        #     eig = min(np.linalg.eigvalsh(self.point.S[0].data))
+        #     self.point.s.from_vec(s)
+        #     eig = min(np.linalg.eigvalsh(self.point.s[0].data))
         #     if eig < 0:
-        #         self.point.S[0].data[np.diag_indices_from(self.point.S[0].data)] += -eig + 1            
-        #     self.point.X = x
+        #         self.point.s[0].data[np.diag_indices_from(self.point.s[0].data)] += -eig + 1            
+        #     self.point.x = x
             
 
         #     # Initialize dual variables y and z
         #     x = lin.fact_solve(GG_fact, -model.c)
         #     z = model.G @ x
 
-        #     self.point.Z.from_vec(z)
-        #     eig = min(np.linalg.eigvalsh(self.point.Z[0].data))
+        #     self.point.z.from_vec(z)
+        #     eig = min(np.linalg.eigvalsh(self.point.z[0].data))
         #     if eig < 0:
-        #         self.point.Z[0].data[np.diag_indices_from(self.point.Z[0].data)] += -eig + 1
+        #         self.point.z[0].data[np.diag_indices_from(self.point.z[0].data)] += -eig + 1
         # else:
         #     AA = model.A @ model.A_T
         #     if sp.sparse.issparse(AA):
@@ -193,39 +194,39 @@ class Solver():
         #     s = -model.A.T @ y
         #     x = s - model.h
 
-        #     self.point.S.from_vec(s)
-        #     self.point.X = x
+        #     self.point.s.from_vec(s)
+        #     self.point.x = x
             
 
         #     # Initialize dual variables y and z
         #     y = lin.fact_solve(AA_fact, -model.A @ model.c)
         #     z = model.A.T @ y
 
-        #     self.point.Z.from_vec(z)
-        #     eig = min(np.linalg.eigvalsh(self.point.Z[0].data))
+        #     self.point.z.from_vec(z)
+        #     eig = min(np.linalg.eigvalsh(self.point.z[0].data))
         #     if eig < 0:
-        #         self.point.Z[0].data[np.diag_indices_from(self.point.Z[0].data)] += -eig + 1
+        #         self.point.z[0].data[np.diag_indices_from(self.point.z[0].data)] += -eig + 1
         #     self.point.y = y
 
         
         # for (k, cone_k) in enumerate(model.cones):
-        #     cone_k.set_point(self.point.S[k], self.point.Z[k], 1.0)
+        #     cone_k.set_point(self.point.s[k], self.point.z[k], 1.0)
         #     assert cone_k.get_feas()
         #     cone_k.get_grad()
 
 
         for (k, cone_k) in enumerate(model.cones):
-            np.copyto(self.point.S[k], cone_k.set_init_point())
+            np.copyto(self.point.s[k], cone_k.set_init_point())
             assert cone_k.get_feas()
-            np.copyto(self.point.Z[k], -cone_k.get_grad())
+            np.copyto(self.point.z[k], -cone_k.get_grad())
 
         # if model.use_G:
-        #     self.point.X[:] = np.linalg.pinv(np.vstack((model.A, model.G))) @ np.vstack((model.b, model.h - self.point.S.to_vec()))
-        #     self.point.y[:] = np.linalg.pinv(model.A.T) @ (-model.G.T @ self.point.Z.to_vec() - model.c)
+        #     self.point.x[:] = np.linalg.pinv(np.vstack((model.A, model.G))) @ np.vstack((model.b, model.h - self.point.s.to_vec()))
+        #     self.point.y[:] = np.linalg.pinv(model.A.T) @ (-model.G.T @ self.point.z.to_vec() - model.c)
         # else:
-        #     self.point.X[:] = -(model.h - self.point.S.to_vec())
-        #     self.point.X[:] = np.linalg.pinv(np.vstack((model.A, model.G.toarray()))) @ np.vstack((model.b, model.h - self.point.S.to_vec()))
-        #     self.point.y[:] = np.linalg.pinv(model.A.toarray().T) @ (self.point.Z.to_vec() - model.c)
+        #     self.point.x[:] = -(model.h - self.point.s.to_vec())
+        #     self.point.x[:] = np.linalg.pinv(np.vstack((model.A, model.G.toarray()))) @ np.vstack((model.b, model.h - self.point.s.to_vec()))
+        #     self.point.y[:] = np.linalg.pinv(model.A.toarray().T) @ (self.point.z.to_vec() - model.c)
 
         self.calc_mu()
         if not math.isclose(self.mu, 1.):
@@ -234,7 +235,7 @@ class Solver():
         return
 
     def calc_mu(self):
-        self.mu = (self.point.S.inp(self.point.Z) + self.point.tau[0, 0]*self.point.kappa[0, 0]) / self.model.nu
+        self.mu = (self.point.s.inp(self.point.z) + self.point.tau[0, 0]*self.point.kap[0, 0]) / self.model.nu
         return self.mu
 
     def get_gap_feas(self):
@@ -244,10 +245,10 @@ class Solver():
         A = self.model.A
         G = self.model.G
 
-        x   = self.point.X
+        x   = self.point.x
         y   = self.point.y
-        z   = self.point.Z.vec
-        s   = self.point.S.vec
+        z   = self.point.z.vec
+        s   = self.point.s.vec
         tau = self.point.tau[0, 0]
 
         c_max = np.linalg.norm(c, np.inf)
@@ -260,7 +261,7 @@ class Solver():
 
         self.p_obj = p_obj_tau / tau + self.model.offset
         self.d_obj = d_obj_tau / tau + self.model.offset
-        self.gap   = min([self.point.Z.inp(self.point.S) / tau, abs(p_obj_tau - d_obj_tau)]) / max([tau, min([abs(p_obj_tau), abs(d_obj_tau)])])
+        self.gap   = min([self.point.z.inp(self.point.s) / tau, abs(p_obj_tau - d_obj_tau)]) / max([tau, min([abs(p_obj_tau), abs(d_obj_tau)])])
 
         # Get primal and dual feasibilities
         x_res = A.T @ y + G.T @ z

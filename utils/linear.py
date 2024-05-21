@@ -2,105 +2,12 @@ import numpy as np
 import scipy as sp
 import sksparse.cholmod as cholmod
 
-from utils import symmetric as sym
-# import symmetric as sym
-
-
-class Vector():
-    def __init__(self, cones, vec=None):
-        self.dims  = []
-        self.types = []
-        for cone_k in cones:
-            self.dims.append(cone_k.dim)
-            self.types.extend(cone_k.type)
-        self.dim = sum(self.dims)
-
-        # Initialize vector
-        if vec is None:
-            self.vec = np.zeros((self.dim, 1))
-        else:
-            assert vec.size == self.dim
-            self.vec = vec
-
-        # Build views of vector
-        self.vec_views = []
-        self.mat = []
-        t = 0
-        for (dim_k, type_k) in zip(self.dims, self.types):
-            self.vec_views.append(self.vec[t:t+dim_k])
-
-            if type_k == 'r':
-                # Real vector
-                self.mat.append(self.vec_views[-1])
-            elif type_k == 's':
-                # Symmetric matrix
-                n_k = int(np.sqrt(dim_k))
-                self.mat.append(self.vec_views[-1].reshape((n_k, n_k)))
-            elif type_k == 'h':
-                # Hermitian matrix
-                n_k = int(np.sqrt(dim_k // 2))
-                self.mat.append(self.vec_views[-1].reshape((-1, 2)).view(dtype=np.complex128).reshape(n_k, n_k))
-            t += dim_k
-
-    def __getitem__(self, key):
-        return self.mat[key]
-    
-    def __iadd__(self, other):
-        self.vec = sp.linalg.blas.daxpy(other.vec, self.vec, a=1)
-        return self
-    
-    def __isub__(self, other):
-        self.vec = sp.linalg.blas.daxpy(other.vec, self.vec, a=-1)
-        return self    
-    
-    def __imul__(self, other):
-        self.vec *= other
-        return self
-    
-    def get_vn(self):
-        return self.dim
-
-    def inp(self, other):
-        return (self.vec.T @ other.vec)[0, 0]
-    
-    def norm(self, order=None):
-        return np.linalg.norm(self.vec, ord=order)
-    
-    def copy_from(self, other):
-        if isinstance(other, np.ndarray):
-            np.copyto(self.vec, other)
-        else:
-            np.copyto(self.vec, other.vec)
-        return self 
-    
-    def axpy(self, a, other):
-        self.vec = sp.linalg.blas.daxpy(other.vec, self.vec, a=a)
-        return self
-    
-    def fill(self, a):
-        self.vec.fill(a)
-        return self
-
 def inp(x, y):
     # Standard inner product
     if isinstance(x, list) and isinstance(y, list):
         return sum([np.sum(xi * yi.conj()).real for (xi, yi) in zip(x, y)])
     else:
         return np.sum(x * y.conj()).real
-
-def norm(x, ord=None):
-    # Standard inner product
-    if isinstance(x, list):
-        return np.linalg.norm(np.array([np.linalg.norm(xi, ord) for xi in x]), ord)
-    else:
-        return np.linalg.norm(x, ord)
-    
-def add(x, y):
-    # Standard inner product
-    if isinstance(x, list):
-        return [xi + yi for (xi, yi) in zip(x, y)]
-    else:
-        return x + y
 
 # @profile
 def fact(A, fact=None):

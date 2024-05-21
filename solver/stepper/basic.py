@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from utils.point import Point
+from utils.vector import Point
 from utils import linear as lin
 
 class BasicStepper():

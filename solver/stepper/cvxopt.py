@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from utils.point import Point
+from utils.vector import Point
 from utils import linear as lin
 from utils import symmetric as sym
 
@@ -22,7 +22,7 @@ class CVXOPTStepper():
 
         # Step 2: Get affine direction
         self.update_rhs_affine(model, point)
-        res_norm = self.syssolver.solve_system_ir(self.dir_a, self.rhs, model, mu, point.tau, point.kappa)
+        res_norm = self.syssolver.solve_system_ir(self.dir_a, self.rhs, model, mu, point.tau, point.kap)
 
         # Step 3: Step size and centering parameter (use bisection)
         alpha_u = 1.0
@@ -32,10 +32,10 @@ class CVXOPTStepper():
             # Take step
             next_point = point + alpha * self.dir_a
 
-            S_eig = np.linalg.eigvalsh(next_point.S[0].data)
-            Z_eig = np.linalg.eigvalsh(next_point.Z[0].data)
+            S_eig = np.linalg.eigvalsh(next_point.s[0].data)
+            Z_eig = np.linalg.eigvalsh(next_point.z[0].data)
 
-            if next_point.tau < 0 or next_point.kappa < 0 or any(S_eig <= 0) or any(Z_eig <= 0):
+            if next_point.tau < 0 or next_point.kap < 0 or any(S_eig <= 0) or any(Z_eig <= 0):
                 alpha_u = alpha
             else:
                 alpha_l = alpha
@@ -47,7 +47,7 @@ class CVXOPTStepper():
 
         # Step 4: Combined direction
         self.update_rhs_comb(model, point, mu, self.dir_a, sigma)
-        temp_res_norm = self.syssolver.solve_system_ir(self.dir_comb, self.rhs, model, mu, point.tau, point.kappa)
+        temp_res_norm = self.syssolver.solve_system_ir(self.dir_comb, self.rhs, model, mu, point.tau, point.kap)
         res_norm = max(temp_res_norm, res_norm)
 
         # Step 5: Line search
@@ -58,10 +58,10 @@ class CVXOPTStepper():
             # Take step
             next_point = point + alpha * self.dir_comb
 
-            S_eig = np.linalg.eigvalsh(next_point.S[0].data)
-            Z_eig = np.linalg.eigvalsh(next_point.Z[0].data)
+            S_eig = np.linalg.eigvalsh(next_point.s[0].data)
+            Z_eig = np.linalg.eigvalsh(next_point.z[0].data)
 
-            if next_point.tau < 0 or next_point.kappa < 0 or any(S_eig <= 0) or any(Z_eig <= 0):
+            if next_point.tau < 0 or next_point.kap < 0 or any(S_eig <= 0) or any(Z_eig <= 0):
                 alpha_u = alpha
             else:
                 alpha_l = alpha
@@ -73,7 +73,7 @@ class CVXOPTStepper():
 
         point += alpha * self.dir_comb
         for (k, cone_k) in enumerate(model.cones):
-            cone_k.set_point(point.S[k], point.Z[k])
+            cone_k.set_point(point.s[k], point.z[k])
             assert cone_k.get_feas()
         
         if verbose:
@@ -85,29 +85,29 @@ class CVXOPTStepper():
         return point, True
     
     def update_rhs_affine(self, model, point):
-        self.rhs.X = -model.A.T @ point.y - model.G.T @ point.Z.to_vec() - model.c * point.tau
-        self.rhs.y = model.A @ point.X - model.b * point.tau
-        self.rhs.Z.from_vec(model.G @ point.X - model.h * point.tau)
-        self.rhs.Z += point.S
+        self.rhs.x = -model.A.T @ point.y - model.G.T @ point.z.to_vec() - model.c * point.tau
+        self.rhs.y = model.A @ point.x - model.b * point.tau
+        self.rhs.z.from_vec(model.G @ point.x - model.h * point.tau)
+        self.rhs.z += point.s
 
-        self.rhs.S = -1 * point.Z
+        self.rhs.s = -1 * point.z
 
-        self.rhs.tau   = lin.inp(model.c, point.X) + lin.inp(model.b, point.y) + lin.inp(model.h, point.Z.to_vec()) + point.kappa
-        self.rhs.kappa = -point.kappa
+        self.rhs.tau   = lin.inp(model.c, point.x) + lin.inp(model.b, point.y) + lin.inp(model.h, point.z.to_vec()) + point.kap
+        self.rhs.kap = -point.kap
 
         return self.rhs
 
     def update_rhs_comb(self, model, point, mu, dir_a, sigma):
-        self.rhs.X = (-model.A.T @ point.y - model.G.T @ point.Z.to_vec() - model.c * point.tau) * (1 - sigma)
-        self.rhs.y = (model.A @ point.X - model.b * point.tau) * (1 - sigma)
-        self.rhs.Z.from_vec((model.G @ point.X - model.h * point.tau) * (1 - sigma))
-        self.rhs.Z += point.S * (1 - sigma)
+        self.rhs.x = (-model.A.T @ point.y - model.G.T @ point.z.to_vec() - model.c * point.tau) * (1 - sigma)
+        self.rhs.y = (model.A @ point.x - model.b * point.tau) * (1 - sigma)
+        self.rhs.z.from_vec((model.G @ point.x - model.h * point.tau) * (1 - sigma))
+        self.rhs.z += point.s * (1 - sigma)
 
         for (k, cone_k) in enumerate(model.cones):
-            self.rhs.S[k] = cone_k.comb_dir(dir_a.S[k], dir_a.Z[k], sigma, mu)
-            # self.rhs.S[k] = -1 * point.Z[k] - sigma*mu*cone_k.get_grad()
+            self.rhs.s[k] = cone_k.comb_dir(dir_a.s[k], dir_a.z[k], sigma, mu)
+            # self.rhs.s[k] = -1 * point.z[k] - sigma*mu*cone_k.get_grad()
 
-        self.rhs.tau   = (lin.inp(model.c, point.X) + lin.inp(model.b, point.y) + lin.inp(model.h, point.Z.to_vec()) + point.kappa) * (1 - sigma)
-        self.rhs.kappa = -point.kappa + (-dir_a.kappa*dir_a.tau + sigma*mu) / point.tau
+        self.rhs.tau   = (lin.inp(model.c, point.x) + lin.inp(model.b, point.y) + lin.inp(model.h, point.z.to_vec()) + point.kap) * (1 - sigma)
+        self.rhs.kap = -point.kap + (-dir_a.kap*dir_a.tau + sigma*mu) / point.tau
 
         return self.rhs
