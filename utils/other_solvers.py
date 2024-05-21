@@ -71,7 +71,8 @@ def cvxopt_solve_sdp(C, b, A, blockStruct):
                     Gl = Gl,
                     hl = hl,
                     Gs = Gs,
-                    hs = hs)
+                    hs = hs,
+                    kktsolver="chol")
     cvxopt_time = time.time() - t0_cvxopt
 
     return {'primal': -cvxoptsol['dual objective'],

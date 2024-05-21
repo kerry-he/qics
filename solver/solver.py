@@ -88,7 +88,7 @@ class Solver():
         self.calc_mu()
 
         # Get solve data
-        self.get_gap_feas()      
+        self.xyztau_res = self.get_gap_feas()      
 
         # Check optimality
         if self.gap <= self.tol_gap:
@@ -133,7 +133,7 @@ class Solver():
                   " | %10.3e" % (self.x_feas), " %10.3e" % (self.y_feas), " %10.3e" % (self.z_feas), end="")
             
         # Step
-        self.point, success = self.stepper.step(self.model, self.point, self.mu, self.verbose)
+        self.point, success = self.stepper.step(self.model, self.point, self.xyztau_res, self.mu, self.verbose)
 
         if not success:
             if self.verbose:
@@ -154,7 +154,7 @@ class Solver():
         model = self.model
         self.point = vec.Point(model)
 
-        self.point.tau[:]   = 1.
+        self.point.tau[:] = 1.
         self.point.kap[:] = 1.
 
         # # Precompute
@@ -221,12 +221,12 @@ class Solver():
             np.copyto(self.point.z[k], -cone_k.get_grad())
 
         # if model.use_G:
-        #     self.point.x[:] = np.linalg.pinv(np.vstack((model.A, model.G))) @ np.vstack((model.b, model.h - self.point.s.to_vec()))
-        #     self.point.y[:] = np.linalg.pinv(model.A.T) @ (-model.G.T @ self.point.z.to_vec() - model.c)
+        #     self.point.x[:] = np.linalg.pinv(np.vstack((model.A, model.G))) @ np.vstack((model.b, model.h - self.point.s.vec))
+        #     self.point.y[:] = np.linalg.pinv(model.A.T) @ (-model.G.T @ self.point.z.vec - model.c)
         # else:
-        #     self.point.x[:] = -(model.h - self.point.s.to_vec())
-        #     self.point.x[:] = np.linalg.pinv(np.vstack((model.A, model.G.toarray()))) @ np.vstack((model.b, model.h - self.point.s.to_vec()))
-        #     self.point.y[:] = np.linalg.pinv(model.A.toarray().T) @ (self.point.z.to_vec() - model.c)
+        #     self.point.x[:] = -(model.h - self.point.s.vec)
+        #     self.point.x[:] = np.linalg.pinv(np.vstack((model.A, model.G.toarray()))) @ np.vstack((model.b, model.h - self.point.s.vec))
+        #     self.point.y[:] = np.linalg.pinv(model.A.T) @ (self.point.z.vec - model.c)
 
         self.calc_mu()
         if not math.isclose(self.mu, 1.):
@@ -237,6 +237,7 @@ class Solver():
     def calc_mu(self):
         self.mu = (self.point.s.inp(self.point.z) + self.point.tau[0, 0]*self.point.kap[0, 0]) / self.model.nu
         return self.mu
+
 
     def get_gap_feas(self):
         c = self.model.c
@@ -250,6 +251,7 @@ class Solver():
         z   = self.point.z.vec
         s   = self.point.s.vec
         tau = self.point.tau[0, 0]
+        kap = self.point.kap[0, 0]
 
         c_max = np.linalg.norm(c, np.inf)
         b_max = abs(b).max(initial=0.0)
@@ -264,18 +266,25 @@ class Solver():
         self.gap   = min([self.point.z.inp(self.point.s) / tau, abs(p_obj_tau - d_obj_tau)]) / max([tau, min([abs(p_obj_tau), abs(d_obj_tau)])])
 
         # Get primal and dual feasibilities
-        x_res = A.T @ y + G.T @ z
-        y_res =   A @ x          
-        z_res =   G @ x       + s
+        x_lhs = -(self.model.A.T @ y + self.model.G_T @ z)
+        y_lhs = A @ x          
+        z_lhs = G @ x + s
 
-        self.x_feas = np.linalg.norm(x_res + c * tau, np.inf) / (1. + c_max) / tau
-        self.y_feas = np.linalg.norm(y_res - b * tau, np.inf) / (1. + b_max) / tau if self.model.use_A else 0.0
-        self.z_feas = np.linalg.norm(z_res - h * tau, np.inf) / (1. + h_max) / tau
+        x_res   = x_lhs - c * tau
+        y_res   = y_lhs - b * tau
+        z_res   = z_lhs - h * tau
+        tau_res = p_obj_tau - d_obj_tau + kap
+
+        self.x_feas = np.linalg.norm(x_res, np.inf) / (1. + c_max) / tau
+        self.y_feas = np.linalg.norm(y_res, np.inf) / (1. + b_max) / tau if self.model.use_A else 0.0
+        self.z_feas = np.linalg.norm(z_res, np.inf) / (1. + h_max) / tau
 
         # Get primal and dual infeasibilities
-        self.x_infeas =  np.linalg.norm(x_res, np.inf) / d_obj_tau if (d_obj_tau > 0) else np.inf
-        self.y_infeas = -abs(y_res).max(initial=0.0) / p_obj_tau if (p_obj_tau < 0) else np.inf
-        self.z_infeas = -np.linalg.norm(z_res, np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
+        self.x_infeas =  np.linalg.norm(x_lhs, np.inf) / d_obj_tau if (d_obj_tau > 0) else np.inf
+        self.y_infeas = -abs(y_lhs).max(initial=0.0) / p_obj_tau if (p_obj_tau < 0) else np.inf
+        self.z_infeas = -np.linalg.norm(z_lhs, np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
+
+        return (x_res, y_res, z_res, tau_res)
 
 
     def rescale_model(self):

@@ -5,14 +5,13 @@ from utils import vector as vec
 from utils import symmetric as sym
 from cones import *
 
-
 # Solves the following square Newton system
 #            - A'*y     - c*tau + z         = rx
 #        A*x            - b*tau             = ry
-#      -c'*x - b'*y                 - kap = rtau
+#      -c'*x - b'*y                 - kap   = rtau
 #     mu*H*x                    + z         = rz 
-#                    mu/t^2*tau     + kap = rkappa
-# for (x, y, z, tau, kap) given right-hand residuals (rx, ry, rz, rtau, rkappa)
+#                    mu/t^2*tau     + kap   = rkap
+# for (x, y, z, tau, kap) given right-hand residuals (rx, ry, rz, rtau, rkap)
 # by using elimination.
 
 class SysSolver():
@@ -22,16 +21,16 @@ class SysSolver():
         self.sym = sym
 
         self.cbh = vec.PointXYZ(model)
-        self.cbh.x[:] = model.c
-        self.cbh.y[:] = model.b
-        np.copyto(self.cbh.z.vec, model.h)
+        self.cbh.x[:]     = model.c
+        self.cbh.y[:]     = model.b
+        self.cbh.z.vec[:] = model.h
         
         self.xyz_b = vec.PointXYZ(model)
         self.xyz_r = vec.PointXYZ(model)
         self.xyz_ir = vec.PointXYZ(model)
         self.xyz_res = vec.PointXYZ(model)
 
-        self.rZ_HrS = vec.VecProduct(model.cones)
+        self.rz_Hrs = vec.VecProduct(model.cones)
         self.vec_temp = vec.VecProduct(model.cones)
         self.vec_temp2 = vec.VecProduct(model.cones)
         self.pnt_res = vec.Point(model)
@@ -84,8 +83,7 @@ class SysSolver():
 
                 if self.AHA_is_sparse:
                     H = blk_invhess_mtx(model)
-                    AHA = (model.A @ H @ model.A_T).tocsc()
-                    # AHA = sp_blk_invhess_congruence(model.A_vec, model, self.AHA_sp_is, self.AHA_sp_js, self.sym)
+                    AHA = (model.A @ H @ model.A_T).toarray()
                 else:
                     AHA = blk_invhess_congruence(model.A_views, model, self.sym)
                 
@@ -137,7 +135,6 @@ class SysSolver():
 
         return
 
-    # @profile
     def solve_system_ir(self, dir, rhs, model, mu, tau, kap):
         # Solve system
         self.solve_system(dir, rhs, model, mu / tau / tau, tau, kap)
@@ -231,7 +228,7 @@ class SysSolver():
         sol.xyz.vec[:] = sp.linalg.blas.daxpy(self.xyz_b.vec, self.xyz_r.vec, a=-sol.tau[0, 0])
 
         # ds := -G @ dx + dtau * h - rz
-        sol.s.vec[:] = -model.G @ sol.x
+        sol.s.vec[:] = -(model.G @ sol.x)
         sol.s.vec[:] = sp.linalg.blas.daxpy(model.h, sol.s.vec, a=sol.tau[0, 0])
         sol.s -= rhs.z
         
@@ -443,16 +440,16 @@ class SysSolver():
             return False
         
         # Get sparsity pattern for each cone
-        self.AHA_sp_is = []
-        self.AHA_sp_js = []
+        # self.AHA_sp_is = []
+        # self.AHA_sp_js = []
         
-        for (k, cone_k) in enumerate(model.cones):
-            Ak = model.A[:, model.cone_idxs[k]]
-            Hk = sp.sparse.csr_array(H_block[k])
-            AHAk = (Ak @ Hk @ Ak.T).tocoo()
+        # for (k, cone_k) in enumerate(model.cones):
+        #     Ak = model.A_views[k]
+        #     Hk = sp.sparse.csr_array(H_block[k])
+        #     AHAk = (Ak @ Hk @ Ak.T).tocoo()
             
-            self.AHA_sp_is.append(AHAk.col)
-            self.AHA_sp_js.append(AHAk.row)
+        #     self.AHA_sp_is.append(AHAk.col)
+        #     self.AHA_sp_js.append(AHAk.row)
         
         return True
             
@@ -517,20 +514,6 @@ def blk_invhess_congruence(dirs, model, sym):
             out += cone_k.invnt_congr(dirs[k])
         else:
             out += cone_k.invhess_congr(dirs[k]) 
-
-    return out
-
-def sp_blk_invhess_congruence(dirs, model, sp_is, sp_js, sym):
-
-    p = len(dirs)
-    out = sp.sparse.csc_matrix((p, p))
-
-    for (k, cone_k) in enumerate(model.cones):
-        dirs_k = [dirs[i].data[k] for i in range(p)]
-        if sym:
-            out += cone_k.sp_invnt_congr(dirs_k, sp_is[k], sp_js[k])
-        else:
-            out += cone_k.sp_invhess_congr(dirs_k, sp_is[k], sp_js[k]) 
 
     return out
 

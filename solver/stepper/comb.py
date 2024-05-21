@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 import math
 from utils.vector import Point
 from utils import linear as lin
@@ -21,11 +22,11 @@ class CombinedStepper():
         
         return
     
-    def step(self, model, point, mu, verbose):
+    def step(self, model, point, xyztau_res, mu, verbose):
         self.syssolver.update_lhs(model)
 
         # Get prediction direction
-        self.update_rhs_pred(model, point)
+        self.update_rhs_pred(model, point, xyztau_res)
         res_norm = self.syssolver.solve_system_ir(self.dir_p, self.rhs, model, mu, point.tau, point.kap)
 
         # Get TOA prediction direction
@@ -72,7 +73,7 @@ class CombinedStepper():
         dir_c = self.dir_c
         dir_p_toa = self.dir_p_toa
         dir_c_toa = self.dir_c_toa
-        next_point = Point(model)
+        next_point = self.next_point
 
         while True:
             alpha_iter += 1
@@ -83,22 +84,22 @@ class CombinedStepper():
             # Step point in direction and step size
             next_point.copy_from(point)
             if mode == "co_toa":
-                # step = alpha * (dir_p + dir_p_toa * alpha) + (dir_c + dir_c_toa * (1.0 - alpha)) * (1.0 - alpha)
+                # step := alpha * (dir_p + dir_p_toa * alpha) + (dir_c + dir_c_toa * (1.0 - alpha)) * (1.0 - alpha)
                 next_point.axpy(alpha             , dir_p)
                 next_point.axpy(alpha ** 2        , dir_p_toa)
                 next_point.axpy((1.0 - alpha)     , dir_c)
                 if not (model.sym and self.syssolver.sym):
                     next_point.axpy((1.0 - alpha) ** 2, dir_c_toa)
             elif mode == "comb":
-                # step = dir_p * alpha + dir_c * (1.0 - alpha)
+                # step := dir_p * alpha + dir_c * (1.0 - alpha)
                 next_point.axpy(alpha        , dir_p)
                 next_point.axpy((1.0 - alpha), dir_c)
             elif mode == "ce_toa":
-                # step = (dir_p + dir_p_toa * alpha) * alpha
+                # step := (dir_p + dir_p_toa * alpha) * alpha
                 next_point.axpy(alpha     ,  dir_c)
                 next_point.axpy(alpha ** 2, dir_c_toa)
             elif mode == "cent":
-                # step = dir_c * alpha
+                # step := dir_c * alpha
                 next_point.axpy(alpha, dir_c)
             
             # Check that tau, kap, mu are well defined
@@ -107,17 +108,18 @@ class CombinedStepper():
             if next_point.tau <= 0 or next_point.kap <= 0 or taukap <= 0:      
                 continue
             # Compute barrier parameter mu, ensure it is positive
-            sz = [s_k.T @ z_k for (s_k, z_k) in zip(next_point.s.vecs, next_point.z.vecs)]  
-            mu = (sum(sz) + taukap) / model.nu
-            if any(np.array(sz) <= 0) or mu <= 0:
+            sz = next_point.s.inp(next_point.z)
+            mu = (sz + taukap) / model.nu
+            if sz <= 0 or mu <= 0:
                 continue
 
             # Check cheap proximity conditions first (skip if using NT symmetric stepping)
             if not (model.sym and self.syssolver.sym):
+                szs = [s_k.T @ z_k for (s_k, z_k) in zip(next_point.s.vecs, next_point.z.vecs)]
                 if abs(taukap / mu - 1) > eta:
                     continue
-                nu  = [cone_k.get_nu() for cone_k in model.cones]
-                rho = [np.abs(sz_k / mu - nu_k) / np.sqrt(nu_k) for (sz_k, nu_k) in zip(sz, nu)]
+                nus = [cone_k.get_nu() for cone_k in model.cones]
+                rho = [np.abs(sz_k / mu - nu_k) / np.sqrt(nu_k) for (sz_k, nu_k) in zip(szs, nus)]
                 if any(np.array(rho) > eta):
                     continue
 
@@ -145,7 +147,7 @@ class CombinedStepper():
         
             # If feasible, return point
             if in_prox:
-                point = next_point
+                point.copy_from(next_point)
                 return point, alpha, True
 
     def update_rhs_cent(self, model, point, mu):
@@ -153,11 +155,14 @@ class CombinedStepper():
         self.rhs.y.fill(0.)
         self.rhs.z.fill(0.)
 
+        # rs := -z - mu*g(s)
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
-            np.copyto(self.rhs.s[k], -point.z[k] - rtmu*cone_k.get_grad())
+            self.rhs.s[k][:] = cone_k.get_grad()
+        self.rhs.s.vec *= -rtmu
+        self.rhs.s.vec -= point.z.vec
 
-        self.rhs.tau[:]   = 0.
+        self.rhs.tau[:] = 0.
         self.rhs.kap[:] = -point.kap + mu / point.tau
 
         return self.rhs
@@ -169,22 +174,22 @@ class CombinedStepper():
 
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
-            np.copyto(self.rhs.s[k], -0.5 * cone_k.third_dir_deriv(dir_c.s[k]) / rtmu)
+            self.rhs.s[k][:] = cone_k.third_dir_deriv(dir_c.s[k])
+        self.rhs.s.vec *= -0.5*rtmu
 
-        self.rhs.tau[:]   = 0.
+        self.rhs.tau[:] = 0.
         self.rhs.kap[:] = (dir_c.tau**2) / (point.tau**3) * mu
 
         return self.rhs
 
-    def update_rhs_pred(self, model, point):
-        self.rhs.x[:] = -model.A.T @ point.y - model.G.T @ point.z.vec - model.c * point.tau
-        self.rhs.y[:] = model.A @ point.x - model.b * point.tau
-        self.rhs.z.copy_from(model.G @ point.x - model.h * point.tau)
-        self.rhs.z += point.s
+    def update_rhs_pred(self, model, point, xyztau_res):
+        self.rhs.x[:] = xyztau_res[0]
+        self.rhs.y[:] = xyztau_res[1]
+        self.rhs.z.vec[:] = xyztau_res[2]
 
-        np.copyto(self.rhs.s.vec, -point.z.vec)
+        self.rhs.s.vec[:] = -point.z.vec
 
-        self.rhs.tau[:]   = lin.inp(model.c, point.x) + lin.inp(model.b, point.y) + lin.inp(model.h, point.z.vec) + point.kap
+        self.rhs.tau[:] = xyztau_res[3]
         self.rhs.kap[:] = -point.kap
 
         return self.rhs
@@ -195,14 +200,16 @@ class CombinedStepper():
         self.rhs.z.fill(0.)
 
         rtmu = math.sqrt(mu)
-        for (k, cone_k) in enumerate(model.cones):
-            if self.syssolver.sym:
-                np.copyto(self.rhs.s[k], 0.5 * cone_k.third_dir_deriv(dir_p.s[k], dir_p.z[k]) / rtmu)
-            else:
-                cone_k.hess_prod_ip(self.rhs.s[k], dir_p.s[k])
-                self.rhs.s[k] -= 0.5 * cone_k.third_dir_deriv(dir_p.s[k]) / rtmu
+        if self.syssolver.sym:
+            for (k, cone_k) in enumerate(model.cones):
+                self.rhs.s[k][:] = cone_k.third_dir_deriv(dir_p.s[k], dir_p.z[k])
+            self.rhs.s *= 0.5 / rtmu
+        else:
+            for (k, cone_k) in enumerate(model.cones):
+                cone_k.hess_prod_ip(self.rhs.s[k][:], dir_p.s[k])
+                self.rhs.s[k][:] -= (0.5 / rtmu) * cone_k.third_dir_deriv(dir_p.s[k]) 
 
-        self.rhs.tau[:]   = 0.
+        self.rhs.tau[:] = 0.
         if self.syssolver.sym:
             self.rhs.kap[:] = -dir_p.tau * dir_p.kap / point.tau
         else:

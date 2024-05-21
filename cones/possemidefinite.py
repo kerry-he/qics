@@ -19,6 +19,8 @@ class Cone():
         self.nt_aux_updated = False
         self.congr_aux_updated = False
 
+        self.dgesdd_lwork = sp.linalg.lapack.dgesdd_lwork(n, n)
+
         return
 
     def get_nu(self):
@@ -46,21 +48,19 @@ class Cone():
             return self.feas
         
         self.feas_updated = True
-
-        try:
-            self.X_chol = sp.linalg.cholesky(self.X, lower=True, check_finite=False)
-            self.feas = True
-        except np.linalg.linalg.LinAlgError:
+        
+        # Try to perform Cholesky factorizations to check PSD
+        self.X_chol, info = sp.linalg.lapack.dpotrf(self.X, lower=True)
+        if info != 0:
             self.feas = False
             return self.feas
         
-        try:
-            self.Z_chol = sp.linalg.cholesky(self.Z, lower=True, check_finite=False)
-            self.feas = True
-        except np.linalg.linalg.LinAlgError:
+        self.Z_chol, info = sp.linalg.lapack.dpotrf(self.Z, lower=True)
+        if info != 0:
             self.feas = False
             return self.feas        
 
+        self.feas = True
         return self.feas
     
     def get_val(self):
@@ -75,6 +75,7 @@ class Cone():
         
         self.X_chol_inv, info = sp.linalg.lapack.dtrtri(self.X_chol, lower=True)
         self.X_inv = self.X_chol_inv.T @ self.X_chol_inv
+        # self.X_inv = sp.linalg.blas.dsyrk(alpha=True, a=self.X_chol_inv, trans=True)
         self.grad = -self.X_inv
 
         self.grad_updated = True
@@ -96,13 +97,10 @@ class Cone():
         if not self.grad_updated:
             self.get_grad()
         if dir2 is None:
-            H = dir1
-            XHX_2 = self.X_inv @ H @ self.X_chol_inv.T
+            XHX_2 = self.X_inv @ dir1 @ self.X_chol_inv.T
             return -2 * XHX_2 @ XHX_2.T
         else:
-            P = dir1
-            D = dir2
-            PD = P @ D
+            PD = dir1 @ dir2
             XiPD = self.X_inv @ PD
             return -XiPD - XiPD.T
     
@@ -112,17 +110,18 @@ class Cone():
         XZX_I.flat[::self.n+1] -= 1
         return np.linalg.norm(XZX_I) ** 2
     
+    # @profile
     def nt_aux(self):
         assert not self.nt_aux_updated
         if not self.grad_updated:
-            grad_k = self.get_grad()   
+            self.get_grad()   
 
         RL = self.Z_chol.T @ self.X_chol
-        U, D, Vt = sp.linalg.svd(RL, check_finite=False)
+        U, D, Vt, _ = sp.linalg.lapack.dgesdd(RL, lwork=self.dgesdd_lwork)
         D_rt2 = np.sqrt(D)
 
         self.W_rt2 = self.X_chol @ (Vt.T / D_rt2)
-        self.W = self.W_rt2 @ self.W_rt2.conj().T
+        self.W = self.W_rt2 @ self.W_rt2.T
 
         self.W_irt2 = self.X_chol_inv.T @ (Vt.T * D_rt2)
         self.W_inv = self.W_irt2 @ self.W_irt2.T
@@ -133,23 +132,21 @@ class Cone():
         if not self.nt_aux_updated:
             self.nt_aux()
         WHW = self.W_inv @ H @ self.W_inv
-        out[:] = (WHW + WHW.T) / 2
-        return out
+        out[:] = np.maximum(WHW, WHW.T)
     
     def invnt_prod_ip(self, out, H):
         if not self.nt_aux_updated:
             self.nt_aux()
         WHW = self.W @ H @ self.W
-        out[:] = (WHW + WHW.T) / 2
-        return out
+        out[:] = np.maximum(WHW, WHW.T)
     
     def invhess_mtx(self):
-        return np.kron(self.X, self.X)
+        return lin.kron(self.X, self.X)
     
     def invnt_mtx(self):
         if not self.nt_aux_updated:
             self.nt_aux()        
-        return np.kron(self.W, self.W)    
+        return lin.kron(self.W, self.W)    
     
     def congr_aux(self, A):
         assert not self.congr_aux_updated
@@ -175,18 +172,22 @@ class Cone():
             self.A_sp_idxs = []
             self.A_ds_idxs = []
             self.A_ds_mtx  = []
+            self.As = []
             
-            for (i, Ai) in enumerate(A):
-                if sp.sparse.issparse(Ai.data) and Ai.data.nnz < 10:
+            for i in range(A.shape[0]):
+                Ai = A[i].reshape((self.n, self.n))
+                self.As.append(Ai)
+
+                if sp.sparse.issparse(Ai) and Ai.nnz < 10:
                     # If aggregate structure is not sparse enough
-                    self.A_sp_data.append(Ai.data.tocoo().data)
-                    self.A_sp_cols.append(Ai.data.tocoo().col)
-                    self.A_sp_rows.append(Ai.data.tocoo().row)
+                    self.A_sp_data.append(Ai.tocoo().data)
+                    self.A_sp_cols.append(Ai.tocoo().col)
+                    self.A_sp_rows.append(Ai.tocoo().row)
                     self.A_sp_idxs.append(i)
                 else:
                     self.A_ds_idxs.append(i)
-                    if sp.sparse.issparse(Ai.data):
-                        self.A_ds_mtx.append(Ai.data.toarray().ravel())
+                    if sp.sparse.issparse(Ai):
+                        self.A_ds_mtx.append(Ai.toarray().ravel())
                     else:
                         self.A_ds_mtx.append(Ai.ravel())
                     
@@ -237,8 +238,8 @@ class Cone():
             # Compute DENSE x DENSE
             if len(self.A_ds_idxs) > 0 and len(self.A_sp_idxs) == 0:
                 for (j, t) in enumerate(self.A_ds_idxs):
-                    AjW  = A[j].data @ self.W_irt2.conj().T
-                    WAjW = self.W_irt2 @ AjW
+                    AjW  = self.As[j] @ self.W_irt2
+                    WAjW = self.W_irt2.conj().T @ AjW
                     lhs[:, j] = WAjW.flat   
                 out = lhs.T @ lhs
                 
@@ -293,7 +294,7 @@ class Cone():
             # Compute DENSE x DENSE
             if len(self.A_ds_idxs) > 0 and len(self.A_sp_idxs) == 0:
                 for (j, t) in enumerate(self.A_ds_idxs):
-                    AjW  = A[j].data @ self.W_rt2
+                    AjW  = self.As[j] @ self.W_rt2
                     WAjW = self.W_rt2.conj().T @ AjW
                     lhs[:, j] = WAjW.flat   
                 out = lhs.T @ lhs
@@ -349,8 +350,8 @@ class Cone():
             # Compute DENSE x DENSE
             if len(self.A_ds_idxs) > 0 and len(self.A_sp_idxs) == 0:
                 for (j, t) in enumerate(self.A_ds_idxs):
-                    AjX  = A[j].data @ self.X_chol_inv.conj().T
-                    XAjX = self.X_chol_inv @ AjX
+                    AjX  = self.As[j] @ self.X_chol_inv
+                    XAjX = self.X_chol_inv.conj().T @ AjX
                     lhs[:, j] = XAjX.flat
                 out = lhs.T @ lhs
                 
@@ -398,7 +399,7 @@ class Cone():
             # Compute DENSE x DENSE
             if len(self.A_ds_idxs) > 0 and len(self.A_sp_idxs) == 0:
                 for (j, t) in enumerate(self.A_ds_idxs):
-                    AjX  = A[j].data @ self.X_chol
+                    AjX  = self.As[j] @ self.X_chol
                     XAjX = self.X_chol.conj().T @ AjX
                     lhs[:, j] = XAjX.flat   
                 out = lhs.T @ lhs
@@ -410,21 +411,6 @@ class Cone():
             X_sub = self.X[np.ix_(self.A_is, self.A_js)]
             XX = X_sub * X_sub.T
             return self.A_nz @ XX @ self.A_nz.T
-        
-    def sp_invnt_congr(self, A, sp_is, sp_js):
-        if not self.nt_aux_updated:
-            self.nt_aux()
-
-        p = len(A)
-
-        sp_vs = [0.0 for _ in sp_is]
-
-        for (k, (i, j)) in enumerate(zip(sp_is, sp_js)):
-            AiW = A[i].data @ self.W
-            AjW = A[j].data @ self.W
-            sp_vs[k] = np.sum(AiW * AjW.T)
-        
-        return sp.sparse.coo_matrix((sp_vs, (sp_is, sp_js)), shape=(p, p)).tocsc()
     
     def comb_dir(self, dS, dZ, sigma, mu):
         if not self.nt_aux_updated:

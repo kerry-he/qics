@@ -128,8 +128,9 @@ if __name__ == "__main__":
             t += dims[i]
     A = sp.sparse.csr_matrix(A)
             
-    model = model.Model(c, A, b, cones=cones)
-    solver = solver.Solver(model, sym=True, ir=True)
+    # model = model.Model(c=-b, G=A.T, h=c, cones=cones)
+    model = model.Model(c=c, A=A, b=b, cones=cones)
+    solver = solver.Solver(model, sym=True, ir=False)
 
     profiler = cProfile.Profile()
     profiler.enable()
@@ -137,7 +138,7 @@ if __name__ == "__main__":
     solver.solve()
 
     profiler.disable()
-    profiler.dump_stats("example.stats")
+    profiler.dump_stats("example.stats")    
 
     sol = cvxopt_solve_sdp(C_sdpa, b, A, blockStruct)
 

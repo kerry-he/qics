@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 import sksparse.cholmod as cholmod
+import numba as nb
 
 def inp(x, y):
     # Standard inner product
@@ -95,3 +96,26 @@ def pcg(A, b, M, tol=1e-8, max_iter=20):
         r_z_k = r_z_k1
 
     return x_k1, (k + 1), abs_res
+
+def kron(a, b):
+    # Kroneker product between two (n x n) matrices
+    n  = a.shape[0]
+    n2 = n*n
+    return (a[:, None, :, None] * b[None, :, None, :]).reshape(n2, n2)
+
+if __name__ == "__main__":
+    import time
+    
+    n = 2
+    X = np.random.rand(n, n)
+    Y = np.random.rand(n, n)
+    
+    tic = time.time()
+    for i in range(10000):
+        out = kron(X, Y)
+    print("Time elapsed: ", time.time() - tic)
+
+    tic = time.time()
+    for i in range(10000):
+        out = np.kron(X, Y)
+    print("Time elapsed: ", time.time() - tic)
