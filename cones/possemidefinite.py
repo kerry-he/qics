@@ -110,7 +110,6 @@ class Cone():
         XZX_I.flat[::self.n+1] -= 1
         return np.linalg.norm(XZX_I) ** 2
     
-    # @profile
     def nt_aux(self):
         assert not self.nt_aux_updated
         if not self.grad_updated:
@@ -132,12 +131,14 @@ class Cone():
         if not self.nt_aux_updated:
             self.nt_aux()
         WHW = self.W_inv @ H @ self.W_inv
+        # out[:] = (WHW + WHW.T) * 0.5
         out[:] = np.maximum(WHW, WHW.T)
     
     def invnt_prod_ip(self, out, H):
         if not self.nt_aux_updated:
             self.nt_aux()
         WHW = self.W @ H @ self.W
+        # out[:] = (WHW + WHW.T) * 0.5
         out[:] = np.maximum(WHW, WHW.T)
     
     def invhess_mtx(self):
@@ -146,7 +147,15 @@ class Cone():
     def invnt_mtx(self):
         if not self.nt_aux_updated:
             self.nt_aux()        
-        return lin.kron(self.W, self.W)    
+        return lin.kron(self.W, self.W)
+    
+    def hess_mtx(self):
+        return lin.kron(self.X_inv, self.X_inv)
+    
+    def nt_mtx(self):
+        if not self.nt_aux_updated:
+            self.nt_aux()        
+        return lin.kron(self.W_inv, self.W_inv)        
     
     def congr_aux(self, A):
         assert not self.congr_aux_updated
@@ -272,7 +281,7 @@ class Cone():
                 for (j, t) in enumerate(self.A_sp_idxs):
                     ts = self.A_sp_idxs[:j+1]
                     
-                    AjW  = A[t].data.dot(self.W)
+                    AjW  = self.As[t].dot(self.W)
                     WAjW = self.W @ AjW
                     out[ts, t] = np.sum(WAjW[self.A_sp_rows[:j+1], self.A_sp_cols[:j+1]] * self.A_sp_data[:j+1], 1)
             

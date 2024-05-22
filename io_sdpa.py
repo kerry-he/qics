@@ -85,7 +85,7 @@ def read_sdpa(filename):
 
 
 if __name__ == "__main__":
-    C_sdpa, b_sdpa, A_sdpa, blockStruct = read_sdpa("./problems/sdp/truss7.dat-s")
+    C_sdpa, b_sdpa, A_sdpa, blockStruct = read_sdpa("./problems/sdp/arch0.dat-s")
     
     # Vectorize C
     dims = []
@@ -130,7 +130,7 @@ if __name__ == "__main__":
             
     # model = model.Model(c=-b, G=A.T, h=c, cones=cones)
     model = model.Model(c=c, A=A, b=b, cones=cones)
-    solver = solver.Solver(model, sym=True, ir=False)
+    solver = solver.Solver(model, sym=True, ir=True)
 
     profiler = cProfile.Profile()
     profiler.enable()
@@ -140,7 +140,13 @@ if __name__ == "__main__":
     profiler.disable()
     profiler.dump_stats("example.stats")    
 
+    profiler = cProfile.Profile()
+    profiler.enable()
+
     sol = cvxopt_solve_sdp(C_sdpa, b, A, blockStruct)
+
+    profiler.disable()
+    profiler.dump_stats("example1.stats")        
 
     print("optval: ", sol['primal']) 
     print("time:   ", sol['time'])   
