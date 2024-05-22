@@ -5,6 +5,7 @@ import scipy as sp
 from utils import symmetric as sym
 from cones import *
 from solver import model, solver
+import os
 
 from utils.other_solvers import cvxopt_solve_sdp, mosek_solve_sdp
 
@@ -46,13 +47,19 @@ def read_sdpa(filename):
         else:
             C.append(np.zeros(-bi))
             
-    A = [[] for ri in range(mDim)]
-    for Ai in A:
-        for bi in blockStruct:
-            if bi >= 0:
-                Ai.append(np.zeros((bi, bi)))
-            else:
-                Ai.append(np.zeros(-bi))
+    totDim = 0
+    idxs = [0]
+    for n in blockStruct:
+        if n >= 0:
+            totDim += n*n
+            idxs.append(idxs[-1] + n*n)
+        else:
+            totDim -= n
+            idxs.append(idxs[-1] - n)
+
+    Acols = []
+    Arows = []
+    Avals = []
     
     lineList = fp.readlines()
     for line in lineList:
@@ -75,80 +82,79 @@ def read_sdpa(filename):
                 C[block][colI] = val
         else:
             if blockStruct[block] >= 0:
-                A[row][block][colI, colJ] = val
-                A[row][block][colJ, colI] = val
+                Acols.append(idxs[block] + colI + colJ*blockStruct[block])
+                Arows.append(row)
+                Avals.append(val)      
+
+                if colJ != colI:
+                    Acols.append(idxs[block] + colJ + colI*blockStruct[block])
+                    Arows.append(row)
+                    Avals.append(val)                     
             else:
                 assert colI == colJ
-                A[row][block][colI] = val
+                Acols.append(idxs[block] + colI)
+                Arows.append(row)
+                Avals.append(val)
+
+    A = sp.sparse.csr_matrix((Avals, (Arows, Acols)), shape=(mDim, totDim))
             
     return C, b, A, blockStruct
 
 
 if __name__ == "__main__":
-    C_sdpa, b_sdpa, A_sdpa, blockStruct = read_sdpa("./problems/sdp/arch0.dat-s")
-    
-    # Vectorize C
-    dims = []
-    cones = []
-    for bi in blockStruct:
-        if bi >= 0:
-            cones.append(possemidefinite.Cone(bi))
-            dims.append(bi * bi)
-            # dims.append(bi * (bi + 1) // 2)
-        else:
-            cones.append(nonnegorthant.Cone(-bi))
-            dims.append(-bi)
-    
-    n = sum(dims)
-    p = len(A_sdpa)
-    
-    c = np.zeros((n, 1))
-    b = b_sdpa.reshape((-1, 1))
-    A = np.zeros((p, n))
-    
-    t = 0
-    for (i, Ci) in enumerate(C_sdpa):
-        if blockStruct[i] >= 0:
-            c[t : t+dims[i]] = Ci.reshape((-1, 1))
-            # c[t : t+dims[i]] = sym.mat_to_vec(Ci)
-        else:
-            c[t : t+dims[i], 0] = Ci
-        t += dims[i]
-    c *= -1
-            
-    for (j, Aj) in enumerate(A_sdpa):
-        t = 0
-        for (i, Aji) in enumerate(Aj):
-            if blockStruct[i] >= 0:
-                A[j, t : t+dims[i]] = Aji.flat
-                # A[[j], t : t+dims[i]] = sym.mat_to_vec(Aji).T
-                # print("Rank: ", np.linalg.matrix_rank(Aji), "  nnz: ", np.count_nonzero(Aji))
+    # fnames = os.listdir("./problems/sdp/")
+    fnames = ["control10.dat-s"]
+
+    for fname in fnames:
+        C_sdpa, b_sdpa, A_sdpa, blockStruct = read_sdpa("./problems/sdp/" + fname)
+        
+        # Vectorize C
+        dims = []
+        cones = []
+        for bi in blockStruct:
+            if bi >= 0:
+                cones.append(possemidefinite.Cone(bi))
+                dims.append(bi * bi)
             else:
-                A[j, t : t+dims[i]] = Aji
+                cones.append(nonnegorthant.Cone(-bi))
+                dims.append(-bi)
+        
+        n = sum(dims)
+        
+        c = np.zeros((n, 1))
+        b = b_sdpa.reshape((-1, 1))
+        A = A_sdpa
+        
+        t = 0
+        for (i, Ci) in enumerate(C_sdpa):
+            if blockStruct[i] >= 0:
+                c[t : t+dims[i]] = Ci.reshape((-1, 1))
+            else:
+                c[t : t+dims[i], 0] = Ci
             t += dims[i]
-    A = sp.sparse.csr_matrix(A)
-            
-    # model = model.Model(c=-b, G=A.T, h=c, cones=cones)
-    model = model.Model(c=c, A=A, b=b, cones=cones)
-    solver = solver.Solver(model, sym=True, ir=True)
+        c *= -1
+                
+        # model = model.Model(c=-b, G=A.T, h=c, cones=cones)
+        mdl = model.Model(c=c, A=A, b=b, cones=cones)
+        slv = solver.Solver(mdl, sym=True, ir=True)
 
-    profiler = cProfile.Profile()
-    profiler.enable()
+        # profiler = cProfile.Profile()
+        # profiler.enable()
 
-    solver.solve()
+        slv.solve()
 
-    profiler.disable()
-    profiler.dump_stats("example.stats")    
+        # profiler.disable()
+        # profiler.dump_stats("example.stats")    
 
-    profiler = cProfile.Profile()
-    profiler.enable()
+        # profiler = cProfile.Profile()
+        # profiler.enable()
 
-    sol = cvxopt_solve_sdp(C_sdpa, b, A, blockStruct)
+        sol = cvxopt_solve_sdp(C_sdpa, b, A, blockStruct)
 
-    profiler.disable()
-    profiler.dump_stats("example1.stats")        
+        # profiler.disable()
+        # profiler.dump_stats("example1.stats")        
 
-    print("optval: ", sol['primal']) 
-    print("time:   ", sol['time'])   
+        print("optval: ", sol['primal']) 
+        print("time:   ", sol['time'])   
 
-    sol = mosek_solve_sdp(C_sdpa, b, A, blockStruct)
+        sol = mosek_solve_sdp(C_sdpa, b, A, blockStruct)

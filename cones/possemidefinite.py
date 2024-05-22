@@ -253,7 +253,7 @@ class Cone():
             # Compute SPARSE x DENSE
             if len(self.A_sp_idxs) > 0 and len(self.A_ds_idxs) > 0:
                 for (j, t) in enumerate(self.A_ds_idxs):
-                    AjX  = self.As[t].data @ X
+                    AjX  = self.As[t] @ X
                     XAjX = X.conj().T @ AjX
                     
                     out[self.A_sp_idxs, t] = np.sum(XAjX[self.A_sp_rows, self.A_sp_cols] * self.A_sp_data, 1)
