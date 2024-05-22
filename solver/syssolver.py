@@ -37,13 +37,13 @@ class SysSolver():
         self.dir_ir = vec.Point(model)
         self.res = vec.Point(model)
 
-        self.Hrows = None
-        self.Hcols = None
         self.H = None
         self.H_inv = None
         
         self.AHA_fact = None
+        self.GHG_fact = None
         self.AHA_is_sparse = None
+        self.GHG_is_sparse = None
 
         self.subsolver = "elim"
         # if subsolver is None:
@@ -70,8 +70,17 @@ class SysSolver():
 
         if self.subsolver == "elim":
             if model.use_G:
-                # TODO: Check sparsity and if we can use CHOLMOD
-                GHG = blk_hess_congruence(model.G_T_views, model, self.sym)
+                # Check sparisty of AHA
+                if self.GHG_is_sparse is None:
+                    self.GHG_is_sparse = self.AHA_sparsity(model, model.G_T)
+
+                if self.GHG_is_sparse:# and not model.is_lp:
+                    self.H_inv, _, _ = blk_invhess_mtx(model, self.Hrows, self.Hcols)
+                    self.H,     _, _ = blk_hess_mtx(model, self.Hrows, self.Hcols)
+                    GHG = (model.G_T @ self.H @ model.G).toarray()
+                else:
+                    GHG = blk_hess_congruence(model.G_T_views, model, self.sym)                    
+
                 self.GHG_fact = lin.fact(GHG)
 
                 if model.use_A:
@@ -82,13 +91,13 @@ class SysSolver():
                     self.AGHGA_fact = lin.fact(AGHGA)
 
             elif model.use_A:
-                # Check sparisty of 
+                # Check sparisty of AHA
                 if self.AHA_is_sparse is None:
-                    self.AHA_is_sparse = self.AHA_sparsity(model)
+                    self.AHA_is_sparse = self.AHA_sparsity(model, model.A)
 
                 if self.AHA_is_sparse:
-                    self.H_inv, self.Hrows, self.Hcols = blk_invhess_mtx(model, self.Hrows, self.Hcols)
-                    self.H, self.Hrows, self.Hcols = blk_hess_mtx(model, self.Hrows, self.Hcols)
+                    self.H_inv, _, _ = blk_invhess_mtx(model, self.Hrows, self.Hcols)
+                    self.H,     _, _ = blk_hess_mtx(model, self.Hrows, self.Hcols)
                     AHA = (model.A @ self.H_inv @ model.A_T).toarray()
                 else:
                     AHA = blk_invhess_congruence(model.A_views, model, self.sym)
@@ -422,9 +431,9 @@ class SysSolver():
 
         return pnt
     
-    def AHA_sparsity(self, model):
+    def AHA_sparsity(self, model, A):
         # Check if A is sparse
-        if not sp.sparse.issparse(model.A):
+        if not sp.sparse.issparse(A):
             return False
         
         # Check if blocks are "small"
@@ -440,8 +449,8 @@ class SysSolver():
                 H_block.append(np.random.rand(dim_k, dim_k))
 
         # Check if AHA has a significant sparsity pattern
-        H_dummy = sp.sparse.block_diag(H_block)
-        AHA_dummy = model.A @ H_dummy @ model.A.T
+        H_dummy, self.Hcols, self.Hrows = blk_diag(H_block, None, None)
+        AHA_dummy = A @ H_dummy @ A.T
         if AHA_dummy.nnz > model.q ** 1.5:              # TODO: Determine a good threshold
             return False
         
@@ -526,7 +535,7 @@ def blk_diag(blks, cols, rows):
         nnz = 0
         for blk in blks:
             n = blk.shape[0]
-            if sp.sparse.issparse(blk):
+            if len(blk.shape) == 1:
                 # Diagonal Hessian from nonnegative orthant
                 nnz += n
             else:
@@ -541,7 +550,7 @@ def blk_diag(blks, cols, rows):
         for blk in blks:
             n = blk.shape[0]
             idxs = np.arange(t, t + n)
-            if sp.sparse.issparse(blk):
+            if len(blk.shape) == 1:
                 # Diagonal Hessian from nonnegative orthant
                 cols[s : s + n] = idxs
                 rows[s : s + n] = idxs
@@ -557,9 +566,9 @@ def blk_diag(blks, cols, rows):
     s = 0
     for blk in blks:
         n = blk.shape[0]
-        if sp.sparse.issparse(blk):
+        if len(blk.shape) == 1:
             # Diagonal Hessian from nonnegative orthant
-            vals[s : s + n] = blk.data
+            vals[s : s + n] = blk
             s += n
         else:
             # Dense Hessian

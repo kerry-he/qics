@@ -31,15 +31,16 @@ for i in range(p):
 A = sp.sparse.csr_matrix(A)
 A = A[A.getnnz(1)>0]
 p = A.shape[0]
-A = A.toarray()
 
 b = np.random.rand(p, 1)
 
 t = 0
 c = np.random.rand(vn*L, 1)
+C = []
 for k in range(L):
     c_k = np.random.randn(n, n)
     c_k = c_k + c_k.T
+    C.append(-c_k)
     c[t:t+vn, 0] = c_k.ravel()
     t += vn
 
@@ -57,3 +58,13 @@ solver.solve()
 
 profiler.disable()
 profiler.dump_stats("example.stats")
+
+
+# Solve using CVXOPT and MOSEK
+from utils.other_solvers import cvxopt_solve_sdp, mosek_solve_sdp
+
+sol = cvxopt_solve_sdp(C, b, A, [n for _ in range(L)])
+print("optval: ", sol['primal']) 
+print("time:   ", sol['time'])   
+
+sol = mosek_solve_sdp(C, b, A, [n for _ in range(L)])
