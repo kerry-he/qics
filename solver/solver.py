@@ -87,7 +87,7 @@ class Solver():
         self.calc_mu()
 
         # Get solve data
-        self.xyztau_res = self.get_gap_feas()      
+        self.get_gap_feas()      
 
         # Check optimality
         if self.gap <= self.tol_gap:
@@ -132,7 +132,7 @@ class Solver():
                   " | %10.3e" % (self.x_feas), " %10.3e" % (self.y_feas), " %10.3e" % (self.z_feas), end="")
             
         # Step
-        self.point, success = self.stepper.step(self.model, self.point, self.xyztau_res, self.mu, self.verbose)
+        self.point, success = self.stepper.step(self.model, self.point, (self.x_res, self.y_res, self.z_res, self.tau_res), self.mu, self.verbose)
 
         if not success:
             if self.verbose:
@@ -147,6 +147,13 @@ class Solver():
     def setup_solver(self):
         self.num_iters = 0
         self.solve_time = time.time()
+
+        model = self.model
+
+        self.c_max = abs(model.c).max(initial=0.0)
+        self.b_max = abs(model.b).max(initial=0.0)
+        self.h_max = abs(model.h).max(initial=0.0)
+
         return
 
     def setup_point(self):
@@ -237,8 +244,8 @@ class Solver():
         self.mu = (self.point.s.inp(self.point.z) + self.point.tau[0, 0]*self.point.kap[0, 0]) / self.model.nu
         return self.mu
 
-
     def get_gap_feas(self):
+        model = self.model
         c = self.model.c
         b = self.model.b
         h = self.model.h
@@ -252,39 +259,39 @@ class Solver():
         tau = self.point.tau[0, 0]
         kap = self.point.kap[0, 0]
 
-        c_max = np.linalg.norm(c, np.inf)
-        b_max = abs(b).max(initial=0.0)
-        h_max = np.linalg.norm(h, np.inf)
-
         # Get primal and dual objectives and optimality gap
-        p_obj_tau =  lin.inp(c, x)
-        d_obj_tau = -lin.inp(b, y) - lin.inp(h, z)
+        p_obj_tau =  c.T @ x
+        d_obj_tau = -b.T @ y - h.T @ z
 
         self.p_obj = p_obj_tau / tau + self.model.offset
         self.d_obj = d_obj_tau / tau + self.model.offset
         self.gap   = min([self.point.z.inp(self.point.s) / tau, abs(p_obj_tau - d_obj_tau)]) / max([tau, min([abs(p_obj_tau), abs(d_obj_tau)])])
 
-        # Get primal and dual feasibilities
-        x_lhs = -(self.model.A.T @ y + self.model.G_T @ z)
-        y_lhs = A @ x          
-        z_lhs = G @ x + s
-
-        x_res   = x_lhs - c * tau
-        y_res   = y_lhs - b * tau
-        z_res   = z_lhs - h * tau
-        tau_res = p_obj_tau - d_obj_tau + kap
-
-        self.x_feas = np.linalg.norm(x_res, np.inf) / (1. + c_max) / tau
-        self.y_feas = np.linalg.norm(y_res, np.inf) / (1. + b_max) / tau if self.model.use_A else 0.0
-        self.z_feas = np.linalg.norm(z_res, np.inf) / (1. + h_max) / tau
-
         # Get primal and dual infeasibilities
-        self.x_infeas =  np.linalg.norm(x_lhs, np.inf) / d_obj_tau if (d_obj_tau > 0) else np.inf
-        self.y_infeas = -abs(y_lhs).max(initial=0.0) / p_obj_tau if (p_obj_tau < 0) else np.inf
-        self.z_infeas = -np.linalg.norm(z_lhs, np.inf) / p_obj_tau if (p_obj_tau < 0) else np.inf
+        self.x_res  = model.A_T @ y
+        self.x_res += model.G_T @ z
+        self.x_res *= -1
 
-        return (x_res, y_res, z_res, tau_res)
+        self.y_res  = model.A @ x
+        self.z_res  = model.G @ x
 
+        self.z_res += s
+
+        self.x_infeas =  lin.norm_inf(self.x_res) / d_obj_tau if (d_obj_tau > 0) else np.inf
+        self.y_infeas = -lin.norm_inf(self.y_res) / p_obj_tau if (p_obj_tau < 0) else np.inf
+        self.z_infeas = -lin.norm_inf(self.z_res) / p_obj_tau if (p_obj_tau < 0) else np.inf
+
+        # Get primal and dual feasibilities
+        self.x_res   = sp.linalg.blas.daxpy(c, self.x_res, a=-tau)
+        self.y_res   = sp.linalg.blas.daxpy(b, self.y_res, a=-tau)
+        self.z_res   = sp.linalg.blas.daxpy(h, self.z_res, a=-tau)
+        self.tau_res = p_obj_tau - d_obj_tau + kap
+
+        self.x_feas = lin.norm_inf(self.x_res) / (1. + self.c_max) / tau
+        self.y_feas = lin.norm_inf(self.y_res) / (1. + self.b_max) / tau
+        self.z_feas = lin.norm_inf(self.z_res) / (1. + self.h_max) / tau
+
+        return
 
     def rescale_model(self):
         model = self.model

@@ -3,6 +3,9 @@ import scipy as sp
 import sksparse.cholmod as cholmod
 import numba as nb
 
+def norm_inf(x):
+    return max(x.max(initial=0.0), -x.min(initial=0.0))
+
 def inp(x, y):
     # Standard inner product
     if isinstance(x, list) and isinstance(y, list):

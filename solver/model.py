@@ -26,8 +26,8 @@ class Model():
 
         self.offset = offset
         
-        self.A_T = self.A.T.tocsr()
-        self.G_T = self.G.T.tocsr()
+        self.A_T = self.A.T.tocsr() if sp.sparse.issparse(self.A) else self.A.T
+        self.G_T = self.G.T.tocsr() if sp.sparse.issparse(self.G) else self.G.T
         
         if self.use_G:
             self.G_T_views = [self.G_T[:, idxs_k] for idxs_k in self.cone_idxs]
