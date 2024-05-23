@@ -10,7 +10,6 @@ def inp(x, y):
     else:
         return np.sum(x * y.conj()).real
 
-# @profile
 def fact(A, fact=None):
     # Perform a Cholesky decomposition, or an LU factorization if Cholesky fails
     if sp.sparse.issparse(A):

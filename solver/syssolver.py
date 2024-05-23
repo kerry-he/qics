@@ -15,8 +15,7 @@ from cones import *
 # by using elimination.
 
 class SysSolver():
-    def __init__(self, model, subsolver=None, ir=True, sym=False):
-        self.sol = vec.Point(model)
+    def __init__(self, model, ir=True, sym=False):
         self.ir = ir                    # Use iterative refinement or not
         self.sym = sym
 
@@ -25,8 +24,8 @@ class SysSolver():
         self.cbh.y[:]     = model.b
         self.cbh.z.vec[:] = model.h
         
-        self.xyz_b = vec.PointXYZ(model)
-        self.xyz_r = vec.PointXYZ(model)
+        self.c_xyz = vec.PointXYZ(model)
+        self.v_xyz = vec.PointXYZ(model)
         self.xyz_ir = vec.PointXYZ(model)
         self.xyz_res = vec.PointXYZ(model)
 
@@ -45,93 +44,60 @@ class SysSolver():
         self.AHA_is_sparse = None
         self.GHG_is_sparse = None
 
-        self.subsolver = "elim"
-        # if subsolver is None:
-        #     if not model.use_G:
-        #         self.subsolver = "elim"
-        #     else:
-        #         self.subsolver = "qrchol"
-        # else:
-        #     self.subsolver = subsolver
-
-        if self.subsolver == "qrchol" and model.use_A:
-            self.Q, self.R = sp.linalg.qr(model.A.T)
-            r = np.linalg.matrix_rank(model.A)
-            self.R = self.R[:r, :]
-            self.Q1 = self.Q[:, :r]
-            self.Q2 = self.Q[:, r:]
-            self.GQ1 = model.G @ self.Q1
-            self.GQ2 = model.G @ self.Q2
-
         return
     
     def update_lhs(self, model):
         # Precompute necessary objects on LHS of Newton system
 
-        if self.subsolver == "elim":
-            if model.use_G:
-                # Check sparisty of AHA
-                if self.GHG_is_sparse is None:
-                    self.GHG_is_sparse = self.AHA_sparsity(model, model.G_T)
+        if model.use_G:
+            # Check sparisty of AHA
+            if self.GHG_is_sparse is None:
+                self.GHG_is_sparse = self.AHA_sparsity(model, model.G_T)
 
-                if self.GHG_is_sparse:# and not model.is_lp:
-                    self.H_inv, _, _ = blk_invhess_mtx(model, self.Hrows, self.Hcols)
-                    self.H,     _, _ = blk_hess_mtx(model, self.Hrows, self.Hcols)
-                    GHG = (model.G_T @ self.H @ model.G).toarray()
-                else:
-                    GHG = blk_hess_congruence(model.G_T_views, model, self.sym)                    
+            if self.GHG_is_sparse:# and not model.is_lp:
+                self.H_inv, _, _ = blk_invhess_mtx(model, self.Hrows, self.Hcols)
+                self.H,     _, _ = blk_hess_mtx(model, self.Hrows, self.Hcols)
+                GHG = (model.G_T @ self.H @ model.G).toarray()
+            else:
+                GHG = blk_hess_congruence(model.G_T_views, model, self.sym)                    
 
-                self.GHG_fact = lin.fact(GHG)
+            self.GHG_fact = lin.fact(GHG)
 
-                if model.use_A:
-                    GHGA = np.zeros((model.n, model.p))
-                    for i in range(model.p):
-                        GHGA[:, i] = lin.fact_solve(self.GHG_fact, model.A.T[:, i])
-                    AGHGA = model.A @ GHGA
-                    self.AGHGA_fact = lin.fact(AGHGA)
+            if model.use_A:
+                GHGA = np.zeros((model.n, model.p))
+                for i in range(model.p):
+                    GHGA[:, i] = lin.fact_solve(self.GHG_fact, model.A.T[:, i])
+                AGHGA = model.A @ GHGA
+                self.AGHGA_fact = lin.fact(AGHGA)
 
-            elif model.use_A:
-                # Check sparisty of AHA
-                if self.AHA_is_sparse is None:
-                    self.AHA_is_sparse = self.AHA_sparsity(model, model.A)
+        elif model.use_A:
+            # Check sparisty of AHA
+            if self.AHA_is_sparse is None:
+                self.AHA_is_sparse = self.AHA_sparsity(model, model.A)
 
-                if self.AHA_is_sparse:
-                    self.H_inv, _, _ = blk_invhess_mtx(model, self.Hrows, self.Hcols)
-                    self.H,     _, _ = blk_hess_mtx(model, self.Hrows, self.Hcols)
-                    AHA = (model.A @ self.H_inv @ model.A_T).toarray()
-                else:
-                    AHA = blk_invhess_congruence(model.A_views, model, self.sym)
-                
-                self.AHA_fact = lin.fact(AHA, self.AHA_fact)
-
-        if self.subsolver == "qrchol":
-            if model.use_A and model.use_G:
-                Q2GHGQ2 = blk_hess_congruence(self.GQ2, model)
-                self.Q2GHGQ2_fact = lin.fact(Q2GHGQ2)
-
-            elif model.use_A:
-                Q2HQ2 = blk_hess_congruence(self.Q2, model)
-                self.Q2HQ2_fact = lin.fact(Q2HQ2)
+            if self.AHA_is_sparse:
+                self.H_inv, _, _ = blk_invhess_mtx(model, self.Hrows, self.Hcols)
+                self.H,     _, _ = blk_hess_mtx(model, self.Hrows, self.Hcols)
+                AHA = (model.A @ self.H_inv @ model.A_T).toarray()
+            else:
+                AHA = blk_invhess_congruence(model.A_views, model, self.sym)
             
-            elif model.use_G:
-                GHG = blk_hess_congruence(model.G_T_views, model, self.sym)
-                self.GHG_fact = lin.fact(GHG)
-
+            self.AHA_fact = lin.fact(AHA, self.AHA_fact)
 
         # Compute constant 3x3 subsystem
-        self.solve_subsystem_elim(self.xyz_b, self.cbh, model)
+        self.solve_sys_3(self.c_xyz, self.cbh, model)
 
         if self.ir:            
-            self.forward_subsystem(self.xyz_res, self.xyz_b, model)
+            self.apply_sys_3(self.xyz_res, self.c_xyz, model)
             self.xyz_res -= self.cbh
             res_norm = self.xyz_res.norm()
             
             iter_refine_count = 0
             while res_norm > 1e-8:
-                self.solve_subsystem_elim(self.xyz_ir, self.xyz_res, model)
+                self.solve_sys_3(self.xyz_ir, self.xyz_res, model)
                 self.xyz_ir *= -1
-                self.xyz_ir += self.xyz_b
-                self.forward_subsystem(self.xyz_res, self.xyz_ir, model)
+                self.xyz_ir += self.c_xyz
+                self.apply_sys_3(self.xyz_res, self.xyz_ir, model)
 
                 self.xyz_res -= self.cbh
                 res_norm_new = self.xyz_res.norm()
@@ -140,7 +106,7 @@ class SysSolver():
                 if res_norm_new > res_norm:
                     break
 
-                self.xyz_b.copy_from(self.xyz_ir)
+                self.c_xyz.copy_from(self.xyz_ir)
                 res_norm = res_norm_new
 
                 iter_refine_count += 1
@@ -152,22 +118,22 @@ class SysSolver():
 
     def solve_system_ir(self, dir, rhs, model, mu, tau, kap):
         # Solve system
-        self.solve_system(dir, rhs, model, mu / tau / tau, tau, kap)
+        self.solve_sys_6(dir, rhs, model, mu / tau / tau, tau, kap)
         res_norm = 0.0
         
         # Check residuals of solve
         if self.ir:
-            self.apply_system(self.res, dir, model, mu / tau / tau, kap, tau)
+            self.apply_sys_6(self.res, dir, model, mu / tau / tau, kap, tau)
             self.res -= rhs
             res_norm = self.res.norm()
 
             # Iterative refinement
             iter_refine_count = 0
             while res_norm > 1e-8:
-                self.solve_system(self.dir_ir, self.res, model, mu / tau / tau, tau, kap)
+                self.solve_sys_6(self.dir_ir, self.res, model, mu / tau / tau, tau, kap)
                 self.dir_ir *= -1
                 self.dir_ir += dir
-                self.apply_system(self.res, self.dir_ir, model, mu / tau / tau, kap, tau)
+                self.apply_sys_6(self.res, self.dir_ir, model, mu / tau / tau, kap, tau)
                 self.res -= rhs
                 res_norm_new = self.res.norm()
 
@@ -185,251 +151,229 @@ class SysSolver():
 
         return res_norm
 
-    def solve_system(self, sol, rhs, model, mu_tau2, tau, kap):
-        # Solve Newton system using elimination
-        # NOTE: mu has already been accounted for in H
+    def solve_sys_6(self, d, r, model, mu_tau2, tau, kap):
+        # Compute (dx, dy, dz, ds, dtau, dkap) by solving the 
+        # 6x6 block system
+        #     [ rx ]    [      A'  G'  c ]  [ dx ]   [    ]
+        #     [ ry ] := [ -A           b ]  [ dy ] - [    ]
+        #     [ rz ]    [ -G           h ]  [ dz ]   [ ds ] 
+        #     [rtau]    [ -c' -b' -h'    ]  [dtau]   [dkap]
+        # and
+        #       rs   :=  mu H(s) ds + dz
+        #      rkap  :=  (mu / tau^2) dtau + dkap   
+        # or, if NT scaling is used,
+        #       rs   :=  H(w) ds + dz
+        #      rkap  :=  (kap / tau) dtau + dkap
+        # for a given (rx, ry, rz, rs, rtau, rkap).
         
-        self.xyz_res.vec[:] = rhs.xyz.vec
+        # First, solve the two reduced 3x3 subsystems 
+        #     [ rx ]    [      A'  G' ]  [ dx ]
+        #     [ ry ] := [ -A          ]  [ dy ]
+        #     [ rz ]    [ -G     H^-1 ]  [ dz ]
+        #               \____ = M ____/
+        # for 
+        #     1) (cx, cy, cz) := M \ (c, b, h)
+        #     2) (vx, vy, vz) := M \ (rx, ry, rz + H \ rs)
+        # (the first one has been precomputed)
+        self.solve_sys_3(self.v_xyz, r.xyz, model, r.s)
 
-        self.solve_subsystem_elim(self.xyz_r, self.xyz_res, model, rhs.s)
-        if self.ir:
-            # Precompute rz + HrS residual
-            blk_invhess_prod_ip(self.rz_Hrs, rhs.s, model, self.sym, self.H_inv)
-            self.rz_Hrs += rhs.z            
-            
-            self.forward_subsystem(self.xyz_res, self.xyz_r, model)
-            self.xyz_res.x -= rhs.x
-            self.xyz_res.y -= rhs.y
-            self.xyz_res.z -= self.rz_Hrs
-            res_norm = self.xyz_res.norm()
-            
-            iter_refine_count = 0
-            while res_norm > 1e-8:
-                self.solve_subsystem_elim(self.xyz_ir, self.xyz_res, model)
-                self.xyz_ir *= -1
-                self.xyz_ir += self.xyz_r
-                self.forward_subsystem(self.xyz_res, self.xyz_ir, model)
 
-                self.pnt_res.x -= rhs.x
-                self.pnt_res.y -= rhs.y
-                self.pnt_res.z -= self.rz_Hrs      
-                res_norm_new = self.xyz_res.norm()
+        # Second, backsubstitute to obtain solutions for the full 6x6 system
+        #     dtau := (rtau + rkap + c' vx + b' vy + h' vz) / (T + c' cx + b' cy + h' cz)
+        #      dx  := vx - dtau cx
+        #      dy  := vy - dtau cy
+        #      dz  := vz - dtau cz
+        #      ds  := -G dx + dtau * h - rz
+        #     dkap := rkap - T * dtau
+        # where T := mu/tau^2, or T := kap/tau if NT scaling is used
 
-                # Check if iterative refinement made things worse
-                if res_norm_new > res_norm:
-                    break
-
-                self.xyz_r.copy_from(self.xyz_ir)
-                res_norm = res_norm_new
-
-                iter_refine_count += 1
-
-                if iter_refine_count > 1:
-                    break        
-
-        # Backsubstitute to obtain solutions for 6x6 block system
-        # taunum := rtau + rkap + <c,xr> + <b,yr> + <h,zr>
-        tau_num = rhs.tau + rhs.kap + self.cbh.inp(self.xyz_r)
+        # taunum := rtau + rkap + c' vx + b' vy + h' vz
+        tau_num = r.tau + r.kap + self.cbh.inp(self.v_xyz)
         if self.sym:
-            # tauden := kap/tau + <c,xb> + <b,yb> + <h,zb>
-            tau_den = (kap / tau + self.cbh.inp(self.xyz_b))
+            # tauden := kap / tau + c' cx + b' cy + h' cz
+            tau_den = (kap / tau + self.cbh.inp(self.c_xyz))
         else:
-            # tauden := mu/tau^2 + <c,xb> + <b,yb> + <h,zb>
-            tau_den  = (mu_tau2 + self.cbh.inp(self.xyz_b))
+            # tauden := mu / tau^2 + c' cx + b' cy + h' cz
+            tau_den  = (mu_tau2 + self.cbh.inp(self.c_xyz))
         # dtau := taunum / tauden
-        sol.tau[:] = tau_num / tau_den
+        d.tau[:] = tau_num / tau_den
 
-        # (dx,dy,dz) := (xr,yr,zr) - dtau * (xb,yb,zb)
-        sol.xyz.vec[:] = sp.linalg.blas.daxpy(self.xyz_b.vec, self.xyz_r.vec, a=-sol.tau[0, 0])
+        # (dx, dy, dz) := (vx, vy, vz) - dtau * (cx, cy, cz)
+        d.xyz.vec[:] = sp.linalg.blas.daxpy(self.c_xyz.vec, self.v_xyz.vec, a=-d.tau[0, 0])
 
-        # ds := -G @ dx + dtau * h - rz
-        sol.s.vec[:] = -(model.G @ sol.x)
-        sol.s.vec[:] = sp.linalg.blas.daxpy(model.h, sol.s.vec, a=sol.tau[0, 0])
-        sol.s -= rhs.z
+        # ds := -G dx + dtau * h - rz
+        np.multiply(model.h, d.tau[0, 0], out=d.s.vec)
+        d.s.vec -= model.G @ d.x
+        d.s.vec -= r.z.vec
         
         if self.sym:
-            # dkap := rkap - (kap/tau)*dtau
-            sol.kap[:] = rhs.kap - kap / tau * sol.tau
+            # dkap := rkap - (kap/tau) * dtau
+            d.kap[:] = r.kap - kap / tau * d.tau
         else:
-            # dkap := rkap - (mu/tau^2)*dtau
-            sol.kap[:] = rhs.kap - mu_tau2 * sol.tau
+            # dkap := rkap - (mu/tau^2) * dtau
+            d.kap[:] = r.kap - mu_tau2 * d.tau
 
-        return sol
-        
-    def solve_subsystem(self, rx, ry, Hrz, model):
-        if self.subsolver == "elim":
-            return self.solve_subsystem_elim(rx, ry, Hrz, model)
-        elif self.subsolver == "qrchol":
-            return self.solve_subsystem_qrchol(rx, ry, Hrz, model)
+        return d
 
-    def solve_subsystem_elim(self, out, rhs, model, rs=None):
-        rx = rhs.x
-        ry = rhs.y
-        rz = rhs.z
+    def solve_sys_3(self, d, r, model, rs=None):
+        # Compute (dx, dy, dz) by solving the 3x3 block system
+        #     [ rx ]   [    ]    [      A'  G' ]  [ dx ]
+        #     [ ry ] + [    ] := [ -A          ]  [ dy ]
+        #     [ rz ]   [H\rs]    [ -G     H^-1 ]  [ dz ]
+        # where H = mu H(s), or H = H(w) if NT scaling is used,
+        # for a given (rx, ry, rz, rs).
 
-        if model.use_A and model.use_G:
-            temp_vec = rx - model.G.T @ (blk_hess_prod(rz, model, self.sym) + rs)
-            temp = model.A @ lin.fact_solve(self.GHG_fact, temp_vec) + ry
-            y = lin.fact_solve(self.AGHGA_fact, temp)
-            x = lin.fact_solve(self.GHG_fact, temp_vec - model.A.T @ y)
-            z = (blk_hess_prod(rz, model, self.sym) + rs) + blk_hess_prod(model.G @ x, model, self.sym)
+        # if model.use_A and model.use_G:
+        #     # In the general case
+        #     #     dy := (A (G'HG)^-1 A') \ [ry + A (G'HG) \ [rx - G' (H rz + rs)]]
+        #     #     dx := (G'HG) \ [rx - G' (H rz + rs) - A' dy]
+        #     #     dz := H (rz + G dx) + rs
+        #
+        #     temp_vec = rx - model.G.T @ (blk_hess_prod(rz, model, self.sym) + rs)
+        #     temp = model.A @ lin.fact_solve(self.GHG_fact, temp_vec) + ry
+        #     y = lin.fact_solve(self.AGHGA_fact, temp)
+        #     x = lin.fact_solve(self.GHG_fact, temp_vec - model.A.T @ y)
+        #     z = (blk_hess_prod(rz, model, self.sym) + rs) + blk_hess_prod(model.G @ x, model, self.sym)
 
-            return x, y, z
+        #     return x, y, z
         
         if model.use_A and not model.use_G:
-            # Solve for y: AHA y := A(rz + H \ (rx + rs)) + ry
-            self.vec_temp.copy_from(rx)
+            # If G = -I (or some easily invertible square diagonal scaling), then
+            #     dy := AHA' \ [A (rz + H \ [rx + rs]) + ry]
+            #     dx := rz + H \ [rx + rs - A' dy]
+            #     dz := A' dy - rx
+
+            # dy := AHA' \ [A (rz + H \ [rx + rs]) + ry]
+            self.vec_temp.copy_from(r.x)
             if rs is not None:
                 self.vec_temp += rs
             blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym, self.H_inv)
-            self.vec_temp2 += rz
-            out.x[:] = self.vec_temp2.vec
-            temp = model.A @ out.x + ry
-            out.y[:] = lin.fact_solve(self.AHA_fact, temp)
+            self.vec_temp2 += r.z
+            d.x[:] = self.vec_temp2.vec
+            temp = model.A @ d.x + r.y
+            d.y[:] = lin.fact_solve(self.AHA_fact, temp)
             
-            # Solve for z: z := At y - rx
-            A_T_y = model.A_T @ out.y
-            out.z.copy_from(A_T_y - rx)
+            # dz := A' dy - rx
+            A_T_y = model.A_T @ d.y
+            d.z.copy_from(A_T_y - r.x)
 
-            # Solve for x: x := rz + H \ (rx + rs - At y)
+            # dx := rz + H \ [rx + rs - A' dy]
             self.vec_temp.copy_from(A_T_y)
             blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym, self.H_inv)
-            out.x[:] -= self.vec_temp2.vec
-
-            return out
+            d.x[:] -= self.vec_temp2.vec
         
         if not model.use_A and model.use_G:
-            # Solve for x: GHG x = rx - G'(H rz + rs)
-            blk_hess_prod_ip(self.vec_temp, rz, model, self.sym, self.H)
+            # If A = [] (i.e, no primal linear constraints), then
+            #     dy := []            
+            #     dx := G'HG \ [rx - G' (H rz + rs)]
+            #     dz := H (rz + G dx) + rs
+
+            # dx := GHG \ [rx - G' (H rz + rs)]
+            blk_hess_prod_ip(self.vec_temp, r.z, model, self.sym, self.H)
             if rs is not None:
                 self.vec_temp += rs
-            temp = rx - model.G_T @ self.vec_temp.vec
-            out.x[:] = lin.fact_solve(self.GHG_fact, temp)
+            temp = r.x - model.G_T @ self.vec_temp.vec
+            d.x[:] = lin.fact_solve(self.GHG_fact, temp)
 
-            # Solve for z: z = H(rz + Gx) + rs
-            self.vec_temp.copy_from(model.G @ out.x)
-            self.vec_temp += rz
-            blk_hess_prod_ip(out.z, self.vec_temp, model, self.sym, self.H)
+            # dz := H (rz + G dx) + rs
+            self.vec_temp.copy_from(model.G @ d.x)
+            self.vec_temp += r.z
+            blk_hess_prod_ip(d.z, self.vec_temp, model, self.sym, self.H)
             if rs is not None:
-                out.z += rs
-
-            return out
+                d.z += rs
         
         if not model.use_A and not model.use_G:
-            x = rz + blk_invhess_prod(rx + rs, model, self.sym)
-            z = rs - blk_hess_prod(x - rz, model, self.sym)
-            y = np.zeros_like(model.b)
+            # If both A = [] and G = -I, then
+            #     dy := []            
+            #     dx := rz + H \ [rx + rs]
+            #     dz := H (rz - dx) + rs
 
-            return x, y, z
-    
-    def solve_subsystem_qrchol(self, rx, ry, Hrz, model):
-        if model.use_A and model.use_G:
-            Q1x = -sp.linalg.solve_triangular(self.R.T, ry, lower=True)
-            rhs = self.Q2.T @ (rx - model.G.T @ (Hrz + blk_hess_prod(self.GQ1 @ Q1x, model, self.sym)))
-            Q2x = lin.fact_solve(self.Q2GHGQ2_fact, rhs)
-            x = self.Q @ np.vstack((Q1x, Q2x))
+            # dx := rz + H \ [rx + rs]
+            self.vec_temp.vec[:] = r.x
+            if rs is not None:
+                self.vec_temp += rs
+            blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym, self.H_inv)
+            d.x[:] = self.vec_temp2.vec
+            d.x   += r.z.vec
 
-            z = Hrz + blk_hess_prod(model.G @ x, model, self.sym)
-
-            rhs = self.Q1.T @ (rx - model.G.T @ z)
-            y = sp.linalg.solve_triangular(self.R, rhs, lower=False)
-
-            return x, y, z
-
-        if model.use_A and not model.use_G:
-            Q1x = -sp.linalg.solve_triangular(self.R.T, ry, lower=True)
-            rhs = self.Q2.T @ (rx + Hrz - blk_hess_prod(self.Q1 @ Q1x, model, self.sym))
-            Q2x = lin.fact_solve(self.Q2HQ2_fact, rhs)
-            x = self.Q @ np.vstack((Q1x, Q2x))
-
-            z = Hrz - blk_hess_prod(x, model, self.sym)
-
-            rhs = self.Q1.T @ (rx + z)
-            y = sp.linalg.solve_triangular(self.R, rhs, lower=False)
-
-            return x, y, z
-
-        if not model.use_A and model.use_G:
-            x = lin.fact_solve(self.GHG_fact, rx - model.G.T @ Hrz)
-            z = Hrz + blk_hess_prod(model.G @ x, model, self.sym)
-            y = np.zeros_like(model.b)
-
-            return x, y, z
-
-        if not model.use_A and not model.use_G:
-            x = blk_invhess_prod(rx + Hrz, model, self.sym)
-            z = Hrz - blk_hess_prod(x, model, self.sym)
-            y = np.zeros_like(model.b)
-
-            return x, y, z
-
-    def solve_subsystem_naive(self, rx, ry, rz, model):
-        invH = blk_invhess_prod(np.eye(model.q), model, self.sym)
-        A1 = np.hstack((np.zeros((model.n, model.n)), model.A.T, model.G.T))
-        A2 = np.hstack((-model.A, np.zeros((model.p, model.p + model.q))))
-        A3 = np.hstack((-model.G, np.zeros((model.q, model.p)), invH))
-        A = np.vstack((A1, A2, A3))
-
-        sol = np.linalg.inv(A) @ np.vstack((rx, ry, rz))
-
-        x = sol[:model.n, [0]]
-        y = sol[model.n:model.n+model.p]
-        z = sol[model.n+model.p:]
-
-        return x, y, z    
-    
-    # @profile
-    def forward_subsystem(self, out, rhs, model):
-        rx = rhs.x
-        ry = rhs.y
-        rz = rhs.z
+            # dz := H (rz - dx) + rs
+            self.vec_temp.vec[:] = r.z
+            self.vec_temp.vec   -= d.x
+            blk_hess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym, self.H)
+            d.z.vec[:] = self.vec_temp2.vec
+            if rs is not None:
+                d.z.vec += rs
         
-        out.x[:] = model.A_T @ ry + model.G_T @ rz.vec
-        # X = [np.zeros_like(rx[0])]
-        # for (i, Ai) in enumerate(model.A_mtx):
-        #     X[0] += ry[i] * Ai[0]
-        # X[0] -= rz[0]
+        return d
 
-        out.y[:] = -model.A @ rx
-        # y = np.zeros_like(ry)
-        # for (i, Ai) in enumerate(model.A_mtx):
-        #     y[i] = -np.sum(Ai[0] * rx[0])
-
-        out.z.copy_from(-model.G @ rx)
-        out.z += blk_invhess_prod_ip(self.vec_temp2, rz, model, self.sym, self.H_inv)
-
-        # x = model.A.T @ ry + model.G.T @ rz
-        # y = -model.A @ rx
-        # z = -model.G @ rx + blk_invhess_prod(rz, model)        
-
-        return out
     
-    def apply_system(self, pnt, rhs, model, mu_tau2, kap, tau):
-        rhs_z_vec = rhs.z.vec
+    def apply_sys_3(self, r, d, model):
+        # Compute (rx, ry, rz) as a forwards pass 
+        # of the 3x3 block system
+        #     [ rx ]    [      A'  G'  ]  [ dx ]
+        #     [ ry ] := [ -A           ]  [ dy ]
+        #     [ rz ]    [ -G      H^-1 ]  [ dz ]
+        # where H = mu H(s), or H = H(w) if NT scaling is used,
+        # for a given (rx, ry, rz).
 
-        # pnt.x[:]     =  model.A.T @ rhs.y + model.G.T @ rhs.z + model.c * rhs.tau
-        pnt.y[:] = -model.A @ rhs.x + model.b * rhs.tau
-        # for (i, Ai) in enumerate(model.A_mtx):
-        #     pnt.y[i] = -np.sum(Ai[0] * rhs.x[0]) + model.b[i] * rhs.tau        
-        # pnt.y[:]     = -model.A @ rhs.x + model.b * rhs.tau
-        # pnt.z[:]     = -model.G @ rhs.x + model.h * rhs.tau - rhs.s
-        # pnt.s[:]     =  blk_hess_prod(rhs.s, model) + rhs.z
-        pnt.tau[:]   = -lin.inp(model.c, rhs.x) - lin.inp(model.b, rhs.y) - lin.inp(model.h, rhs_z_vec) - rhs.kap
+        # rx := A' dy + G' dz
+        r.x[:] = model.A_T @ d.y
+        r.x   += model.G_T @ d.z.vec
+        
+        # ry := -A dx
+        r.y[:] = model.A @ d.x
+        r.y   *= -1
+
+        # pz := -G dx + H \ dz
+        blk_invhess_prod_ip(r.z, d.z, model, self.sym, self.H_inv)
+        r.z.vec -= model.G @ d.x
+
+        return r
+    
+    def apply_sys_6(self, r, d, model, mu_tau2, kap, tau):
+        # Compute (rx, ry, rz, rs, rtau, rkap) as a forwards pass 
+        # of the 6x6 block system
+        #     [ rx ]    [      A'  G'  c ]  [ dx ]   [    ]
+        #     [ ry ] := [ -A           b ]  [ dy ] - [    ]
+        #     [ rz ]    [ -G           h ]  [ dz ]   [ ds ] 
+        #     [rtau]    [ -c' -b' -h'    ]  [dtau]   [dkap]
+        # and
+        #       rs   :=  mu H(s) ds + dz
+        #      rkap  :=  (mu / tau^2) dtau + dkap   
+        # or, if NT scaling is used,
+        #       rs   :=  H(w) ds + dz
+        #      rkap  :=  (kap / tau) dtau + dkap
+        # for a given (dx, dy, dz, ds, dtau, dkap).
+
+        # rx := A' dy + G' dz + c dtau
+        np.multiply(model.c, d.tau[0, 0], out=r.x)
+        r.x += model.A_T @ d.y
+        r.x += model.G_T @ d.z.vec
+
+        # ry := -A dx + b dtau
+        np.multiply(model.b, d.tau[0, 0], out=r.y)
+        r.y -= model.A @ d.x
+
+        # rz := -G dx + h dtau - ds
+        np.multiply(model.h, d.tau[0, 0], out=r.z.vec)
+        r.z.vec -= model.G @ d.x
+        r.z.vec -= d.s.vec
+
+        # rs := mu H ds + dz
+        blk_hess_prod_ip(r.s, d.s, model, self.sym, self.H)
+        r.s.vec += d.z.vec
+
+        # rtau := -c' dx - b' dy - h' dz - dkap
+        r.tau[:] = -(model.c.T @ d.x) - (model.b.T @ d.y) - (model.h.T @ d.z.vec) - d.kap[0, 0]
+
         if self.sym:
-            pnt.kap[:] = (kap / tau) * rhs.tau + rhs.kap
+            # rkap := (kap / tau) dtau + dkap
+            r.kap[:] = (kap / tau) * d.tau[0, 0] + d.kap[0, 0]
         else:
-            pnt.kap[:] = mu_tau2 * rhs.tau + rhs.kap
+            # rkap := (mu / tau^2) dtau + dkap   
+            r.kap[:] = mu_tau2 * d.tau[0, 0] + d.kap[0, 0]
 
-        pnt.x[:] = model.A_T @ rhs.y + model.G_T @ rhs_z_vec + model.c * rhs.tau
-        # pnt.x = [model.c_mtx[0] * rhs.tau - rhs.z[0]]
-        # for (i, Ai) in enumerate(model.A_mtx): 
-        #     pnt.x[0] += Ai[0] * rhs.y[i]
-        pnt.z.copy_from(-model.G @ rhs.x + model.h * rhs.tau)
-        pnt.z -= rhs.s
-        blk_hess_prod_ip(pnt.s, rhs.s, model, self.sym, self.H)
-        pnt.s += rhs.z
-
-        return pnt
+        return r
     
     def AHA_sparsity(self, model, A):
         # Check if A is sparse

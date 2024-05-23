@@ -24,7 +24,6 @@ class Solver():
         tol_infeas = 1e-12,
         tol_ip = 1e-13,
         verbose  = True,
-        subsolver = None,
         stepper = None,
         ir = True,
         sym = False
@@ -39,7 +38,7 @@ class Solver():
         self.tol_ip = tol_ip
 
         self.model = model
-        syssolver = SysSolver(model, subsolver=subsolver, ir=ir, sym=sym)
+        syssolver = SysSolver(model, ir=ir, sym=sym)
         self.stepper = CombinedStepper(syssolver, model) if (stepper is None) else stepper
 
         return

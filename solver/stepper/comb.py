@@ -82,7 +82,7 @@ class CombinedStepper():
 
             alpha = alpha_sched[alpha_iter]
             # Step point in direction and step size
-            next_point.copy_from(point)
+            next_point.vec[:] = point.vec
             if mode == "co_toa":
                 # step := alpha * (dir_p + dir_p_toa * alpha) + (dir_c + dir_c_toa * (1.0 - alpha)) * (1.0 - alpha)
                 next_point.axpy(alpha             , dir_p)
@@ -147,7 +147,7 @@ class CombinedStepper():
         
             # If feasible, return point
             if in_prox:
-                point.copy_from(next_point)
+                point.vec[:] = next_point.vec
                 return point, alpha, True
 
     def update_rhs_cent(self, model, point, mu):

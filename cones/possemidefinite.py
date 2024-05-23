@@ -85,12 +85,14 @@ class Cone():
         if not self.grad_updated:
             self.get_grad()
         XHX = self.X_inv @ H @ self.X_inv
-        out[:] = (XHX + XHX.T) / 2
+        np.add(XHX, XHX.T, out=out)
+        out *= 0.5
         return out    
     
     def invhess_prod_ip(self, out, H):
         XHX = self.X @ H @ self.X
-        out[:] = (XHX + XHX.T) / 2
+        np.add(XHX, XHX.T, out=out)
+        out *= 0.5
         return out
     
     def third_dir_deriv(self, dir1, dir2=None):
@@ -131,15 +133,15 @@ class Cone():
         if not self.nt_aux_updated:
             self.nt_aux()
         WHW = self.W_inv @ H @ self.W_inv
-        out[:] = (WHW + WHW.T) * 0.5
-        # out[:] = np.maximum(WHW, WHW.T)
+        np.add(WHW, WHW.T, out=out)
+        out *= 0.5
     
     def invnt_prod_ip(self, out, H):
         if not self.nt_aux_updated:
             self.nt_aux()
         WHW = self.W @ H @ self.W
-        out[:] = (WHW + WHW.T) * 0.5
-        # out[:] = np.maximum(WHW, WHW.T)
+        np.add(WHW, WHW.T, out=out)
+        out *= 0.5
     
     def invhess_mtx(self):
         return lin.kron(self.X, self.X)
