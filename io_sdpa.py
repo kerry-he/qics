@@ -7,7 +7,7 @@ from cones import *
 from solver import model, solver
 import os
 
-from utils.other_solvers import cvxopt_solve_sdp, mosek_solve_sdp
+from utils.other_solvers import cvxopt_solve_sdp, mosek_solve_sdp, clarabel_solve_sdp
 
 def read_sdpa(filename):
     fp = open(filename, "r")
@@ -39,7 +39,7 @@ def read_sdpa(filename):
         b_str.remove('')
     b = np.array([float(bi) for bi in b_str])
     
-    # Read C
+    # Read C and A
     C = []
     for bi in blockStruct:
         if bi >= 0:
@@ -49,18 +49,32 @@ def read_sdpa(filename):
             
     totDim = 0
     idxs = [0]
+    totDim_compressed = 0
+    idxs_compressed = [0]
     for n in blockStruct:
         if n >= 0:
             totDim += n*n
             idxs.append(idxs[-1] + n*n)
+
+            totDim_compressed += n*(n+1)//2
+            idxs_compressed.append(idxs_compressed[-1] + n*(n+1)//2)
         else:
             totDim -= n
             idxs.append(idxs[-1] - n)
 
+            totDim_compressed -= n
+            idxs_compressed.append(idxs_compressed[-1] - n)
+
+    C_compresed = np.zeros(totDim_compressed)
+
     Acols = []
     Arows = []
     Avals = []
-    
+
+    Acols_compressed = []
+    Arows_compressed = []
+    Avals_compressed = []
+
     lineList = fp.readlines()
     for line in lineList:
         row, block, colI, colJ, val = line.split()[0:5]
@@ -84,12 +98,12 @@ def read_sdpa(filename):
             if blockStruct[block] >= 0:
                 Acols.append(idxs[block] + colI + colJ*blockStruct[block])
                 Arows.append(row)
-                Avals.append(val)      
+                Avals.append(val)
 
                 if colJ != colI:
                     Acols.append(idxs[block] + colJ + colI*blockStruct[block])
                     Arows.append(row)
-                    Avals.append(val)                     
+                    Avals.append(val)
             else:
                 assert colI == colJ
                 Acols.append(idxs[block] + colI)
@@ -103,7 +117,7 @@ def read_sdpa(filename):
 
 if __name__ == "__main__":
     # fnames = os.listdir("./problems/sdp/")
-    fnames = ["control10.dat-s"]
+    fnames = ["truss7.dat-s"]
 
     for fname in fnames:
         C_sdpa, b_sdpa, A_sdpa, blockStruct = read_sdpa("./problems/sdp/" + fname)
@@ -134,7 +148,7 @@ if __name__ == "__main__":
             t += dims[i]
         c *= -1
                 
-        # model = model.Model(c=-b, G=A.T, h=c, cones=cones)
+        # mdl = model.Model(c=-b, G=A.T, h=c, cones=cones)
         mdl = model.Model(c=c, A=A, b=b, cones=cones)
         slv = solver.Solver(mdl, sym=True, ir=True)
 
@@ -154,7 +168,9 @@ if __name__ == "__main__":
         # profiler.disable()
         # profiler.dump_stats("example1.stats")        
 
-        print("optval: ", sol['primal']) 
-        print("time:   ", sol['time'])   
+        # print("optval: ", sol['primal']) 
+        # print("time:   ", sol['time'])   
 
         sol = mosek_solve_sdp(C_sdpa, b, A, blockStruct)
+
+        sol = clarabel_solve_sdp(C_sdpa, b, A, blockStruct)

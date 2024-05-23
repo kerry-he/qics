@@ -21,6 +21,8 @@ import cvxopt
 import time
 import sys
 
+import cvxpy
+import clarabel
 
 def cvxopt_solve_sdp(C, b, A, blockStruct):
     # Solve problem
@@ -134,3 +136,76 @@ def mosek_solve_sdp(C, b, A, blockStruct):
             'dual': msk_M.dualObjValue(), 
             'time': msk_time, 
             'status': msk_status}
+
+def clarabel_solve_sdp(c, b, A, blockStruct):
+    import cvxpy as cp
+
+    (p, n) = A.shape
+
+    # Create optimization variables
+    xs = []
+    constraints = []
+    c_x = []
+    A_x = []
+    t = 0
+    for (k, bi) in enumerate(blockStruct):
+        if bi >= 0:
+            x_k = cp.Variable((bi, bi), symmetric=True)
+            xs.append(cp.vec(x_k))
+            constraints += [x_k >> 0]
+
+            c_x.append(cp.sum(cp.multiply(c[k], x_k)))
+
+            A_k = A[:, t:t+bi*bi].tocoo()
+            A_x.append(A_k @ xs[k])
+
+            t += bi*bi
+        else:
+            x_k = cp.Variable(-bi)
+            xs.append(x_k)
+            constraints += [x_k >= 0]
+
+            c_x.append(cp.sum(cp.multiply(c[k], x_k)))
+
+            A_k = A[:, t:t-bi].tocoo()
+            A_x.append(A_k @ xs[k])
+
+    constraints += [sum(A_x) == b.ravel()]     
+
+    # Form objective.
+    obj = cp.Maximize(sum(c_x))
+
+    # Form and solve problem.
+    prob = cp.Problem(obj, constraints)
+    prob.solve(solver='CLARABEL', verbose=True)
+
+
+    # # Split A into SDP and LP components
+    # (p, n) = A.shape
+
+    # # Clarabel constraint data
+    # P = sp.sparse.csc_matrix((n, n))
+
+    # A = sparse.vstack([A, sp.sparse.csr_matrix(np.eye(n))]).tocsc()
+    # b = np.concatenate([b.reshape(-1), np.zeros(n)])
+
+    # cones = [clarabel.ZeroConeT(p)]
+    # for bi in blockStruct:
+    #     if bi >= 0:
+    #         cones.append(clarabel.PSDTriangleConeT(bi))
+    #     else:
+    #         cones.append(clarabel.NonnegativeConeT(-bi))
+
+    # settings = clarabel.DefaultSettings()
+
+    # solver = clarabel.DefaultSolver(P, c, A, b, cones, settings)
+
+    # solution = solver.solve()
+    # solution.x  # primal solution
+    # solution.z  # dual solution
+    # solution.s  # primal slacks
+
+    # return 
+
+
+

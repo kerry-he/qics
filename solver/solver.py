@@ -150,9 +150,9 @@ class Solver():
 
         model = self.model
 
-        self.c_max = abs(model.c).max(initial=0.0)
-        self.b_max = abs(model.b).max(initial=0.0)
-        self.h_max = abs(model.h).max(initial=0.0)
+        self.c_max = lin.norm_inf(model.c)
+        self.b_max = lin.norm_inf(model.b)
+        self.h_max = lin.norm_inf(model.h)
 
         return
 
@@ -283,7 +283,7 @@ class Solver():
 
         # Get primal and dual feasibilities
         self.x_res   = sp.linalg.blas.daxpy(c, self.x_res, a=-tau)
-        self.y_res   = sp.linalg.blas.daxpy(b, self.y_res, a=-tau)
+        self.y_res   = sp.linalg.blas.daxpy(b, self.y_res, a=-tau) if model.use_A else self.y_res
         self.z_res   = sp.linalg.blas.daxpy(h, self.z_res, a=-tau)
         self.tau_res = p_obj_tau - d_obj_tau + kap
 
