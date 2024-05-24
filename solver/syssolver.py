@@ -16,7 +16,15 @@ from cones import *
 
 class SysSolver():
     def __init__(self, model, ir=True, sym=False):
-        self.ir = ir                    # Use iterative refinement or not
+        self.ir = ir                     # Use iterative refinement or not
+        self.ir_settings = {
+            'maxiter'     : 1,           # Maximum IR iterations
+            'tol'         : 1e-8,        # Tolerance for when IR is used
+            'improv_ratio': 5.0          # Expected reduction in tolerance, otherwise slow progress
+        }
+
+        self.model = model
+
         self.sym = sym
 
         self.cbh = vec.PointXYZ(model)
@@ -26,14 +34,14 @@ class SysSolver():
         
         self.c_xyz = vec.PointXYZ(model)
         self.v_xyz = vec.PointXYZ(model)
-        self.xyz_ir = vec.PointXYZ(model)
-        self.xyz_res = vec.PointXYZ(model)
+        self.ir_xyz = vec.PointXYZ(model)
+        self.res_xyz = vec.PointXYZ(model)
 
         self.rz_Hrs = vec.VecProduct(model.cones)
         self.vec_temp = vec.VecProduct(model.cones)
         self.vec_temp2 = vec.VecProduct(model.cones)
         self.pnt_res = vec.Point(model)
-        self.dir_ir = vec.Point(model)
+        self.cor = vec.Point(model)
         self.res = vec.Point(model)
 
         self.H = None
@@ -46,7 +54,10 @@ class SysSolver():
 
         return
     
-    def update_lhs(self, model):
+    def update_lhs(self, model, point, mu):
+        self.mu  = mu
+        self.pnt = point
+
         # Precompute necessary objects on LHS of Newton system
 
         if model.use_G:
@@ -85,73 +96,23 @@ class SysSolver():
             self.AHA_fact = lin.fact(AHA, self.AHA_fact)
 
         # Compute constant 3x3 subsystem
-        self.solve_sys_3(self.c_xyz, self.cbh, model)
-
-        if self.ir:            
-            self.apply_sys_3(self.xyz_res, self.c_xyz, model)
-            self.xyz_res -= self.cbh
-            res_norm = self.xyz_res.norm()
-            
-            iter_refine_count = 0
-            while res_norm > 1e-8:
-                self.solve_sys_3(self.xyz_ir, self.xyz_res, model)
-                self.xyz_ir *= -1
-                self.xyz_ir += self.c_xyz
-                self.apply_sys_3(self.xyz_res, self.xyz_ir, model)
-
-                self.xyz_res -= self.cbh
-                res_norm_new = self.xyz_res.norm()
-
-                # Check if iterative refinement made things worse
-                if res_norm_new > res_norm:
-                    break
-
-                self.c_xyz.copy_from(self.xyz_ir)
-                res_norm = res_norm_new
-
-                iter_refine_count += 1
-
-                if iter_refine_count > 1:
-                    break
+        self.solve_sys_3(self.c_xyz, self.cbh)
+        if self.ir:
+            self.solve_sys_3_ir(self.c_xyz, self.cbh)
 
         return
 
-    def solve_system_ir(self, dir, rhs, model, mu, tau, kap):
+    def solve_sys(self, dir, rhs):
         # Solve system
-        self.solve_sys_6(dir, rhs, model, mu / tau / tau, tau, kap)
-        res_norm = 0.0
-        
-        # Check residuals of solve
+        self.solve_sys_6(dir, rhs)
         if self.ir:
-            self.apply_sys_6(self.res, dir, model, mu / tau / tau, kap, tau)
-            self.res -= rhs
-            res_norm = self.res.norm()
-
-            # Iterative refinement
-            iter_refine_count = 0
-            while res_norm > 1e-8:
-                self.solve_sys_6(self.dir_ir, self.res, model, mu / tau / tau, tau, kap)
-                self.dir_ir *= -1
-                self.dir_ir += dir
-                self.apply_sys_6(self.res, self.dir_ir, model, mu / tau / tau, kap, tau)
-                self.res -= rhs
-                res_norm_new = self.res.norm()
-
-                # Check if iterative refinement made things worse
-                if res_norm_new > res_norm:
-                    break
-
-                dir.copy_from(self.dir_ir)
-                res_norm = res_norm_new
-
-                iter_refine_count += 1
-
-                if iter_refine_count > 1:
-                    break
+            res_norm = self.solve_sys_6_ir(dir, rhs)
+        else:
+            res_norm = 0.0
 
         return res_norm
 
-    def solve_sys_6(self, d, r, model, mu_tau2, tau, kap):
+    def solve_sys_6(self, d, r):
         # Compute (dx, dy, dz, ds, dtau, dkap) by solving the 
         # 6x6 block system
         #     [ rx ]    [      A'  G'  c ]  [ dx ]   [    ]
@@ -165,6 +126,10 @@ class SysSolver():
         #       rs   :=  H(w) ds + dz
         #      rkap  :=  (kap / tau) dtau + dkap
         # for a given (rx, ry, rz, rs, rtau, rkap).
+
+        model = self.model
+        pnt   = self.pnt
+        mu    = self.mu
         
         # First, solve the two reduced 3x3 subsystems 
         #     [ rx ]    [      A'  G' ]  [ dx ]
@@ -175,8 +140,7 @@ class SysSolver():
         #     1) (cx, cy, cz) := M \ (c, b, h)
         #     2) (vx, vy, vz) := M \ (rx, ry, rz + H \ rs)
         # (the first one has been precomputed)
-        self.solve_sys_3(self.v_xyz, r.xyz, model, r.s)
-
+        self.solve_sys_3(self.v_xyz, r.xyz, r.s)
 
         # Second, backsubstitute to obtain solutions for the full 6x6 system
         #     dtau := (rtau + rkap + c' vx + b' vy + h' vz) / (T + c' cx + b' cy + h' cz)
@@ -191,10 +155,10 @@ class SysSolver():
         tau_num = r.tau + r.kap + self.cbh.inp(self.v_xyz)
         if self.sym:
             # tauden := kap / tau + c' cx + b' cy + h' cz
-            tau_den = (kap / tau + self.cbh.inp(self.c_xyz))
+            tau_den = (pnt.kap / pnt.tau + self.cbh.inp(self.c_xyz))
         else:
             # tauden := mu / tau^2 + c' cx + b' cy + h' cz
-            tau_den  = (mu_tau2 + self.cbh.inp(self.c_xyz))
+            tau_den  = ((mu / pnt.tau / pnt.tau) + self.cbh.inp(self.c_xyz))
         # dtau := taunum / tauden
         d.tau[:] = tau_num / tau_den
 
@@ -208,20 +172,22 @@ class SysSolver():
         
         if self.sym:
             # dkap := rkap - (kap/tau) * dtau
-            d.kap[:] = r.kap - kap / tau * d.tau
+            d.kap[:] = r.kap - (pnt.kap / pnt.tau) * d.tau
         else:
             # dkap := rkap - (mu/tau^2) * dtau
-            d.kap[:] = r.kap - mu_tau2 * d.tau
+            d.kap[:] = r.kap - (mu / pnt.tau / pnt.tau) * d.tau
 
         return d
 
-    def solve_sys_3(self, d, r, model, rs=None):
+    def solve_sys_3(self, d, r, rs=None):
         # Compute (dx, dy, dz) by solving the 3x3 block system
         #     [ rx ]   [    ]    [      A'  G' ]  [ dx ]
         #     [ ry ] + [    ] := [ -A          ]  [ dy ]
         #     [ rz ]   [H\rs]    [ -G     H^-1 ]  [ dz ]
         # where H = mu H(s), or H = H(w) if NT scaling is used,
         # for a given (rx, ry, rz, rs).
+
+        model = self.model
 
         # if model.use_A and model.use_G:
         #     # In the general case
@@ -305,32 +271,8 @@ class SysSolver():
                 d.z.vec += rs
         
         return d
-
     
-    def apply_sys_3(self, r, d, model):
-        # Compute (rx, ry, rz) as a forwards pass 
-        # of the 3x3 block system
-        #     [ rx ]    [      A'  G'  ]  [ dx ]
-        #     [ ry ] := [ -A           ]  [ dy ]
-        #     [ rz ]    [ -G      H^-1 ]  [ dz ]
-        # where H = mu H(s), or H = H(w) if NT scaling is used,
-        # for a given (rx, ry, rz).
-
-        # rx := A' dy + G' dz
-        r.x[:] = model.A_T @ d.y
-        r.x   += model.G_T @ d.z.vec
-        
-        # ry := -A dx
-        r.y[:] = model.A @ d.x
-        r.y   *= -1
-
-        # pz := -G dx + H \ dz
-        blk_invhess_prod_ip(r.z, d.z, model, self.sym, self.H_inv)
-        r.z.vec -= model.G @ d.x
-
-        return r
-    
-    def apply_sys_6(self, r, d, model, mu_tau2, kap, tau):
+    def apply_sys_6(self, r, d):
         # Compute (rx, ry, rz, rs, rtau, rkap) as a forwards pass 
         # of the 6x6 block system
         #     [ rx ]    [      A'  G'  c ]  [ dx ]   [    ]
@@ -344,6 +286,10 @@ class SysSolver():
         #       rs   :=  H(w) ds + dz
         #      rkap  :=  (kap / tau) dtau + dkap
         # for a given (dx, dy, dz, ds, dtau, dkap).
+
+        model = self.model
+        pnt   = self.pnt
+        mu    = self.mu
 
         # rx := A' dy + G' dz + c dtau
         np.multiply(model.c, d.tau[0, 0], out=r.x)
@@ -368,12 +314,59 @@ class SysSolver():
 
         if self.sym:
             # rkap := (kap / tau) dtau + dkap
-            r.kap[:] = (kap / tau) * d.tau[0, 0] + d.kap[0, 0]
+            r.kap[:] = (pnt.kap / pnt.tau) * d.tau[0, 0] + d.kap[0, 0]
         else:
             # rkap := (mu / tau^2) dtau + dkap   
-            r.kap[:] = mu_tau2 * d.tau[0, 0] + d.kap[0, 0]
+            r.kap[:] = (mu / pnt.tau / pnt.tau) * d.tau[0, 0] + d.kap[0, 0]
 
         return r
+
+    def apply_sys_3(self, r, d):
+        # Compute (rx, ry, rz) as a forwards pass 
+        # of the 3x3 block system
+        #     [ rx ]    [      A'  G'  ]  [ dx ]
+        #     [ ry ] := [ -A           ]  [ dy ]
+        #     [ rz ]    [ -G      H^-1 ]  [ dz ]
+        # where H = mu H(s), or H = H(w) if NT scaling is used,
+        # for a given (rx, ry, rz).
+
+        model = self.model
+
+        # rx := A' dy + G' dz
+        r.x[:] = model.A_T @ d.y
+        r.x   += model.G_T @ d.z.vec
+        
+        # ry := -A dx
+        r.y[:] = model.A @ d.x
+        r.y   *= -1
+
+        # pz := -G dx + H \ dz
+        blk_invhess_prod_ip(r.z, d.z, model, self.sym, self.H_inv)
+        r.z.vec -= model.G @ d.x
+
+        return r
+
+    def solve_sys_6_ir(self, d, r):
+        return solve_sys_ir(
+            d, 
+            r, 
+            self.apply_sys_6, 
+            self.solve_sys_6, 
+            self.res, 
+            self.cor, 
+            self.ir_settings
+        )
+    
+    def solve_sys_3_ir(self, d, r):
+        return solve_sys_ir(
+            d, 
+            r, 
+            self.apply_sys_3, 
+            self.solve_sys_3, 
+            self.res_xyz, 
+            self.ir_xyz, 
+            self.ir_settings
+        )    
     
     def AHA_sparsity(self, model, A):
         # Check if A is sparse
@@ -399,6 +392,57 @@ class SysSolver():
             return False
         
         return True
+
+
+def solve_sys_ir(x, b, A, A_inv, res, cor, settings):
+    # Perform iterative refinement on a solution x of a linear system 
+    #     A x = b
+
+    ir_maxiter      = settings['maxiter']
+    ir_tol          = settings['tol']
+    ir_improv_ratio = settings['improv_ratio']
+
+    r_norm = b.norm()
+
+    # Compute residuals: 
+    # res := b - A x
+    A(res, x)
+    res -=  b
+    res_norm = res.norm() / (1 + r_norm)
+    
+    for i in range(ir_maxiter):
+        # If solution is accurate enough, exit iterative refinement
+        if res_norm < ir_tol:
+            break
+        prev_res_norm = res_norm
+
+        # Perform iterative refinement
+        # cor := A \ res
+        A_inv(cor, res)
+        cor *= -1
+        # x := x + cor
+        cor += x
+
+        # Check residuals
+        #     res := b - A x
+        A(res, cor)
+        res -= b
+        res_norm = res.norm() / (1 + r_norm)
+
+        # Exit if iterative refinement made things worse
+        improv_ratio = prev_res_norm / res_norm
+        if improv_ratio < 1:
+            return prev_res_norm
+        
+        # Otherwise, update solution
+        x.vec[:] = cor.vec
+        
+        # Exit if iterative refinement is slow
+        if improv_ratio < ir_improv_ratio:
+            break
+
+    return res_norm
+
 
 def blk_hess_prod_ip(out, dirs, model, sym, H):
     if H is not None:

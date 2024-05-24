@@ -23,26 +23,26 @@ class CombinedStepper():
         return
     
     def step(self, model, point, xyztau_res, mu, verbose):
-        self.syssolver.update_lhs(model)
+        self.syssolver.update_lhs(model, point, mu)
 
         # Get prediction direction
         self.update_rhs_pred(model, point, xyztau_res)
-        res_norm = self.syssolver.solve_system_ir(self.dir_p, self.rhs, model, mu, point.tau, point.kap)
+        res_norm = self.syssolver.solve_sys(self.dir_p, self.rhs)
 
         # Get TOA prediction direction
         self.update_rhs_pred_toa(model, point, mu, self.dir_p)
-        temp_res_norm = self.syssolver.solve_system_ir(self.dir_p_toa, self.rhs, model, mu, point.tau, point.kap)
+        temp_res_norm = self.syssolver.solve_sys(self.dir_p_toa, self.rhs)
         res_norm = max(temp_res_norm, res_norm)
 
         # Get centering direction
         self.update_rhs_cent(model, point, mu)
-        temp_res_norm = self.syssolver.solve_system_ir(self.dir_c, self.rhs, model, mu, point.tau, point.kap)
+        temp_res_norm = self.syssolver.solve_sys(self.dir_c, self.rhs)
         res_norm = max(temp_res_norm, res_norm)
 
         # Get TOA centering direction
         if not (model.sym and self.syssolver.sym):
             self.update_rhs_cent_toa(model, point, mu, self.dir_c)
-            temp_res_norm = self.syssolver.solve_system_ir(self.dir_c_toa, self.rhs, model, mu, point.tau, point.kap)
+            temp_res_norm = self.syssolver.solve_sys(self.dir_c_toa, self.rhs)
             res_norm = max(temp_res_norm, res_norm)
 
         step_mode = "co_toa"

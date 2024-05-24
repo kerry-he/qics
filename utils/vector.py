@@ -31,8 +31,8 @@ class Vector():
             np.copyto(self.vec, other.vec)
         return self 
         
-    def norm(self, order=None):
-        return np.linalg.norm(self.vec, ord=order)
+    def norm(self):
+        return np.sqrt((self.vec.T @ self.vec)[0, 0])
     
     def inp(self, other):
         return (self.vec.T @ other.vec)[0, 0]

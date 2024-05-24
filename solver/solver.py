@@ -37,6 +37,8 @@ class Solver():
         self.tol_infeas = tol_infeas
         self.tol_ip = tol_ip
 
+        self.point = vec.Point(model)
+
         self.model = model
         syssolver = SysSolver(model, ir=ir, sym=sym)
         self.stepper = CombinedStepper(syssolver, model) if (stepper is None) else stepper
@@ -158,7 +160,6 @@ class Solver():
 
     def setup_point(self):
         model = self.model
-        self.point = vec.Point(model)
 
         self.point.tau[:] = 1.
         self.point.kap[:] = 1.
