@@ -6,13 +6,18 @@ from utils import symmetric as sym
 from cones import *
 
 # Solves the following square Newton system
-#            - A'*y     - c*tau + z         = rx
-#        A*x            - b*tau             = ry
-#      -c'*x - b'*y                 - kap   = rtau
-#     mu*H*x                    + z         = rz 
-#                    mu/t^2*tau     + kap   = rkap
-# for (x, y, z, tau, kap) given right-hand residuals (rx, ry, rz, rtau, rkap)
-# by using elimination.
+#     [ rx ]    [      A'  G'  c ] [ dx ]   [    ]
+#     [ ry ] := [ -A           b ] [ dy ] - [    ]
+#     [ rz ]    [ -G           h ] [ dz ]   [ ds ] 
+#     [rtau]    [ -c' -b' -h'    ] [dtau]   [dkap]
+# and
+#       rs   :=  mu H(s) ds + dz
+#      rkap  :=  (mu / tau^2) dtau + dkap   
+# or, if NT scaling is used,
+#       rs   :=  H(w) ds + dz
+#      rkap  :=  (kap / tau) dtau + dkap
+# for (dx, dy, dz, dtau, dkap) given right-hand residuals (rx, ry, rz, rtau, rkap)
+# by using block elimination and Cholesky factorization of the Schur complement matrix.
 
 class SysSolver():
     def __init__(self, model, ir=True, sym=False):
@@ -70,14 +75,14 @@ class SysSolver():
                 self.H,     _, _ = blk_hess_mtx(model, self.Hrows, self.Hcols)
                 GHG = (model.G_T @ self.H @ model.G).toarray()
             else:
-                GHG = blk_hess_congruence(model.G_T_views, model, self.sym)                    
+                GHG = blk_hess_congruence(model.G_T_views, model, self.sym)
 
             self.GHG_fact = lin.fact(GHG)
 
             if model.use_A:
                 GHGA = np.zeros((model.n, model.p))
                 for i in range(model.p):
-                    GHGA[:, i] = lin.fact_solve(self.GHG_fact, model.A.T[:, i])
+                    GHGA[:, [i]] = lin.fact_solve(self.GHG_fact, model.A.T[:, [i]].toarray())
                 AGHGA = model.A @ GHGA
                 self.AGHGA_fact = lin.fact(AGHGA)
 
@@ -91,7 +96,7 @@ class SysSolver():
                 self.H,     _, _ = blk_hess_mtx(model, self.Hrows, self.Hcols)
                 AHA = (model.A @ self.H_inv @ model.A_T).toarray()
             else:
-                AHA = blk_invhess_congruence(model.A_views, model, self.sym)
+                AHA = blk_invhess_congruence(model.G_inv_A_views, model, self.sym)
             
             self.AHA_fact = lin.fact(AHA, self.AHA_fact)
 
@@ -189,50 +194,69 @@ class SysSolver():
 
         model = self.model
 
-        # if model.use_A and model.use_G:
-        #     # In the general case
-        #     #     dy := (A (G'HG)^-1 A') \ [ry + A (G'HG) \ [rx - G' (H rz + rs)]]
-        #     #     dx := (G'HG) \ [rx - G' (H rz + rs) - A' dy]
-        #     #     dz := H (rz + G dx) + rs
-        #
-        #     temp_vec = rx - model.G.T @ (blk_hess_prod(rz, model, self.sym) + rs)
-        #     temp = model.A @ lin.fact_solve(self.GHG_fact, temp_vec) + ry
-        #     y = lin.fact_solve(self.AGHGA_fact, temp)
-        #     x = lin.fact_solve(self.GHG_fact, temp_vec - model.A.T @ y)
-        #     z = (blk_hess_prod(rz, model, self.sym) + rs) + blk_hess_prod(model.G @ x, model, self.sym)
-
-        #     return x, y, z
-        
-        if model.use_A and not model.use_G:
-            # If G = -I (or some easily invertible square diagonal scaling), then
-            #     dy := AHA' \ [A (rz + H \ [rx + rs]) + ry]
-            #     dx := rz + H \ [rx + rs - A' dy]
-            #     dz := A' dy - rx
-
-            # dy := AHA' \ [A (rz + H \ [rx + rs]) + ry]
-            self.vec_temp.copy_from(r.x)
+        if model.use_A and model.use_G:
+            # In the general case
+            #     dy := (A (G'HG)^-1 A') \ [ry + A (G'HG) \ [rx - G' (H rz + rs)]]
+            #     dx := (G'HG) \ [rx - G' (H rz + rs) - A' dy]
+            #     dz := H (rz + G dx) + rs
+            
+            # dy := (A (G'HG)^-1 A') \ [ry + A (G'HG) \ [rx - G' (H rz + rs)]]
+            blk_hess_prod_ip(self.vec_temp, r.z, model, self.sym, self.H)
             if rs is not None:
                 self.vec_temp += rs
+            temp = r.x - model.G_T @ self.vec_temp.vec
+            temp = r.y + model.A @ lin.fact_solve(self.GHG_fact, temp)
+            d.y[:] = lin.fact_solve(self.AGHGA_fact, temp)
+            
+            # dx := (G'HG) \ [rx - G' (H rz + rs) - A' dy]
+            temp = r.x - self.vec_temp.vec - model.A_T @ d.y
+            d.x[:] = lin.fact_solve(self.GHG_fact, temp)
+            
+            # dz := H (rz + G dx) + rs
+            d.z.vec[:] = self.vec_temp.vec
+            self.vec_temp2.vec[:] = model.G @ d.x
+            blk_hess_prod_ip(self.vec_temp, self.vec_temp2, model, self.sym, self.H)
+            d.z.vec += self.vec_temp.vec
+        
+        elif model.use_A and not model.use_G:
+            # If G = -I (or some easily invertible square diagonal scaling), then
+            #     [ rx ]   [    ]    [      A' -I  ]  [ dx ]
+            #     [ ry ] + [    ] := [ -A          ]  [ dy ]
+            #     [ rz ]   [H\rs]    [  I     H^-1 ]  [ dz ]            
+            # dy := (AG^-1 H^-1 (AG^-1)') \ [ry + A (G^-1 (H \ [G^-1 rx - rs] - rz)]
+            # dz := G^-1 (rx - A' dy)
+            # dx := G^-1 (H \ [dz - rs] - rz)
+            
+            # dy := (AG^-1 H^-1 (AG^-1)') \ [ry + A (G^-1 (H \ [G^-1 rx - rs] - rz)]
+            np.multiply(r.x, model.G_inv, out=self.vec_temp.vec)
+            if rs is not None:
+                self.vec_temp.vec -= rs.vec
             blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym, self.H_inv)
-            self.vec_temp2 += r.z
-            d.x[:] = self.vec_temp2.vec
-            temp = model.A @ d.x + r.y
+            self.vec_temp2.vec -= r.z.vec
+            self.vec_temp2.vec *= model.G_inv
+            temp  = model.A @ self.vec_temp2.vec
+            temp += r.y
             d.y[:] = lin.fact_solve(self.AHA_fact, temp)
             
-            # dz := A' dy - rx
-            A_T_y = model.A_T @ d.y
-            d.z.copy_from(A_T_y - r.x)
+            # dz := G^-1 (rx - A' dy)
+            d.z.vec[:] = r.x
+            d.z.vec   -= model.A_T @ d.y
+            d.z.vec   *= model.G_inv
 
-            # dx := rz + H \ [rx + rs - A' dy]
-            self.vec_temp.copy_from(A_T_y)
+            # dx := G^-1 (H \ [dz - rs] - rz)
+            self.vec_temp.vec[:] = d.z.vec
+            if rs is not None:
+                self.vec_temp.vec -= rs.vec
             blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym, self.H_inv)
-            d.x[:] -= self.vec_temp2.vec
-        
-        if not model.use_A and model.use_G:
+            self.vec_temp2.vec -= r.z.vec
+            np.multiply(self.vec_temp2.vec, model.G_inv, out=d.x)
+            
+        elif not model.use_A and model.use_G:
             # If A = [] (i.e, no primal linear constraints), then
-            #     dy := []            
-            #     dx := G'HG \ [rx - G' (H rz + rs)]
-            #     dz := H (rz + G dx) + rs
+            #     [ rx ]   [    ]    [       G' ]  [ dx ]
+            #     [ rz ]   [H\rs]    [ -G  H^-1 ]  [ dz ]            
+            # dx := G'HG \ [rx - G' (H rz + rs)]
+            # dz := H (rz + G dx) + rs
 
             # dx := GHG \ [rx - G' (H rz + rs)]
             blk_hess_prod_ip(self.vec_temp, r.z, model, self.sym, self.H)
@@ -248,11 +272,12 @@ class SysSolver():
             if rs is not None:
                 d.z += rs
         
-        if not model.use_A and not model.use_G:
+        elif not model.use_A and not model.use_G:
             # If both A = [] and G = -I, then
-            #     dy := []            
-            #     dx := rz + H \ [rx + rs]
-            #     dz := H (rz - dx) + rs
+            #     [ rx ]   [    ]    [     -I  ]  [ dx ]
+            #     [ rz ]   [H\rs]    [ I  H^-1 ]  [ dz ]                    
+            # dx := rz + H \ [rx + rs]
+            # dz := H (rz - dx) + rs
 
             # dx := rz + H \ [rx + rs]
             self.vec_temp.vec[:] = r.x
