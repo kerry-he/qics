@@ -117,7 +117,7 @@ def read_sdpa(filename):
 
 if __name__ == "__main__":
     # fnames = os.listdir("./problems/sdp/")
-    fnames = ["truss7.dat-s"]
+    fnames = ["control10.dat-s"]
 
     for fname in fnames:
         C_sdpa, b_sdpa, A_sdpa, blockStruct = read_sdpa("./problems/sdp/" + fname)
@@ -163,7 +163,7 @@ if __name__ == "__main__":
         # profiler = cProfile.Profile()
         # profiler.enable()
 
-        sol = cvxopt_solve_sdp(C_sdpa, b, A, blockStruct)
+        # sol = cvxopt_solve_sdp(C_sdpa, b, A, blockStruct)
 
         # profiler.disable()
         # profiler.dump_stats("example1.stats")        
@@ -171,6 +171,6 @@ if __name__ == "__main__":
         # print("optval: ", sol['primal']) 
         # print("time:   ", sol['time'])   
 
-        sol = mosek_solve_sdp(C_sdpa, b, A, blockStruct)
+        # sol = mosek_solve_sdp(C_sdpa, b, A, blockStruct)
 
-        sol = clarabel_solve_sdp(C_sdpa, b, A, blockStruct)
+        # sol = clarabel_solve_sdp(C_sdpa, b, A, blockStruct)

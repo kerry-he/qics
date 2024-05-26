@@ -225,7 +225,7 @@ class SysSolver():
             #     [ rz ]   [H\rs]    [  I     H^-1 ]  [ dz ]            
             # dy := (AG^-1 H^-1 (AG^-1)') \ [ry + A (G^-1 (H \ [G^-1 rx - rs] - rz)]
             # dz := G^-1 (rx - A' dy)
-            # dx := G^-1 (H \ [dz - rs] - rz)
+            # dx := G^-1 (H \ [G^-1 (rx - A' dy) - rs] - rz)
             
             # dy := (AG^-1 H^-1 (AG^-1)') \ [ry + A (G^-1 (H \ [G^-1 rx - rs] - rz)]
             np.multiply(r.x, model.G_inv, out=self.vec_temp.vec)
@@ -233,23 +233,21 @@ class SysSolver():
                 self.vec_temp.vec -= rs.vec
             blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym, self.H_inv)
             self.vec_temp2.vec -= r.z.vec
-            self.vec_temp2.vec *= model.G_inv
-            temp  = model.A @ self.vec_temp2.vec
+            np.multiply(self.vec_temp2.vec, model.G_inv, out=d.x)
+            temp  = model.A @ d.x
             temp += r.y
             d.y[:] = lin.fact_solve(self.AHA_fact, temp)
-            
-            # dz := G^-1 (rx - A' dy)
-            d.z.vec[:] = r.x
-            d.z.vec   -= model.A_T @ d.y
-            d.z.vec   *= model.G_inv
 
-            # dx := G^-1 (H \ [dz - rs] - rz)
-            self.vec_temp.vec[:] = d.z.vec
-            if rs is not None:
-                self.vec_temp.vec -= rs.vec
+            # dz := G^-1 (rx - A' dy)
+            A_T_dy = model.A_T @ d.y
+            np.subtract(r.x, A_T_dy, out=d.z.vec)
+            d.z.vec *= model.G_inv
+
+            # dx := G^-1 (H \ [G^-1 rx - rs] - rz - H \ [G^-1 A' dy])
+            np.multiply(A_T_dy, model.G_inv, out=self.vec_temp.vec)
             blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym, self.H_inv)
-            self.vec_temp2.vec -= r.z.vec
-            np.multiply(self.vec_temp2.vec, model.G_inv, out=d.x)
+            self.vec_temp2.vec *= model.G_inv
+            d.x -= self.vec_temp2.vec
             
         elif not model.use_A and model.use_G:
             # If A = [] (i.e, no primal linear constraints), then
