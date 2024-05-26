@@ -113,3 +113,6 @@ class Cone():
     
     def nt_mtx(self):
         return (self.z / self.x).reshape((-1,))
+    
+    def comb_dir(self, dS, dZ, sigma, mu):
+        return -self.z - dS*dZ/self.x + sigma*mu/self.x

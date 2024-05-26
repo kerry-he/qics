@@ -5,7 +5,6 @@ import scipy as sp
 from utils import symmetric as sym
 from cones import *
 from solver import model, solver
-import os
 
 from utils.other_solvers import cvxopt_solve_sdp, mosek_solve_sdp, clarabel_solve_sdp
 
@@ -65,15 +64,9 @@ def read_sdpa(filename):
             totDim_compressed -= n
             idxs_compressed.append(idxs_compressed[-1] - n)
 
-    C_compresed = np.zeros(totDim_compressed)
-
     Acols = []
     Arows = []
     Avals = []
-
-    Acols_compressed = []
-    Arows_compressed = []
-    Avals_compressed = []
 
     lineList = fp.readlines()
     for line in lineList:
@@ -116,8 +109,15 @@ def read_sdpa(filename):
 
 
 if __name__ == "__main__":
-    # fnames = os.listdir("./problems/sdp/")
-    fnames = ["control10.dat-s"]
+    import os, csv
+
+    fnames = os.listdir("./problems/sdp/")
+    # fnames = ["truss7.dat-s"]
+
+    fout_name = 'data.csv'
+    with open(fout_name, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["problem", "solver", "status", "optval", "time", "iter", "gap", "pfeas", "dfeas"])
 
     for fname in fnames:
         C_sdpa, b_sdpa, A_sdpa, blockStruct = read_sdpa("./problems/sdp/" + fname)
@@ -160,8 +160,18 @@ if __name__ == "__main__":
         # profiler.disable()
         # profiler.dump_stats("example.stats")    
 
-        # profiler = cProfile.Profile()
-        # profiler.enable()
+        with open(fout_name, 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([fname, "comb", slv.status, slv.p_obj, slv.solve_time, slv.num_iters, slv.gap, max(slv.y_feas, slv.z_feas), slv.x_feas])        
+
+        mdl = model.Model(c=c, A=A, b=b, cones=cones)
+        slv = solver.Solver(mdl, sym=True, ir=True, stepper=True)
+
+        slv.solve()
+
+        with open(fout_name, 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([fname, "cvxopt", slv.status, slv.p_obj, slv.solve_time, slv.num_iters, slv.gap, max(slv.y_feas, slv.z_feas), slv.x_feas])        
 
         # sol = cvxopt_solve_sdp(C_sdpa, b, A, blockStruct)
 

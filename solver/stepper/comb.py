@@ -81,6 +81,7 @@ class CombinedStepper():
                 return point, alpha, False
 
             alpha = alpha_sched[alpha_iter]
+            gamma = 1 - alpha
             # Step point in direction and step size
             next_point.vec[:] = point.vec
             if mode == "co_toa":
@@ -88,6 +89,10 @@ class CombinedStepper():
                 next_point.axpy(alpha             , dir_p)
                 next_point.axpy(alpha ** 2        , dir_p_toa)
                 next_point.axpy((1.0 - alpha)     , dir_c)
+
+                # next_point.axpy((1 - gamma**0.33) * (1 - gamma) , dir_p)
+                # next_point.axpy((1 - gamma**0.33)               , dir_p_toa)
+                # next_point.axpy((1 - gamma**0.33) * gamma       , dir_c)                
                 if not (model.sym and self.syssolver.sym):
                     next_point.axpy((1.0 - alpha) ** 2, dir_c_toa)
             elif mode == "comb":
@@ -159,6 +164,7 @@ class CombinedStepper():
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
             self.rhs.s[k][:] = cone_k.get_grad()
+            # self.rhs.s[k][:] = cone_k.grad_similar()
         self.rhs.s.vec *= -rtmu
         self.rhs.s.vec -= point.z.vec
 

@@ -13,11 +13,11 @@ class Model():
         self.p = np.size(b) if (b is not None) else 0
         self.q = np.size(h) if (h is not None) else self.n
     
-        self.c = c
-        self.A = A if (A is not None) else  np.empty((0, self.n))
-        self.b = b if (b is not None) else  np.empty((0, 1))
-        self.G = G if (G is not None) else -sp.sparse.identity(self.n).tocsr()
-        self.h = h if (h is not None) else  np.zeros((self.n, 1))
+        self.c = c.copy()
+        self.A = A.copy() if (A is not None) else  np.empty((0, self.n))
+        self.b = b.copy() if (b is not None) else  np.empty((0, 1))
+        self.G = G.copy() if (G is not None) else -sp.sparse.identity(self.n).tocsr()
+        self.h = h.copy() if (h is not None) else  np.zeros((self.n, 1))
         self.cones = cones
 
         self.use_G = (G is not None)

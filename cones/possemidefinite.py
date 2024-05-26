@@ -105,6 +105,30 @@ class Cone():
             PD = dir1 @ dir2
             XiPD = self.X_inv @ PD
             return -XiPD - XiPD.T
+            
+            # # Compute (W^-T ds) o (W dz)
+            # RXR = self.R_inv @ dir1 @ self.R_inv.T
+            # RZR = self.R.T @ dir2 @ self.R
+            # temp = (RXR @ RZR + RZR @ RXR)
+
+            # # Compute Lambda \ [(W^-T ds) o (W dz)]
+            # Gamma = np.add.outer(self.Lambda, self.Lambda)
+            # temp /= Gamma
+
+            # # Compute W^-1 (Lambda \ [(W^-T ds) o (W dz)])
+            # temp = -self.R_inv.T @ temp @ self.R_inv
+            # return temp
+        
+    def grad_similar(self):
+        temp = np.eye(self.n)
+
+        # Compute Lambda \ e
+        Gamma = np.add.outer(self.Lambda, self.Lambda)
+        temp *= 2 / Gamma
+
+        # Compute W^-1 (Lambda \ e)
+        temp = self.R_inv.T @ temp @ self.R_inv
+        return temp
     
     def prox(self):
         assert self.feas_updated
@@ -117,15 +141,18 @@ class Cone():
         if not self.grad_updated:
             self.get_grad()   
 
+        # Compute the symmeterized point
+        # Lambda = R' Z R = R^-1 S R^-T
         RL = self.Z_chol.T @ self.X_chol
-        U, D, Vt, _ = sp.linalg.lapack.dgesdd(RL, lwork=self.dgesdd_lwork)
-        D_rt2 = np.sqrt(D)
+        _, self.Lambda, Vt, _ = sp.linalg.lapack.dgesdd(RL, lwork=self.dgesdd_lwork)
+        D_rt2 = np.sqrt(self.Lambda)
 
-        self.W_rt2 = self.X_chol @ (Vt.T / D_rt2)
-        self.W = self.W_rt2 @ self.W_rt2.T
+        # Compute the scaling point W = R R'
+        self.R = self.X_chol @ (Vt.T / D_rt2)
+        self.W = self.R @ self.R.T
 
-        self.W_irt2 = self.X_chol_inv.T @ (Vt.T * D_rt2)
-        self.W_inv = self.W_irt2 @ self.W_irt2.T
+        self.R_inv = (self.X_chol_inv.T @ (Vt.T * D_rt2)).T
+        self.W_inv = self.R_inv.T @ self.R_inv
 
         self.nt_aux_updated = True
     
@@ -215,13 +242,13 @@ class Cone():
         if not self.nt_aux_updated:
             self.nt_aux()
         
-        return self.base_congr(A, self.W_inv, self.W_irt2)
+        return self.base_congr(A, self.W_inv, self.R_inv.T)
 
     def invnt_congr(self, A):
         if not self.nt_aux_updated:
             self.nt_aux()
         
-        return self.base_congr(A, self.W, self.W_rt2)
+        return self.base_congr(A, self.W, self.R)
 
     def hess_congr(self, A):
         if not self.grad_updated:
@@ -290,22 +317,23 @@ class Cone():
             self.nt_aux()
 
         # V = W^-T x = W z where W z = R^T Z R
-        V = self.W_rt2.T @ self.Z @ self.W_rt2
+        V = self.R.T @ self.Z @ self.R
 
         # lhs = -VoV - (W^-T ds)o(W dz) + sigma*mu*I
-        WdS = self.W_irt2.T @ dS.data @ self.W_irt2
-        WdZ = self.W_rt2.T @ dZ.data @ self.W_rt2
+        WdS = self.R_inv @ dS.data @ self.R_inv.T
+        WdZ = self.R.T @ dZ.data @ self.R
         temp = WdS @ WdZ
 
         lhs = -V @ V.T - 0.5*(temp + temp.T) + sigma*mu*np.eye(self.n)
-        
-        eig, vec = np.linalg.eigh(V)
 
-        temp = vec.T @ lhs @ vec
-        temp = 2 * temp / np.add.outer(eig, eig)
-        temp = vec @ temp @ vec.T
+        # Compute Lambda \ [(W^-T ds) o (W dz)]
+        Gamma = np.add.outer(self.Lambda, self.Lambda)
+        lhs *= 2 / Gamma
 
-        return lin.Symmetric(self.W_irt2 @ temp @ self.W_irt2.T)
+        # Compute W^-1 (Lambda \ [(W^-T ds) o (W dz)])
+        temp = self.R_inv.T @ lhs @ self.R_inv
+
+        return (temp + temp.T) * 0.5
     
 def ragged_to_array(ragged):
     p = len(ragged)

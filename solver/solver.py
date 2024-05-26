@@ -38,21 +38,23 @@ class Solver():
         self.tol_ip = tol_ip
 
         self.point = vec.Point(model)
+        self.point_backup = vec.Point(model)
 
         self.model = model
         syssolver = SysSolver(model, ir=ir, sym=sym)
-        self.stepper = CombinedStepper(syssolver, model) if (stepper is None) else stepper
+        self.stepper = CombinedStepper(syssolver, model) if (stepper is None) else CVXOPTStepper(syssolver, model)
 
         return
     
     def solve(self):
         self.setup_solver()
-        # self.rescale_model()
         self.setup_point()
 
         while True:
             if self.step_and_check():
                 break
+
+        self.solve_time = time.time() - self.solve_time
 
         # Get solve data
         self.get_gap_feas()
@@ -66,7 +68,7 @@ class Solver():
             print()
             print("Opt value:  %.10f" % (self.p_obj))
             print("Tolerance:  %.10e" % (self.gap))
-            print("Solve time: %.10f" % (time.time() - self.solve_time), " seconds")
+            print("Solve time: %.10f" % (self.solve_time), " seconds")
             print()
 
         return
@@ -89,7 +91,14 @@ class Solver():
         self.calc_mu()
 
         # Get solve data
-        self.get_gap_feas()      
+        if self.num_iters > 0:
+            self.copy_solver_data()
+
+        self.get_gap_feas()
+
+        if self.num_iters > 0:
+            if self.check_progress():
+                return True        
 
         # Check optimality
         if self.gap <= self.tol_gap:
@@ -140,7 +149,7 @@ class Solver():
             if self.verbose:
                 self.status = "step_failure"
                 print("\nFailed to step")
-                return True            
+                return True
 
         self.num_iters += 1
 
@@ -261,8 +270,8 @@ class Solver():
         kap = self.point.kap[0, 0]
 
         # Get primal and dual objectives and optimality gap
-        p_obj_tau =  c.T @ x
-        d_obj_tau = -b.T @ y - h.T @ z
+        p_obj_tau =  (c.T @ x)[0, 0]
+        d_obj_tau = -(b.T @ y + h.T @ z)[0, 0]
 
         self.p_obj = p_obj_tau / tau + self.model.offset
         self.d_obj = d_obj_tau / tau + self.model.offset
@@ -274,8 +283,8 @@ class Solver():
         self.x_res *= -1
 
         self.y_res  = model.A @ x
-        self.z_res  = model.G @ x
 
+        self.z_res  = model.G @ x
         self.z_res += s
 
         self.x_infeas =  lin.norm_inf(self.x_res) / d_obj_tau if (d_obj_tau > 0) else np.inf
@@ -293,26 +302,47 @@ class Solver():
         self.z_feas = lin.norm_inf(self.z_res) / (1. + self.h_max) / tau
 
         return
+    
+    def copy_solver_data(self):
+        # Copy solver data in case solution quality degrades
+        self.point_backup.vec[:] = self.point.vec
+        self.x_res_backup   = self.x_feas
+        self.y_res_backup   = self.y_feas
+        self.z_res_backup   = self.z_feas
+        self.tau_res_backup = self.tau_res
 
-    def rescale_model(self):
-        model = self.model
+    def check_progress(self):
+        # Check if progress is slow or if solution quality is degrading
+        eps = 1e-15
 
-        self.c_scale = np.zeros_like(model.c)
-        self.b_scale = np.zeros_like(model.b)
+        # Check for slow progress
+        improv = max([
+            0.,
+            (self.x_res_backup - self.x_feas) / (self.x_res_backup + eps),
+            (self.y_res_backup - self.y_feas) / (self.y_res_backup + eps),
+            (self.z_res_backup - self.z_feas) / (self.z_res_backup + eps),
+            (self.tau_res_backup - self.tau_res) / (self.tau_res_backup + eps)
+        ])
+
+        degrad = max([
+            0., 
+            (self.x_feas - self.x_res_backup) / (self.x_res_backup + eps),
+            (self.y_feas - self.y_res_backup) / (self.y_res_backup + eps),
+            (self.z_feas - self.z_res_backup) / (self.z_res_backup + eps),
+            (self.tau_res - self.tau_res_backup) / (self.tau_res_backup + eps)
+        ])        
+
+        if improv < 1e-3:
+            self.status = "slow_progress"
+            if self.verbose:
+                print("Detected slow progress")
+            return True
         
-        # Rescale c
-        for i in range(model.n):
-            self.c_scale[i] = np.sqrt(max(abs(model.c[i, 0]), np.max(np.abs(model.A[:, i])), np.max(np.abs(model.G[:, i]))))
-
-        # Rescale b
-        for i in range(model.p):
-            self.b_scale[i] = np.sqrt(max(abs(model.b[i, 0]), np.max(np.abs(model.A[i, :]))))
-
-        model.c[:, :] /= self.c_scale
-        model.A[:, :] /= self.c_scale.T
-        model.G[:, :] /= self.c_scale.T
-
-        model.A[:, :] /= self.b_scale
-        model.b[:, :] /= self.b_scale
-
-        return
+        #TODO: Improve this so that we can keep iterating until the overall gap and feasibilities are worse than before
+        if degrad > 1e1 and max([self.x_feas, self.y_feas, self.z_feas]) < 1e-4:
+            self.status = "slow_progress"
+            if self.verbose:
+                print("Detected slow progress")
+            return True
+        
+        return False
