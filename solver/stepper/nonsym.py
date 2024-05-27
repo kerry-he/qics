@@ -58,12 +58,9 @@ class NonSymStepper():
                     point, alpha, success = self.line_search(model, point, step_mode)
         
         if verbose:
-            if success:
-                print("  | %6s" % step_mode, "%10.3e" % (res_norm), "%10.3e" % (self.prox), " %5.3f" % (alpha))
-            else:
-                return point, False
+            print("  | %6s" % step_mode, "%10.3e" % (res_norm), "%10.3e" % (self.prox), " %5.3f" % (alpha))
         
-        return point, True
+        return point, success, alpha
     
     def line_search(self, model, point, mode="co_toa"):
         alpha_iter = -1

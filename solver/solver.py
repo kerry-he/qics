@@ -5,8 +5,6 @@ import time
 
 from utils import linear as lin
 from utils import vector as vec
-from solver.stepper.basic import BasicStepper
-from solver.stepper.aggressive import AggressiveStepper
 from solver.stepper.nonsym import NonSymStepper
 from solver.stepper.sym import SymStepper
 from solver.syssolver import SysSolver
@@ -22,6 +20,7 @@ class Solver():
         tol_gap = 1e-8,
         tol_feas = 1e-8,
         tol_infeas = 1e-12,
+        near_tol = 1e3,
         tol_ip = 1e-13,
         verbose  = True,
         ir = True,
@@ -35,9 +34,15 @@ class Solver():
         self.tol_feas = tol_feas
         self.tol_infeas = tol_infeas
         self.tol_ip = tol_ip
+        self.near_tol = near_tol
 
         self.point = vec.Point(model)
-        self.point_backup = vec.Point(model)
+        self.point_best = vec.Point(model)
+
+        self.small_step_tol = 0.005
+        
+        self.solution_status = None
+        self.exit_status = None
 
         self.model = model
         syssolver = SysSolver(model, ir=ir, sym=sym)
@@ -46,90 +51,17 @@ class Solver():
         return
     
     def solve(self):
+        # Setup solver
         self.setup_solver()
         self.setup_point()
-
-        while True:
-            if self.step_and_check():
-                break
-
-        self.solve_time = time.time() - self.solve_time
-
-        # Get solve data
-        self.get_gap_feas()
-
-        if self.verbose:
-            if not self.status == "step_failure":
-                print("%5d" % (self.num_iters), " %8.1e" % (self.mu), " %8.1e" % (self.point.tau), " %8.1e" % (self.point.kap),
-                    " | %10.3e" % (self.p_obj), " %10.3e" % (self.d_obj), " %10.3e" % (self.gap), 
-                    " | %10.3e" % (self.x_feas), " %10.3e" % (self.y_feas), " %10.3e" % (self.z_feas), end="")
-
-            print()
-            print("Opt value:  %.10f" % (self.p_obj))
-            print("Tolerance:  %.10e" % (self.gap))
-            print("Solve time: %.10f" % (self.solve_time), " seconds")
-            print()
-
-        return
-    
-    def step_and_check(self):
-        # Check termination
-        if self.num_iters >= self.max_iter:
-            self.status = "max_iter"
-            if self.verbose:
-                print("Maximum iteration limit reached")
-            return True
-        
-        if time.time() - self.solve_time >= self.max_time:
-            self.status = "max_time"
-            if self.verbose:
-                print("Maximum time limit reached")
-            return True
-        
-        # Update barrier parameter mu
         self.calc_mu()
-
-        # Get solve data
-        if self.num_iters > 0:
-            self.copy_solver_data()
-
         self.get_gap_feas()
 
-        if self.num_iters > 0:
-            if self.check_progress():
-                return True        
-
-        # Check optimality
-        if self.gap <= self.tol_gap:
-            # Check feasibility
-            if self.x_feas <= self.tol_feas and self.y_feas <= self.tol_feas and self.z_feas <= self.tol_feas:
-                self.status = "solved"
-                if self.verbose:
-                    print("Solved to desired tolerance")
-                return True
-
-        # Check infeasibility
-        if self.x_infeas <= self.tol_infeas:
-            self.status = "primal_infeas"
-            if self.verbose:
-                print("Detected primal infeasibility")
-            return True       
-
-        if self.y_infeas <= self.tol_infeas and self.z_infeas <= self.tol_infeas:
-            self.status = "dual_infeas"
-            if self.verbose:
-                print("Detected dual infeasibility")
-            return True            
-            
-        # Check ill-posedness
-        if self.mu <= self.tol_ip and self.point.tau <= self.tol_ip * min([1., self.point.kap]):
-            self.status = "ill_posed"
-            if self.verbose:
-                print("Detected ill-posed problem")     
-            return True       
-
+        # ==============================================================
+        # Print iteration status
+        # ==============================================================
         if self.verbose:
-            if self.num_iters % 20 == 0:
+            if self.iter % 20 == 0:
                 print("===================================================================================================================================================================")
                 print("%5s" % "iter", " %8s" % "mu", " %8s" % "tau", " %8s" % "kap",
                     " | %10s" % "p_obj", " %10s" % "d_obj", " %10s" % "gap", 
@@ -137,25 +69,123 @@ class Solver():
                     " | %6s" % "step", "%10s" % "dir_tol", "%10s" % "prox", " %5s" % "alpha")
                 print("===================================================================================================================================================================")                
             
-            print("%5d" % (self.num_iters), " %8.1e" % (self.mu), " %8.1e" % (self.point.tau), " %8.1e" % (self.point.kap),
+            print("%5d" % (self.iter), " %8.1e" % (self.mu), " %8.1e" % (self.point.tau), " %8.1e" % (self.point.kap),
                   " | %10.3e" % (self.p_obj), " %10.3e" % (self.d_obj), " %10.3e" % (self.gap),
-                  " | %10.3e" % (self.x_feas), " %10.3e" % (self.y_feas), " %10.3e" % (self.z_feas), end="")
-            
-        # Step
-        self.point, success = self.stepper.step(self.model, self.point, (self.x_res, self.y_res, self.z_res, self.tau_res), self.mu, self.verbose)
+                  " | %10.3e" % (self.x_feas), " %10.3e" % (self.y_feas), " %10.3e" % (self.z_feas), end="")        
 
-        if not success:
-            if self.verbose:
-                self.status = "step_failure"
-                print("\nFailed to step")
+        while True:
+            if self.step_and_check():
+                break
+
+        self.solve_time = time.time() - self.solve_time
+
+        # If we didn't reach a solution, check if we are close to optimal
+        if self.exit_status != "solved":
+            self.copy_solver_data()
+            self.retrieve_best_data()
+
+            self.solution_status = "not_optimal"
+
+            if self.gap <= self.tol_gap * self.near_tol:
+                if self.x_feas <= self.tol_feas * self.near_tol:
+                    if self.y_feas <= self.tol_feas * self.near_tol: 
+                        if self.z_feas <= self.tol_feas * self.near_tol:
+                            self.solution_status = "near_optimal"
+
+
+        if self.verbose:
+            print()
+            print("Solution status: %s" % (self.solution_status))
+            print("Exit status:     %s" % (self.exit_status))
+            print("Opt value:       %.10f" % (self.p_obj))
+            print("Tolerance:       %.10e" % (self.gap))
+            print("Solve time:      %.10f" % (self.solve_time), " seconds")
+            print()
+
+        return
+    
+    def step_and_check(self): 
+        # ==============================================================
+        # Step
+        # ==============================================================
+        # Make a copy of current point before taking a step
+        self.copy_solver_data()
+
+        # Take a step
+        self.point, success, alpha = self.stepper.step(self.model, self.point, (self.x_res, self.y_res, self.z_res, self.tau_res), self.mu, self.verbose)
+        self.iter += 1
+
+        # Compute barrier parameter and residuals
+        self.calc_mu()
+        self.get_gap_feas()
+
+        # ==============================================================
+        # Print iteration status
+        # ==============================================================
+        if self.verbose:
+            if self.iter % 20 == 0:
+                print("===================================================================================================================================================================")
+                print("%5s" % "iter", " %8s" % "mu", " %8s" % "tau", " %8s" % "kap",
+                    " | %10s" % "p_obj", " %10s" % "d_obj", " %10s" % "gap", 
+                    " | %10s" % "x_feas", " %10s" % "y_feas", " %10s" % "z_feas",
+                    " | %6s" % "step", "%10s" % "dir_tol", "%10s" % "prox", " %5s" % "alpha")
+                print("===================================================================================================================================================================")                
+            
+            print("%5d" % (self.iter), " %8.1e" % (self.mu), " %8.1e" % (self.point.tau), " %8.1e" % (self.point.kap),
+                  " | %10.3e" % (self.p_obj), " %10.3e" % (self.d_obj), " %10.3e" % (self.gap),
+                  " | %10.3e" % (self.x_feas), " %10.3e" % (self.y_feas), " %10.3e" % (self.z_feas), end="")        
+
+        # ==============================================================
+        # Check termination criteria
+        # ==============================================================
+        # 1) Check optimality
+        if self.gap <= self.tol_gap:
+            if self.x_feas <= self.tol_feas and self.y_feas <= self.tol_feas and self.z_feas <= self.tol_feas:
+                self.solution_status = "optimal"
+                self.exit_status = "solved"
                 return True
 
-        self.num_iters += 1
+        # 2) Check primal and dual infeasibility
+        if self.x_infeas <= self.tol_infeas:
+            self.solution_status = "primal_infeas"
+            self.exit_status = "solved"
+            return True       
+
+        if self.y_infeas <= self.tol_infeas and self.z_infeas <= self.tol_infeas:
+            self.solution_status = "dual_infeas"
+            self.exit_status = "solved"
+            return True            
+            
+        # 3) Check ill-posedness
+        if self.mu <= self.tol_ip and self.point.tau <= self.tol_ip * min([1., self.point.kap]):
+            self.solution_status = "ill_posed"
+            self.exit_status = "solved"
+            return True
+        
+        # 4) Check if maximum iterations is exceeded
+        if self.iter >= self.max_iter:
+            self.exit_status = "max_iter"
+            return True
+        
+        # 5) Check if maximum time is exceeded
+        if time.time() - self.solve_time >= self.max_time:
+            self.exit_status = "max_time"
+            return True 
+        
+        # 6) Did the step fail or not
+        if not success:
+            self.exit_status = "step_failure"
+            return True
+            
+        # 7) Check if progress is slow or degrading at high tolerance
+        if alpha <= self.small_step_tol:
+            self.exit_status = "slow_progress"
+            return True
 
         return False
 
     def setup_solver(self):
-        self.num_iters = 0
+        self.iter = 0
         self.solve_time = time.time()
 
         model = self.model
@@ -172,76 +202,10 @@ class Solver():
         self.point.tau[:] = 1.
         self.point.kap[:] = 1.
 
-        # # Precompute
-        # if model.use_G:
-        #     GG = model.G_T @ model.G
-        #     if sp.sparse.issparse(GG):
-        #         GG = sp.sparse.csc_matrix(GG)
-        #     GG_fact = lin.fact(GG)
-
-        #     # Initialize primal variables x and s
-        #     x = lin.fact_solve(GG_fact, model.G_T @ model.h)
-        #     s = model.h - model.G @ x
-
-        #     self.point.s.from_vec(s)
-        #     eig = min(np.linalg.eigvalsh(self.point.s[0].data))
-        #     if eig < 0:
-        #         self.point.s[0].data[np.diag_indices_from(self.point.s[0].data)] += -eig + 1            
-        #     self.point.x = x
-            
-
-        #     # Initialize dual variables y and z
-        #     x = lin.fact_solve(GG_fact, -model.c)
-        #     z = model.G @ x
-
-        #     self.point.z.from_vec(z)
-        #     eig = min(np.linalg.eigvalsh(self.point.z[0].data))
-        #     if eig < 0:
-        #         self.point.z[0].data[np.diag_indices_from(self.point.z[0].data)] += -eig + 1
-        # else:
-        #     AA = model.A @ model.A_T
-        #     if sp.sparse.issparse(AA):
-        #         AA = sp.sparse.csc_matrix(AA)
-        #     AA_fact = lin.fact(AA)
-
-        #     # Initialize primal variables x and s
-        #     y = lin.fact_solve(AA_fact, -model.A @ model.h - model.b)
-        #     s = -model.A.T @ y
-        #     x = s - model.h
-
-        #     self.point.s.from_vec(s)
-        #     self.point.x = x
-            
-
-        #     # Initialize dual variables y and z
-        #     y = lin.fact_solve(AA_fact, -model.A @ model.c)
-        #     z = model.A.T @ y
-
-        #     self.point.z.from_vec(z)
-        #     eig = min(np.linalg.eigvalsh(self.point.z[0].data))
-        #     if eig < 0:
-        #         self.point.z[0].data[np.diag_indices_from(self.point.z[0].data)] += -eig + 1
-        #     self.point.y = y
-
-        
-        # for (k, cone_k) in enumerate(model.cones):
-        #     cone_k.set_point(self.point.s[k], self.point.z[k], 1.0)
-        #     assert cone_k.get_feas()
-        #     cone_k.get_grad()
-
-
         for (k, cone_k) in enumerate(model.cones):
             np.copyto(self.point.s[k], cone_k.set_init_point())
             assert cone_k.get_feas()
             np.copyto(self.point.z[k], -cone_k.get_grad())
-
-        # if model.use_G:
-        #     self.point.x[:] = np.linalg.pinv(np.vstack((model.A, model.G))) @ np.vstack((model.b, model.h - self.point.s.vec))
-        #     self.point.y[:] = np.linalg.pinv(model.A.T) @ (-model.G.T @ self.point.z.vec - model.c)
-        # else:
-        #     self.point.x[:] = -(model.h - self.point.s.vec)
-        #     self.point.x[:] = np.linalg.pinv(np.vstack((model.A, model.G.toarray()))) @ np.vstack((model.b, model.h - self.point.s.vec))
-        #     self.point.y[:] = np.linalg.pinv(model.A.T) @ (self.point.z.vec - model.c)
 
         self.calc_mu()
         if not math.isclose(self.mu, 1.):
@@ -303,46 +267,45 @@ class Solver():
         return
     
     def copy_solver_data(self):
-        # Copy solver data in case solution quality degrades
-        self.point_backup.vec[:] = self.point.vec
-        self.x_res_backup   = self.x_feas
-        self.y_res_backup   = self.y_feas
-        self.z_res_backup   = self.z_feas
-        self.tau_res_backup = self.tau_res
+        if (self.iter == 0) or max(
+            self.x_feas_best, self.y_feas_best, 
+            self.z_feas_best, self.gap_best
+        ) > max(
+            self.x_feas, self.y_feas, 
+            self.z_feas, self.gap
+        ):
+            self.point_best.vec[:] = self.point.vec
+            self.best_iter = self.iter
+            
+            self.p_obj_best = self.p_obj
+            self.d_obj_best = self.d_obj
+            self.gap_best   = self.gap
 
-    def check_progress(self):
-        # Check if progress is slow or if solution quality is degrading
-        eps = 1e-15
+            self.x_feas_best = self.x_feas
+            self.y_feas_best = self.y_feas
+            self.z_feas_best = self.z_feas
+            self.tau_res_best = self.tau_res
 
-        # Check for slow progress
-        improv = max([
-            0.,
-            (self.x_res_backup - self.x_feas) / (self.x_res_backup + eps),
-            (self.y_res_backup - self.y_feas) / (self.y_res_backup + eps),
-            (self.z_res_backup - self.z_feas) / (self.z_res_backup + eps),
-            (self.tau_res_backup - self.tau_res) / (self.tau_res_backup + eps)
-        ])
+            self.x_infeas_best = self.x_infeas
+            self.y_infeas_best = self.y_infeas
+            self.z_infeas_best = self.z_infeas
 
-        degrad = max([
-            0., 
-            (self.x_feas - self.x_res_backup) / (self.x_res_backup + eps),
-            (self.y_feas - self.y_res_backup) / (self.y_res_backup + eps),
-            (self.z_feas - self.z_res_backup) / (self.z_res_backup + eps),
-            (self.tau_res - self.tau_res_backup) / (self.tau_res_backup + eps)
-        ])        
+    def retrieve_best_data(self):
+        if self.best_iter != self.iter:
+            if self.verbose:
+                print("\nRetrieving data from iteration ", self.best_iter)
 
-        # SLow progress detection is kind of bad
-        # if improv < 1e-3:
-        #     self.status = "slow_progress"
-        #     if self.verbose:
-        #         print("Detected slow progress")
-        #     return True
-        
-        # #TODO: Improve this so that we can keep iterating until the overall gap and feasibilities are worse than before
-        # if degrad > 1e1 and max([self.x_feas, self.y_feas, self.z_feas]) < 1e-4:
-        #     self.status = "slow_progress"
-        #     if self.verbose:
-        #         print("Detected slow progress")
-        #     return True
-        
-        return False
+            self.point.vec = self.point_best.vec[:]
+            
+            self.p_obj = self.p_obj_best
+            self.d_obj = self.d_obj_best
+            self.gap = self.gap_best
+
+            self.x_feas = self.x_feas_best
+            self.y_feas = self.y_feas_best
+            self.z_feas = self.z_feas_best
+            self.tau_res = self.tau_res_best
+
+            self.x_infeas = self.x_infeas_best
+            self.y_infeas = self.y_infeas_best
+            self.z_infeas = self.z_infeas_best

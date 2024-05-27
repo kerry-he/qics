@@ -112,7 +112,7 @@ if __name__ == "__main__":
     import os, csv
 
     # fnames = os.listdir("./problems/sdp/")
-    fnames = ["control6.dat-s"]
+    fnames = ["control5.dat-s"]
 
     fout_name = 'data.csv'
     with open(fout_name, 'w', newline='') as file:
@@ -166,7 +166,7 @@ if __name__ == "__main__":
 
         with open(fout_name, 'a', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow([fname, "ours", slv.status, slv.p_obj, slv.solve_time, slv.num_iters, slv.gap, max(slv.y_feas, slv.z_feas), slv.x_feas])        
+            writer.writerow([fname, "ours", slv.solution_status, slv.p_obj, slv.solve_time, slv.iter, slv.gap, max(slv.y_feas, slv.z_feas), slv.x_feas])        
 
         # ==============================================================
         # CVXOPT

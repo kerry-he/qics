@@ -30,6 +30,7 @@ class SymStepper():
         alpha = self.taukap_step_to_boundary(self.dir_a, point)
         for (k, cone_k) in enumerate(model.cones):
             alpha = min(alpha, cone_k.step_to_boundary(self.dir_a.s[k], self.dir_a.z[k]))
+        alpha = min(alpha, 1.)
         sigma = (1 - alpha) ** 3
 
         # Step 4: Combined direction
@@ -41,20 +42,21 @@ class SymStepper():
         alpha = self.taukap_step_to_boundary(self.dir_comb, point)
         for (k, cone_k) in enumerate(model.cones):
             alpha = min(alpha, cone_k.step_to_boundary(self.dir_comb.s[k], self.dir_comb.z[k]))
-        alpha = alpha * 0.99
+        alpha = min(alpha, 1.) * 0.99
         if alpha == 0:
             point, False
+
+        if verbose:
+            print("  | %6.4f" % sigma, "%10.3e" % (res_norm), "%10.3e" % (self.prox), " %5.3f" % (alpha))
 
         # Take step
         point.vec += alpha * self.dir_comb.vec
         for (k, cone_k) in enumerate(model.cones):
             cone_k.set_point(point.s[k], point.z[k])
-            assert cone_k.get_feas()
+            if not cone_k.get_feas():
+                return point, False, alpha
         
-        if verbose:
-            print("  | %6.4f" % sigma, "%10.3e" % (res_norm), "%10.3e" % (self.prox), " %5.3f" % (alpha))
-        
-        return point, True
+        return point, True, alpha
     
     def taukap_step_to_boundary(self, dir, point):
         tau_alpha = dir.tau[0, 0] / point.tau[0, 0]
