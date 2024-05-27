@@ -75,7 +75,6 @@ class Cone():
         
         self.X_chol_inv, info = sp.linalg.lapack.dtrtri(self.X_chol, lower=True)
         self.X_inv = self.X_chol_inv.T @ self.X_chol_inv
-        # self.X_inv = sp.linalg.blas.dsyrk(alpha=True, a=self.X_chol_inv, trans=True)
         self.grad = -self.X_inv
 
         self.grad_updated = True
@@ -105,30 +104,6 @@ class Cone():
             PD = dir1 @ dir2
             XiPD = self.X_inv @ PD
             return -XiPD - XiPD.T
-            
-            # # Compute (W^-T ds) o (W dz)
-            # RXR = self.R_inv @ dir1 @ self.R_inv.T
-            # RZR = self.R.T @ dir2 @ self.R
-            # temp = (RXR @ RZR + RZR @ RXR)
-
-            # # Compute Lambda \ [(W^-T ds) o (W dz)]
-            # Gamma = np.add.outer(self.Lambda, self.Lambda)
-            # temp /= Gamma
-
-            # # Compute W^-1 (Lambda \ [(W^-T ds) o (W dz)])
-            # temp = -self.R_inv.T @ temp @ self.R_inv
-            # return temp
-        
-    def grad_similar(self):
-        temp = np.eye(self.n)
-
-        # Compute Lambda \ e
-        Gamma = np.add.outer(self.Lambda, self.Lambda)
-        temp *= 2 / Gamma
-
-        # Compute W^-1 (Lambda \ e)
-        temp = self.R_inv.T @ temp @ self.R_inv
-        return temp
     
     def prox(self):
         assert self.feas_updated
@@ -241,19 +216,16 @@ class Cone():
     def nt_congr(self, A):
         if not self.nt_aux_updated:
             self.nt_aux()
-        
         return self.base_congr(A, self.W_inv, self.R_inv.T)
 
     def invnt_congr(self, A):
         if not self.nt_aux_updated:
             self.nt_aux()
-        
         return self.base_congr(A, self.W, self.R)
 
     def hess_congr(self, A):
         if not self.grad_updated:
-            self.get_grad()        
-                    
+            self.get_grad()
         return self.base_congr(A, self.X_inv, self.X_chol_inv)
 
     def invhess_congr(self, A):
@@ -311,29 +283,75 @@ class Cone():
             XX = X_sub * X_sub.T
             return self.A_nz @ XX @ self.A_nz.T
 
-    
-    def comb_dir(self, dS, dZ, sigma, mu):
+    def comb_dir(self, out, dS, dZ, sigma_mu):
+        # Compute the residual for rs where rs is given as the lhs of
+        #     Lambda o (W dz + W^-T ds) = -Lambda o Lambda - (W^-T ds_a) o (W dz_a) 
+        #                                 + sigma * mu * I
+        # which is rearranged into the form H ds + dz = rs, i.e.,
+        #     rs := W^-1 [ Lambda \ (-Lambda o Lambda - (W^-T ds_a) o (W dz_a) + sigma*mu I) ]
+        # See: [Section 5.4]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf
+
         if not self.nt_aux_updated:
-            self.nt_aux()
+            self.nt_aux()        
 
-        # V = W^-T x = W z where W z = R^T Z R
-        V = self.R.T @ self.Z @ self.R
+        # Compute (W^-T ds_a) o (W dz_a) = (R^-1 dS R^-T) o (R^T dZ R)
+        #                                = 0.5 * ([R^-1 dS dZ R] + [R^T dZ dS R^-T])
+        temp1 = self.R_inv @ dS
+        temp2 = dZ @ self.R
+        temp3 = temp1 @ temp2        
+        np.add(temp3, temp3.T, out=temp1)
+        temp1 *= -0.5
 
-        # lhs = -VoV - (W^-T ds)o(W dz) + sigma*mu*I
-        WdS = self.R_inv @ dS.data @ self.R_inv.T
-        WdZ = self.R.T @ dZ.data @ self.R
-        temp = WdS @ WdZ
+        # Compute -Lambda o Lambda - [ ... ] + sigma*mu I
+        # Note that Lambda is a diagonal matrix
+        temp1.flat[::self.n+1] -= np.square(self.Lambda)
+        temp1.flat[::self.n+1] += sigma_mu
 
-        lhs = -V @ V.T - 0.5*(temp + temp.T) + sigma*mu*np.eye(self.n)
-
-        # Compute Lambda \ [(W^-T ds) o (W dz)]
+        # Compute Lambda \ [ ... ]
+        # Since Lambda is diagonal, the solution to the Sylvester equation 
+        #     find  X  s.t.  0.5 * (Lambda X + X Lambda) = B
+        # is given by
+        #     X = B .* (2 / [Lambda_ii + Lambda_jj]_ij)
         Gamma = np.add.outer(self.Lambda, self.Lambda)
-        lhs *= 2 / Gamma
+        temp1 /= Gamma
 
-        # Compute W^-1 (Lambda \ [(W^-T ds) o (W dz)])
-        temp = self.R_inv.T @ lhs @ self.R_inv
+        # Compute W^-1 [ ... ] = R^-T [... ] R^-1
+        temp = self.R_inv.T @ temp1 @ self.R_inv
+        np.add(temp, temp.T, out=out)
 
-        return (temp + temp.T) * 0.5
+    def step_to_boundary(self, dS, dZ):
+        # Compute the maximum step alpha in [0, 1] we can take such that 
+        #     S + alpha dS >= 0
+        #     Z + alpha dZ >= 0  
+        # See: [Section 8.3]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf
+
+        if not self.nt_aux_updated:
+            self.nt_aux()                
+        Lambda_irt2 = np.reciprocal(np.sqrt(self.Lambda))
+
+        # Compute rho := H(lambda)^1/2 W^-T dS 
+        #              = Lambda^-1/2 R^-1 dS R^-T Lambda^-1/2
+        rho = self.R_inv @ dS @ self.R_inv.T
+        rho *= Lambda_irt2.reshape((-1, 1))
+        rho *= Lambda_irt2.reshape(( 1,-1))
+
+        # Compute sig := H(lambda)^1/2 W dS 
+        #              = Lambda^-1/2 R^T dS R Lambda^-1/2
+        sig = self.R.T @ dZ @ self.R
+        sig *= Lambda_irt2.reshape((-1, 1))
+        sig *= Lambda_irt2.reshape(( 1,-1))        
+
+        # Compute minimum eigenvalues of rho and sig
+        min_eig_rho = sp.linalg.lapack.dsyevr(rho, compute_v=False, range='I', iu=1)[0][0]
+        min_eig_sig = sp.linalg.lapack.dsyevr(sig, compute_v=False, range='I', iu=1)[0][0]
+
+        # Maximum step is given by 
+        #     alpha := 1 / max(0, -min(eig(rho)), -min(eig(sig)))
+        # Clamp this step between 0 and 1
+        if min_eig_rho >= 0 and min_eig_sig >= 0:
+            return 1.
+        else:
+            return 1. / max(-min_eig_rho, -min_eig_sig)
     
 def ragged_to_array(ragged):
     p = len(ragged)

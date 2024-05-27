@@ -28,14 +28,17 @@ def fact(A, fact=None):
                 A_diag = A.diagonal()
                 A.setdiag(np.max([A_diag, np.ones_like(A_diag) * 1e-12], axis=0) * (1 + 1e-8))
         
-    
+    diag_incr = None
     while True:
         try:
             fact = sp.linalg.cho_factor(A, check_finite=False)
             return (fact, "cho")
         except np.linalg.LinAlgError:
-            diag_idx = np.diag_indices_from(A)
-            A[diag_idx] = np.max([A[diag_idx], np.ones_like(A[diag_idx]) * 1e-12], axis=0) * (1 + 1e-8)
+            if diag_incr is None:
+                A_norm = max(np.max(A), -np.min(A))
+                diag_incr = A_norm * np.finfo(A.dtype).eps
+            A.flat[::A.shape[0]+1] += diag_incr
+            diag_incr *= 1e2
 
     # try:
     #     fact = sp.linalg.cho_factor(A)

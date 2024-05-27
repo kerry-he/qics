@@ -107,10 +107,10 @@ class SysSolver():
 
         return
 
-    def solve_sys(self, dir, rhs):
+    def solve_sys(self, dir, rhs, ir=True):
         # Solve system
         self.solve_sys_6(dir, rhs)
-        if self.ir:
+        if self.ir and ir:
             res_norm = self.solve_sys_6_ir(dir, rhs)
         else:
             res_norm = 0.0

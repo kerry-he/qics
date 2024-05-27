@@ -7,7 +7,7 @@ from utils import symmetric as sym
 
 alpha_sched = [0.9999, 0.999, 0.99, 0.9, 0.8, 0.7, 0.5, 0.3, 0.2, 0.1, 0.01, 0.001]
 
-class CombinedStepper():
+class NonSymStepper():
     def __init__(self, syssolver, model):
         self.syssolver = syssolver
         self.prox = 0.0
@@ -164,7 +164,6 @@ class CombinedStepper():
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
             self.rhs.s[k][:] = cone_k.get_grad()
-            # self.rhs.s[k][:] = cone_k.grad_similar()
         self.rhs.s.vec *= -rtmu
         self.rhs.s.vec -= point.z.vec
 

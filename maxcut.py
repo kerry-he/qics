@@ -9,11 +9,11 @@ from solver import model, solver
 
 np.random.seed(1)
 
-n = 100
+n = 1000
 
 A_is = [i for i in range(n)]
 A_js = [i + i*n for i in range(n)]
-A_vs = [1 for i in range(n)]
+A_vs = [1. for i in range(n)]
 A = sp.sparse.csr_array((A_vs, (A_is, A_js)), shape=(n, n*n))
 
 b = np.ones((n, 1))
@@ -22,9 +22,9 @@ C = C + C.T
 c = C.reshape((-1, 1))
 
 cones = [possemidefinite.Cone(n)]
-# model = model.Model(c=c,  A=A,   b=b, cones=cones)
-model = model.Model(c=-b, G=A.T, h=c, cones=cones)
-solver = solver.Solver(model, sym=True, ir=False)
+model = model.Model(c=c,  A=A,   b=b, cones=cones)
+# model = model.Model(c=-b, G=A.T, h=c, cones=cones)
+solver = solver.Solver(model, sym=True, ir=True)
 
 profiler = cProfile.Profile()
 profiler.enable()

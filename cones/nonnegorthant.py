@@ -114,5 +114,29 @@ class Cone():
     def nt_mtx(self):
         return (self.z / self.x).reshape((-1,))
     
-    def comb_dir(self, dS, dZ, sigma, mu):
-        return -self.z - dS*dZ/self.x + sigma*mu/self.x
+    def comb_dir(self, out, ds, dz, sigma_mu):
+        # Compute the residual for rs where rs is given as the lhs of
+        #     Lambda o (W dz + W^-T ds) = -Lambda o Lambda - (W^-T ds_a) o (W dz_a) 
+        #                                 + sigma * mu * 1
+        # which is rearranged into the form H ds + dz = rs, i.e.,
+        #     rs := W^-1 [ Lambda \ (-Lambda o Lambda - (W^-T ds_a) o (W dz_a) + sigma*mu 1) ]
+        # See: [Section 5.4]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf        
+        out[:] = (sigma_mu - ds*dz) / self.x - self.z
+    
+    def step_to_boundary(self, ds, dz):
+        # Compute the maximum step alpha in [0, 1] we can take such that 
+        #     s + alpha ds >= 0
+        #     z + alpha dz >= 0  
+        # See: [Section 8.3]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf
+
+        # Compute rho := ds / s and sig := dz / z
+        min_rho = np.min(ds / self.x)
+        min_sig = np.min(dz / self.z)
+
+        # Maximum step is given by 
+        #     alpha := 1 / max(0, -min(rho), -min(sig))
+        # Clamp this step between 0 and 1        
+        if min_rho >= 0 and min_sig >= 0:
+            return 1.
+        else:
+            return 1. / max(-min_rho, -min_sig)

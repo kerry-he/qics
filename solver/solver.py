@@ -7,8 +7,8 @@ from utils import linear as lin
 from utils import vector as vec
 from solver.stepper.basic import BasicStepper
 from solver.stepper.aggressive import AggressiveStepper
-from solver.stepper.comb import CombinedStepper
-from solver.stepper.cvxopt import CVXOPTStepper
+from solver.stepper.nonsym import NonSymStepper
+from solver.stepper.sym import SymStepper
 from solver.syssolver import SysSolver
 
 from utils import symmetric as sym
@@ -24,7 +24,6 @@ class Solver():
         tol_infeas = 1e-12,
         tol_ip = 1e-13,
         verbose  = True,
-        stepper = None,
         ir = True,
         sym = False
     ):
@@ -42,7 +41,7 @@ class Solver():
 
         self.model = model
         syssolver = SysSolver(model, ir=ir, sym=sym)
-        self.stepper = CombinedStepper(syssolver, model) if (stepper is None) else CVXOPTStepper(syssolver, model)
+        self.stepper = NonSymStepper(syssolver, model) if (sym is False) else SymStepper(syssolver, model)
 
         return
     
@@ -332,17 +331,18 @@ class Solver():
             (self.tau_res - self.tau_res_backup) / (self.tau_res_backup + eps)
         ])        
 
-        if improv < 1e-3:
-            self.status = "slow_progress"
-            if self.verbose:
-                print("Detected slow progress")
-            return True
+        # SLow progress detection is kind of bad
+        # if improv < 1e-3:
+        #     self.status = "slow_progress"
+        #     if self.verbose:
+        #         print("Detected slow progress")
+        #     return True
         
-        #TODO: Improve this so that we can keep iterating until the overall gap and feasibilities are worse than before
-        if degrad > 1e1 and max([self.x_feas, self.y_feas, self.z_feas]) < 1e-4:
-            self.status = "slow_progress"
-            if self.verbose:
-                print("Detected slow progress")
-            return True
+        # #TODO: Improve this so that we can keep iterating until the overall gap and feasibilities are worse than before
+        # if degrad > 1e1 and max([self.x_feas, self.y_feas, self.z_feas]) < 1e-4:
+        #     self.status = "slow_progress"
+        #     if self.verbose:
+        #         print("Detected slow progress")
+        #     return True
         
         return False
