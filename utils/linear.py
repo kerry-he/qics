@@ -40,13 +40,6 @@ def fact(A, fact=None):
             A.flat[::A.shape[0]+1] += diag_incr
             diag_incr *= 1e2
 
-    # try:
-    #     fact = sp.linalg.cho_factor(A)
-    #     return (fact, "cho")
-    # except np.linalg.LinAlgError:
-    #     fact = sp.linalg.lu_factor(A)
-    #     return (fact, "lu")
-
 def fact_solve(A, x):
     # Factor solve for either Cholesky or LU factorization of A
     (fact, type) = A

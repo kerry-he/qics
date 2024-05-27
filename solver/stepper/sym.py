@@ -19,6 +19,7 @@ class SymStepper():
         return
     
     def step(self, model, point, xyztau_res, mu, verbose):
+        # Step 1: Pre-build and -factor Schur complement matrix 
         self.syssolver.update_lhs(model, point, mu)
 
         # Step 2: Get affine direction

@@ -112,7 +112,7 @@ if __name__ == "__main__":
     import os, csv
 
     # fnames = os.listdir("./problems/sdp/")
-    fnames = ["arch0.dat-s"]
+    fnames = ["control6.dat-s"]
 
     fout_name = 'data.csv'
     with open(fout_name, 'w', newline='') as file:
@@ -120,6 +120,9 @@ if __name__ == "__main__":
         writer.writerow(["problem", "solver", "status", "optval", "time", "iter", "gap", "pfeas", "dfeas"])
 
     for fname in fnames:
+        # ==============================================================
+        # Read problem data
+        # ==============================================================
         C_sdpa, b_sdpa, A_sdpa, blockStruct = read_sdpa("./problems/sdp/" + fname)
         
         # Vectorize C
@@ -147,31 +150,41 @@ if __name__ == "__main__":
                 c[t : t+dims[i], 0] = Ci
             t += dims[i]
         c *= -1
-                
+
+        # ==============================================================
+        # Our algorithm
+        # ==============================================================
         # mdl = model.Model(c=-b, G=A.T, h=c, cones=cones)
         mdl = model.Model(c=c, A=A, b=b, cones=cones)
         slv = solver.Solver(mdl, sym=True, ir=True)
 
         # profiler = cProfile.Profile()
         # profiler.enable()
-
         slv.solve()
-
         # profiler.disable()
         # profiler.dump_stats("example.stats")    
 
         with open(fout_name, 'a', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow([fname, "comb", slv.status, slv.p_obj, slv.solve_time, slv.num_iters, slv.gap, max(slv.y_feas, slv.z_feas), slv.x_feas])        
+            writer.writerow([fname, "ours", slv.status, slv.p_obj, slv.solve_time, slv.num_iters, slv.gap, max(slv.y_feas, slv.z_feas), slv.x_feas])        
 
-        # sol = cvxopt_solve_sdp(C_sdpa, b, A, blockStruct)
+        # ==============================================================
+        # CVXOPT
+        # ==============================================================
+        sol = cvxopt_solve_sdp(C_sdpa, b, A, blockStruct)
 
-        # profiler.disable()
-        # profiler.dump_stats("example1.stats")        
+        with open(fout_name, 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([fname, "cvxopt", sol['status'], sol['obj'], sol['time'], sol['iter'], sol['gap'], sol['pfeas'], sol['dfeas']])        
 
-        # print("optval: ", sol['primal']) 
-        # print("time:   ", sol['time'])   
+        print("optval: ", sol['gap']) 
+        print("time:   ", sol['time'])   
 
-        # sol = mosek_solve_sdp(C_sdpa, b, A, blockStruct)
+        # ==============================================================
+        # MOSEK
+        # ==============================================================
+        sol = mosek_solve_sdp(C_sdpa, b, A, blockStruct)
 
-        # sol = clarabel_solve_sdp(C_sdpa, b, A, blockStruct)
+        with open(fout_name, 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([fname, "mosek", sol['status'], sol['obj'], sol['time'], sol['iter'], sol['gap'], sol['pfeas'], sol['dfeas']])        

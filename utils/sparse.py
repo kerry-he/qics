@@ -23,4 +23,7 @@ def abs_max(A, axis):
         A.data = np.abs(A.data)
         return A.max(axis=axis).toarray().reshape(-1)
     else:
-        return np.maximum(A.max(axis=axis), -A.min(axis=axis))
+        return np.maximum(
+            A.max(axis=axis, initial=0.0), 
+           -A.min(axis=axis, initial=0.0)
+        )

@@ -38,7 +38,7 @@ profiler.dump_stats("example.stats")
 from utils.other_solvers import cvxopt_solve_sdp, mosek_solve_sdp
 
 sol = cvxopt_solve_sdp([-C], b, A, [n])
-print("optval: ", sol['primal']) 
+print("optval: ", sol['gap']) 
 print("time:   ", sol['time'])   
 
 sol = mosek_solve_sdp([-C], b, A, [n])

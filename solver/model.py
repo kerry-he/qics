@@ -70,6 +70,11 @@ class Model():
             sparse.abs_max(self.G, axis=1)
         ])
 
+        # Ensure there are no divide by zeros
+        self.c_scale[self.c_scale < np.finfo(self.c_scale.dtype).eps] = 1.
+        self.b_scale[self.b_scale < np.finfo(self.b_scale.dtype).eps] = 1.
+        self.h_scale[self.h_scale < np.finfo(self.h_scale.dtype).eps] = 1.
+
         # Rescale data
         self.c /= self.c_scale.reshape((-1, 1))
         self.b /= self.b_scale.reshape((-1, 1))

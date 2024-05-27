@@ -188,7 +188,7 @@ class Cone():
             self.As = []
             
             for i in range(A.shape[0]):
-                Ai = A[i].reshape((self.n, self.n))
+                Ai = A[i].reshape((self.n, self.n)).tocsr()
                 self.As.append(Ai)
 
                 if sp.sparse.issparse(Ai) and Ai.nnz < 10:
@@ -249,7 +249,8 @@ class Cone():
                     XAjX = X @ AjX
                     out[ts, t] = np.sum(XAjX[self.A_sp_rows[:j+1], self.A_sp_cols[:j+1]] * self.A_sp_data[:j+1], 1)
             
-            lhs = np.zeros((self.dim, len(self.A_ds_idxs)))
+            # lhs = np.zeros((self.dim, len(self.A_ds_idxs)))
+            lhs = np.zeros((len(self.A_ds_idxs), self.dim))
             
             # Compute SPARSE x DENSE
             if len(self.A_sp_idxs) > 0 and len(self.A_ds_idxs) > 0:
@@ -260,17 +261,17 @@ class Cone():
                     out[self.A_sp_idxs, t] = np.sum(XAjX[self.A_sp_rows, self.A_sp_cols] * self.A_sp_data, 1)
                     out[t, self.A_sp_idxs] = out[self.A_sp_idxs, t]
                 
-                    lhs[:, j] = XAjX.flat
+                    lhs[j] = XAjX.ravel()
                     
-                out[np.ix_(self.A_ds_idxs, self.A_ds_idxs)] = self.A_ds_mtx @ lhs
+                out[np.ix_(self.A_ds_idxs, self.A_ds_idxs)] = self.A_ds_mtx @ lhs.T
                 
             # Compute DENSE x DENSE
             if len(self.A_ds_idxs) > 0 and len(self.A_sp_idxs) == 0:
                 for (j, t) in enumerate(self.A_ds_idxs):
                     AjX       = self.As[j] @ X_rt2
                     XAjX      = X_rt2.conj().T @ AjX
-                    lhs[:, j] = XAjX.flat   
-                out = lhs.T @ lhs
+                    lhs[j] = XAjX.ravel()
+                out = lhs @ lhs.T
                 
             return out
 

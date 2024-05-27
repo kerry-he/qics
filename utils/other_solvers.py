@@ -76,12 +76,15 @@ def cvxopt_solve_sdp(C, b, A, blockStruct):
                     hs = hs)
     cvxopt_time = time.time() - t0_cvxopt
 
-    return {'primal': -cvxoptsol['dual objective'],
-            'dual': -cvxoptsol['primal objective'],
-            'x': np.array(cvxoptsol['zs'][0]).ravel(),
-            'y': np.array(cvxoptsol['x']).ravel(),
-            'status': cvxoptsol['status'],
-            'time': cvxopt_time}
+    return {
+        'obj': -cvxoptsol['dual objective'],
+        'status': cvxoptsol['status'],
+        'time': cvxopt_time,
+        'iter': cvxoptsol['iterations'],
+        'gap': cvxoptsol['relative gap'],
+        'dfeas': cvxoptsol['dual infeasibility'],
+        'pfeas': cvxoptsol['primal infeasibility']
+    }
 
 
 def mosek_solve_sdp(C, b, A, blockStruct):
@@ -127,15 +130,18 @@ def mosek_solve_sdp(C, b, A, blockStruct):
     msk_M.objective(ObjectiveSense.Maximize, Expr.add(msk_CX))
     msk_M.setSolverParam("numThreads", 1)
     msk_M.setLogHandler(sys.stdout)
-    msk_t0 = time.perf_counter()
     msk_M.solve()
-    msk_time = time.perf_counter() - msk_t0
     msk_status = msk_M.getProblemStatus()
 
-    return {'primal': msk_M.primalObjValue(), 
-            'dual': msk_M.dualObjValue(), 
-            'time': msk_time, 
-            'status': msk_status}
+    return {
+        'obj': msk_M.primalObjValue(), 
+        'time': msk_M.getSolverDoubleInfo("intpntTime"), 
+        'status': msk_status,
+        'iter': msk_M.getSolverIntInfo("intpntIter"),
+        'gap': msk_M.primalObjValue() - msk_M.dualObjValue(),
+        'dfeas': msk_M.getSolverDoubleInfo("intpntDualFeas"),
+        'pfeas': msk_M.getSolverDoubleInfo("intpntPrimalFeas")
+    }
 
 def clarabel_solve_sdp(c, b, A, blockStruct):
     import cvxpy as cp
