@@ -77,7 +77,7 @@ def cvxopt_solve_sdp(C, b, A, blockStruct):
     cvxopt_time = time.time() - t0_cvxopt
 
     return {
-        'obj': -cvxoptsol['dual objective'],
+        'obj': cvxoptsol['dual objective'],
         'status': cvxoptsol['status'],
         'time': cvxopt_time,
         'iter': cvxoptsol['iterations'],

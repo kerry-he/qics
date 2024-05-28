@@ -28,17 +28,14 @@ def fact(A, fact=None):
                 A_diag = A.diagonal()
                 A.setdiag(np.max([A_diag, np.ones_like(A_diag) * 1e-12], axis=0) * (1 + 1e-8))
         
-    diag_incr = None
+    diag_incr = np.finfo(A.dtype).eps
     while True:
         try:
             fact = sp.linalg.cho_factor(A, check_finite=False)
             return (fact, "cho")
         except np.linalg.LinAlgError:
-            if diag_incr is None:
-                A_norm = max(np.max(A), -np.min(A))
-                diag_incr = A_norm * np.finfo(A.dtype).eps
             A.flat[::A.shape[0]+1] += diag_incr
-            diag_incr *= 1e2
+            diag_incr *= 1e1
 
 def fact_solve(A, x):
     # Factor solve for either Cholesky or LU factorization of A

@@ -65,10 +65,24 @@ class Model():
         ])
 
         # Rescale h
-        self.h_scale = np.maximum.reduce([
-            np.abs(self.h.reshape(-1)),
-            sparse.abs_max(self.G, axis=1)
-        ])
+        # Note we can only scale each cone by a positive factor, and 
+        # we can't scale each individual variable by a different factor
+        # (except for the nonnegative orthant)
+        self.h_scale = np.zeros(self.q)
+        h_absmax = np.abs(self.h.reshape(-1))
+        G_absmax_row = sparse.abs_max(self.G, axis=1)
+        for (k, cone_k) in enumerate(self.cones):
+            idxs = self.cone_idxs[k]
+            if isinstance(cone_k, nonnegorthant.Cone):
+                self.h_scale[idxs] = np.maximum.reduce([
+                    h_absmax[idxs],
+                    G_absmax_row[idxs]
+                ])
+            else:
+                self.h_scale[idxs] = np.max([
+                    h_absmax[idxs],
+                    G_absmax_row[idxs]
+                ])
 
         # Ensure there are no divide by zeros
         self.c_scale[self.c_scale < np.finfo(self.c_scale.dtype).eps] = 1.

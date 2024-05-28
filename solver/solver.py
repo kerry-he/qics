@@ -38,6 +38,8 @@ class Solver():
         self.point_best = vec.Point(model)
 
         self.small_step_tol = 0.005
+        self.consecutive_small_step_limit = 2
+        self.consecutive_small_steps = 0
         
         self.solution_status = None
         self.exit_status = None
@@ -186,8 +188,12 @@ class Solver():
             
         # 7) Check if progress is slow or degrading at high tolerance
         if alpha <= self.small_step_tol:
-            self.exit_status = "slow_progress"
-            return True
+            self.consecutive_small_steps += 1
+            if self.consecutive_small_steps >= self.consecutive_small_step_limit:
+                self.exit_status = "slow_progress"
+                return True
+        else:
+            self.consecutive_small_steps = 0
 
         return False
 
