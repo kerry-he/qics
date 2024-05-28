@@ -9,19 +9,17 @@ from solver.stepper.nonsym import NonSymStepper
 from solver.stepper.sym import SymStepper
 from solver.syssolver import SysSolver
 
-from utils import symmetric as sym
-
 class Solver():
     def __init__(
         self, 
         model, 
-        max_iter = 1000, 
+        max_iter = 100, 
         max_time = np.inf,
         tol_gap = 1e-8,
         tol_feas = 1e-8,
         tol_infeas = 1e-12,
-        near_tol = 1e3,
         tol_ip = 1e-13,
+        tol_near = 1e3,
         verbose  = True,
         ir = True,
         sym = False
@@ -34,7 +32,7 @@ class Solver():
         self.tol_feas = tol_feas
         self.tol_infeas = tol_infeas
         self.tol_ip = tol_ip
-        self.near_tol = near_tol
+        self.tol_near = tol_near
 
         self.point = vec.Point(model)
         self.point_best = vec.Point(model)
@@ -84,13 +82,22 @@ class Solver():
             self.copy_solver_data()
             self.retrieve_best_data()
 
-            self.solution_status = "not_optimal"
+            self.solution_status = "unknown"
 
-            if self.gap <= self.tol_gap * self.near_tol:
-                if self.x_feas <= self.tol_feas * self.near_tol:
-                    if self.y_feas <= self.tol_feas * self.near_tol: 
-                        if self.z_feas <= self.tol_feas * self.near_tol:
+            # Check near optimality
+            if self.gap <= self.tol_gap * self.tol_near:
+                if self.x_feas <= self.tol_feas * self.tol_near:
+                    if self.y_feas <= self.tol_feas * self.tol_near: 
+                        if self.z_feas <= self.tol_feas * self.tol_near:
                             self.solution_status = "near_optimal"
+
+            # Check near infeasibility
+            if self.x_infeas <= self.tol_infeas * self.tol_near:
+                self.solution_status = "near_pinfeas"
+
+            if self.y_infeas <= self.tol_infeas * self.tol_near:
+                if self.z_infeas <= self.tol_infeas * self.tol_near:
+                    self.solution_status = "near_dinfeas"
 
 
         if self.verbose:
@@ -147,18 +154,18 @@ class Solver():
 
         # 2) Check primal and dual infeasibility
         if self.x_infeas <= self.tol_infeas:
-            self.solution_status = "primal_infeas"
+            self.solution_status = "pinfeas"
             self.exit_status = "solved"
             return True       
 
         if self.y_infeas <= self.tol_infeas and self.z_infeas <= self.tol_infeas:
-            self.solution_status = "dual_infeas"
+            self.solution_status = "dinfeas"
             self.exit_status = "solved"
             return True            
             
         # 3) Check ill-posedness
-        if self.mu <= self.tol_ip and self.point.tau <= self.tol_ip * min([1., self.point.kap]):
-            self.solution_status = "ill_posed"
+        if self.illposed_res <= self.tol_ip:
+            self.solution_status = "illposed"
             self.exit_status = "solved"
             return True
         
@@ -244,15 +251,21 @@ class Solver():
         self.x_res  = model.A_T @ y
         self.x_res += model.G_T @ z
         self.x_res *= -1
-
         self.y_res  = model.A @ x
-
         self.z_res  = model.G @ x
         self.z_res += s
 
-        self.x_infeas =  lin.norm_inf(self.x_res) / d_obj_tau if (d_obj_tau > 0) else np.inf
-        self.y_infeas = -lin.norm_inf(self.y_res) / p_obj_tau if (p_obj_tau < 0) else np.inf
-        self.z_infeas = -lin.norm_inf(self.z_res) / p_obj_tau if (p_obj_tau < 0) else np.inf
+        norm_x_res = lin.norm_inf(self.x_res)
+        norm_y_res = lin.norm_inf(self.x_res)
+        norm_z_res = lin.norm_inf(self.x_res)
+
+        self.x_infeas =  norm_x_res / d_obj_tau if (d_obj_tau > 0) else np.inf
+        self.y_infeas = -norm_y_res / p_obj_tau if (p_obj_tau < 0) else np.inf
+        self.z_infeas = -norm_z_res / p_obj_tau if (p_obj_tau < 0) else np.inf
+
+        # Get ill posedness certificates
+        norm_xyzs = max(lin.norm_inf(x), lin.norm_inf(y), lin.norm_inf(z), lin.norm_inf(s))
+        self.illposed_res = max(norm_x_res, norm_y_res, norm_z_res) / norm_xyzs if (norm_xyzs > 0) else np.inf
 
         # Get primal and dual feasibilities
         self.x_res   = sp.linalg.blas.daxpy(c, self.x_res, a=-tau)

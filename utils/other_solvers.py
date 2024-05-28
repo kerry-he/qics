@@ -134,11 +134,11 @@ def mosek_solve_sdp(C, b, A, blockStruct):
     msk_status = msk_M.getProblemStatus()
 
     return {
-        'obj': msk_M.primalObjValue(), 
+        'obj': msk_M.getSolverDoubleInfo("intpntPrimalObj"), 
         'time': msk_M.getSolverDoubleInfo("intpntTime"), 
         'status': msk_status,
         'iter': msk_M.getSolverIntInfo("intpntIter"),
-        'gap': msk_M.primalObjValue() - msk_M.dualObjValue(),
+        'gap': msk_M.getSolverDoubleInfo("intpntPrimalObj") - msk_M.getSolverDoubleInfo("intpntDualObj"),
         'dfeas': msk_M.getSolverDoubleInfo("intpntDualFeas"),
         'pfeas': msk_M.getSolverDoubleInfo("intpntPrimalFeas")
     }
