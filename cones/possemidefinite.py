@@ -232,8 +232,8 @@ class Cone():
                 if len(self.A_ds_idxs) > 0:
                     A_sp_lil = self.A_sp.tolil()
                     self.A_sp_data = ragged_to_array([np.array(data_k)           for data_k in A_sp_lil.data])
-                    self.A_sp_cols = ragged_to_array([np.array(idxs_k)  % self.n for idxs_k in A_sp_lil.rows])
-                    self.A_sp_rows = ragged_to_array([np.array(idxs_k) // self.n for idxs_k in A_sp_lil.rows])
+                    self.A_sp_cols = ragged_to_array([np.array(idxs_k, dtype=int)  % self.n for idxs_k in A_sp_lil.rows])
+                    self.A_sp_rows = ragged_to_array([np.array(idxs_k, dtype=int) // self.n for idxs_k in A_sp_lil.rows])
             else:
                 # 2) Otherwise, we will compute AHA_ij = <A_i, X A_j X> by
                 #     a) For all j, compute X A_j X by doing one sparse and one dense matrix multiplication

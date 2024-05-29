@@ -38,7 +38,7 @@ class Solver():
         self.point_best = vec.Point(model)
 
         self.small_step_tol = 0.005
-        self.consecutive_small_step_limit = 2
+        self.consecutive_small_step_limit = 1
         self.consecutive_small_steps = 0
         
         self.solution_status = None

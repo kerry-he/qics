@@ -39,10 +39,10 @@ class Model():
             self.G_T_views = [self.G_T[:, idxs_k] for idxs_k in self.cone_idxs]
         elif self.use_A:
             # After rescaling, G is some easily invertible square diagonal matrix
-            self.G_inv = np.reciprocal(self.G.diagonal()).reshape((-1, 1))
-
-            G_inv_A = sparse.scale_axis(self.A.copy(), scale_cols=self.G_inv)
-            self.G_inv_A_views = [G_inv_A[:, idxs_k] for idxs_k in self.cone_idxs]
+            self.G_inv = -self.c_scale.reshape((-1, 1))
+            self.A_invG = sparse.scale_axis(self.A.copy(), scale_cols=self.G_inv)
+            self.A_invG_T = self.A_invG.T.tocsr() if sp.sparse.issparse(self.A_invG) else self.A_invG.T
+            self.A_invG_views = [self.A_invG[:, idxs_k] for idxs_k in self.cone_idxs]
 
         self.sym = True
         for cone_k in cones:

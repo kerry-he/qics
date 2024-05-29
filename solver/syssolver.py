@@ -94,9 +94,9 @@ class SysSolver():
             if self.AHA_is_sparse:
                 self.H_inv, _, _ = blk_invhess_mtx(model, self.Hrows, self.Hcols)
                 self.H,     _, _ = blk_hess_mtx(model, self.Hrows, self.Hcols)
-                AHA = (model.A @ self.H_inv @ model.A_T).toarray()
+                AHA = (model.A_invG @ self.H_inv @ model.A_invG_T).toarray()
             else:
-                AHA = blk_invhess_congruence(model.G_inv_A_views, model, self.sym)
+                AHA = blk_invhess_congruence(model.A_invG_views, model, self.sym)
             
             self.AHA_fact = lin.fact(AHA, self.AHA_fact)
 
