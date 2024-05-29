@@ -94,82 +94,11 @@ class Cone():
         out *= 0.5
         return out
     
-    def nt_prod_ip(self, out, H):
-        if not self.nt_aux_updated:
-            self.nt_aux()
-        WHW = self.W_inv @ H @ self.W_inv
-        np.add(WHW, WHW.T, out=out)
-        out *= 0.5
-    
-    def invnt_prod_ip(self, out, H):
-        if not self.nt_aux_updated:
-            self.nt_aux()
-        WHW = self.W @ H @ self.W
-        np.add(WHW, WHW.T, out=out)
-        out *= 0.5    
-    
-    def third_dir_deriv(self, dir1, dir2=None):
-        if not self.grad_updated:
-            self.get_grad()
-        if dir2 is None:
-            XHX_2 = self.X_inv @ dir1 @ self.X_chol_inv.T
-            return -2 * XHX_2 @ XHX_2.T
-        else:
-            PD = dir1 @ dir2
-            XiPD = self.X_inv @ PD
-            return -XiPD - XiPD.T
-    
-    def prox(self):
-        assert self.feas_updated
-        XZX_I = self.X_chol.conj().T @ self.Z @ self.X_chol
-        XZX_I.flat[::self.n+1] -= 1
-        return np.linalg.norm(XZX_I) ** 2
-    
-    def nt_aux(self):
-        assert not self.nt_aux_updated
-        if not self.grad_updated:
-            self.get_grad()   
-
-        # Compute the symmeterized point
-        # Lambda = R' Z R = R^-1 S R^-T
-        RL = self.Z_chol.T @ self.X_chol
-        _, self.Lambda, Vt, _ = sp.linalg.lapack.dgesdd(RL, lwork=self.dgesdd_lwork)
-        D_rt2 = np.sqrt(self.Lambda)
-
-        # Compute the scaling point W = R R'
-        self.R = self.X_chol @ (Vt.T / D_rt2)
-        self.W = self.R @ self.R.T
-
-        self.R_inv = (self.X_chol_inv.T @ (Vt.T * D_rt2)).T
-        self.W_inv = self.R_inv.T @ self.R_inv
-
-        self.nt_aux_updated = True
-    
     def invhess_mtx(self):
         return lin.kron(self.X, self.X)
     
-    def invnt_mtx(self):
-        if not self.nt_aux_updated:
-            self.nt_aux()        
-        return lin.kron(self.W, self.W)
-    
     def hess_mtx(self):
-        return lin.kron(self.X_inv, self.X_inv)
-    
-    def nt_mtx(self):
-        if not self.nt_aux_updated:
-            self.nt_aux()        
-        return lin.kron(self.W_inv, self.W_inv)
-    
-    def nt_congr(self, A):
-        if not self.nt_aux_updated:
-            self.nt_aux()
-        return self.base_congr(A, self.W_inv, self.R_inv.T)
-
-    def invnt_congr(self, A):
-        if not self.nt_aux_updated:
-            self.nt_aux()
-        return self.base_congr(A, self.W, self.R)
+        return lin.kron(self.X_inv, self.X_inv)    
 
     def hess_congr(self, A):
         if not self.grad_updated:
@@ -197,6 +126,22 @@ class Cone():
                 self.A_ds = self.A_ds.toarray()
 
             A_sp_where_nz = np.unique(self.A_sp.indices)
+
+            def ragged_to_array(ragged):
+                p = len(ragged)
+                if p == 0:
+                    return np.array([])
+                
+                ns = [xi.size for xi in ragged]
+                n = max(ns)
+                array = np.zeros((p, n), dtype=ragged[0].dtype)
+                mask = np.ones((p, n), dtype=bool)
+                
+                for i in range(p):
+                    array[i, :ns[i]] = ragged[i]
+                    mask[i, :ns[i]] = 0
+                    
+                return array            
 
             # Two ways we can take advantage of sparsity in constraint matrix A:
             if len(A_sp_where_nz) < self.n ** 1.5:
@@ -348,6 +293,104 @@ class Cone():
             out = lhs @ lhs.T
             
         return out
+    
+    def third_dir_deriv(self, dir1, dir2=None):
+        if not self.grad_updated:
+            self.get_grad()
+        if dir2 is None:
+            XHX_2 = self.X_inv @ dir1 @ self.X_chol_inv.T
+            return -2 * XHX_2 @ XHX_2.T
+        else:
+            PD = dir1 @ dir2
+            XiPD = self.X_inv @ PD
+            return -XiPD - XiPD.T
+    
+    def prox(self):
+        assert self.feas_updated
+        XZX_I = self.X_chol.conj().T @ self.Z @ self.X_chol
+        XZX_I.flat[::self.n+1] -= 1
+        return np.linalg.norm(XZX_I) ** 2    
+
+    # ========================================================================
+    # Functions specific to symmetric cones for NT scaling
+    # ========================================================================
+    # Computes the NT scaling point W and scaled variable Lambda such that
+    #     H(W)[S] = Z  <==> Lambda := P^-T(S) = P(Z)
+    # where H(W) = V^T V. To obtain for for the PSD cone, first let compute the SVD
+    #     U D V^T = Z_chol^T S_chol
+    # Then compute 
+    #     R    := S_chol V D^-1/2     = Z_chol^-T U D^1/2
+    #     R^-1 := D^1/2 V^T S_chol^-1 = D^-1/2 U^T Z_chol^T
+    # Then we can find the scaling point as
+    #     W    := R R^T
+    #           = S^1/2 (S^1/2 Z S^1/2)^-1/2 S^1/2 
+    #           = Z^-1/2 (Z^1/2 S Z^1/2)^1/2 Z^1/2 (i.e., geometric mean of Z and S)
+    #     W^-1 := R^-T R^-1
+    # and the scaled point as
+    #     Lambda := D
+    # Also, we have the linear transformations given by
+    #     H(W)[S] = W^-1 S W^-1
+    #     P^-T(S) = R^-1 S R^-T
+    #     P(Z)    = R^T Z R
+    # See: [Section 4.3]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf
+
+    def nt_aux(self):
+        assert not self.nt_aux_updated
+        if not self.grad_updated:
+            self.get_grad()   
+
+        # Take the SVD of Z_chol^T S_chol to get scaled point Lambda := D
+        RL = self.Z_chol.T @ self.X_chol
+        _, self.Lambda, Vt, _ = sp.linalg.lapack.dgesdd(RL, lwork=self.dgesdd_lwork)
+        D_rt2 = np.sqrt(self.Lambda)
+
+        # Compute the scaling point as
+        #    R := S_chol V D^-1/2, and
+        #    W := R R^T
+        self.R = self.X_chol @ (Vt.T / D_rt2)
+        self.W = self.R @ self.R.T
+
+        # Compute the inverse scaling point as
+        #     R^-1 := D^1/2 V^T S_chol^-1, and
+        #     W^-1 := R^-T R^-1
+        self.R_inv = (self.X_chol_inv.T @ (Vt.T * D_rt2)).T
+        self.W_inv = self.R_inv.T @ self.R_inv
+
+        self.nt_aux_updated = True
+
+    def nt_prod_ip(self, out, H):
+        if not self.nt_aux_updated:
+            self.nt_aux()
+        WHW = self.W_inv @ H @ self.W_inv
+        np.add(WHW, WHW.T, out=out)
+        out *= 0.5
+    
+    def invnt_prod_ip(self, out, H):
+        if not self.nt_aux_updated:
+            self.nt_aux()
+        WHW = self.W @ H @ self.W
+        np.add(WHW, WHW.T, out=out)
+        out *= 0.5    
+
+    def invnt_mtx(self):
+        if not self.nt_aux_updated:
+            self.nt_aux()        
+        return lin.kron(self.W, self.W)
+    
+    def nt_mtx(self):
+        if not self.nt_aux_updated:
+            self.nt_aux()        
+        return lin.kron(self.W_inv, self.W_inv)
+    
+    def nt_congr(self, A):
+        if not self.nt_aux_updated:
+            self.nt_aux()
+        return self.base_congr(A, self.W_inv, self.R_inv.T)
+
+    def invnt_congr(self, A):
+        if not self.nt_aux_updated:
+            self.nt_aux()
+        return self.base_congr(A, self.W, self.R)
 
     def comb_dir(self, out, dS, dZ, sigma_mu):
         # Compute the residual for rs where rs is given as the lhs of
@@ -387,11 +430,9 @@ class Cone():
 
     def step_to_boundary(self, dS, dZ):
         # Compute the maximum step alpha in [0, 1] we can take such that 
-        #     S + alpha dS >= 0  eig(I + alpha dS) = 1/(-eig_min(dS)) >=  alpha 
+        #     S + alpha dS >= 0
         #     Z + alpha dZ >= 0  
         # See: [Section 8.3]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf
-
-        # Solve directly using generalized eigenvalue problem
 
         if not self.nt_aux_updated:
             self.nt_aux()                
@@ -420,20 +461,3 @@ class Cone():
             return 1.
         else:
             return 1. / max(-min_eig_rho, -min_eig_sig)
-    
-def ragged_to_array(ragged):
-    p = len(ragged)
-    if p == 0:
-        return np.array([])
-    
-    
-    ns = [xi.size for xi in ragged]
-    n = max(ns)
-    array = np.zeros((p, n), dtype=ragged[0].dtype)
-    mask = np.ones((p, n), dtype=bool)
-    
-    for i in range(p):
-        array[i, :ns[i]] = ragged[i]
-        mask[i, :ns[i]] = 0
-        
-    return array
