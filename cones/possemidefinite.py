@@ -188,16 +188,14 @@ class Cone():
                 # Get indices of sparse matrices so we can do efficient inner product
                 # AND turn rows of A in to sparse matrices Ai
                 if (len(A_sp_where_nz) >= self.n ** 1.5) or (len(self.A_ds_idxs) > 0):
-                    self.Ai_sp = []
-                    self.A_sp_data = []
-                    self.A_sp_cols = []
-                    self.A_sp_rows = []
-                    for i in self.A_sp_idxs:
-                        Ai = A[i].reshape((self.n, self.n))
-                        self.Ai_sp.append(Ai.tocsr())
-                        self.A_sp_data.append(Ai.data)
-                        self.A_sp_cols.append(Ai.col)
-                        self.A_sp_rows.append(Ai.row)
+                    A_sp_lil = self.A_sp.tolil()
+                    self.A_sp_data = [np.array(data_k)           for data_k in A_sp_lil.data]
+                    self.A_sp_cols = [np.array(idxs_k, dtype=int)  % self.n for idxs_k in A_sp_lil.rows]
+                    self.A_sp_rows = [np.array(idxs_k, dtype=int) // self.n for idxs_k in A_sp_lil.rows]
+                    self.Ai_sp = [sp.sparse.csr_array((data, (row, col)), shape=(self.n, self.n))
+                                  for (data, row, col) in zip(self.A_sp_data, self.A_sp_cols, self.A_sp_rows)]
+                    
+                    # Fix ragged arrays
                     self.A_sp_data = ragged_to_array(self.A_sp_data)
                     self.A_sp_cols = ragged_to_array(self.A_sp_cols)
                     self.A_sp_rows = ragged_to_array(self.A_sp_rows)
