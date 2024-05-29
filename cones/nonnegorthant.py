@@ -6,135 +6,133 @@ class Cone():
     def __init__(self, dim):
         # Dimension properties
         self.dim = dim
-        self.grad = lin.Real(self.dim)
-        
+        self.type = ['r']
+
+        self.Ax = None
+
         self.congr_aux_updated = False
         return
-    
-    def zeros(self):
-        return lin.Real(self.dim)
-        
+
     def get_nu(self):
         return self.dim
     
     def set_init_point(self):
         self.set_point(
-            lin.Real(np.ones((self.dim, 1))), 
-            lin.Real(np.ones((self.dim, 1)))
+            np.ones((self.dim, 1)), 
+            np.ones((self.dim, 1))
         )
-        return lin.Real(self.x)
-    
+        return self.x
+
     def set_point(self, point, dual=None, a=True):
-        self.x = point.data * a
-        self.z = dual.data * a
+        self.x = point * a
+        self.z = dual * a
         return
-    
+
     def get_feas(self):
         return np.all(np.greater(self.x, 0)) and np.all(np.greater(self.z, 0))
-    
+
     def get_val(self):
         return -np.sum(np.log(self.x))    
-    
+
     def get_grad(self):
-        self.grad.data = -np.reciprocal(self.x)
-        return self.grad
+        return -np.reciprocal(self.x)
 
     def hess_prod_ip(self, out, H):
-        out.data = H.data / (self.x**2)
+        out[:] = H / (self.x**2)
         return out    
 
     def invhess_prod_ip(self, out, H):
-        out.data = H.data * (self.x**2)
+        out[:] = H * (self.x**2)
         return out
-    
-    def third_dir_deriv(self, dir1, dir2=None):
-        if dir2 is None:
-            return lin.Real(-2 * (dir1.data*dir1.data) / (self.x*self.x*self.x))
-        else:
-            return lin.Real(-2 * dir1.data * dir2.data / self.x)
-    
-    def prox(self):
-        return np.linalg.norm(self.x * self.z - 1, np.inf)
-        
-    def nt_prod_ip(self, out, H):
-        out.data = H.data * self.z / self.x
-        return out
-    
-    def invnt_prod_ip(self, out, H):
-        out.data = H.data * self.x / self.z
-        return out        
 
-    def congr_aux(self, A):
-        assert not self.congr_aux_updated
-        # Check if A matrix is sparse, and build data, col, row arrays if so
-        p = len(A)
-        n = A[0].data.shape[0]
-        
-        nnz = 0
-        self.A = np.zeros((p, n))
-        for i in range(p):
-            if sp.sparse.issparse(A[i].data):
-                self.A[[i], :] = A[i].data.toarray().T
-                nnz += A[i].data.nnz
-            else:
-                self.A[[i], :] = A[i].data.T
-                nnz += n
-                
-        if nnz < n * p * 0.05:
-            self.A = sp.sparse.csr_matrix(self.A)
-                
-        self.congr_aux_updated = True 
+    def hess_mtx(self):
+        return np.reciprocal(self.x * self.x).reshape((-1,))
+
+    def invhess_mtx(self):
+        return (self.x * self.x).reshape((-1,))    
 
     def hess_congr(self, A):
-        if not self.congr_aux_updated:
-            self.congr_aux(A)
-            
-        if sp.sparse.issparse(self.A):
-            d = sp.sparse.diags_array(np.reciprocal(self.x.ravel()))
-            Ax = d @ self.A.T
-            return sp.sparse.csc_matrix(Ax.T @ Ax)
-        else:
-            Ax = self.A.T / self.x
-            return Ax.T @ Ax     
+        return self.base_congr(A, np.reciprocal(self.x))
 
     def invhess_congr(self, A):
-        if not self.congr_aux_updated:
-            self.congr_aux(A)
-            
-        if sp.sparse.issparse(self.A):
-            d = sp.sparse.diags_array(self.x.ravel())
-            Ax = d @ self.A.T
-            return sp.sparse.csc_matrix(Ax.T @ Ax)
+        return self.base_congr(A, self.x)
+
+    def base_congr(self, A, x):
+        if sp.sparse.issparse(A):
+            if self.Ax is None:
+                self.Ax = A.copy()
+            self.Ax.data = A.data * np.take(x, A.indices)
+            return self.Ax @ self.Ax.T
         else:
-            Ax = self.x * self.A.T
-            return Ax.T @ Ax     
+            Ax = x * A.T
+            return Ax.T @ Ax
+
+    def third_dir_deriv(self, dir1, dir2=None):
+        if dir2 is None:
+            return -2 * dir1 * dir1 / (self.x*self.x*self.x)
+        else:
+            return -2 * dir1 * dir2 / self.x
+
+    def prox(self):
+        return np.linalg.norm(self.x * self.z - 1, np.inf)
+
+    # ========================================================================
+    # Functions specific to symmetric cones for NT scaling
+    # ========================================================================
+    # We want the NT scaling point w and scaled variable lambda such that
+    #     H(w) s = z  <==> lambda := W^-T s = W z
+    # where H(w) = W^T W. For the nonnegative orthant, we have
+    #     w      = s.^1/2 ./ z.^1/2
+    #     lambda = z.^1/2 .* s.^1/2
+    # Also, we have the linear transformations given by
+    #     H(w) ds = ds .* s ./ z
+    #     W^-T ds = ds .* z.^1/2 ./ s.^1/2
+    #     W    dz = dz .* s.^1/2 ./ z.^1/2
+    # See: [Section 4.1]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf
+
+    def nt_prod_ip(self, out, H):
+        out[:] = H * self.z / self.x
+        return out
+
+    def invnt_prod_ip(self, out, H):
+        out[:] = H * self.x / self.z
+        return out
+
+    def nt_mtx(self):
+        return (self.z / self.x).reshape((-1,))
+    
+    def invnt_mtx(self):
+        return (self.x / self.z).reshape((-1,))
 
     def nt_congr(self, A):
-        if not self.congr_aux_updated:
-            self.congr_aux(A)
-            
-        if sp.sparse.issparse(self.A):
-            d = sp.sparse.diags_array(np.sqrt(self.z / self.x).ravel())
-            Ax = d @ self.A.T
-            return sp.sparse.csc_matrix(Ax.T @ Ax)
-        else:
-            Ax = np.sqrt(self.z / self.x) * self.A.T
-            return Ax.T @ Ax 
+        return self.base_congr(A, np.sqrt(self.z / self.x))
 
     def invnt_congr(self, A):
-        if not self.congr_aux_updated:
-            self.congr_aux(A)
-            
-        if sp.sparse.issparse(self.A):
-            d = sp.sparse.diags_array(np.sqrt(self.x / self.z).ravel())
-            Ax = d @ self.A.T
-            return sp.sparse.csc_matrix(Ax.T @ Ax)
-        else:
-            Ax = np.sqrt(self.x / self.z) * self.A.T
-            return Ax.T @ Ax 
+        return self.base_congr(A, np.sqrt(self.x / self.z))    
 
-    def sp_invhess_congr(self, A, sp_is, sp_js):
-        return self.invnt_congr(A)
-        
-    def sp_invnt_congr(self, A, sp_is, sp_js):
-        return self.invnt_congr(A)
+    def comb_dir(self, out, ds, dz, sigma_mu):
+        # Compute the residual for rs where rs is given as the lhs of
+        #     Lambda o (W dz + W^-T ds) = -Lambda o Lambda - (W^-T ds_a) o (W dz_a) 
+        #                                 + sigma * mu * 1
+        # which is rearranged into the form H ds + dz = rs, i.e.,
+        #     rs := W^-1 [ Lambda \ (-Lambda o Lambda - (W^-T ds_a) o (W dz_a) + sigma*mu 1) ]
+        # See: [Section 5.4]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf        
+        out[:] = (sigma_mu - ds*dz) / self.x - self.z
+    
+    def step_to_boundary(self, ds, dz):
+        # Compute the maximum step alpha in [0, 1] we can take such that 
+        #     s + alpha ds >= 0
+        #     z + alpha dz >= 0  
+        # See: [Section 8.3]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf
+
+        # Compute rho := ds / s and sig := dz / z
+        min_rho = np.min(ds / self.x)
+        min_sig = np.min(dz / self.z)
+
+        # Maximum step is given by 
+        #     alpha := 1 / max(0, -min(rho), -min(sig))
+        # Clamp this step between 0 and 1        
+        if min_rho >= 0 and min_sig >= 0:
+            return 1.
+        else:
+            return 1. / max(-min_rho, -min_sig)
