@@ -116,21 +116,26 @@ class Cone():
         assert not self.congr_aux_updated
 
         if sp.sparse.issparse(A):
+            # Count the number of nonzeros in each row of A / for each Ai
+            # and sort A by number of nonzero elements
+            A_nnz = A.getnnz(1)
+
+            # Split A into 3 groups: 1) sparse; 2) sparse-ish; 3) dense
+            self.A_1_idxs = np.where((A_nnz >  0)               & (A_nnz < self.dim * 0.02) & False)[0]
+            self.A_2_idxs = np.where((A_nnz >= self.dim * 0.02) & (A_nnz < self.dim * 0.2)  | True)[0]
+            self.A_3_idxs = np.where((A_nnz >= self.dim * 0.2)                              & False)[0]
+
+            self.A_2_idxs = np.where((A_nnz >  0))[0]
+
+            # # Sort each of these by the number of nonzero entries
+            # self.A_1_idxs = A_1_idxs[np.argsort(A_nnz[A_1_idxs])]
+            # self.A_2_idxs = A_2_idxs[np.argsort(A_nnz[A_2_idxs])]
+            # self.A_3_idxs = A_3_idxs[np.argsort(A_nnz[A_3_idxs])]
+
             # Split A into parts which are sparse, and those that are dense(-ish)
             self.A_sp_idxs = np.where((A.getnnz(1) <= self.n) & (A.getnnz(1) > 0))[0]
             self.A_sp_idxs = self.A_sp_idxs[np.argsort(A.getnnz(1)[self.A_sp_idxs])]
             self.A_ds_idxs = np.where(A.getnnz(1) > self.n)[0]
-
-            self.AHA_sp_sp_idxs = np.ix_(self.A_sp_idxs, self.A_sp_idxs)
-            self.AHA_ds_ds_idxs = np.ix_(self.A_ds_idxs, self.A_ds_idxs)
-
-            self.A_sp = A[self.A_sp_idxs]
-            self.A_ds = A[self.A_ds_idxs]
-            # If dense(-ish) part of A is sufficiently dense, then turn into a dense array 
-            if self.A_ds.nnz >= (self.A_ds.shape[0]*self.A_ds.shape[1]) ** 0.5:
-                self.A_ds = self.A_ds.toarray()
-
-            A_sp_where_nz = np.unique(self.A_sp.indices)
 
             def ragged_to_array(ragged):
                 p = len(ragged)
@@ -148,74 +153,73 @@ class Cone():
                     
                 return array            
 
-            # Two ways we can take advantage of sparsity in constraint matrix A:
-            if len(A_sp_where_nz) < self.n ** 1.5:
-                # 1) If sparse Ai share an aggregate sparsity pattern, then noting that
-                #        AHA_ij = <A_i, X A_j X> 
-                #               = sum_(a,b,c,d) (Ai)_ab (Aj)_cd X_ac X_db
-                #               = sum_(a,b,c,d) (Ai)_ab (Aj)_cd X_ad X_cb (swap c and d indices, then use symmetry of Aj)
-                #    we only have to sum over all (a,b) and (c,d) that are elements of
-                #    the aggregate sparsity pattern of Ai for all i. Therefore, we have
-                #        AHA = B Z B'
-                #    where
-                #        - B_(i, (a,b)) = (Ai)_ab, 
-                #              i.e., B is a matrix with columns equal to the columns of A 
-                #              corresponding to the aggeregate sparsity pattern of Ai
-                #        - Z_((a,b), (c,d)) = X_ad X_cb
-                #              i.e., Z is a submatrix of the Kronecker product between X and X
-                #              We can construct this matrix by first computing
-                #                  W_((a,b), (c,d)) = X_ad
-                #              then as 
-                #                  W_((a,b), (c,d))^T = W_((c,d), (a,b)) = X_cb
-                #              we have
-                #                  Z_((a,b), (c,d)) = W_((a,b), (c,d)) o W_((a,b), (c,d))^T
-                #              where o denotes elementwise multiplication.
-                self.sp_congr_mode = 0
-
-                # Get structures corresponding to aggregate sparsity structure of matrices Ai
-                self.A_sp_nz = self.A_sp[:, A_sp_where_nz]
-                self.A_sp_is = A_sp_where_nz  % self.n
-                self.A_sp_js = A_sp_where_nz // self.n
-                self.A_sp_is_js = np.ix_(self.A_sp_is, self.A_sp_js)
-
-                # Get indices of sparse matrices so we can do efficient sparse inner products
-                if len(self.A_ds_idxs) > 0:
-                    A_sp_lil = self.A_sp.tolil()
-                    self.A_sp_data = ragged_to_array([np.array(data_k)           for data_k in A_sp_lil.data])
-                    self.A_sp_cols = ragged_to_array([np.array(idxs_k, dtype=int)  % self.n for idxs_k in A_sp_lil.rows])
-                    self.A_sp_rows = ragged_to_array([np.array(idxs_k, dtype=int) // self.n for idxs_k in A_sp_lil.rows])
-            else:
-                # 2) Otherwise, we will compute AHA_ij = <A_i, X A_j X> by
-                #     a) For all j, compute X A_j X by doing one sparse and one dense matrix multiplication
-                #     b) For all i,j, compute sparse inner product <A_i, X A_j, X>
-                self.sp_congr_mode = 1
-
+            # Prepare things we need for Strategy 1:
+            if len(self.A_1_idxs) > 0:
                 # Get indices of sparse matrices so we can do efficient inner product
                 # AND turn rows of A in to sparse matrices Ai
-                A_sp_lil = self.A_sp.tolil()
-                self.A_sp_data = [np.array(data_k)           for data_k in A_sp_lil.data]
-                self.A_sp_cols = [np.array(idxs_k, dtype=int)  % self.n for idxs_k in A_sp_lil.rows]
-                self.A_sp_rows = [np.array(idxs_k, dtype=int) // self.n for idxs_k in A_sp_lil.rows]
-                # self.Ai_sp = [sp.sparse.csr_array((data, (row, col)), shape=(self.n, self.n))
-                #                 for (data, row, col) in zip(self.A_sp_data, self.A_sp_cols, self.A_sp_rows)]
+                triu_indices = np.triu(np.arange(self.dim, dtype=np.int64).reshape((self.n, self.n)) + 1).T.ravel() - 1
+                triu_indices = triu_indices[triu_indices >= 0]
 
-                temp_indices = np.triu(np.arange(self.dim, dtype=np.int64).reshape((self.n, self.n)) + 1).T.ravel() - 1
-                temp_indices = temp_indices[temp_indices >= 0]
-
-                A_sp_lil = self.A_sp[:, temp_indices].tolil()
-                self.A_sp_data = [np.array(data_k)           for data_k in A_sp_lil.data]
-                self.A_sp_cols = [temp_indices[idxs_k] // self.n for idxs_k in A_sp_lil.rows]
-                self.A_sp_rows = [temp_indices[idxs_k] % self.n for idxs_k in A_sp_lil.rows]
+                A_1_lil = A[self.A_1_idxs, triu_indices].tolil()
+                self.A_1_data = [np.array(data_k)               for data_k in A_1_lil.data]
+                self.A_1_cols = [triu_indices[idxs_k] // self.n for idxs_k in A_1_lil.rows]
+                self.A_1_rows = [triu_indices[idxs_k]  % self.n for idxs_k in A_1_lil.rows]
 
                 # Fix ragged arrays
-                self.A_sp_data = ragged_to_array(self.A_sp_data)
-                self.A_sp_cols = ragged_to_array(self.A_sp_cols)
-                self.A_sp_rows = ragged_to_array(self.A_sp_rows)
-                self.A_sp_data[self.A_sp_cols != self.A_sp_rows] *= np.sqrt(2)
-                self.A_sp_nnzs = np.array([data_k.size for data_k in self.A_sp_data], dtype=np.int64)
+                self.A_1_data = ragged_to_array(self.A_1_data)
+                self.A_1_cols = ragged_to_array(self.A_1_cols)
+                self.A_1_rows = ragged_to_array(self.A_1_rows)
+                self.A_1_data[self.A_1_cols != self.A_1_rows] *= np.sqrt(2)
+                self.A_1_nnzs = np.array([data_k.size for data_k in self.A_sp_data], dtype=np.int64)
+
+            if len(self.A_2_idxs) > 0:
+                # Get indices of sparse matrices so we can do efficient inner product
+                # AND turn rows of A into sparse matrices Ai
+                A_2 = A[self.A_2_idxs]
+                A_2_lil = A_2.tolil()
+                A_2_data = [np.array(data_k)                      for data_k in A_2_lil.data]
+                A_2_cols = [np.array(idxs_k, dtype=int)  % self.n for idxs_k in A_2_lil.rows]
+                A_2_rows = [np.array(idxs_k, dtype=int) // self.n for idxs_k in A_2_lil.rows]
+                self.Ai_2 = [sp.sparse.csr_array((data, (row, col)), shape=(self.n, self.n))
+                                for (data, row, col) in zip(A_2_data, A_2_cols, A_2_rows)]                       
+
+                triu_indices = np.triu(np.arange(self.dim, dtype=np.int64).reshape((self.n, self.n)) + 1).ravel() - 1
+                triu_indices = triu_indices[triu_indices >= 0]
+
+                A_2_lil = A_2[:, triu_indices].tolil()
+                self.A_2_data = [np.array(data_k)               for data_k in A_2_lil.data]
+                self.A_2_cols = [triu_indices[idxs_k]  % self.n for idxs_k in A_2_lil.rows]
+                self.A_2_rows = [triu_indices[idxs_k] // self.n for idxs_k in A_2_lil.rows]
+                self.A_2_nnzs = np.array([data_k.size for data_k in self.A_2_data], dtype=np.int64)
+
+                # Get cumulative union of cols and rows
+                cum_A = np.zeros((self.n, self.n))
+                self.A_2_rows_cum = []
+                self.A_2_cols_cum = []
+                self.A_2_nnzs_cum = np.zeros(len(self.A_2_data), dtype=np.int64)              
+                for j in range(len(self.A_2_data)):
+                    # Check if cumulative A already has nonzero entries in nonzero entries of Aj
+                    new_idxs = np.where(cum_A[self.A_2_rows[j], self.A_2_cols[j]] == 0)[0]
+                    new_rows = self.A_2_rows[j][new_idxs]
+                    new_cols = self.A_2_cols[j][new_idxs]
+                    
+                    self.A_2_rows_cum.append(new_rows)
+                    self.A_2_cols_cum.append(new_cols)
+                    self.A_2_nnzs_cum[j] = len(new_rows)
+
+                    cum_A[new_rows, new_cols] += 1
+
+                # Fix ragged arrays
+                self.A_2_data = ragged_to_array(self.A_2_data)
+                self.A_2_cols = ragged_to_array(self.A_2_cols)
+                self.A_2_rows = ragged_to_array(self.A_2_rows)
+                self.A_2_data[self.A_2_cols != self.A_2_rows] *= 2
+
+                self.A_2_rows_cum = ragged_to_array(self.A_2_rows_cum)
+                self.A_2_cols_cum = ragged_to_array(self.A_2_cols_cum)                     
 
             # Turn dense-ish rows of A to either sparse or dense matrices Ai
-            if len(self.A_ds_idxs) > 0:
+            if len(self.A_3_idxs) > 0:
                 self.Ai_ds = []
                 for i in self.A_ds_idxs:
                     Ai = A[i].reshape((self.n, self.n))
@@ -235,13 +239,35 @@ class Cone():
             
         self.congr_aux_updated = True
 
-    # @profile
     def base_congr(self, A, X, X_rt2):
         if not self.congr_aux_updated:
             self.congr_aux(A)
 
         p = A.shape[0]
         out = np.zeros((p, p))
+
+        if len(self.A_2_idxs):
+            
+            # Old method
+            for (j, t) in enumerate(self.A_2_idxs):
+                # Compute X Aj X for sparse Aj
+                ts = self.A_2_idxs[:j+1]
+                AjX  = self.Ai_2[j].dot(X)
+                XAjX = X @ AjX
+
+                # Efficient inner product <Ai, X Aj X> for sparse Ai
+                out[ts, t] = np.sum(XAjX[self.A_2_rows[:j+1], self.A_2_cols[:j+1]] * self.A_2_data[:j+1], 1)
+
+
+            # # New method
+            # # Compute Fi = Ai X
+            # AXs = np.empty((len(self.A_2_idxs), self.n, self.n))
+            # for j in range(len(self.A_2_idxs)):
+            #     AXs[j] = self.Ai_2[j].dot(X)
+            # AHA2(self.A_2_rows, self.A_2_cols, self.A_2_data, self.A_2_nnzs, X, out, self.A_2_idxs, AXs, self.A_2_rows_cum, self.A_2_cols_cum, self.A_2_nnzs_cum)
+
+        return out
+
 
         # Compute sparse-sparse component
         if len(self.A_sp_idxs) > 0:
@@ -543,3 +569,55 @@ def AHA(
                 out[I, J] = r2 * tmp1 + tmp2
             else:
                 out[J, I] = r2 * tmp1 + tmp2
+
+@nb.njit(parallel=True, fastmath=True)
+def AHA2(
+        A_rows,
+        A_cols,
+        A_vals,
+        A_nnz,
+        X,
+        out,
+        indices,
+        F,
+        A_rows_cum,
+        A_cols_cum,
+        A_nnzs_cum
+    ):
+    # Computes the congruence transform A (X kron X) A'
+    # when A is very sparse
+
+    p = A_rows.shape[0]
+    n = X.shape[0]
+
+    # Loop through each entry of the Schur complement matrix (AHA)_ij
+    for j in nb.prange(p):
+
+        work = np.empty((n, n))
+
+        # Precompute nonzeros of XAjX
+        for k in range(j + 1):
+            for gamma in range(A_nnzs_cum[k]):
+                c = A_rows_cum[k, gamma]
+                d = A_cols_cum[k, gamma]
+
+                work[c, d] = 0
+                for l in range(n):
+                    work[c, d] += X[c, l] * F[j, l, d]
+
+        for i in range(j + 1):
+            I = indices[i]
+            J = indices[j]
+
+            tmp = 0.
+
+            for alpha in range(A_nnz[i]):
+                a = A_rows[i, alpha]
+                b = A_cols[i, alpha]
+
+                tmp += A_vals[i, alpha] * work[a, b]
+            
+            if J >= I:
+                out[I, J] = tmp
+            else:
+                out[J, I] = tmp
