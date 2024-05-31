@@ -112,6 +112,7 @@ class Cone():
     def invhess_congr(self, A):
         return self.base_congr(A, self.X, self.X_chol)    
     
+    # @profile
     def congr_aux(self, A):
         assert not self.congr_aux_updated
 
@@ -121,21 +122,14 @@ class Cone():
             A_nnz = A.getnnz(1)
 
             # Split A into 3 groups: 1) sparse; 2) sparse-ish; 3) dense
-            self.A_1_idxs = np.where((A_nnz >  0)               & (A_nnz < self.dim * 0.02) & False)[0]
-            self.A_2_idxs = np.where((A_nnz >= self.dim * 0.02) & (A_nnz < self.dim * 0.2)  | True)[0]
-            self.A_3_idxs = np.where((A_nnz >= self.dim * 0.2)                              & False)[0]
+            A_1_idxs = np.where((A_nnz >  0)               & (A_nnz < np.sqrt(self.n)))[0]
+            A_2_idxs = np.where((A_nnz >= np.sqrt(self.n)) & (A_nnz < self.n))[0]
+            A_3_idxs = np.where((A_nnz >= self.n))[0]
 
-            self.A_2_idxs = np.where((A_nnz >  0))[0]
-
-            # # Sort each of these by the number of nonzero entries
-            # self.A_1_idxs = A_1_idxs[np.argsort(A_nnz[A_1_idxs])]
-            # self.A_2_idxs = A_2_idxs[np.argsort(A_nnz[A_2_idxs])]
-            # self.A_3_idxs = A_3_idxs[np.argsort(A_nnz[A_3_idxs])]
-
-            # Split A into parts which are sparse, and those that are dense(-ish)
-            self.A_sp_idxs = np.where((A.getnnz(1) <= self.n) & (A.getnnz(1) > 0))[0]
-            self.A_sp_idxs = self.A_sp_idxs[np.argsort(A.getnnz(1)[self.A_sp_idxs])]
-            self.A_ds_idxs = np.where(A.getnnz(1) > self.n)[0]
+            # Sort each of these by the number of nonzero entries
+            self.A_1_idxs = A_1_idxs[np.argsort(A_nnz[A_1_idxs])]
+            self.A_2_idxs = A_2_idxs[np.argsort(A_nnz[A_2_idxs])]
+            self.A_3_idxs = A_3_idxs[np.argsort(A_nnz[A_3_idxs])]
 
             def ragged_to_array(ragged):
                 p = len(ragged)
@@ -154,13 +148,14 @@ class Cone():
                 return array            
 
             # Prepare things we need for Strategy 1:
-            if len(self.A_1_idxs) > 0:
-                # Get indices of sparse matrices so we can do efficient inner product
-                # AND turn rows of A in to sparse matrices Ai
-                triu_indices = np.triu(np.arange(self.dim, dtype=np.int64).reshape((self.n, self.n)) + 1).T.ravel() - 1
-                triu_indices = triu_indices[triu_indices >= 0]
+            if len(self.A_1_idxs) > 0:                
 
-                A_1_lil = A[self.A_1_idxs, triu_indices].tolil()
+                # Get indices of sparse matrices so we can do efficient inner product
+                triu_indices = np.triu(np.arange(self.dim, dtype=np.int64).reshape((self.n, self.n)) + 1).ravel() - 1
+                triu_indices = triu_indices[triu_indices >= 0]
+                
+                A1 = A[self.A_1_idxs]
+                A_1_lil = A1[:, triu_indices].tolil()
                 self.A_1_data = [np.array(data_k)               for data_k in A_1_lil.data]
                 self.A_1_cols = [triu_indices[idxs_k] // self.n for idxs_k in A_1_lil.rows]
                 self.A_1_rows = [triu_indices[idxs_k]  % self.n for idxs_k in A_1_lil.rows]
@@ -169,12 +164,12 @@ class Cone():
                 self.A_1_data = ragged_to_array(self.A_1_data)
                 self.A_1_cols = ragged_to_array(self.A_1_cols)
                 self.A_1_rows = ragged_to_array(self.A_1_rows)
-                self.A_1_data[self.A_1_cols != self.A_1_rows] *= np.sqrt(2)
-                self.A_1_nnzs = np.array([data_k.size for data_k in self.A_sp_data], dtype=np.int64)
+                self.A_1_data[self.A_1_cols != self.A_1_rows] *= 2
+                self.A_1_nnzs = np.array([data_k.size for data_k in self.A_1_data], dtype=np.int64)
 
+            # Prepare things we need for Strategy 2:
             if len(self.A_2_idxs) > 0:
-                # Get indices of sparse matrices so we can do efficient inner product
-                # AND turn rows of A into sparse matrices Ai
+                # First turn rows of A into sparse CSR matrices Ai
                 A_2 = A[self.A_2_idxs]
                 A_2_lil = A_2.tolil()
                 A_2_data = [np.array(data_k)                      for data_k in A_2_lil.data]
@@ -183,6 +178,7 @@ class Cone():
                 self.Ai_2 = [sp.sparse.csr_array((data, (row, col)), shape=(self.n, self.n))
                                 for (data, row, col) in zip(A_2_data, A_2_cols, A_2_rows)]                       
 
+                # Now get indices of sparse matrices so we can do efficient inner product
                 triu_indices = np.triu(np.arange(self.dim, dtype=np.int64).reshape((self.n, self.n)) + 1).ravel() - 1
                 triu_indices = triu_indices[triu_indices >= 0]
 
@@ -192,22 +188,22 @@ class Cone():
                 self.A_2_rows = [triu_indices[idxs_k] // self.n for idxs_k in A_2_lil.rows]
                 self.A_2_nnzs = np.array([data_k.size for data_k in self.A_2_data], dtype=np.int64)
 
-                # Get cumulative union of cols and rows
-                cum_A = np.zeros((self.n, self.n))
-                self.A_2_rows_cum = []
-                self.A_2_cols_cum = []
-                self.A_2_nnzs_cum = np.zeros(len(self.A_2_data), dtype=np.int64)              
-                for j in range(len(self.A_2_data)):
-                    # Check if cumulative A already has nonzero entries in nonzero entries of Aj
-                    new_idxs = np.where(cum_A[self.A_2_rows[j], self.A_2_cols[j]] == 0)[0]
-                    new_rows = self.A_2_rows[j][new_idxs]
-                    new_cols = self.A_2_cols[j][new_idxs]
+                # # Get cumulative union of cols and rows
+                # cum_A = np.zeros((self.n, self.n))
+                # self.A_2_rows_cum = []
+                # self.A_2_cols_cum = []
+                # self.A_2_nnzs_cum = np.zeros(len(self.A_2_data), dtype=np.int64)              
+                # for j in range(len(self.A_2_data)):
+                #     # Check if cumulative A already has nonzero entries in nonzero entries of Aj
+                #     new_idxs = np.where(cum_A[self.A_2_rows[j], self.A_2_cols[j]] == 0)[0]
+                #     new_rows = self.A_2_rows[j][new_idxs]
+                #     new_cols = self.A_2_cols[j][new_idxs]
                     
-                    self.A_2_rows_cum.append(new_rows)
-                    self.A_2_cols_cum.append(new_cols)
-                    self.A_2_nnzs_cum[j] = len(new_rows)
+                #     self.A_2_rows_cum.append(new_rows)
+                #     self.A_2_cols_cum.append(new_cols)
+                #     self.A_2_nnzs_cum[j] = len(new_rows)
 
-                    cum_A[new_rows, new_cols] += 1
+                #     cum_A[new_rows, new_cols] += 1
 
                 # Fix ragged arrays
                 self.A_2_data = ragged_to_array(self.A_2_data)
@@ -215,30 +211,28 @@ class Cone():
                 self.A_2_rows = ragged_to_array(self.A_2_rows)
                 self.A_2_data[self.A_2_cols != self.A_2_rows] *= 2
 
-                self.A_2_rows_cum = ragged_to_array(self.A_2_rows_cum)
-                self.A_2_cols_cum = ragged_to_array(self.A_2_cols_cum)                     
+                # self.A_2_rows_cum = ragged_to_array(self.A_2_rows_cum)
+                # self.A_2_cols_cum = ragged_to_array(self.A_2_cols_cum)
 
-            # Turn dense-ish rows of A to either sparse or dense matrices Ai
+            # Prepare things we need for Strategy 3:
             if len(self.A_3_idxs) > 0:
-                self.Ai_ds = []
-                for i in self.A_ds_idxs:
-                    Ai = A[i].reshape((self.n, self.n))
-                    # Check if we should store Ai as a sparse or dense matrix
-                    if Ai.nnz >= (Ai.shape[0]*Ai.shape[1]) ** 0.5:
-                        self.Ai_ds.append(Ai.toarray())
-                    else:
-                        self.Ai_ds.append(Ai.tocsr())
+                self.AHA_3_3_idxs = np.ix_(self.A_3_idxs, self.A_3_idxs)
+
+                # Turn rows of A into dense matrices Ai
+                self.A_3 = A[self.A_3_idxs].toarray()
+                self.Ai_3 = [Ai.reshape((self.n, self.n)) for Ai in self.A_3]
+
         else:
             # A and all Ai are dense matrices
             # Just need to convert the rows of A into dense matrices
-            self.A_sp_idxs = np.array([])
-            self.A_ds_idxs = np.arange(A.shape[0])
-            self.Ai_ds = []
-            for i in range(A.shape[0]):
-                self.Ai_ds.append(A[i].reshape((self.n, self.n)))
+            self.A_1_idxs = np.array([])
+            self.A_2_idxs = np.array([])
+            self.A_3_idxs = np.arange(A.shape[0])
+            self.Ai_3 = [Ai.reshape((self.n, self.n)) for Ai in A]
             
         self.congr_aux_updated = True
-
+    
+    # @profile
     def base_congr(self, A, X, X_rt2):
         if not self.congr_aux_updated:
             self.congr_aux(A)
@@ -246,8 +240,11 @@ class Cone():
         p = A.shape[0]
         out = np.zeros((p, p))
 
-        if len(self.A_2_idxs):
-            
+        # Compute sparse-sparse component
+        if len(self.A_1_idxs) > 0:
+            AHA(self.A_1_rows, self.A_1_cols, self.A_1_data, self.A_1_nnzs, X, out, self.A_1_idxs)
+
+        if len(self.A_2_idxs) > 0:
             # Old method
             for (j, t) in enumerate(self.A_2_idxs):
                 # Compute X Aj X for sparse Aj
@@ -257,7 +254,11 @@ class Cone():
 
                 # Efficient inner product <Ai, X Aj X> for sparse Ai
                 out[ts, t] = np.sum(XAjX[self.A_2_rows[:j+1], self.A_2_cols[:j+1]] * self.A_2_data[:j+1], 1)
+                out[t, ts] = out[ts, t]
 
+                if len(self.A_1_idxs) > 0:
+                    out[self.A_1_idxs, t] = np.sum(XAjX[self.A_1_rows, self.A_1_cols] * self.A_1_data, 1)
+                    out[t, self.A_1_idxs] = out[self.A_1_idxs, t]          
 
             # # New method
             # # Compute Fi = Ai X
@@ -266,66 +267,24 @@ class Cone():
             #     AXs[j] = self.Ai_2[j].dot(X)
             # AHA2(self.A_2_rows, self.A_2_cols, self.A_2_data, self.A_2_nnzs, X, out, self.A_2_idxs, AXs, self.A_2_rows_cum, self.A_2_cols_cum, self.A_2_nnzs_cum)
 
-        return out
+        if (len(self.A_1_idxs) > 0 or len(self.A_2_idxs) > 0) and len(self.A_3_idxs) > 0:
+            lhs = np.zeros((len(self.A_3_idxs), self.dim))
 
-
-        # Compute sparse-sparse component
-        if len(self.A_sp_idxs) > 0:
-            if self.sp_congr_mode == 0:
-                # Use strategy (1) for computing sparse-sparse congruence
-                # (see comments in congr_aux() function)
-                X_sub = X[self.A_sp_is_js]
-                XX = X_sub * X_sub.T
-                temp = self.A_sp_nz.dot(XX)
-                out[self.AHA_sp_sp_idxs] = self.A_sp_nz.dot(temp.T)
-
-            elif self.sp_congr_mode == 1:
-                # Use strategy (2) for computing sparse-sparse congruence
-                # (see comments in congr_aux() function)
-
-                # print("Now running on block of size ", self.n, " with A density ", A.nnz / A.shape[0] / A.shape[1])
-
-                # tic = time.time()
-                # for (j, t) in enumerate(self.A_sp_idxs):
-                #     # Compute X Aj X for sparse Aj
-                #     ts = self.A_sp_idxs[:j+1]
-                #     AjX  = self.Ai_sp[j].dot(X)
-                #     XAjX = X @ AjX
-
-                #     # Efficient inner product <Ai, X Aj X> for sparse Ai
-                #     out[ts, t] = np.sum(XAjX[self.A_sp_rows[:j+1], self.A_sp_cols[:j+1]] * self.A_sp_data[:j+1], 1)
-                # print("Method 1 took: ", time.time() - tic)
-
-                # tic = time.time()
-                # cythonstuff.cython_test.AHA(self.A_sp_rows, self.A_sp_cols, self.A_sp_data, self.A_sp_nnzs, X, out, self.A_sp_idxs)
-                # print("Method 2 took: ", time.time() - tic)
-
-                # tic = time.time()
-                AHA(self.A_sp_rows, self.A_sp_cols, self.A_sp_data, self.A_sp_nnzs, X, out, self.A_sp_idxs)
-                # print("Method 3 took: ", time.time() - tic)
-        lhs = np.zeros((len(self.A_ds_idxs), self.dim))
-        
-        if len(self.A_sp_idxs) > 0 and len(self.A_ds_idxs) > 0:
-            # Compute sparse-dense component
-            # For pairs of a sparse Ai and dense Aj, we have the option of either
-            #     a) First compute X Aj X, then compute <Ai, X Aj X>, or
-            #     b) First copmute X Ai X, then compute <Aj, X Ai X>.
-            # The first option is better as we need to compute X Aj X anyways for all 
-            # dense Aj for the dense-dense component, and computing the inner product with
-            # sparse matrices is faster.
-            for (j, t) in enumerate(self.A_ds_idxs):
-                # Compute X Aj X for dense Aj
-                AjX    = self.Ai_ds[j] @ X
-                XAjX   = X.conj().T @ AjX
+            for (j, t) in enumerate(self.A_3_idxs):
+                # Compute X Aj X for sparse Aj
+                AjX  = self.Ai_3[j].dot(X)
+                XAjX = X @ AjX
                 lhs[j] = XAjX.ravel()
-                
-                # Efficient inner product <Ai, X Aj X> for sparse Ai
-                out[self.A_sp_idxs, t] = np.sum(XAjX[self.A_sp_rows, self.A_sp_cols] * self.A_sp_data, 1)
-                out[t, self.A_sp_idxs] = out[self.A_sp_idxs, t]
-            
-            # Compute dense-dense component
-            # Inner product <Ai, X Aj X> for dense Ai
-            out[self.AHA_ds_ds_idxs] = self.A_ds @ lhs.T
+
+                if len(self.A_1_idxs) > 0:
+                    out[self.A_1_idxs, t] = np.sum(XAjX[self.A_1_rows, self.A_1_cols] * self.A_1_data, 1)
+                    out[t, self.A_1_idxs] = out[self.A_1_idxs, t]
+
+                if len(self.A_2_idxs) > 0:
+                    out[self.A_2_idxs, t] = np.sum(XAjX[self.A_2_rows, self.A_2_cols] * self.A_2_data, 1)
+                    out[t, self.A_2_idxs] = out[self.A_2_idxs, t]
+
+            out[self.AHA_3_3_idxs] = self.A_3 @ lhs.T
             
         # If all of Ai are dense, then it is slightly faster to use a strategy using
         # symmetric matrix multiplication, i.e., for Cholesky factor X = LL'
@@ -334,14 +293,16 @@ class Cone():
         #         = [A (L kr L)] [A (L kr L)]'
         # where 
         #     [A (L kr L)]_j = vec(L' Aj L)
-        if len(self.A_ds_idxs) > 0 and len(self.A_sp_idxs) == 0:
-            for j in range(len(self.A_ds_idxs)):
+        if len(self.A_1_idxs) == 0 and len(self.A_2_idxs) == 0 and len(self.A_3_idxs) > 0:
+            lhs = np.zeros((len(self.A_3_idxs), self.dim))
+
+            for j in range(len(self.A_3_idxs)):
                 # Compute L Aj L' for dense Aj
-                AjX    = self.Ai_ds[j] @ X_rt2
+                AjX    = self.Ai_3[j] @ X_rt2
                 XAjX   = X_rt2.conj().T @ AjX
                 lhs[j] = XAjX.ravel()
             # Compute symmetric matrix multiplication [A (L kr L)] [A (L kr L)]'
-            out[self.AHA_ds_ds_idxs] = lhs @ lhs.T
+            out[self.AHA_3_3_idxs] = lhs @ lhs.T
             
         return out
     
@@ -530,8 +491,6 @@ def AHA(
     # when A is very sparse
 
     p = A_rows.shape[0]
-    r2 = 1.41421356237309504880
-    ir2 = 0.70710678118654752440
 
     # Loop through each entry of the Schur complement matrix (AHA)_ij
     for j in nb.prange(p):
@@ -557,18 +516,18 @@ def AHA(
                     else:
                         # c = d
                         tmp4 += A_vals[j, beta] * X[a, c] * X[b, d]
-                    
+
                 if a > b:
                     # a > b
-                    tmp1 += A_vals[i, alpha] * (ir2 * tmp3 + tmp4)
+                    tmp1 += A_vals[i, alpha] * (0.5 * tmp3 + tmp4)
                 else:
                     # a = b
-                    tmp2 += A_vals[i, alpha] * (ir2 * tmp3 + tmp4)
+                    tmp2 += A_vals[i, alpha] * (0.5 * tmp3 + tmp4)
                     
             if J >= I:
-                out[I, J] = r2 * tmp1 + tmp2
+                out[I, J] = tmp1 + tmp2
             else:
-                out[J, I] = r2 * tmp1 + tmp2
+                out[J, I] = tmp1 + tmp2
 
 @nb.njit(parallel=True, fastmath=True)
 def AHA2(
