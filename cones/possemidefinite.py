@@ -3,6 +3,10 @@ import scipy as sp
 import numba as nb
 from utils import symmetric as sym
 from utils import linear as lin
+import cythonstuff.cython_test
+import cython
+
+import time
 
 class Cone():
     def __init__(self, n, hermitian=False):
@@ -113,8 +117,9 @@ class Cone():
 
         if sp.sparse.issparse(A):
             # Split A into parts which are sparse, and those that are dense(-ish)
-            self.A_sp_idxs = np.where(A.getnnz(1) < self.n)[0]
-            self.A_ds_idxs = np.where(A.getnnz(1) >= self.n)[0]
+            self.A_sp_idxs = np.where((A.getnnz(1) <= self.n) & (A.getnnz(1) > 0))[0]
+            self.A_sp_idxs = self.A_sp_idxs[np.argsort(A.getnnz(1)[self.A_sp_idxs])]
+            self.A_ds_idxs = np.where(A.getnnz(1) > self.n)[0]
 
             self.AHA_sp_sp_idxs = np.ix_(self.A_sp_idxs, self.A_sp_idxs)
             self.AHA_ds_ds_idxs = np.ix_(self.A_ds_idxs, self.A_ds_idxs)
@@ -187,18 +192,27 @@ class Cone():
 
                 # Get indices of sparse matrices so we can do efficient inner product
                 # AND turn rows of A in to sparse matrices Ai
-                if (len(A_sp_where_nz) >= self.n ** 1.5) or (len(self.A_ds_idxs) > 0):
-                    A_sp_lil = self.A_sp.tolil()
-                    self.A_sp_data = [np.array(data_k)           for data_k in A_sp_lil.data]
-                    self.A_sp_cols = [np.array(idxs_k, dtype=int)  % self.n for idxs_k in A_sp_lil.rows]
-                    self.A_sp_rows = [np.array(idxs_k, dtype=int) // self.n for idxs_k in A_sp_lil.rows]
-                    self.Ai_sp = [sp.sparse.csr_array((data, (row, col)), shape=(self.n, self.n))
-                                  for (data, row, col) in zip(self.A_sp_data, self.A_sp_cols, self.A_sp_rows)]
-                    
-                    # Fix ragged arrays
-                    self.A_sp_data = ragged_to_array(self.A_sp_data)
-                    self.A_sp_cols = ragged_to_array(self.A_sp_cols)
-                    self.A_sp_rows = ragged_to_array(self.A_sp_rows)
+                A_sp_lil = self.A_sp.tolil()
+                self.A_sp_data = [np.array(data_k)           for data_k in A_sp_lil.data]
+                self.A_sp_cols = [np.array(idxs_k, dtype=int)  % self.n for idxs_k in A_sp_lil.rows]
+                self.A_sp_rows = [np.array(idxs_k, dtype=int) // self.n for idxs_k in A_sp_lil.rows]
+                # self.Ai_sp = [sp.sparse.csr_array((data, (row, col)), shape=(self.n, self.n))
+                #                 for (data, row, col) in zip(self.A_sp_data, self.A_sp_cols, self.A_sp_rows)]
+
+                temp_indices = np.triu(np.arange(self.dim, dtype=np.int64).reshape((self.n, self.n)) + 1).T.ravel() - 1
+                temp_indices = temp_indices[temp_indices >= 0]
+
+                A_sp_lil = self.A_sp[:, temp_indices].tolil()
+                self.A_sp_data = [np.array(data_k)           for data_k in A_sp_lil.data]
+                self.A_sp_cols = [temp_indices[idxs_k] // self.n for idxs_k in A_sp_lil.rows]
+                self.A_sp_rows = [temp_indices[idxs_k] % self.n for idxs_k in A_sp_lil.rows]
+
+                # Fix ragged arrays
+                self.A_sp_data = ragged_to_array(self.A_sp_data)
+                self.A_sp_cols = ragged_to_array(self.A_sp_cols)
+                self.A_sp_rows = ragged_to_array(self.A_sp_rows)
+                self.A_sp_data[self.A_sp_cols != self.A_sp_rows] *= np.sqrt(2)
+                self.A_sp_nnzs = np.array([data_k.size for data_k in self.A_sp_data], dtype=np.int64)
 
             # Turn dense-ish rows of A to either sparse or dense matrices Ai
             if len(self.A_ds_idxs) > 0:
@@ -221,6 +235,7 @@ class Cone():
             
         self.congr_aux_updated = True
 
+    # @profile
     def base_congr(self, A, X, X_rt2):
         if not self.congr_aux_updated:
             self.congr_aux(A)
@@ -241,15 +256,27 @@ class Cone():
             elif self.sp_congr_mode == 1:
                 # Use strategy (2) for computing sparse-sparse congruence
                 # (see comments in congr_aux() function)
-                for (j, t) in enumerate(self.A_sp_idxs):
-                    # Compute X Aj X for sparse Aj
-                    ts = self.A_sp_idxs[:j+1]
-                    AjX  = self.Ai_sp[j].dot(X)
-                    XAjX = X @ AjX
 
-                    # Efficient inner product <Ai, X Aj X> for sparse Ai
-                    out[ts, t] = np.sum(XAjX[self.A_sp_rows[:j+1], self.A_sp_cols[:j+1]] * self.A_sp_data[:j+1], 1)
-        
+                # print("Now running on block of size ", self.n, " with A density ", A.nnz / A.shape[0] / A.shape[1])
+
+                # tic = time.time()
+                # for (j, t) in enumerate(self.A_sp_idxs):
+                #     # Compute X Aj X for sparse Aj
+                #     ts = self.A_sp_idxs[:j+1]
+                #     AjX  = self.Ai_sp[j].dot(X)
+                #     XAjX = X @ AjX
+
+                #     # Efficient inner product <Ai, X Aj X> for sparse Ai
+                #     out[ts, t] = np.sum(XAjX[self.A_sp_rows[:j+1], self.A_sp_cols[:j+1]] * self.A_sp_data[:j+1], 1)
+                # print("Method 1 took: ", time.time() - tic)
+
+                # tic = time.time()
+                # cythonstuff.cython_test.AHA(self.A_sp_rows, self.A_sp_cols, self.A_sp_data, self.A_sp_nnzs, X, out, self.A_sp_idxs)
+                # print("Method 2 took: ", time.time() - tic)
+
+                # tic = time.time()
+                AHA(self.A_sp_rows, self.A_sp_cols, self.A_sp_data, self.A_sp_nnzs, X, out, self.A_sp_idxs)
+                # print("Method 3 took: ", time.time() - tic)
         lhs = np.zeros((len(self.A_ds_idxs), self.dim))
         
         if len(self.A_sp_idxs) > 0 and len(self.A_ds_idxs) > 0:
@@ -282,13 +309,13 @@ class Cone():
         # where 
         #     [A (L kr L)]_j = vec(L' Aj L)
         if len(self.A_ds_idxs) > 0 and len(self.A_sp_idxs) == 0:
-            for j in range(p):
+            for j in range(len(self.A_ds_idxs)):
                 # Compute L Aj L' for dense Aj
                 AjX    = self.Ai_ds[j] @ X_rt2
                 XAjX   = X_rt2.conj().T @ AjX
                 lhs[j] = XAjX.ravel()
             # Compute symmetric matrix multiplication [A (L kr L)] [A (L kr L)]'
-            out = lhs @ lhs.T
+            out[self.AHA_ds_ds_idxs] = lhs @ lhs.T
             
         return out
     
@@ -446,7 +473,7 @@ class Cone():
         #              = Lambda^-1/2 R^T dS R Lambda^-1/2
         sig = self.R.T @ dZ @ self.R
         sig *= Lambda_irt2.reshape((-1, 1))
-        sig *= Lambda_irt2.reshape(( 1,-1))        
+        sig *= Lambda_irt2.reshape(( 1,-1))
 
         # Compute minimum eigenvalues of rho and sig
         min_eig_rho = sp.linalg.lapack.dsyevr(rho, compute_v=False, range='I', iu=1)[0][0]
@@ -459,3 +486,60 @@ class Cone():
             return 1.
         else:
             return 1. / max(-min_eig_rho, -min_eig_sig)
+        
+
+import numba as nb
+
+@nb.njit(parallel=True, fastmath=True)
+def AHA(
+        A_rows,
+        A_cols,
+        A_vals,
+        A_nnz,
+        X,
+        out,
+        indices,
+    ):
+    # Computes the congruence transform A (X kron X) A'
+    # when A is very sparse
+
+    p = A_rows.shape[0]
+    r2 = 1.41421356237309504880
+    ir2 = 0.70710678118654752440
+
+    # Loop through each entry of the Schur complement matrix (AHA)_ij
+    for j in nb.prange(p):
+        for i in nb.prange(j + 1):
+            I = indices[i]
+            J = indices[j]
+
+            tmp1 = 0.
+            tmp2 = 0.
+            for alpha in range(A_nnz[i]):
+                a = A_rows[i, alpha]
+                b = A_cols[i, alpha]
+
+                tmp3 = 0.
+                tmp4 = 0.
+                for beta in range(A_nnz[j]):
+                    c = A_rows[j, beta]
+                    d = A_cols[j, beta]
+
+                    if c > d:
+                        # c > d
+                        tmp3 += A_vals[j, beta] * (X[a, c] * X[b, d] + X[a, d] * X[b, c])
+                    else:
+                        # c = d
+                        tmp4 += A_vals[j, beta] * X[a, c] * X[b, d]
+                    
+                if a > b:
+                    # a > b
+                    tmp1 += A_vals[i, alpha] * (ir2 * tmp3 + tmp4)
+                else:
+                    # a = b
+                    tmp2 += A_vals[i, alpha] * (ir2 * tmp3 + tmp4)
+                    
+            if J >= I:
+                out[I, J] = r2 * tmp1 + tmp2
+            else:
+                out[J, I] = r2 * tmp1 + tmp2
