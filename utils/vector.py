@@ -119,6 +119,11 @@ class VecProduct(Vector):
                 self.mats.append(self.vecs[-1].reshape((n_k, n_k)))
             elif type_k == 'h':
                 # Hermitian matrix
+                # Note that the view is defined so that the real vector
+                #     [0., 1., 2., 3., 4., 5., 6., 7.] 
+                # is reshaped to the complex matrix
+                #     [ 0.+1.j   2.+3.j ]
+                #     [ 4.+5.j   6.+7.j ]
                 n_k = int(np.sqrt(dim_k // 2))
                 self.mats.append(self.vecs[-1].reshape((-1, 2)).view(dtype=np.complex128).reshape(n_k, n_k))
             t += dim_k
