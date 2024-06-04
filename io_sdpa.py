@@ -177,7 +177,7 @@ if __name__ == "__main__":
         except Exception as e:
             with open(fout_name, 'a', newline='') as file:
                 writer = csv.writer(file)
-                writer.writerow([fname, "ours", e, None, None, None, None, None, None])    
+                writer.writerow([fname, "ours", e, None, None, None, None, None, None])
 
         # ==============================================================
         # CVXOPT

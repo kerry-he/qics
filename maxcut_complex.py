@@ -14,7 +14,7 @@ n = 500
 A_is = [i for i in range(n)]
 A_js = [2*i + 2*i*n for i in range(n)]
 A_vs = [1. for i in range(n)]
-A = sp.sparse.csr_array((A_vs, (A_is, A_js)), shape=(n, 2*n*n)).toarray()
+A = sp.sparse.csr_array((A_vs, (A_is, A_js)), shape=(n, 2*n*n))
 
 b = np.ones((n, 1))
 C = np.random.randn(n, n) + np.random.randn(n, n)*1j

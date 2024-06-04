@@ -128,9 +128,12 @@ class Cone():
 
             # Split A into 3 groups: 1) sparse; 2) sparse-ish; 3) dense
             # TODO: Determine good thresholds
-            A_1_idxs = np.where((A_nnz >  0)      & (A_nnz < self.n))[0]
-            A_2_idxs = np.where((A_nnz >= self.n) & (A_nnz < self.n))[0]
-            A_3_idxs = np.where((A_nnz >= self.n))[0]
+            # A_1_idxs = np.where((A_nnz >  0)      & (A_nnz < self.n))[0]
+            # A_2_idxs = np.where((A_nnz >= self.n) & (A_nnz < self.n))[0]
+            # A_3_idxs = np.where((A_nnz >= self.n))[0]
+            A_1_idxs = np.where((A_nnz >  0)      & (A_nnz < 0.5))[0]
+            A_2_idxs = np.where((A_nnz >= 0.5) & (A_nnz < self.n))[0]
+            A_3_idxs = np.where((A_nnz >= self.n))[0]            
 
             # Sort each of these by the number of nonzero entries
             self.A_1_idxs = A_1_idxs[np.argsort(A_nnz[A_1_idxs])]
@@ -150,8 +153,8 @@ class Cone():
                 for i in range(p):
                     array[i, :ns[i]] = ragged[i]
                     mask[i, :ns[i]] = 0
-                    
-                return array            
+
+                return array
 
             # Prepare things we need for Strategy 1:
             if len(self.A_1_idxs) > 0:                
@@ -160,45 +163,87 @@ class Cone():
                 triu_indices = np.triu(np.arange(self.dim, dtype=np.int64).reshape((self.n, self.n)) + 1).ravel() - 1
                 triu_indices = triu_indices[triu_indices >= 0]
                 
-                A1 = A[self.A_1_idxs]
-                A_1_lil = A1[:, triu_indices].tolil()
-                self.A_1_data = [np.array(data_k)               for data_k in A_1_lil.data]
-                self.A_1_cols = [triu_indices[idxs_k] // self.n for idxs_k in A_1_lil.rows]
-                self.A_1_rows = [triu_indices[idxs_k]  % self.n for idxs_k in A_1_lil.rows]
+                if self.hermitian:
+                    A_1 = A[self.A_1_idxs]
+                    A_1_real = A_1[:, ::2][:, triu_indices].tolil()
+                    A_1_imag = A_1[:, 1::2][:, triu_indices].tolil()
 
-                # Fix ragged arrays
-                self.A_1_data = ragged_to_array(self.A_1_data)
-                self.A_1_cols = ragged_to_array(self.A_1_cols)
-                self.A_1_rows = ragged_to_array(self.A_1_rows)
-                self.A_1_data[self.A_1_cols != self.A_1_rows] *= 2
-                self.A_1_nnzs = np.array([data_k.size for data_k in self.A_1_data], dtype=np.int64)
+                    self.A_1_data = [np.append(np.array(data_r_k), np.array(data_i_k)) for (data_r_k, data_i_k) in zip(A_1_real.data, A_1_imag.data)]
+                    self.A_1_cols = [np.append((triu_indices[idxs_r_k] % self.n)*2, (triu_indices[idxs_i_k] % self.n)*2+1) for (idxs_r_k, idxs_i_k) in zip(A_1_real.rows, A_1_imag.rows)]
+                    self.A_1_rows = [np.append(triu_indices[idxs_r_k] // self.n, triu_indices[idxs_i_k] // self.n) for (idxs_r_k, idxs_i_k) in zip(A_1_real.rows, A_1_imag.rows)]
+                    self.A_1_nnzs = np.array([data_k.size for data_k in self.A_2_data], dtype=np.int64)
+
+                    # Fix ragged arrays
+                    self.A_1_data = ragged_to_array(self.A_1_data)
+                    self.A_1_cols = ragged_to_array(self.A_1_cols)
+                    self.A_1_rows = ragged_to_array(self.A_1_rows)
+                    self.A_1_data[self.A_1_cols != 2*self.A_1_rows] *= 2      
+                else:
+                    A_1 = A[self.A_1_idxs]
+                    A_1_lil = A_1[:, triu_indices].tolil()
+                    self.A_1_data = [np.array(data_k)               for data_k in A_1_lil.data]
+                    self.A_1_cols = [triu_indices[idxs_k] // self.n for idxs_k in A_1_lil.rows]
+                    self.A_1_rows = [triu_indices[idxs_k]  % self.n for idxs_k in A_1_lil.rows]
+
+                    # Fix ragged arrays
+                    self.A_1_data = ragged_to_array(self.A_1_data)
+                    self.A_1_cols = ragged_to_array(self.A_1_cols)
+                    self.A_1_rows = ragged_to_array(self.A_1_rows)
+                    self.A_1_data[self.A_1_cols != self.A_1_rows] *= 2
+                    self.A_1_nnzs = np.array([data_k.size for data_k in self.A_1_data], dtype=np.int64)
 
             # Prepare things we need for Strategy 2:
             if len(self.A_2_idxs) > 0:
                 # First turn rows of A into sparse CSR matrices Ai
-                A_2 = A[self.A_2_idxs]
-                A_2_lil = A_2.tolil()
-                A_2_data = [np.array(data_k)                      for data_k in A_2_lil.data]
-                A_2_cols = [np.array(idxs_k, dtype=int)  % self.n for idxs_k in A_2_lil.rows]
-                A_2_rows = [np.array(idxs_k, dtype=int) // self.n for idxs_k in A_2_lil.rows]
-                self.Ai_2 = [sp.sparse.csr_array((data, (row, col)), shape=(self.n, self.n))
-                                for (data, row, col) in zip(A_2_data, A_2_cols, A_2_rows)]                       
+                if self.hermitian:
+                    A_2 = A[self.A_2_idxs]
+                    A_2_lil = (A_2[:, ::2] + A_2[:, 1::2]*1j).tolil()
+                    A_2_data = [np.array(data_k)                      for data_k in A_2_lil.data]
+                    A_2_cols = [np.array(idxs_k, dtype=int)  % self.n for idxs_k in A_2_lil.rows]
+                    A_2_rows = [np.array(idxs_k, dtype=int) // self.n for idxs_k in A_2_lil.rows]
+
+                    self.Ai_2 = [sp.sparse.csr_array((data, (row, col)), shape=(self.n, self.n))
+                                    for (data, row, col) in zip(A_2_data, A_2_cols, A_2_rows)]                 
+                else:
+                    A_2 = A[self.A_2_idxs]
+                    A_2_lil = A_2.tolil()
+                    A_2_data = [np.array(data_k)                      for data_k in A_2_lil.data]
+                    A_2_cols = [np.array(idxs_k, dtype=int)  % self.n for idxs_k in A_2_lil.rows]
+                    A_2_rows = [np.array(idxs_k, dtype=int) // self.n for idxs_k in A_2_lil.rows]
+
+                    self.Ai_2 = [sp.sparse.csr_array((data, (row, col)), shape=(self.n, self.n))
+                                    for (data, row, col) in zip(A_2_data, A_2_cols, A_2_rows)]
 
                 # Now get indices of sparse matrices so we can do efficient inner product
-                triu_indices = np.triu(np.arange(self.dim, dtype=np.int64).reshape((self.n, self.n)) + 1).ravel() - 1
+                triu_indices = np.triu(np.arange(self.n*self.n, dtype=np.int64).reshape((self.n, self.n)) + 1).ravel() - 1
                 triu_indices = triu_indices[triu_indices >= 0]
 
-                A_2_lil = A_2[:, triu_indices].tolil()
-                self.A_2_data = [np.array(data_k)               for data_k in A_2_lil.data]
-                self.A_2_cols = [triu_indices[idxs_k]  % self.n for idxs_k in A_2_lil.rows]
-                self.A_2_rows = [triu_indices[idxs_k] // self.n for idxs_k in A_2_lil.rows]
-                self.A_2_nnzs = np.array([data_k.size for data_k in self.A_2_data], dtype=np.int64)
+                if self.hermitian:
+                    A_2_real = A_2[:, ::2][:, triu_indices].tolil()
+                    A_2_imag = A_2[:, 1::2][:, triu_indices].tolil()
 
-                # Fix ragged arrays
-                self.A_2_data = ragged_to_array(self.A_2_data)
-                self.A_2_cols = ragged_to_array(self.A_2_cols)
-                self.A_2_rows = ragged_to_array(self.A_2_rows)
-                self.A_2_data[self.A_2_cols != self.A_2_rows] *= 2
+                    self.A_2_data = [np.append(np.array(data_r_k), np.array(data_i_k)) for (data_r_k, data_i_k) in zip(A_2_real.data, A_2_imag.data)]
+                    self.A_2_cols = [np.append((triu_indices[idxs_r_k] % self.n)*2, (triu_indices[idxs_i_k] % self.n)*2+1) for (idxs_r_k, idxs_i_k) in zip(A_2_real.rows, A_2_imag.rows)]
+                    self.A_2_rows = [np.append(triu_indices[idxs_r_k] // self.n, triu_indices[idxs_i_k] // self.n) for (idxs_r_k, idxs_i_k) in zip(A_2_real.rows, A_2_imag.rows)]
+                    self.A_2_nnzs = np.array([data_k.size for data_k in self.A_2_data], dtype=np.int64)
+
+                    # Fix ragged arrays
+                    self.A_2_data = ragged_to_array(self.A_2_data)
+                    self.A_2_cols = ragged_to_array(self.A_2_cols)
+                    self.A_2_rows = ragged_to_array(self.A_2_rows)
+                    self.A_2_data[self.A_2_cols != 2*self.A_2_rows] *= 2                    
+                else:
+                    A_2_lil = A_2[:, triu_indices].tolil()
+                    self.A_2_data = [np.array(data_k)               for data_k in A_2_lil.data]
+                    self.A_2_cols = [triu_indices[idxs_k]  % self.n for idxs_k in A_2_lil.rows]
+                    self.A_2_rows = [triu_indices[idxs_k] // self.n for idxs_k in A_2_lil.rows]
+                    self.A_2_nnzs = np.array([data_k.size for data_k in self.A_2_data], dtype=np.int64)
+
+                    # Fix ragged arrays
+                    self.A_2_data = ragged_to_array(self.A_2_data)
+                    self.A_2_cols = ragged_to_array(self.A_2_cols)
+                    self.A_2_rows = ragged_to_array(self.A_2_rows)
+                    self.A_2_data[self.A_2_cols != self.A_2_rows] *= 2
 
             # Prepare things we need for Strategy 3:
             if len(self.A_3_idxs) > 0:
@@ -237,12 +282,12 @@ class Cone():
             AHA(self.A_1_rows, self.A_1_cols, self.A_1_data, self.A_1_nnzs, X, out, self.A_1_idxs)
 
         if len(self.A_2_idxs) > 0:
-            # Old method
             for (j, t) in enumerate(self.A_2_idxs):
                 # Compute X Aj X for sparse Aj
                 ts = self.A_2_idxs[:j+1]
                 AjX  = self.Ai_2[j].dot(X)
                 XAjX = X @ AjX
+                XAjX = XAjX.view(dtype=np.float64)
 
                 # Efficient inner product <Ai, X Aj X> for sparse Ai
                 out[ts, t] = np.sum(XAjX[self.A_2_rows[:j+1], self.A_2_cols[:j+1]] * self.A_2_data[:j+1], 1)
@@ -259,7 +304,8 @@ class Cone():
                 # Compute X Aj X for sparse Aj
                 AjX  = self.Ai_3[j].dot(X)
                 XAjX = X @ AjX
-                lhs[j] = XAjX.view(dtype=np.float64).reshape(-1)
+                XAjX = XAjX.view(dtype=np.float64)
+                lhs[j] = XAjX.reshape(-1)
 
                 if len(self.A_1_idxs) > 0:
                     out[self.A_1_idxs, t] = np.sum(XAjX[self.A_1_rows, self.A_1_cols] * self.A_1_data, 1)
@@ -462,6 +508,58 @@ import numba as nb
 
 @nb.njit(parallel=True, fastmath=True)
 def AHA(
+        A_rows,
+        A_cols,
+        A_vals,
+        A_nnz,
+        X,
+        out,
+        indices,
+    ):
+    # Computes the congruence transform A (X kron X) A'
+    # when A is very sparse
+
+    p = A_rows.shape[0]
+
+    # Loop through each entry of the Schur complement matrix (AHA)_ij
+    for j in nb.prange(p):
+        for i in nb.prange(j + 1):
+            I = indices[i]
+            J = indices[j]
+
+            tmp1 = 0.
+            tmp2 = 0.
+            for alpha in range(A_nnz[i]):
+                a = A_rows[i, alpha]
+                b = A_cols[i, alpha]
+
+                tmp3 = 0.
+                tmp4 = 0.
+                for beta in range(A_nnz[j]):
+                    c = A_rows[j, beta]
+                    d = A_cols[j, beta]
+
+                    if c > d:
+                        # c > d
+                        tmp3 += A_vals[j, beta] * (X[a, c] * X[b, d] + X[a, d] * X[b, c])
+                    else:
+                        # c = d
+                        tmp4 += A_vals[j, beta] * X[a, c] * X[b, d]
+
+                if a > b:
+                    # a > b
+                    tmp1 += A_vals[i, alpha] * (0.5 * tmp3 + tmp4)
+                else:
+                    # a = b
+                    tmp2 += A_vals[i, alpha] * (0.5 * tmp3 + tmp4)
+                    
+            if J >= I:
+                out[I, J] = tmp1 + tmp2
+            else:
+                out[J, I] = tmp1 + tmp2
+
+@nb.njit(parallel=True, fastmath=True)
+def AHA_complex(
         A_rows,
         A_cols,
         A_vals,
