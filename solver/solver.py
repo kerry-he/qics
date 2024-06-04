@@ -166,10 +166,11 @@ class Solver():
             return True            
             
         # 3) Check ill-posedness
-        if self.illposed_res <= self.tol_ip:
-            self.solution_status = "illposed"
-            self.exit_status = "solved"
-            return True
+        if self.point.tau < self.tol_infeas and self.point.kap < self.tol_infeas:
+            if self.illposed_res <= self.tol_ip:
+                self.solution_status = "illposed"
+                self.exit_status = "solved"
+                return True
         
         # 4) Check if maximum iterations is exceeded
         if self.iter >= self.max_iter:

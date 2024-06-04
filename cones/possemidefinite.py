@@ -3,8 +3,6 @@ import scipy as sp
 import numba as nb
 from utils import symmetric as sym
 from utils import linear as lin
-import cythonstuff.cython_test
-import cython
 
 import time
 
@@ -122,8 +120,9 @@ class Cone():
             A_nnz = A.getnnz(1)
 
             # Split A into 3 groups: 1) sparse; 2) sparse-ish; 3) dense
-            A_1_idxs = np.where((A_nnz >  0)               & (A_nnz < np.sqrt(self.n)))[0]
-            A_2_idxs = np.where((A_nnz >= np.sqrt(self.n)) & (A_nnz < self.n))[0]
+            # TODO: Determine good thresholds
+            A_1_idxs = np.where((A_nnz >  0)      & (A_nnz < self.n))[0]
+            A_2_idxs = np.where((A_nnz >= self.n) & (A_nnz < self.n))[0]
             A_3_idxs = np.where((A_nnz >= self.n))[0]
 
             # Sort each of these by the number of nonzero entries
@@ -232,7 +231,6 @@ class Cone():
             
         self.congr_aux_updated = True
     
-    # @profile
     def base_congr(self, A, X, X_rt2):
         if not self.congr_aux_updated:
             self.congr_aux(A)
@@ -348,9 +346,6 @@ class Cone():
 
     def nt_aux(self):
         assert not self.nt_aux_updated
-        if not self.grad_updated:
-            self.get_grad()   
-
         # Take the SVD of Z_chol^T S_chol to get scaled point Lambda := D
         RL = self.Z_chol.T @ self.X_chol
         _, self.Lambda, Vt, _ = sp.linalg.lapack.dgesdd(RL, lwork=self.dgesdd_lwork)
@@ -365,6 +360,7 @@ class Cone():
         # Compute the inverse scaling point as
         #     R^-1 := D^1/2 V^T S_chol^-1, and
         #     W^-1 := R^-T R^-1
+        self.X_chol_inv, _ = sp.linalg.lapack.dtrtri(self.X_chol, lower=True)        
         self.R_inv = (self.X_chol_inv.T @ (Vt.T * D_rt2)).T
         self.W_inv = self.R_inv.T @ self.R_inv
 
