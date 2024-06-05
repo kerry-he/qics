@@ -166,16 +166,16 @@ class Cone():
                 if self.hermitian:
                     A_1 = A[self.A_1_idxs]
                     A_1_lil = (A_1[:, ::2] + A_1[:, 1::2]*1j)[:, triu_indices].tolil()
-                    self.A_1_data = [np.array(data_k)               for data_k in A_1_lil.data]
-                    self.A_1_cols = [triu_indices[idxs_k] // self.n for idxs_k in A_1_lil.rows]
-                    self.A_1_rows = [triu_indices[idxs_k]  % self.n for idxs_k in A_1_lil.rows]
+                    self.A_1x_data = [np.array(data_k)               for data_k in A_1_lil.data]
+                    self.A_1x_cols = [triu_indices[idxs_k] // self.n for idxs_k in A_1_lil.rows]
+                    self.A_1x_rows = [triu_indices[idxs_k]  % self.n for idxs_k in A_1_lil.rows]
 
                     # Fix ragged arrays
-                    self.A_1_data = ragged_to_array(self.A_1_data)
-                    self.A_1_cols = ragged_to_array(self.A_1_cols)
-                    self.A_1_rows = ragged_to_array(self.A_1_rows)
-                    self.A_1_data[self.A_1_cols != self.A_1_rows] *= 2
-                    self.A_1_nnzs = np.array([data_k.size for data_k in self.A_1_data], dtype=np.int64)
+                    self.A_1x_data = ragged_to_array(self.A_1x_data)
+                    self.A_1x_cols = ragged_to_array(self.A_1x_cols)
+                    self.A_1x_rows = ragged_to_array(self.A_1x_rows)
+                    self.A_1x_data[self.A_1x_cols != self.A_1x_rows] *= 2
+                    self.A_1x_nnzs = np.array([data_k.size for data_k in self.A_1x_data], dtype=np.int64)
 
                     # A_1 = A[self.A_1_idxs]
                     # A_1_real = A_1[:, ::2][:, triu_indices].tolil()
@@ -191,6 +191,20 @@ class Cone():
                     # self.A_1_cols = ragged_to_array(self.A_1_cols)
                     # self.A_1_rows = ragged_to_array(self.A_1_rows)
                     # self.A_1_data[self.A_1_cols != 2*self.A_1_rows] *= 2
+                    A_1_real = A_1[:, ::2][:, triu_indices].tolil()
+                    A_1_imag = A_1[:, 1::2][:, triu_indices].tolil()
+
+                    self.A_1_data = [np.append(np.array(data_r_k), np.array(data_i_k)) for (data_r_k, data_i_k) in zip(A_1_real.data, A_1_imag.data)]
+                    self.A_1_cols = [np.append((triu_indices[idxs_r_k] % self.n)*2, (triu_indices[idxs_i_k] % self.n)*2+1) for (idxs_r_k, idxs_i_k) in zip(A_1_real.rows, A_1_imag.rows)]
+                    self.A_1_rows = [np.append(triu_indices[idxs_r_k] // self.n, triu_indices[idxs_i_k] // self.n) for (idxs_r_k, idxs_i_k) in zip(A_1_real.rows, A_1_imag.rows)]
+                    self.A_1_nnzs = np.array([data_k.size for data_k in self.A_1_data], dtype=np.int64)
+
+                    # Fix ragged arrays
+                    self.A_1_data = ragged_to_array(self.A_1_data)
+                    self.A_1_cols = ragged_to_array(self.A_1_cols)
+                    self.A_1_rows = ragged_to_array(self.A_1_rows)
+                    self.A_1_data[self.A_1_cols != 2*self.A_1_rows] *= 2                    
+
                 else:
                     A_1 = A[self.A_1_idxs]
                     A_1_lil = A_1[:, triu_indices].tolil()
@@ -282,6 +296,7 @@ class Cone():
             
         self.congr_aux_updated = True
     
+    @profile
     def base_congr(self, A, X, X_rt2):
         if not self.congr_aux_updated:
             self.congr_aux(A)
@@ -292,7 +307,7 @@ class Cone():
         # Compute sparse-sparse component
         if len(self.A_1_idxs) > 0:
             if self.hermitian:
-                AHA_complex(self.A_1_rows, self.A_1_cols, self.A_1_data, self.A_1_nnzs, X, out, self.A_1_idxs)
+                AHA_complex(self.A_1x_rows, self.A_1x_cols, self.A_1x_data, self.A_1x_nnzs, X, out, self.A_1_idxs)
             else:
                 AHA(self.A_1_rows, self.A_1_cols, self.A_1_data, self.A_1_nnzs, X, out, self.A_1_idxs)
 
@@ -610,8 +625,8 @@ def AHA_complex(
                         x4 = X[a, d].real * X[c, b].imag + X[c, b].real * X[a, d].imag
 
                         tmp3_r += A_vals[j, beta].real * ( x1 + x2)
-                        tmp3_r += A_vals[j, beta].imag * (-x3 + x4)
-                        tmp3_i += A_vals[j, beta].imag * ( x1 - x2)
+                        tmp3_r -= A_vals[j, beta].imag * (-x3 + x4)
+                        tmp3_i -= A_vals[j, beta].imag * ( x1 - x2)
                         tmp3_i += A_vals[j, beta].real * ( x3 + x4)
                     else:
                         # c = d, (Ai)_cc is real
@@ -619,7 +634,7 @@ def AHA_complex(
                         tmp4_i += A_vals[j, beta].real * (X[a, c].real * X[d, b].imag - X[a, c].real * X[d, b].imag)
 
                 tmp1 += A_vals[i, alpha].real * (0.5 * tmp3_r + tmp4_r)
-                tmp1 += A_vals[i, alpha].imag * (0.5 * tmp3_i + tmp4_i)
+                tmp1 -= A_vals[i, alpha].imag * (0.5 * tmp3_i + tmp4_i)
                     
             if J >= I:
                 out[I, J] = tmp1
@@ -662,13 +677,13 @@ def AHA_complex(
 #                     if c > d:
 #                         # c > d
 #                         # tmp3 += A_vals[j, beta] * (X[a, c] * X[b, d] + X[a, d] * X[b, c])
-#                         tmp3 += A_vals[j, beta] * X[a, c] * X[d, b]
-#                         tmp3 += np.conj(A_vals[j, beta]) * X[a, d] * X[c, b]
+#                         tmp3 += np.conj(A_vals[j, beta]) * X[a, c] * X[d, b]
+#                         tmp3 += A_vals[j, beta] * X[a, d] * X[c, b]
 #                     else:
 #                         # c = d
 #                         tmp4 += A_vals[j, beta] * X[a, c] * X[d, b]
 
-#                 tmp1 += np.conj(A_vals[i, alpha]) * (0.5 * tmp3 + tmp4)
+#                 tmp1 += A_vals[i, alpha] * (0.5 * tmp3 + tmp4)
                     
 #             if J >= I:
 #                 out[I, J] = tmp1.real
