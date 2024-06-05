@@ -9,7 +9,7 @@ from solver import model, solver
 
 np.random.seed(1)
 
-n = 1000
+n = 2000
 
 A_is = [i for i in range(n)]
 A_js = [i + i*n for i in range(n)]
