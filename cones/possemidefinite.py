@@ -118,6 +118,7 @@ class Cone():
     def invhess_congr(self, A):
         return self.base_congr(A, self.X, self.X_chol)    
     
+    # @profile
     def congr_aux(self, A):
         assert not self.congr_aux_updated
 
@@ -139,6 +140,9 @@ class Cone():
             self.A_1_idxs = A_1_idxs[np.argsort(A_nnz[A_1_idxs])]
             self.A_2_idxs = A_2_idxs[np.argsort(A_nnz[A_2_idxs])]
             self.A_3_idxs = A_3_idxs[np.argsort(A_nnz[A_3_idxs])]
+            # self.A_1_idxs = A_1_idxs
+            # self.A_2_idxs = A_2_idxs
+            # self.A_3_idxs = A_3_idxs
 
             def ragged_to_array(ragged):
                 p = len(ragged)
@@ -169,13 +173,41 @@ class Cone():
                     self.A_1x_data = [np.array(data_k)               for data_k in A_1_lil.data]
                     self.A_1x_cols = [triu_indices[idxs_k] // self.n for idxs_k in A_1_lil.rows]
                     self.A_1x_rows = [triu_indices[idxs_k]  % self.n for idxs_k in A_1_lil.rows]
+                    self.A_1x_nnzs = np.array([data_k.size for data_k in self.A_1x_data], dtype=np.int64)
 
                     # Fix ragged arrays
                     self.A_1x_data = ragged_to_array(self.A_1x_data)
                     self.A_1x_cols = ragged_to_array(self.A_1x_cols)
                     self.A_1x_rows = ragged_to_array(self.A_1x_rows)
                     self.A_1x_data[self.A_1x_cols != self.A_1x_rows] *= 2
-                    self.A_1x_nnzs = np.array([data_k.size for data_k in self.A_1x_data], dtype=np.int64)
+
+
+                    # Split real and imag
+                    A_1 = A[self.A_1_idxs]
+                    A_1_r = A_1[:, ::2][:, triu_indices].tolil()
+                    A_1_i = A_1[:, 1::2][:, triu_indices].tolil()
+
+                    self.A_1_r_data = [np.array(data_k)               for data_k in A_1_r.data]
+                    self.A_1_r_cols = [triu_indices[idxs_k] // self.n for idxs_k in A_1_r.rows]
+                    self.A_1_r_rows = [triu_indices[idxs_k]  % self.n for idxs_k in A_1_r.rows]
+                    self.A_1_r_nnzs = np.array([data_k.size for data_k in self.A_1_r_data], dtype=np.int64)
+
+                    self.A_1_r_data = ragged_to_array(self.A_1_r_data)
+                    self.A_1_r_cols = ragged_to_array(self.A_1_r_cols)
+                    self.A_1_r_rows = ragged_to_array(self.A_1_r_rows)
+                    self.A_1_r_data[self.A_1_r_cols != self.A_1_r_rows] *= 2
+                    
+
+                    self.A_1_i_data = [np.array(data_k)               for data_k in A_1_i.data]
+                    self.A_1_i_cols = [triu_indices[idxs_k] // self.n for idxs_k in A_1_i.rows]
+                    self.A_1_i_rows = [triu_indices[idxs_k]  % self.n for idxs_k in A_1_i.rows]
+                    self.A_1_i_nnzs = np.array([data_k.size for data_k in self.A_1_i_data], dtype=np.int64)
+
+                    self.A_1_i_data = ragged_to_array(self.A_1_i_data)
+                    self.A_1_i_cols = ragged_to_array(self.A_1_i_cols)
+                    self.A_1_i_rows = ragged_to_array(self.A_1_i_rows)
+                    self.A_1_i_data[self.A_1_i_cols != self.A_1_i_rows] *= 2
+                               
 
                     # A_1 = A[self.A_1_idxs]
                     # A_1_real = A_1[:, ::2][:, triu_indices].tolil()
@@ -211,13 +243,13 @@ class Cone():
                     self.A_1_data = [np.array(data_k)               for data_k in A_1_lil.data]
                     self.A_1_cols = [triu_indices[idxs_k] // self.n for idxs_k in A_1_lil.rows]
                     self.A_1_rows = [triu_indices[idxs_k]  % self.n for idxs_k in A_1_lil.rows]
+                    self.A_1_nnzs = np.array([data_k.size for data_k in self.A_1_data], dtype=np.int64)
 
                     # Fix ragged arrays
                     self.A_1_data = ragged_to_array(self.A_1_data)
                     self.A_1_cols = ragged_to_array(self.A_1_cols)
                     self.A_1_rows = ragged_to_array(self.A_1_rows)
                     self.A_1_data[self.A_1_cols != self.A_1_rows] *= 2
-                    self.A_1_nnzs = np.array([data_k.size for data_k in self.A_1_data], dtype=np.int64)
 
             # Prepare things we need for Strategy 2:
             if len(self.A_2_idxs) > 0:
@@ -296,7 +328,6 @@ class Cone():
             
         self.congr_aux_updated = True
     
-    @profile
     def base_congr(self, A, X, X_rt2):
         if not self.congr_aux_updated:
             self.congr_aux(A)
@@ -308,6 +339,8 @@ class Cone():
         if len(self.A_1_idxs) > 0:
             if self.hermitian:
                 AHA_complex(self.A_1x_rows, self.A_1x_cols, self.A_1x_data, self.A_1x_nnzs, X, out, self.A_1_idxs)
+                # AHA_complex_altalt(self.A_1x_rows, self.A_1x_cols, self.A_1x_data, self.A_1x_nnzs, X, out, self.A_1_idxs)
+                # AHA_complex_alt(self.A_1_r_rows, self.A_1_r_cols, self.A_1_r_data, self.A_1_r_nnzs, self.A_1_i_rows, self.A_1_i_cols, self.A_1_i_data, self.A_1_i_nnzs, X, out, self.A_1_idxs)
             else:
                 AHA(self.A_1_rows, self.A_1_cols, self.A_1_data, self.A_1_nnzs, X, out, self.A_1_idxs)
 
@@ -618,11 +651,12 @@ def AHA_complex(
 
                     if c > d:
                         # c > d
-                        # tmp3 += A_vals[j, beta] * (X[a, c] * X[b, d] + X[a, d] * X[b, c])
                         x1 = X[a, c].real * X[d, b].real - X[a, c].imag * X[d, b].imag
                         x2 = X[a, d].real * X[c, b].real - X[a, d].imag * X[c, b].imag
                         x3 = X[a, c].real * X[d, b].imag + X[d, b].real * X[a, c].imag
                         x4 = X[a, d].real * X[c, b].imag + X[c, b].real * X[a, d].imag
+
+                        X[a, c] * X[d, b]
 
                         tmp3_r += A_vals[j, beta].real * ( x1 + x2)
                         tmp3_r -= A_vals[j, beta].imag * (-x3 + x4)
@@ -642,50 +676,155 @@ def AHA_complex(
                 out[J, I] = tmp1
 
 
-# @nb.njit(parallel=True, fastmath=True)
-# def AHA_complex(
-#         A_rows,
-#         A_cols,
-#         A_vals,
-#         A_nnz,
-#         X,
-#         out,
-#         indices,
-#     ):
-#     # Computes the congruence transform A (X kron X) A'
-#     # when A is very sparse
+@nb.njit(parallel=True, fastmath=True)
+def AHA_complex_altalt(
+        A_rows,
+        A_cols,
+        A_vals,
+        A_nnz,
+        X,
+        out,
+        indices,
+    ):
+    # Computes the congruence transform A (X kron X) A'
+    # when A is very sparse
 
-#     p = A_rows.shape[0]
+    p = A_rows.shape[0]
 
-#     # Loop through each entry of the Schur complement matrix (AHA)_ij
-#     for j in nb.prange(p):
-#         for i in nb.prange(j + 1):
-#             I = indices[i]
-#             J = indices[j]
+    # Loop through each entry of the Schur complement matrix (AHA)_ij
+    for j in nb.prange(p):
+        for i in nb.prange(j + 1):
+            I = indices[i]
+            J = indices[j]
 
-#             tmp1 = 0.
-#             for alpha in range(A_nnz[i]):
-#                 a = A_rows[i, alpha]
-#                 b = A_cols[i, alpha]
+            tmp1 = 0.
+            for alpha in range(A_nnz[i]):
+                a = A_rows[i, alpha]
+                b = A_cols[i, alpha]
 
-#                 tmp3 = 0.
-#                 tmp4 = 0.
-#                 for beta in range(A_nnz[j]):
-#                     c = A_rows[j, beta]
-#                     d = A_cols[j, beta]
+                tmp3 = 0.
+                tmp4 = 0.
+                for beta in range(A_nnz[j]):
+                    c = A_rows[j, beta]
+                    d = A_cols[j, beta]
 
-#                     if c > d:
-#                         # c > d
-#                         # tmp3 += A_vals[j, beta] * (X[a, c] * X[b, d] + X[a, d] * X[b, c])
-#                         tmp3 += np.conj(A_vals[j, beta]) * X[a, c] * X[d, b]
-#                         tmp3 += A_vals[j, beta] * X[a, d] * X[c, b]
-#                     else:
-#                         # c = d
-#                         tmp4 += A_vals[j, beta] * X[a, c] * X[d, b]
+                    if c > d:
+                        # c > d
+                        tmp3 += np.conj(A_vals[j, beta]) * X[a, c] * X[d, b]
+                        tmp3 += A_vals[j, beta] * X[a, d] * X[c, b]
+                    else:
+                        # c = d
+                        tmp4 += A_vals[j, beta].real * X[a, c] * X[d, b]
 
-#                 tmp1 += A_vals[i, alpha] * (0.5 * tmp3 + tmp4)
+                tmp4 += 0.5 * tmp3
+                tmp1 += A_vals[i, alpha].real * tmp4.real
+                tmp1 -= A_vals[i, alpha].imag * tmp4.imag
+                
+                # tmp1 += A_vals[i, alpha] * (0.5 * tmp3 + tmp4)
+
+                # tmp1 += A_vals[i, alpha].real * (0.5 * tmp3_r + tmp4_r)
+                # tmp1 -= A_vals[i, alpha].imag * (0.5 * tmp3_i + tmp4_i)
+
                     
-#             if J >= I:
-#                 out[I, J] = tmp1.real
-#             else:
-#                 out[J, I] = tmp1.real
+            if J >= I:
+                out[I, J] = tmp1
+            else:
+                out[J, I] = tmp1
+
+@nb.njit(parallel=True, fastmath=True)
+def AHA_complex_alt(
+        A_r_rows,
+        A_r_cols,
+        A_r_vals,
+        A_r_nnz,
+        A_i_rows,
+        A_i_cols,
+        A_i_vals,
+        A_i_nnz,        
+        X,
+        out,
+        indices,
+    ):
+    # Computes the congruence transform A (X kron X) A'
+    # when A is very sparse
+
+    p = A_r_rows.shape[0]
+
+    # Loop through each entry of the Schur complement matrix (AHA)_ij
+    for j in nb.prange(p):
+        for i in nb.prange(j + 1):
+            I = indices[i]
+            J = indices[j]
+
+            # Loop over real nonzero elements
+            tmp1 = 0.
+            for alpha in range(A_r_nnz[i]):
+                a = A_r_rows[i, alpha]
+                b = A_r_cols[i, alpha]
+
+                tmp3_r = 0.
+                tmp4_r = 0.
+                # Loop over real nonzero elements
+                for beta in range(A_r_nnz[j]):
+                    c = A_r_rows[j, beta]
+                    d = A_r_cols[j, beta]
+
+                    if c > d:
+                        # c > d
+                        x1 = X[a, c].real * X[d, b].real - X[a, c].imag * X[d, b].imag
+                        x2 = X[a, d].real * X[c, b].real - X[a, d].imag * X[c, b].imag
+
+                        tmp3_r += A_r_vals[j, beta] * ( x1 + x2)
+                    else:
+                        tmp4_r += A_r_vals[j, beta] * (X[a, c].real * X[d, b].real - X[a, c].imag * X[d, b].imag)
+
+                # Loop over imag nonzero elements
+                for beta in range(A_i_nnz[j]):
+                    c = A_i_rows[j, beta]
+                    d = A_i_cols[j, beta]
+
+                    # if c > d:
+                    x3 = X[a, c].real * X[d, b].imag + X[d, b].real * X[a, c].imag
+                    x4 = X[a, d].real * X[c, b].imag + X[c, b].real * X[a, d].imag
+
+                    tmp3_r -= A_i_vals[j, beta] * (-x3 + x4)
+
+                tmp1 += A_r_vals[i, alpha] * (0.5 * tmp3_r + tmp4_r)
+
+            # Now loop over imag nonzero elemnts 
+            for alpha in range(A_i_nnz[i]):
+                a = A_i_rows[i, alpha]
+                b = A_i_cols[i, alpha]
+
+                tmp3_i = 0.
+                tmp4_i = 0.
+                # Loop over real nonzero elements
+                for beta in range(A_r_nnz[j]):
+                    c = A_r_rows[j, beta]
+                    d = A_r_cols[j, beta]
+
+                    if c > d:
+                        # c > d
+                        x3 = X[a, c].real * X[d, b].imag + X[d, b].real * X[a, c].imag
+                        x4 = X[a, d].real * X[c, b].imag + X[c, b].real * X[a, d].imag
+
+                        tmp3_i += A_r_vals[j, beta] * ( x3 + x4)
+                    else:
+                        tmp4_i += A_r_vals[j, beta] * (X[a, c].real * X[d, b].imag - X[a, c].real * X[d, b].imag)
+
+                # Loop over imag nonzero elements
+                for beta in range(A_i_nnz[j]):
+                    c = A_i_rows[j, beta]
+                    d = A_i_cols[j, beta]
+
+                    x1 = X[a, c].real * X[d, b].real - X[a, c].imag * X[d, b].imag
+                    x2 = X[a, d].real * X[c, b].real - X[a, d].imag * X[c, b].imag
+
+                    tmp3_i -= A_i_vals[j, beta] * ( x1 - x2)
+
+                tmp1 -= A_i_vals[i, alpha] * (0.5 * tmp3_i + tmp4_i)                
+                    
+            if J >= I:
+                out[I, J] = tmp1
+            else:
+                out[J, I] = tmp1
