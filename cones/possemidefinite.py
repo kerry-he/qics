@@ -140,9 +140,6 @@ class Cone():
             self.A_1_idxs = A_1_idxs[np.argsort(A_nnz[A_1_idxs])]
             self.A_2_idxs = A_2_idxs[np.argsort(A_nnz[A_2_idxs])]
             self.A_3_idxs = A_3_idxs[np.argsort(A_nnz[A_3_idxs])]
-            # self.A_1_idxs = A_1_idxs
-            # self.A_2_idxs = A_2_idxs
-            # self.A_3_idxs = A_3_idxs
 
             def ragged_to_array(ragged):
                 p = len(ragged)
@@ -152,11 +149,9 @@ class Cone():
                 ns = [xi.size for xi in ragged]
                 n = max(ns)
                 array = np.zeros((p, n), dtype=ragged[0].dtype)
-                mask = np.ones((p, n), dtype=bool)
                 
                 for i in range(p):
                     array[i, :ns[i]] = ragged[i]
-                    mask[i, :ns[i]] = 0
 
                 return array
 
@@ -164,81 +159,49 @@ class Cone():
             if len(self.A_1_idxs) > 0:                
 
                 # Get indices of sparse matrices so we can do efficient inner product
-                triu_indices = np.triu(np.arange(self.n*self.n, dtype=np.int64).reshape((self.n, self.n)) + 1).ravel() - 1
-                triu_indices = triu_indices[triu_indices >= 0]
+                triu_indices = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
+
+                A_1 = A[self.A_1_idxs]
                 
                 if self.hermitian:
-                    A_1 = A[self.A_1_idxs]
-                    A_1_lil = (A_1[:, ::2] + A_1[:, 1::2]*1j)[:, triu_indices].tolil()
-                    self.A_1x_data = [np.array(data_k)               for data_k in A_1_lil.data]
-                    self.A_1x_cols = [triu_indices[idxs_k] // self.n for idxs_k in A_1_lil.rows]
-                    self.A_1x_rows = [triu_indices[idxs_k]  % self.n for idxs_k in A_1_lil.rows]
+                    # Create arrays where real and complex are combined
+                    A_1_real = A_1[:, ::2][:, triu_indices]
+                    A_1_imag = A_1[:, 1::2][:, triu_indices]
+
+                    A_1_lil = (A_1_real + A_1_imag*1j).tolil()
+                    self.A_1x_data = [np.array(data_k) for data_k in A_1_lil.data]
+                    self.A_1x_data = ragged_to_array(self.A_1x_data)
                     self.A_1x_nnzs = np.array([data_k.size for data_k in self.A_1x_data], dtype=np.int64)
 
-                    # Fix ragged arrays
-                    self.A_1x_data = ragged_to_array(self.A_1x_data)
-                    self.A_1x_cols = ragged_to_array(self.A_1x_cols)
-                    self.A_1x_rows = ragged_to_array(self.A_1x_rows)
+                    rowcols = ragged_to_array([triu_indices[idxs_k] for idxs_k in A_1_lil.rows])
+                    self.A_1x_cols = rowcols // self.n
+                    self.A_1x_rows = rowcols  % self.n
+
+                    rowcols = ragged_to_array([np.array(idxs_k) for idxs_k in A_1_lil.rows])
+                    self.A_1x_rows = (np.ceil(np.sqrt(2 * (rowcols + 1) + 0.25) - 0.5) - 1).astype('int32')
+                    self.A_1x_cols = (rowcols - (self.A_1x_rows + 1) * self.A_1x_rows / 2).astype('int32')
+
                     self.A_1x_data[self.A_1x_cols != self.A_1x_rows] *= 2
 
+                    if len(self.A_2_idxs) > 0 or len(self.A_3_idxs) > 0:
+                        # Create arrays where real and complex are split to do easy inner products with
+                        A_1_real = A_1_real.tolil()
+                        A_1_imag = A_1_imag.tolil()
 
-                    # Split real and imag
-                    A_1 = A[self.A_1_idxs]
-                    A_1_r = A_1[:, ::2][:, triu_indices].tolil()
-                    A_1_i = A_1[:, 1::2][:, triu_indices].tolil()
+                        self.A_1_data = [np.array(data_r_k + data_i_k) for (data_r_k, data_i_k) in zip(A_1_real.data, A_1_imag.data)]
 
-                    self.A_1_r_data = [np.array(data_k)               for data_k in A_1_r.data]
-                    self.A_1_r_cols = [triu_indices[idxs_k] // self.n for idxs_k in A_1_r.rows]
-                    self.A_1_r_rows = [triu_indices[idxs_k]  % self.n for idxs_k in A_1_r.rows]
-                    self.A_1_r_nnzs = np.array([data_k.size for data_k in self.A_1_r_data], dtype=np.int64)
+                        rowcols = [np.append(triu_indices[idxs_r_k], triu_indices[idxs_i_k]) for (idxs_r_k, idxs_i_k) in zip(A_1_real.rows, A_1_imag.rows)]
 
-                    self.A_1_r_data = ragged_to_array(self.A_1_r_data)
-                    self.A_1_r_cols = ragged_to_array(self.A_1_r_cols)
-                    self.A_1_r_rows = ragged_to_array(self.A_1_r_rows)
-                    self.A_1_r_data[self.A_1_r_cols != self.A_1_r_rows] *= 2
-                    
+                        self.A_1_cols = [np.append((triu_indices[idxs_r_k] % self.n)*2, (triu_indices[idxs_i_k] % self.n)*2+1) for (idxs_r_k, idxs_i_k) in zip(A_1_real.rows, A_1_imag.rows)]
+                        self.A_1_rows = [np.append(triu_indices[idxs_r_k] // self.n, triu_indices[idxs_i_k] // self.n) for (idxs_r_k, idxs_i_k) in zip(A_1_real.rows, A_1_imag.rows)]
+                        self.A_1_nnzs = np.array([data_k.size for data_k in self.A_1_data], dtype=np.int64)
 
-                    self.A_1_i_data = [np.array(data_k)               for data_k in A_1_i.data]
-                    self.A_1_i_cols = [triu_indices[idxs_k] // self.n for idxs_k in A_1_i.rows]
-                    self.A_1_i_rows = [triu_indices[idxs_k]  % self.n for idxs_k in A_1_i.rows]
-                    self.A_1_i_nnzs = np.array([data_k.size for data_k in self.A_1_i_data], dtype=np.int64)
-
-                    self.A_1_i_data = ragged_to_array(self.A_1_i_data)
-                    self.A_1_i_cols = ragged_to_array(self.A_1_i_cols)
-                    self.A_1_i_rows = ragged_to_array(self.A_1_i_rows)
-                    self.A_1_i_data[self.A_1_i_cols != self.A_1_i_rows] *= 2
-                               
-
-                    # A_1 = A[self.A_1_idxs]
-                    # A_1_real = A_1[:, ::2][:, triu_indices].tolil()
-                    # A_1_imag = A_1[:, 1::2][:, triu_indices].tolil()
-
-                    # self.A_1_data = [np.append(np.array(data_r_k), np.array(data_i_k)) for (data_r_k, data_i_k) in zip(A_1_real.data, A_1_imag.data)]
-                    # self.A_1_cols = [np.append((triu_indices[idxs_r_k] % self.n)*2, (triu_indices[idxs_i_k] % self.n)*2+1) for (idxs_r_k, idxs_i_k) in zip(A_1_real.rows, A_1_imag.rows)]
-                    # self.A_1_rows = [np.append(triu_indices[idxs_r_k] // self.n, triu_indices[idxs_i_k] // self.n) for (idxs_r_k, idxs_i_k) in zip(A_1_real.rows, A_1_imag.rows)]
-                    # self.A_1_nnzs = np.array([data_k.size for data_k in self.A_2_data], dtype=np.int64)
-
-                    # # Fix ragged arrays
-                    # self.A_1_data = ragged_to_array(self.A_1_data)
-                    # self.A_1_cols = ragged_to_array(self.A_1_cols)
-                    # self.A_1_rows = ragged_to_array(self.A_1_rows)
-                    # self.A_1_data[self.A_1_cols != 2*self.A_1_rows] *= 2
-                    A_1_real = A_1[:, ::2][:, triu_indices].tolil()
-                    A_1_imag = A_1[:, 1::2][:, triu_indices].tolil()
-
-                    self.A_1_data = [np.append(np.array(data_r_k), np.array(data_i_k)) for (data_r_k, data_i_k) in zip(A_1_real.data, A_1_imag.data)]
-                    self.A_1_cols = [np.append((triu_indices[idxs_r_k] % self.n)*2, (triu_indices[idxs_i_k] % self.n)*2+1) for (idxs_r_k, idxs_i_k) in zip(A_1_real.rows, A_1_imag.rows)]
-                    self.A_1_rows = [np.append(triu_indices[idxs_r_k] // self.n, triu_indices[idxs_i_k] // self.n) for (idxs_r_k, idxs_i_k) in zip(A_1_real.rows, A_1_imag.rows)]
-                    self.A_1_nnzs = np.array([data_k.size for data_k in self.A_1_data], dtype=np.int64)
-
-                    # Fix ragged arrays
-                    self.A_1_data = ragged_to_array(self.A_1_data)
-                    self.A_1_cols = ragged_to_array(self.A_1_cols)
-                    self.A_1_rows = ragged_to_array(self.A_1_rows)
-                    self.A_1_data[self.A_1_cols != 2*self.A_1_rows] *= 2                    
-
+                        # Fix ragged arrays
+                        self.A_1_data = ragged_to_array(self.A_1_data)
+                        self.A_1_cols = ragged_to_array(self.A_1_cols)
+                        self.A_1_rows = ragged_to_array(self.A_1_rows)
+                        self.A_1_data[self.A_1_cols != 2*self.A_1_rows] *= 2
                 else:
-                    A_1 = A[self.A_1_idxs]
                     A_1_lil = A_1[:, triu_indices].tolil()
                     self.A_1_data = [np.array(data_k)               for data_k in A_1_lil.data]
                     self.A_1_cols = [triu_indices[idxs_k] // self.n for idxs_k in A_1_lil.rows]
@@ -249,48 +212,35 @@ class Cone():
                     self.A_1_data = ragged_to_array(self.A_1_data)
                     self.A_1_cols = ragged_to_array(self.A_1_cols)
                     self.A_1_rows = ragged_to_array(self.A_1_rows)
-                    self.A_1_data[self.A_1_cols != self.A_1_rows] *= 2
+                    self.A_2_data[self.A_2_cols != self.A_2_rows] *= 2
 
             # Prepare things we need for Strategy 2:
             if len(self.A_2_idxs) > 0:
                 # First turn rows of A into sparse CSR matrices Ai
+                A_2 = A[self.A_2_idxs]
                 if self.hermitian:
-                    A_2 = A[self.A_2_idxs]
-                    A_2_lil = (A_2[:, ::2] + A_2[:, 1::2]*1j).tolil()
-                    A_2_data = [np.array(data_k)                      for data_k in A_2_lil.data]
-                    A_2_cols = [np.array(idxs_k, dtype=int)  % self.n for idxs_k in A_2_lil.rows]
-                    A_2_rows = [np.array(idxs_k, dtype=int) // self.n for idxs_k in A_2_lil.rows]
-
-                    self.Ai_2 = [sp.sparse.csr_array((data, (row, col)), shape=(self.n, self.n))
-                                    for (data, row, col) in zip(A_2_data, A_2_cols, A_2_rows)]                 
-                else:
-                    A_2 = A[self.A_2_idxs]
-                    A_2_lil = A_2.tolil()
-                    A_2_data = [np.array(data_k)                      for data_k in A_2_lil.data]
-                    A_2_cols = [np.array(idxs_k, dtype=int)  % self.n for idxs_k in A_2_lil.rows]
-                    A_2_rows = [np.array(idxs_k, dtype=int) // self.n for idxs_k in A_2_lil.rows]
-
-                    self.Ai_2 = [sp.sparse.csr_array((data, (row, col)), shape=(self.n, self.n))
-                                    for (data, row, col) in zip(A_2_data, A_2_cols, A_2_rows)]
+                    A_2_real = A_2[:, ::2]
+                    A_2_imag = A_2[:, 1::2]
+                    A_2 = A_2_real + A_2_imag*1j
+                A_2_lil = A_2.tolil()
+                A_2_data = [np.array(data_k)                      for data_k in A_2_lil.data]
+                A_2_cols = [np.array(idxs_k, dtype=int)  % self.n for idxs_k in A_2_lil.rows]
+                A_2_rows = [np.array(idxs_k, dtype=int) // self.n for idxs_k in A_2_lil.rows]
+                self.Ai_2 = [sp.sparse.csr_array((data, (row, col)), shape=(self.n, self.n))
+                                for (data, row, col) in zip(A_2_data, A_2_rows, A_2_cols)]
 
                 # Now get indices of sparse matrices so we can do efficient inner product
                 triu_indices = np.triu(np.arange(self.n*self.n, dtype=np.int64).reshape((self.n, self.n)) + 1).ravel() - 1
                 triu_indices = triu_indices[triu_indices >= 0]
 
                 if self.hermitian:
-                    A_2_real = A_2[:, ::2][:, triu_indices].tolil()
-                    A_2_imag = A_2[:, 1::2][:, triu_indices].tolil()
+                    A_2_real = A_2_real[:, triu_indices].tolil()
+                    A_2_imag = A_2_imag[:, triu_indices].tolil()
 
-                    self.A_2_data = [np.append(np.array(data_r_k), np.array(data_i_k)) for (data_r_k, data_i_k) in zip(A_2_real.data, A_2_imag.data)]
+                    self.A_2_data = [np.array(data_r_k + data_i_k) for (data_r_k, data_i_k) in zip(A_2_real.data, A_2_imag.data)]
                     self.A_2_cols = [np.append((triu_indices[idxs_r_k] % self.n)*2, (triu_indices[idxs_i_k] % self.n)*2+1) for (idxs_r_k, idxs_i_k) in zip(A_2_real.rows, A_2_imag.rows)]
                     self.A_2_rows = [np.append(triu_indices[idxs_r_k] // self.n, triu_indices[idxs_i_k] // self.n) for (idxs_r_k, idxs_i_k) in zip(A_2_real.rows, A_2_imag.rows)]
                     self.A_2_nnzs = np.array([data_k.size for data_k in self.A_2_data], dtype=np.int64)
-
-                    # Fix ragged arrays
-                    self.A_2_data = ragged_to_array(self.A_2_data)
-                    self.A_2_cols = ragged_to_array(self.A_2_cols)
-                    self.A_2_rows = ragged_to_array(self.A_2_rows)
-                    self.A_2_data[self.A_2_cols != 2*self.A_2_rows] *= 2                    
                 else:
                     A_2_lil = A_2[:, triu_indices].tolil()
                     self.A_2_data = [np.array(data_k)               for data_k in A_2_lil.data]
@@ -298,10 +248,13 @@ class Cone():
                     self.A_2_rows = [triu_indices[idxs_k] // self.n for idxs_k in A_2_lil.rows]
                     self.A_2_nnzs = np.array([data_k.size for data_k in self.A_2_data], dtype=np.int64)
 
-                    # Fix ragged arrays
-                    self.A_2_data = ragged_to_array(self.A_2_data)
-                    self.A_2_cols = ragged_to_array(self.A_2_cols)
-                    self.A_2_rows = ragged_to_array(self.A_2_rows)
+                # Fix ragged arrays
+                self.A_2_data = ragged_to_array(self.A_2_data)
+                self.A_2_cols = ragged_to_array(self.A_2_cols)
+                self.A_2_rows = ragged_to_array(self.A_2_rows)
+                if self.hermitian:
+                    self.A_2_data[self.A_2_cols != 2*self.A_2_rows] *= 2
+                else:
                     self.A_2_data[self.A_2_cols != self.A_2_rows] *= 2
 
             # Prepare things we need for Strategy 3:
@@ -339,8 +292,6 @@ class Cone():
         if len(self.A_1_idxs) > 0:
             if self.hermitian:
                 AHA_complex(self.A_1x_rows, self.A_1x_cols, self.A_1x_data, self.A_1x_nnzs, X, out, self.A_1_idxs)
-                # AHA_complex_altalt(self.A_1x_rows, self.A_1x_cols, self.A_1x_data, self.A_1x_nnzs, X, out, self.A_1_idxs)
-                # AHA_complex_alt(self.A_1_r_rows, self.A_1_r_cols, self.A_1_r_data, self.A_1_r_nnzs, self.A_1_i_rows, self.A_1_i_cols, self.A_1_i_data, self.A_1_i_nnzs, X, out, self.A_1_idxs)
             else:
                 AHA(self.A_1_rows, self.A_1_cols, self.A_1_data, self.A_1_nnzs, X, out, self.A_1_idxs)
 
@@ -641,67 +592,6 @@ def AHA_complex(
                 a = A_rows[i, alpha]
                 b = A_cols[i, alpha]
 
-                tmp3_r = 0.
-                tmp3_i = 0.
-                tmp4_r = 0.
-                tmp4_i = 0.
-                for beta in range(A_nnz[j]):
-                    c = A_rows[j, beta]
-                    d = A_cols[j, beta]
-
-                    if c > d:
-                        # c > d
-                        x1 = X[a, c].real * X[d, b].real - X[a, c].imag * X[d, b].imag
-                        x2 = X[a, d].real * X[c, b].real - X[a, d].imag * X[c, b].imag
-                        x3 = X[a, c].real * X[d, b].imag + X[d, b].real * X[a, c].imag
-                        x4 = X[a, d].real * X[c, b].imag + X[c, b].real * X[a, d].imag
-
-                        X[a, c] * X[d, b]
-
-                        tmp3_r += A_vals[j, beta].real * ( x1 + x2)
-                        tmp3_r -= A_vals[j, beta].imag * (-x3 + x4)
-                        tmp3_i -= A_vals[j, beta].imag * ( x1 - x2)
-                        tmp3_i += A_vals[j, beta].real * ( x3 + x4)
-                    else:
-                        # c = d, (Ai)_cc is real
-                        tmp4_r += A_vals[j, beta].real * (X[a, c].real * X[d, b].real - X[a, c].imag * X[d, b].imag)
-                        tmp4_i += A_vals[j, beta].real * (X[a, c].real * X[d, b].imag - X[a, c].real * X[d, b].imag)
-
-                tmp1 += A_vals[i, alpha].real * (0.5 * tmp3_r + tmp4_r)
-                tmp1 -= A_vals[i, alpha].imag * (0.5 * tmp3_i + tmp4_i)
-                    
-            if J >= I:
-                out[I, J] = tmp1
-            else:
-                out[J, I] = tmp1
-
-
-@nb.njit(parallel=True, fastmath=True)
-def AHA_complex_altalt(
-        A_rows,
-        A_cols,
-        A_vals,
-        A_nnz,
-        X,
-        out,
-        indices,
-    ):
-    # Computes the congruence transform A (X kron X) A'
-    # when A is very sparse
-
-    p = A_rows.shape[0]
-
-    # Loop through each entry of the Schur complement matrix (AHA)_ij
-    for j in nb.prange(p):
-        for i in nb.prange(j + 1):
-            I = indices[i]
-            J = indices[j]
-
-            tmp1 = 0.
-            for alpha in range(A_nnz[i]):
-                a = A_rows[i, alpha]
-                b = A_cols[i, alpha]
-
                 tmp3 = 0.
                 tmp4 = 0.
                 for beta in range(A_nnz[j]):
@@ -716,113 +606,10 @@ def AHA_complex_altalt(
                         # c = d
                         tmp4 += A_vals[j, beta].real * X[a, c] * X[d, b]
 
+                # Do addition slightly differently to guarantee a real number
                 tmp4 += 0.5 * tmp3
                 tmp1 += A_vals[i, alpha].real * tmp4.real
                 tmp1 -= A_vals[i, alpha].imag * tmp4.imag
-                
-                # tmp1 += A_vals[i, alpha] * (0.5 * tmp3 + tmp4)
-
-                # tmp1 += A_vals[i, alpha].real * (0.5 * tmp3_r + tmp4_r)
-                # tmp1 -= A_vals[i, alpha].imag * (0.5 * tmp3_i + tmp4_i)
-
-                    
-            if J >= I:
-                out[I, J] = tmp1
-            else:
-                out[J, I] = tmp1
-
-@nb.njit(parallel=True, fastmath=True)
-def AHA_complex_alt(
-        A_r_rows,
-        A_r_cols,
-        A_r_vals,
-        A_r_nnz,
-        A_i_rows,
-        A_i_cols,
-        A_i_vals,
-        A_i_nnz,        
-        X,
-        out,
-        indices,
-    ):
-    # Computes the congruence transform A (X kron X) A'
-    # when A is very sparse
-
-    p = A_r_rows.shape[0]
-
-    # Loop through each entry of the Schur complement matrix (AHA)_ij
-    for j in nb.prange(p):
-        for i in nb.prange(j + 1):
-            I = indices[i]
-            J = indices[j]
-
-            # Loop over real nonzero elements
-            tmp1 = 0.
-            for alpha in range(A_r_nnz[i]):
-                a = A_r_rows[i, alpha]
-                b = A_r_cols[i, alpha]
-
-                tmp3_r = 0.
-                tmp4_r = 0.
-                # Loop over real nonzero elements
-                for beta in range(A_r_nnz[j]):
-                    c = A_r_rows[j, beta]
-                    d = A_r_cols[j, beta]
-
-                    if c > d:
-                        # c > d
-                        x1 = X[a, c].real * X[d, b].real - X[a, c].imag * X[d, b].imag
-                        x2 = X[a, d].real * X[c, b].real - X[a, d].imag * X[c, b].imag
-
-                        tmp3_r += A_r_vals[j, beta] * ( x1 + x2)
-                    else:
-                        tmp4_r += A_r_vals[j, beta] * (X[a, c].real * X[d, b].real - X[a, c].imag * X[d, b].imag)
-
-                # Loop over imag nonzero elements
-                for beta in range(A_i_nnz[j]):
-                    c = A_i_rows[j, beta]
-                    d = A_i_cols[j, beta]
-
-                    # if c > d:
-                    x3 = X[a, c].real * X[d, b].imag + X[d, b].real * X[a, c].imag
-                    x4 = X[a, d].real * X[c, b].imag + X[c, b].real * X[a, d].imag
-
-                    tmp3_r -= A_i_vals[j, beta] * (-x3 + x4)
-
-                tmp1 += A_r_vals[i, alpha] * (0.5 * tmp3_r + tmp4_r)
-
-            # Now loop over imag nonzero elemnts 
-            for alpha in range(A_i_nnz[i]):
-                a = A_i_rows[i, alpha]
-                b = A_i_cols[i, alpha]
-
-                tmp3_i = 0.
-                tmp4_i = 0.
-                # Loop over real nonzero elements
-                for beta in range(A_r_nnz[j]):
-                    c = A_r_rows[j, beta]
-                    d = A_r_cols[j, beta]
-
-                    if c > d:
-                        # c > d
-                        x3 = X[a, c].real * X[d, b].imag + X[d, b].real * X[a, c].imag
-                        x4 = X[a, d].real * X[c, b].imag + X[c, b].real * X[a, d].imag
-
-                        tmp3_i += A_r_vals[j, beta] * ( x3 + x4)
-                    else:
-                        tmp4_i += A_r_vals[j, beta] * (X[a, c].real * X[d, b].imag - X[a, c].real * X[d, b].imag)
-
-                # Loop over imag nonzero elements
-                for beta in range(A_i_nnz[j]):
-                    c = A_i_rows[j, beta]
-                    d = A_i_cols[j, beta]
-
-                    x1 = X[a, c].real * X[d, b].real - X[a, c].imag * X[d, b].imag
-                    x2 = X[a, d].real * X[c, b].real - X[a, d].imag * X[c, b].imag
-
-                    tmp3_i -= A_i_vals[j, beta] * ( x1 - x2)
-
-                tmp1 -= A_i_vals[i, alpha] * (0.5 * tmp3_i + tmp4_i)                
                     
             if J >= I:
                 out[I, J] = tmp1
