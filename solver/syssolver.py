@@ -403,7 +403,7 @@ class SysSolver():
             # Cone is too big
             if isinstance(cone_k, nonnegorthant.Cone):
                 H_block.append(sp.sparse.diags(np.random.rand(dim_k)))
-            elif dim_k > model.q * 0.1:         # TODO: Determine a good threshold
+            elif (dim_k > model.q * 0.05) or (dim_k > 10):         # TODO: Determine a good threshold
                 return False
             else:
                 H_block.append(np.random.rand(dim_k, dim_k))

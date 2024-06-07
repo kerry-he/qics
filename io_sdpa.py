@@ -7,6 +7,9 @@ from cones import *
 from solver import model, solver
 
 from utils.other_solvers import cvxopt_solve_sdp, mosek_solve_sdp, clarabel_solve_sdp
+from utils import other_solvers
+
+import sdpap
 
 def read_sdpa(filename):
     fp = open(filename, "r")
@@ -111,8 +114,11 @@ def read_sdpa(filename):
 if __name__ == "__main__":
     import os, csv
 
-    # fnames = os.listdir("./problems/sdp/")
-    fnames = ["control5.dat-s"]
+    folder = "./problems/sdplib/"
+    # Run all instances in folder
+    fnames = os.listdir(folder)
+    # Run single instance
+    # fnames = ["arch0.dat-s"]
 
     fout_name = 'data.csv'
     with open(fout_name, 'w', newline='') as file:
@@ -123,7 +129,7 @@ if __name__ == "__main__":
         # ==============================================================
         # Read problem data
         # ==============================================================
-        C_sdpa, b_sdpa, A_sdpa, blockStruct = read_sdpa("./problems/sdp/" + fname)
+        C_sdpa, b_sdpa, A_sdpa, blockStruct = read_sdpa(folder + fname)
         
         # Vectorize C
         dims = []
@@ -154,37 +160,80 @@ if __name__ == "__main__":
         # ==============================================================
         # Our algorithm
         # ==============================================================
-        # mdl = model.Model(c=-b, G=A.T, h=c, cones=cones)
-        mdl = model.Model(c=c, A=A, b=b, cones=cones)
-        slv = solver.Solver(mdl, sym=True, ir=True)
+        try:
+        #     mdl = model.Model(c=-b, G=A.T, h=c, cones=cones)
+            mdl = model.Model(c=c, A=A, b=b, cones=cones)
+            slv = solver.Solver(mdl, sym=True, ir=True)
 
-        # profiler = cProfile.Profile()
-        # profiler.enable()
-        slv.solve()
-        # profiler.disable()
-        # profiler.dump_stats("example.stats")    
+            profiler = cProfile.Profile()
+            profiler.enable()
+            slv.solve()
+            profiler.disable()
+            profiler.dump_stats("example.stats")
 
-        with open(fout_name, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([fname, "ours", slv.solution_status, slv.p_obj, slv.solve_time, slv.iter, slv.gap, max(slv.y_feas, slv.z_feas), slv.x_feas])        
+            with open(fout_name, 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([fname, "ours", slv.solution_status, slv.p_obj, slv.solve_time, slv.iter, slv.gap, max(slv.y_feas, slv.z_feas), slv.x_feas])        
+        except Exception as e:
+            with open(fout_name, 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([fname, "ours", e, None, None, None, None, None, None])
 
         # ==============================================================
         # CVXOPT
         # ==============================================================
-        sol = cvxopt_solve_sdp(C_sdpa, b, A, blockStruct)
+        try:
+            sol = cvxopt_solve_sdp(C_sdpa, b, A, blockStruct)
 
-        with open(fout_name, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([fname, "cvxopt", sol['status'], sol['obj'], sol['time'], sol['iter'], sol['gap'], sol['pfeas'], sol['dfeas']])        
+            with open(fout_name, 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([fname, "cvxopt", sol['status'], sol['obj'], sol['time'], sol['iter'], sol['gap'], sol['pfeas'], sol['dfeas']])        
 
-        print("optval: ", sol['gap']) 
-        print("time:   ", sol['time'])   
+            print("optval: ", sol['gap']) 
+            print("time:   ", sol['time'])   
+        except Exception as e:
+            with open(fout_name, 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([fname, "cvxopt", e, None, None, None, None, None, None])        
 
         # ==============================================================
         # MOSEK
         # ==============================================================
-        sol = mosek_solve_sdp(C_sdpa, b, A, blockStruct)
+        try:
+            sol = mosek_solve_sdp(C_sdpa, b, A, blockStruct)
 
-        with open(fout_name, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([fname, "mosek", sol['status'], sol['obj'], sol['time'], sol['iter'], sol['gap'], sol['pfeas'], sol['dfeas']])        
+            with open(fout_name, 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([fname, "mosek", sol['status'], sol['obj'], sol['time'], sol['iter'], sol['gap'], sol['pfeas'], sol['dfeas']])
+        except Exception as e:
+            with open(fout_name, 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([fname, "mosek", e, None, None, None, None, None, None])
+
+        # ==============================================================
+        # SDPA
+        # ==============================================================
+        try:
+            A, b, c, K, J = sdpap.fromsdpa(folder + fname)
+            sdpap_options = {}
+            sdpap_options['epsilonStar'] = 1e-8
+            # sdpap_options['numThreads'] = 1
+            x, y, timeinfo, sdpainfo = other_solvers.solve_sdpap(-A,-b,-c,K,J,)
+
+            with open(fout_name, 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([
+                    fname, 
+                    "sdpa", 
+                    sdpainfo['phasevalue'], 
+                    sdpainfo['primalObj'], 
+                    sdpainfo['sdpaTime'], 
+                    sdpainfo['iteration'], 
+                    sdpainfo['dualityGap'] / (1 + abs(sdpainfo['primalObj'])), 
+                    sdpainfo['primalError'], 
+                    sdpainfo['dualError']
+                ])
+        except Exception as e:
+            with open(fout_name, 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([fname, "cvxopt", e, None, None, None, None, None, None])
