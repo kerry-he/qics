@@ -166,3 +166,4 @@ cython_debug/
 *.mat
 *.dat-s
 *.csv
+*.dat-c

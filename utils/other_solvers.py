@@ -24,6 +24,125 @@ import sys
 import cvxpy
 import clarabel
 
+def read_sdpa(filename):
+
+    # Determine if this is a complex or real SDP file
+    dtype = np.complex128 if (filename[-1] == 'c') else np.float64
+
+    fp = open(filename, "r")
+    line = fp.readline()
+    # Skip comments
+    while line[0] == '*' or line[0] == '"':
+        line = fp.readline()
+        
+    # Read mDim
+    mDim = int(line.strip().split(' ')[0])
+
+    # Read nBlock
+    line = fp.readline()
+    nBlock = int(line.strip().split(' ')[0])
+    
+    # Read blockStruct
+    line = fp.readline()
+    blockStruct = [int(i) for i in line.strip().split(' ')]
+    
+    # Read b
+    line = fp.readline()
+    line = line.strip()
+    line = line.strip('{}()')
+    if ',' in line:
+        b_str = line.strip().split(',')
+    else:
+        b_str = line.strip().split()
+    while b_str.count('') > 0:
+        b_str.remove('')
+    b = np.array([float(bi) for bi in b_str])
+    
+    # Read C and A
+    C = []
+    for bi in blockStruct:
+        if bi >= 0:
+            C.append(np.zeros((bi, bi), dtype=dtype))
+        else:
+            C.append(np.zeros(-bi))
+            
+    totDim = 0
+    idxs = [0]
+    for n in blockStruct:
+        if n >= 0:
+            if dtype == np.complex128:
+                totDim += 2*n*n
+                idxs.append(idxs[-1] + 2*n*n)
+            else:
+                totDim += n*n
+                idxs.append(idxs[-1] + n*n)
+        else:
+            totDim -= n
+            idxs.append(idxs[-1] - n)
+
+    Acols = []
+    Arows = []
+    Avals = []
+
+    lineList = fp.readlines()
+    for line in lineList:
+        row, block, colI, colJ, val = line.split()[0:5]
+        row = int(row.strip(',')) - 1
+        block = int(block.strip(',')) - 1
+        colI = int(colI.strip(',')) - 1
+        colJ = int(colJ.strip(',')) - 1
+        val = complex(val.strip(',')) if (dtype == np.complex128 and blockStruct[block] >= 0) else float(val.strip(','))
+        
+        if val == 0:
+            continue
+        
+        if row == -1:
+            if blockStruct[block] >= 0:
+                C[block][colI, colJ] = val
+                C[block][colJ, colI] = np.conj(val)
+            else:
+                assert colI == colJ
+                C[block][colI] = val
+        else:
+            if blockStruct[block] >= 0:
+                if dtype == np.complex128:
+                    if val.real != 0.:
+                        Acols.append(idxs[block] + (colI + colJ*blockStruct[block])*2)
+                        Arows.append(row)
+                        Avals.append(val.real)
+
+                        if colJ != colI:
+                            Acols.append(idxs[block] + (colJ + colI*blockStruct[block])*2)
+                            Arows.append(row)
+                            Avals.append(val.real)
+
+                    if val.imag != 0.:
+                        Acols.append(idxs[block] + (colI + colJ*blockStruct[block])*2 + 1)
+                        Arows.append(row)
+                        Avals.append(val.imag)
+
+                        Acols.append(idxs[block] + (colJ + colI*blockStruct[block])*2 + 1)
+                        Arows.append(row)
+                        Avals.append(-val.imag)
+                else:
+                    Acols.append(idxs[block] + colI + colJ*blockStruct[block])
+                    Arows.append(row)
+                    Avals.append(val)
+
+                    if colJ != colI:
+                        Acols.append(idxs[block] + colJ + colI*blockStruct[block])
+                        Arows.append(row)
+                        Avals.append(val)
+            else:
+                assert colI == colJ
+                Acols.append(idxs[block] + colI)
+                Arows.append(row)
+                Avals.append(val)
+
+    A = sp.sparse.csr_matrix((Avals, (Arows, Acols)), shape=(mDim, totDim))
+            
+    return C, b, A, blockStruct
+
 def cvxopt_solve_sdp(C, b, A, blockStruct):
     # Solve problem
     #   min c'x s.t. Ax == b, x >= 0
@@ -128,7 +247,7 @@ def mosek_solve_sdp(C, b, A, blockStruct):
     # Mosek MODEL
     msk_M.constraint(Expr.add(msk_AX), Domain.equalsTo(list(b.ravel())))
     msk_M.objective(ObjectiveSense.Maximize, Expr.add(msk_CX))
-    msk_M.setSolverParam("numThreads", 1)
+    # msk_M.setSolverParam("numThreads", 1)
     msk_M.setLogHandler(sys.stdout)
     msk_M.solve()
     msk_status = msk_M.getProblemStatus()
@@ -138,7 +257,7 @@ def mosek_solve_sdp(C, b, A, blockStruct):
         'time': msk_M.getSolverDoubleInfo("intpntTime"), 
         'status': msk_status,
         'iter': msk_M.getSolverIntInfo("intpntIter"),
-        'gap': msk_M.getSolverDoubleInfo("intpntPrimalObj") - msk_M.getSolverDoubleInfo("intpntDualObj"),
+        'gap': (msk_M.getSolverDoubleInfo("intpntPrimalObj") - msk_M.getSolverDoubleInfo("intpntDualObj")) / (1 + abs(msk_M.getSolverDoubleInfo("intpntPrimalObj"))),
         'dfeas': msk_M.getSolverDoubleInfo("intpntDualFeas"),
         'pfeas': msk_M.getSolverDoubleInfo("intpntPrimalFeas")
     }
@@ -212,6 +331,8 @@ def clarabel_solve_sdp(c, b, A, blockStruct):
     # solution.s  # primal slacks
 
     # return 
+
+
 
 __all__ = ['solve']
 
@@ -546,7 +667,6 @@ def solve_sdpap(A, b, c, K, J, option={}):
     # --------------------------------------------------
     # Make dictionary 'info'
     # --------------------------------------------------
-    maybe_print('Making result infomation...')
     timeinfo['convert'] = (timeinfo['conv_domain'] + timeinfo['conv_range'] +
                            timeinfo['conv_std'] + timeinfo['conv_fv'])
     timeinfo['retrieve'] = (timeinfo['ret_fv'] + timeinfo['ret_std'] +
@@ -555,6 +675,5 @@ def solve_sdpap(A, b, c, K, J, option={}):
     if ran_K.f > 0 and option['frvMethod'] == 'elimination':
         sdpainfo['primalObj'] += gamma
         sdpainfo['dualObj'] += gamma
-
 
     return x, y, timeinfo, sdpainfo

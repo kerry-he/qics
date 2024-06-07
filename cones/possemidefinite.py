@@ -2,10 +2,7 @@ import numpy as np
 import scipy as sp
 import numba as nb
 import itertools
-from utils import symmetric as sym
 from utils import linear as lin
-
-import time
 
 class Cone():
     def __init__(self, n, hermitian=False):
@@ -302,7 +299,6 @@ class Cone():
             
         self.congr_aux_updated = True
     
-    @profile
     def base_congr(self, A, X, X_rt2):
         if not self.congr_aux_updated:
             self.congr_aux(A)
@@ -452,12 +448,12 @@ class Cone():
 
     def invnt_mtx(self):
         if not self.nt_aux_updated:
-            self.nt_aux()        
+            self.nt_aux()
         return lin.kron(self.W, self.W)
     
     def nt_mtx(self):
         if not self.nt_aux_updated:
-            self.nt_aux()        
+            self.nt_aux()
         return lin.kron(self.W_inv, self.W_inv)
     
     def nt_congr(self, A):
