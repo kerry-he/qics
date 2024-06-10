@@ -1,6 +1,5 @@
 import numpy as np
 import scipy as sp
-from utils import linear as lin
 
 def scale_axis(A, scale_rows=None, scale_cols=None):
     if sp.sparse.issparse(A):
