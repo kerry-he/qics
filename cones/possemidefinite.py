@@ -193,20 +193,21 @@ class Cone():
                         self.Ai_ds.append(A_ds[k, :].toarray().reshape(self.n, self.n))
 
                 # Extract and scale all off-diagonal blocks by 2
-                if self.hermitian:
-                    self.triu_indices = np.array(
-                        [2 * (i + i*self.n)     for i in range(self.n)] + 
-                        [2 * (i + j*self.n)     for j in range(self.n) for i in range(j)] + 
-                        [2 * (i + j*self.n) + 1 for j in range(self.n) for i in range(j)]
-                    )
-                    scale = 2 * np.ones(2 * self.n * self.n)
-                    scale[::2*self.n+2] = 1
-                else:
-                    self.triu_indices = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
-                    scale = 2 * np.ones(self.n * self.n)
-                    scale[::self.n+1] = 1
-                self.A_triu = sparse.scale_axis(A, scale_cols=scale)
-                self.A_triu = self.A_triu[:, self.triu_indices]                    
+                if len(self.A_sp_idxs) > 0:
+                    if self.hermitian:
+                        self.triu_indices = np.array(
+                            [2 * (i + i*self.n)     for i in range(self.n)] + 
+                            [2 * (i + j*self.n)     for j in range(self.n) for i in range(j)] + 
+                            [2 * (i + j*self.n) + 1 for j in range(self.n) for i in range(j)]
+                        )
+                        scale = 2 * np.ones(2 * self.n * self.n)
+                        scale[::2*self.n+2] = 1
+                    else:
+                        self.triu_indices = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
+                        scale = 2 * np.ones(self.n * self.n)
+                        scale[::self.n+1] = 1
+                    self.A_triu = sparse.scale_axis(A, scale_cols=scale)
+                    self.A_triu = self.A_triu[:, self.triu_indices]                    
 
         else:
             # A and all Ai are dense matrices
@@ -220,6 +221,7 @@ class Cone():
 
         self.congr_aux_updated = True
 
+    @profile
     def base_congr(self, A, X, X_rt2):
         if not self.congr_aux_updated:
             self.congr_aux(A)
@@ -227,15 +229,13 @@ class Cone():
         p = A.shape[0]
         out = np.zeros((p, p))
 
-        if sp.sparse.issparse(A):
-
-            # Compute sparse-sparse component
-            if len(self.A_sp_idxs) > 0:
-                # Use fast Numba compiled functions when A is extremely sparse 
-                if self.hermitian:
-                    AHA_complex(out, self.A_sp_rows, self.A_sp_cols, self.A_sp_data, self.A_sp_nnzs, X, self.A_sp_idxs)
-                else:
-                    AHA(out, self.A_sp_rows, self.A_sp_cols, self.A_sp_data, self.A_sp_nnzs, X, self.A_sp_idxs)
+        # Compute sparse-sparse component
+        if len(self.A_sp_idxs) > 0:
+            # Use fast Numba compiled functions when A is extremely sparse 
+            if self.hermitian:
+                AHA_complex(out, self.A_sp_rows, self.A_sp_cols, self.A_sp_data, self.A_sp_nnzs, X, self.A_sp_idxs)
+            else:
+                AHA(out, self.A_sp_rows, self.A_sp_cols, self.A_sp_data, self.A_sp_nnzs, X, self.A_sp_idxs)
 
             if len(self.A_ds_idxs) > 0:
                 lhs = np.zeros((len(self.A_ds_idxs), self.dim))
@@ -249,6 +249,9 @@ class Cone():
                 # Compute inner products between all <Ai, X Aj X>
                 out[:, self.A_ds_idxs] = self.A_triu @ lhs[:, self.triu_indices].T
                 out[self.A_ds_idxs, :] = out[:, self.A_ds_idxs].T
+
+            return out
+
         else:
             lhs = np.zeros((len(self.A_ds_idxs), self.dim))
 
@@ -259,8 +262,6 @@ class Cone():
                 lhs[j] = XAjX.view(dtype=np.float64).reshape(-1)
             # Compute symmetric matrix multiplication [A (L kr L)] [A (L kr L)]'
             return lhs @ lhs.conj().T
-            
-        return out
     
     def third_dir_deriv(self, dir1, dir2=None):
         if not self.grad_updated:
