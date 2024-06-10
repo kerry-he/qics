@@ -125,7 +125,9 @@ class Cone():
             A_nnz = A.getnnz(1)
             self.A_sp_idxs = np.where((A_nnz > 0) & (A_nnz < self.n))[0]
             self.A_ds_idxs = np.where((A_nnz >= self.n))[0]
+
             self.A_sp_idxs = self.A_sp_idxs[np.argsort(A_nnz[self.A_sp_idxs])]
+            self.A_ds_ds_idxs = np.ix_(self.A_ds_idxs, self.A_ds_idxs)
 
             def lil_to_array(ragged):
                 # Converts a list of lists (with possibly different lengths) 
@@ -214,6 +216,7 @@ class Cone():
             # Just need to convert the rows of A into dense matrices
             self.A_sp_idxs = np.array([])
             self.A_ds_idxs = np.arange(A.shape[0])
+            self.A_ds_ds_idxs = np.ix_(self.A_ds_idxs, self.A_ds_idxs)
             if self.hermitian:
                 self.Ai_ds = [Ai.reshape((-1, 2)).view(dtype=np.complex128).reshape(self.n, self.n) for Ai in A]
             else:
@@ -221,7 +224,6 @@ class Cone():
 
         self.congr_aux_updated = True
 
-    @profile
     def base_congr(self, A, X, X_rt2):
         if not self.congr_aux_updated:
             self.congr_aux(A)
@@ -249,9 +251,6 @@ class Cone():
                 # Compute inner products between all <Ai, X Aj X>
                 out[:, self.A_ds_idxs] = self.A_triu @ lhs[:, self.triu_indices].T
                 out[self.A_ds_idxs, :] = out[:, self.A_ds_idxs].T
-
-            return out
-
         else:
             lhs = np.zeros((len(self.A_ds_idxs), self.dim))
 
@@ -261,7 +260,9 @@ class Cone():
                 XAjX   = X_rt2.conj().T @ AjX
                 lhs[j] = XAjX.view(dtype=np.float64).reshape(-1)
             # Compute symmetric matrix multiplication [A (L kr L)] [A (L kr L)]'
-            return lhs @ lhs.conj().T
+            out[self.A_ds_ds_idxs] = lhs @ lhs.conj().T
+
+        return out
     
     def third_dir_deriv(self, dir1, dir2=None):
         if not self.grad_updated:
