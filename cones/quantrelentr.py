@@ -14,6 +14,13 @@ class Cone():
         self.dim = 1 + 2 * self.vn                      # Total dimension of cone
         self.use_sqrt = False
 
+
+
+        self.dim   = (1, n*n, n*n)   if (not hermitian) else (1, 2*n*n, 2*n*n)
+        self.type  = ('r', 's', 's') if (not hermitian) else ('r', 'h', 'h')
+        self.dtype = np.float64      if (not hermitian) else np.complex128
+
+
         self.idx_X = slice(1, 1 + self.vn)
         self.idx_Y = slice(1 + self.vn, self.dim)
 
@@ -23,32 +30,39 @@ class Cone():
         self.hess_aux_updated    = False
         self.invhess_aux_updated = False
         self.dder3_aux_updated   = False
+        self.congr_aux_updated   = False
 
         return
         
     def get_nu(self):
         return 1 + 2 * self.n
     
-    def set_init_point(self):
-        point = np.empty((self.dim, 1))
-
+    def get_init_point(self, out):
         (t0, x0, y0) = get_central_ray_relentr(self.n)
 
-        point[0] = t0
-        point[self.idx_X] = sym.mat_to_vec(np.eye(self.n), hermitian=self.hermitian) * x0
-        point[self.idx_Y] = sym.mat_to_vec(np.eye(self.n), hermitian=self.hermitian) * y0
+        point = (
+            t0, 
+            np.eye(self.n, dtype=self.dtype) * x0,
+            np.eye(self.n, dtype=self.dtype) * y0,
+        )
 
-        self.set_point(point)
+        self.set_point(point, point)
 
-        return point
+        out[0][:] = point[0]
+        out[1][:] = point[1]
+        out[2][:] = point[2]
+
+        return out
     
-    def set_point(self, point):
-        assert np.size(point) == self.dim
-        self.point = point
+    def set_point(self, point, dual=None, a=True):
 
-        self.t = point[0]
-        self.X = sym.vec_to_mat(point[self.idx_X], hermitian=self.hermitian)
-        self.Y = sym.vec_to_mat(point[self.idx_Y], hermitian=self.hermitian)
+        self.t = point[0] * a
+        self.X = point[1] * a
+        self.Y = point[2] * a
+
+        self.t_d = dual[0] * a
+        self.X_d = dual[1] * a
+        self.Y_d = dual[2] * a        
 
         self.feas_updated        = False
         self.grad_updated        = False
@@ -87,11 +101,17 @@ class Cone():
 
         return -np.log(self.z) - np.sum(self.log_Dx) - np.sum(self.log_Dy)
 
-    def get_grad(self):
+    def get_grad(self, out=None):
         assert self.feas_updated
 
         if self.grad_updated:
-            return self.grad
+            if out is not None:
+                out[0][:] = self.grad[0]
+                out[1][:] = self.grad[1]
+                out[2][:] = self.grad[2]
+                return out
+            else:            
+                return self.grad
         
         self.inv_Dx = np.reciprocal(self.Dx)
         self.inv_Dy = np.reciprocal(self.Dy)
@@ -106,13 +126,21 @@ class Cone():
         self.DPhiX = self.log_XY + np.eye(self.n)
         self.DPhiY = -self.Uy @ (self.D1y_log * self.UyXUy) @ self.Uy.conj().T
 
-        self.grad             = np.empty((self.dim, 1))
-        self.grad[0]          = -self.zi
-        self.grad[self.idx_X] = sym.mat_to_vec(self.zi * self.DPhiX - self.inv_X, hermitian=self.hermitian)
-        self.grad[self.idx_Y] = sym.mat_to_vec(self.zi * self.DPhiY - self.inv_Y, hermitian=self.hermitian)
+        self.grad = (
+           -self.zi,
+            self.zi * self.DPhiX - self.inv_X,
+            self.zi * self.DPhiY - self.inv_Y
+        )
 
         self.grad_updated = True
-        return self.grad
+
+        if out is not None:
+            out[0][:] = self.grad[0]
+            out[1][:] = self.grad[1]
+            out[2][:] = self.grad[2]
+            return out
+        else:
+            return self.grad
     
     def update_hessprod_aux(self):
         assert not self.hess_aux_updated
@@ -124,12 +152,76 @@ class Cone():
 
         # Preparing other required variables
         self.zi2 = self.zi * self.zi
-        self.DPhiX_vec = sym.mat_to_vec(self.DPhiX, hermitian=self.hermitian)
-        self.DPhiY_vec = sym.mat_to_vec(self.DPhiY, hermitian=self.hermitian)
 
         self.hess_aux_updated = True
 
         return
+
+    def hess_prod_ip(self, out, H):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+
+        (Ht, Hx, Hy) = H
+
+        UxHxUx = self.Ux.conj().T @ Hx @ self.Ux
+        UyHxUy = self.Uy.conj().T @ Hx @ self.Uy
+        UyHyUy = self.Uy.conj().T @ Hy @ self.Uy
+
+        # Hessian product of conditional entropy
+        D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
+        D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T
+        D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.conj().T
+        D2PhiYYH = -mgrad.scnd_frechet(self.D2y_log_UXU, UyHyUy, U=self.Uy)
+        
+        # Hessian product of barrier function
+        out[0][:] = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
+
+        out[1][:]  = -out[0] * self.DPhiX
+        out[1][:] +=  self.zi * D2PhiXXH + self.inv_X @ Hx @ self.inv_X
+        out[1][:] +=  self.zi * D2PhiXYH
+
+        out[2][:]  = -out[0] * self.DPhiY
+        out[2][:] +=  self.zi * D2PhiYXH
+        out[2][:] +=  self.zi * D2PhiYYH + self.inv_Y @ Hy @ self.inv_Y
+
+        return out
+
+
+    def congr_aux(self, A):
+        assert not self.congr_aux_updated
+
+        self.At = A[:, [0]]
+        Ax = A[:, 1 : 1+self.dim[1]]
+        Ay = A[:, 1+self.dim[1] : 1+self.dim[1]+self.dim[2]]
+
+        self.Ax = [Ax_k.reshape((self.n, self.n)) for Ax_k in Ax]
+        self.Ay = [Ay_k.reshape((self.n, self.n)) for Ay_k in Ay]
+
+        self.congr_aux_updated = True
+
+    def hess_congr(self, A):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+        if not self.congr_aux_updated:
+            self.congr_aux(A)
+
+        p = A.shape[0]
+        out = np.zeros((p, p))
+        lhs = np.zeros((p, sum(self.dim)))
+
+        temp = (np.zeros((1, 1)), np.zeros((self.n, self.n)), np.zeros((self.n, self.n)))
+
+        for k in range(p):
+            self.hess_prod_ip(temp, (self.At[[k]], self.Ax[k], self.Ay[k]))
+
+            lhs[k, [0]] = temp[0]
+            lhs[k, 1 : 1+self.dim[1]] = temp[1].reshape(-1)
+            lhs[k, 1+self.dim[1] : 1+self.dim[1]+self.dim[2]] = temp[2].reshape(-1)
+
+
+        return lhs @ A.T
 
     def hess_prod(self, dirs):
         assert self.grad_updated
@@ -220,6 +312,47 @@ class Cone():
         self.invhess_aux_updated = True
 
         return
+    
+
+    def invhess_prod_ip(self, out, H):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+        if not self.invhess_aux_updated:
+            self.update_invhessprod_aux()
+
+        (Ht, Hx, Hy) = H
+
+        Wx = Hx + Ht * self.DPhiX
+        Wy = Hy + Ht * self.DPhiY
+
+        temp = self.Ux.conj().T @ Wx @ self.Ux
+        temp = self.UyUx @ (self.D1x_comb_inv * temp) @ self.UyUx.conj().T
+        temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.conj().T
+        temp = self.Uy.conj().T @ (Wy - temp) @ self.Uy
+        temp_vec = sym.mat_to_vec(temp, hermitian=self.hermitian)
+
+
+        temp_vec = lin.fact_solve(self.hess_schur_fact, temp_vec)
+
+
+        temp = sym.vec_to_mat(temp_vec, hermitian=self.hermitian)
+        outY = self.Uy @ temp @ self.Uy.conj().T
+
+        temp = self.Uy.conj().T @ outY @ self.Uy
+        temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.conj().T
+        temp = Wx - temp
+        temp = self.Ux.conj().T @ temp @ self.Ux
+        outX = self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.conj().T
+
+        outt = self.z2 * Ht + lin.inp(self.DPhiX, outX) + lin.inp(self.DPhiY, outY)
+
+        out[0][:] = outt
+        out[1][:] = outX
+        out[2][:] = outY
+
+        return out
+    
 
     def invhess_prod(self, dirs):
         assert self.grad_updated
@@ -286,20 +419,16 @@ class Cone():
 
         return
 
-    def third_dir_deriv(self, dirs):
+    def third_dir_deriv_axpy(self, out, dir, a=True):
         assert self.grad_updated
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
         if not self.dder3_aux_updated:
             self.update_dder3_aux()
 
-        Ht = dirs[0, :]
-        Hx = sym.vec_to_mat(dirs[self.idx_X, :], hermitian=self.hermitian)
-        Hy = sym.vec_to_mat(dirs[self.idx_Y, :], hermitian=self.hermitian)
+        (Ht, Hx, Hy) = dir
 
-        out = np.zeros((self.dim, 1))
-
-        chi = Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)
+        chi = Ht[0, 0] - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)
         chi2 = chi * chi
 
         UxHxUx = self.Ux.conj().T @ Hx @ self.Ux
@@ -336,53 +465,24 @@ class Cone():
         dder3_Y +=  self.zi * (D3PhiYYX + D3PhiYXY + D3PhiYYY)
         dder3_Y -=  2 * self.inv_Y @ Hy @ self.inv_Y @ Hy @ self.inv_Y
 
-        out[0]          = dder3_t
-        out[self.idx_X] = sym.mat_to_vec(dder3_X, hermitian=self.hermitian)
-        out[self.idx_Y] = sym.mat_to_vec(dder3_Y, hermitian=self.hermitian)
+        out[0][:] += dder3_t * a
+        out[1][:] += dder3_X * a
+        out[2][:] += dder3_Y * a
 
         return out
-
-    def norm_invhess(self, x):
-        assert self.grad_updated
-        if not self.hess_aux_updated:
-            self.update_hessprod_aux()
-
-        Ht = x[0, :]
-        Hx = sym.vec_to_mat(x[self.idx_X, :], hermitian=self.hermitian)
-        Hy = sym.vec_to_mat(x[self.idx_Y, :], hermitian=self.hermitian)
-
-        Wx = Hx + Ht * self.DPhiX
-        Wy = Hy + Ht * self.DPhiY
-
-        UWxU = self.Uy.conj().T @ Wx @ self.Uy
-        UWyU = self.Uy.conj().T @ Wy @ self.Uy
-
-        # Estimate Hessian
-        self.D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
-        self.D1y_inv = np.reciprocal(np.outer(self.Dy, self.Dy))
-        self.D1x_comb = self.zi * self.D1x_log + self.D1x_inv
-        x_largest = np.max(self.D1x_comb)
-
-        D2y_UXU = self.D2y_log * self.UyXUy
-        S_est = np.zeros((self.n, self.n))
-        for k in range(self.n):
-            eigs_k = np.linalg.eigvalsh(D2y_UXU[k, :, :])
-            y_smallest = np.min(eigs_k)
-            S_est[k, :] += y_smallest
-            S_est[:, k] += y_smallest
-
-        Dxy = -self.D1y_log * self.zi
-        Dyy = -S_est * self.zi + self.D1y_inv
-
-        schur = Dyy - Dxy * Dxy / x_largest
-
-        temp = UWyU - Dxy * UWxU / x_largest
-        tempY = temp / schur
-        outY = self.Uy @ tempY @ self.Uy.conj().T
-        outX = (Wx - (self.Uy @ (Dxy * tempY) @ self.Uy.conj().T)) / x_largest
-        outt = self.z * self.z * Ht + lin.inp(self.DPhiX, outX) + lin.inp(self.DPhiY, outY)
-        
-        return lin.inp(outX, Hx) + lin.inp(outY, Hy) + (outt * Ht)
+    
+    def prox(self):
+        assert self.feas_updated
+        if not self.grad_updated:
+            self.get_grad()
+        psi = (
+            self.t_d + self.grad[0],
+            self.X_d + self.grad[1],
+            self.Y_d + self.grad[2]
+        )
+        temp = (np.zeros((1, 1)), np.zeros((self.n, self.n)), np.zeros((self.n, self.n)))
+        self.invhess_prod_ip(temp, psi)
+        return lin.inp(temp[0], psi[0]) + lin.inp(temp[1], psi[1]) + lin.inp(temp[2], psi[2])
 
 
 def get_central_ray_relentr(x_dim):

@@ -6,7 +6,7 @@ class Cone():
     def __init__(self, dim):
         # Dimension properties
         self.dim = dim
-        self.type = ['r']
+        self.type = 'r'
 
         self.Ax = None
 
@@ -16,12 +16,14 @@ class Cone():
     def get_nu(self):
         return self.dim
     
-    def set_init_point(self):
+    def get_init_point(self, out):
         self.set_point(
             np.ones((self.dim, 1)), 
             np.ones((self.dim, 1))
         )
-        return self.x
+
+        out[:] = self.x
+        return out
 
     def set_point(self, point, dual=None, a=True):
         self.x = point * a
@@ -34,8 +36,9 @@ class Cone():
     def get_val(self):
         return -np.sum(np.log(self.x))    
 
-    def get_grad(self):
-        return -np.reciprocal(self.x)
+    def get_grad(self, out):
+        out[:] = -np.reciprocal(self.x)
+        return out
 
     def hess_prod_ip(self, out, H):
         out[:] = H / (self.x**2)
@@ -67,11 +70,13 @@ class Cone():
             Ax = x * A.T
             return Ax.T @ Ax
 
-    def third_dir_deriv(self, dir1, dir2=None):
+    def third_dir_deriv_axpy(self, out, dir1, dir2=None, a=True):
         if dir2 is None:
-            return -2 * dir1 * dir1 / (self.x*self.x*self.x)
+            out -= 2 * a * dir1 * dir1 / (self.x*self.x*self.x)
+            return out
         else:
-            return -2 * dir1 * dir2 / self.x
+            out -= 2 * a * dir1 * dir2 / self.x
+            return out
 
     def prox(self):
         return np.linalg.norm(self.x * self.z - 1, np.inf)

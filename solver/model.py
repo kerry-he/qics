@@ -110,7 +110,7 @@ def build_cone_idxs(n, cones):
     cone_idxs = []
     prev_idx = 0
     for cone in cones:
-        dim_k = cone.dim
+        dim_k = np.sum(cone.dim)
         cone_idxs.append(slice(prev_idx, prev_idx + dim_k))
         prev_idx += dim_k
     assert prev_idx == n

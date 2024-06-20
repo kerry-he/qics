@@ -12,7 +12,7 @@ class Cone():
         self.hermitian = hermitian                     # Hermitian or symmetric vector space
 
         self.dim   = n * n      if (not hermitian) else 2 * n * n
-        self.type  = ['s']      if (not hermitian) else ['h']
+        self.type  = 's'        if (not hermitian) else 'h'
         self.dtype = np.float64 if (not hermitian) else np.complex128
         
         # Update flags
@@ -35,12 +35,14 @@ class Cone():
     def get_nu(self):
         return self.n
     
-    def set_init_point(self):
+    def get_init_point(self, out):
         self.set_point(
             np.eye(self.n, dtype=self.dtype), 
             np.eye(self.n, dtype=self.dtype)
         )
-        return self.X
+
+        out[:] = self.X
+        return out
     
     def set_point(self, point, dual=None, a=True):
         self.X = point * a
@@ -76,7 +78,7 @@ class Cone():
         (sign, logabsdet) = np.linalg.slogdet(self.X)
         return -sign * logabsdet
     
-    def get_grad(self):
+    def get_grad(self, out):
         assert self.feas_updated
 
         if self.grad_updated:
@@ -87,7 +89,9 @@ class Cone():
         self.grad = -self.X_inv
 
         self.grad_updated = True
-        return self.grad
+
+        out[:] = self.grad
+        return out
     
     def hess_prod_ip(self, out, H):
         if not self.grad_updated:
@@ -264,16 +268,19 @@ class Cone():
 
         return out
     
-    def third_dir_deriv(self, dir1, dir2=None):
+    def third_dir_deriv_axpy(self, out, dir1, dir2=None, a=True):
         if not self.grad_updated:
             self.get_grad()
         if dir2 is None:
             XHX_2 = self.X_inv @ dir1 @ self.X_chol_inv.conj().T
-            return -2 * XHX_2 @ XHX_2.conj().T
+            out -= 2 * a * XHX_2 @ XHX_2.conj().T
+            return out
         else:
             PD = dir1 @ dir2
-            XiPD = self.X_inv @ PD
-            return -XiPD - XiPD.conj().T
+            XiPD = self.X_inv @ PD * a
+            out -= XiPD
+            out -= XiPD.conj().T
+            return out
     
     def prox(self):
         assert self.feas_updated

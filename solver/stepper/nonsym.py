@@ -86,10 +86,6 @@ class NonSymStepper():
                 next_point.axpy(alpha             , dir_p)
                 next_point.axpy(alpha ** 2        , dir_p_toa)
                 next_point.axpy((1.0 - alpha)     , dir_c)
-
-                # next_point.axpy((1 - gamma**0.33) * (1 - gamma) , dir_p)
-                # next_point.axpy((1 - gamma**0.33)               , dir_p_toa)
-                # next_point.axpy((1 - gamma**0.33) * gamma       , dir_c)                
                 if not (model.sym and self.syssolver.sym):
                     next_point.axpy((1.0 - alpha) ** 2, dir_c_toa)
             elif mode == "comb":
@@ -160,7 +156,7 @@ class NonSymStepper():
         # rs := -z - mu*g(s)
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
-            self.rhs.s[k][:] = cone_k.get_grad()
+            cone_k.get_grad(self.rhs.s[k])
         self.rhs.s.vec *= -rtmu
         self.rhs.s.vec -= point.z.vec
 
@@ -175,8 +171,9 @@ class NonSymStepper():
         self.rhs.z.fill(0.)
 
         rtmu = math.sqrt(mu)
+        self.rhs.s.fill(0.)
         for (k, cone_k) in enumerate(model.cones):
-            self.rhs.s[k][:] = cone_k.third_dir_deriv(dir_c.s[k])
+            cone_k.third_dir_deriv_axpy(self.rhs.s[k], dir_c.s[k])
         self.rhs.s.vec *= -0.5*rtmu
 
         self.rhs.tau[:] = 0.
@@ -204,12 +201,12 @@ class NonSymStepper():
         rtmu = math.sqrt(mu)
         if self.syssolver.sym:
             for (k, cone_k) in enumerate(model.cones):
-                self.rhs.s[k][:] = cone_k.third_dir_deriv(dir_p.s[k], dir_p.z[k])
+                cone_k.third_dir_deriv_axpy(self.rhs.s[k], dir_p.s[k], dir_p.z[k])
             self.rhs.s *= 0.5 / rtmu
         else:
             for (k, cone_k) in enumerate(model.cones):
-                cone_k.hess_prod_ip(self.rhs.s[k][:], dir_p.s[k])
-                self.rhs.s[k][:] -= (0.5 / rtmu) * cone_k.third_dir_deriv(dir_p.s[k]) 
+                cone_k.hess_prod_ip(self.rhs.s[k], dir_p.s[k])
+                cone_k.third_dir_deriv_axpy(self.rhs.s[k], dir_p.s[k], a=-0.5 / rtmu) 
 
         self.rhs.tau[:] = 0.
         if self.syssolver.sym:

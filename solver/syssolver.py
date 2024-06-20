@@ -80,9 +80,10 @@ class SysSolver():
             self.GHG_fact = lin.fact(GHG)
 
             if model.use_A:
-                GHGA = np.zeros((model.n, model.p))
-                for i in range(model.p):
-                    GHGA[:, [i]] = lin.fact_solve(self.GHG_fact, model.A.T[:, [i]].toarray())
+                # GHGA = np.zeros((model.n, model.p))
+                # for i in range(model.p):
+                #     GHGA[:, [i]] = lin.fact_solve(self.GHG_fact, model.A.T[:, [i]])
+                GHGA = lin.fact_solve(self.GHG_fact, model.A.T)
                 AGHGA = model.A @ GHGA
                 self.AGHGA_fact = lin.fact(AGHGA)
 
@@ -209,7 +210,7 @@ class SysSolver():
             d.y[:] = lin.fact_solve(self.AGHGA_fact, temp)
             
             # dx := (G'HG) \ [rx - G' (H rz + rs) - A' dy]
-            temp = r.x - self.vec_temp.vec - model.A_T @ d.y
+            temp = r.x - model.G_T @ self.vec_temp.vec - model.A_T @ d.y
             d.x[:] = lin.fact_solve(self.GHG_fact, temp)
             
             # dz := H (rz + G dx) + rs

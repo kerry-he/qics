@@ -217,9 +217,10 @@ class Solver():
         self.point.kap[:] = 1.
 
         for (k, cone_k) in enumerate(model.cones):
-            np.copyto(self.point.s[k], cone_k.set_init_point())
+            cone_k.get_init_point(self.point.s[k])
             assert cone_k.get_feas()
-            np.copyto(self.point.z[k], -cone_k.get_grad())
+            cone_k.get_grad(self.point.z[k])
+        self.point.z.vec *= -1
 
         self.calc_mu()
         if not math.isclose(self.mu, 1.):
