@@ -128,12 +128,12 @@ class VecProduct(Vector):
         t = 0
         for (dim_k, type_k) in zip(self.dims, self.types):
             self.vecs.append(self.vec[t:t+np.sum(dim_k)])
-            if isinstance(type_k, tuple):
+            if isinstance(type_k, list):
                 mats_k = []
                 for (dim_k_j, type_k_j) in zip(dim_k, type_k):
                     mats_k.append(vec_to_mat(self.vec, dim_k_j, type_k_j, t))
                     t += dim_k_j
-                self.mats.append(tuple(mats_k))
+                self.mats.append(mats_k)
             else:
                 self.mats.append(vec_to_mat(self.vec, dim_k, type_k, t))
                 t += dim_k

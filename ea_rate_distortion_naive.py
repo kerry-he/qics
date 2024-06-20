@@ -18,8 +18,8 @@ def purify(eig):
     return vec @ vec.T
 
 def get_ikr_tr1(n, sN):
-    tr2 = np.zeros((sN, sN))
     N = n * n
+    tr2 = np.zeros((N*N, sN))
     k = -1
     for j in range(N):
         for i in range(j + 1):
@@ -32,7 +32,7 @@ def get_ikr_tr1(n, sN):
                 H[i, j] = H[j, i] = math.sqrt(0.5)
             
             I_H = sym.i_kr(sym.p_tr(H, 0, (n, n)), 0, (n, n))
-            tr2[:, [k]] = sym.mat_to_vec(I_H)
+            tr2[:, k] = I_H.ravel()
 
     return tr2
 
@@ -54,12 +54,28 @@ def get_tr2(n, sn, sN):
 
     return tr2
 
+def get_eye(n, sn):
+    eye = np.zeros((n*n, sn))
+    k = -1
+    for j in range(n):
+        for i in range(j + 1):
+            k += 1
+        
+            H = np.zeros((n, n))
+            if i == j:
+                H[i, j] = 1
+            else:
+                H[i, j] = H[j, i] = math.sqrt(0.5)
+            
+            eye[:, k] = H.ravel()
+    return eye
+
 
 np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-n = 7
+n = 6
 N = n * n
 sn = sym.vec_dim(n)
 sN = sym.vec_dim(N)
@@ -77,6 +93,7 @@ D = 0.5
 # Build problem model
 tr2 = get_tr2(n, sn, sN)
 ikr_tr1 = get_ikr_tr1(n, sN)
+eye = get_eye(N, sN)
 
 A = np.hstack((np.zeros((sn, 1)), tr2))
 
@@ -85,13 +102,13 @@ b = sym.mat_to_vec(rho_A)
 c = np.zeros((sN + 1, 1))
 c[0] = 1.
 
-G1 = np.hstack((np.ones((1, 1)), np.zeros((1, sN))))            # t_qre
-G2 = np.hstack((np.zeros((sN, 1)), np.eye(sN)))                 # X_qre
-G3 = np.hstack((np.zeros((sN, 1)), ikr_tr1))                    # Y_qre
-G4 = np.hstack((np.zeros((1, 1)), -Delta.T))                     # LP
+G1 = np.hstack((np.ones((1, 1)), np.zeros((1, sN))))     # t_qre
+G2 = np.hstack((np.zeros((N*N, 1)), eye))                 # X_qre
+G3 = np.hstack((np.zeros((N*N, 1)), ikr_tr1))             # Y_qre
+G4 = np.hstack((np.zeros((1, 1)), -Delta.T))             # LP
 G = -np.vstack((G1, G2, G3, G4))
 
-h = np.zeros((1 + sN*2 + 1, 1))
+h = np.zeros((1 + N*N*2 + 1, 1))
 h[-1] = D
 
 # Input into model and solve

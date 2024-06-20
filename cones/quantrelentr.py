@@ -16,8 +16,8 @@ class Cone():
 
 
 
-        self.dim   = (1, n*n, n*n)   if (not hermitian) else (1, 2*n*n, 2*n*n)
-        self.type  = ('r', 's', 's') if (not hermitian) else ('r', 'h', 'h')
+        self.dim   = [1, n*n, n*n]   if (not hermitian) else [1, 2*n*n, 2*n*n]
+        self.type  = ['r', 's', 's'] if (not hermitian) else ['r', 'h', 'h']
         self.dtype = np.float64      if (not hermitian) else np.complex128
 
 
@@ -40,11 +40,11 @@ class Cone():
     def get_init_point(self, out):
         (t0, x0, y0) = get_central_ray_relentr(self.n)
 
-        point = (
+        point = [
             t0, 
             np.eye(self.n, dtype=self.dtype) * x0,
             np.eye(self.n, dtype=self.dtype) * y0,
-        )
+        ]
 
         self.set_point(point, point)
 
@@ -126,11 +126,11 @@ class Cone():
         self.DPhiX = self.log_XY + np.eye(self.n)
         self.DPhiY = -self.Uy @ (self.D1y_log * self.UyXUy) @ self.Uy.conj().T
 
-        self.grad = (
+        self.grad = [
            -self.zi,
             self.zi * self.DPhiX - self.inv_X,
             self.zi * self.DPhiY - self.inv_Y
-        )
+        ]
 
         self.grad_updated = True
 
@@ -157,6 +157,7 @@ class Cone():
 
         return
 
+    # @profile
     def hess_prod_ip(self, out, H):
         assert self.grad_updated
         if not self.hess_aux_updated:
@@ -177,29 +178,30 @@ class Cone():
         # Hessian product of barrier function
         out[0][:] = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
 
-        out[1][:]  = -out[0] * self.DPhiX
-        out[1][:] +=  self.zi * D2PhiXXH + self.inv_X @ Hx @ self.inv_X
-        out[1][:] +=  self.zi * D2PhiXYH
+        out[1][:] = -out[0] * self.DPhiX
+        out[1]   +=  self.zi * (D2PhiXYH + D2PhiXXH)
+        out[1]   +=  self.inv_X @ Hx @ self.inv_X
 
-        out[2][:]  = -out[0] * self.DPhiY
-        out[2][:] +=  self.zi * D2PhiYXH
-        out[2][:] +=  self.zi * D2PhiYYH + self.inv_Y @ Hy @ self.inv_Y
+        out[2][:] = -out[0] * self.DPhiY
+        out[2]   +=  self.zi * (D2PhiYXH + D2PhiYYH)
+        temp = self.inv_Y @ Hy @ self.inv_Y
+        out[2]   +=  temp
 
         return out
-
 
     def congr_aux(self, A):
         assert not self.congr_aux_updated
 
-        self.At = A[:, [0]]
+        self.At = A[:, 0]
         Ax = A[:, 1 : 1+self.dim[1]]
         Ay = A[:, 1+self.dim[1] : 1+self.dim[1]+self.dim[2]]
 
-        self.Ax = [Ax_k.reshape((self.n, self.n)) for Ax_k in Ax]
-        self.Ay = [Ay_k.reshape((self.n, self.n)) for Ay_k in Ay]
+        self.Ax = np.array([Ax_k.reshape((self.n, self.n)) for Ax_k in Ax])
+        self.Ay = np.array([Ay_k.reshape((self.n, self.n)) for Ay_k in Ay])
 
         self.congr_aux_updated = True
 
+    @profile
     def hess_congr(self, A):
         assert self.grad_updated
         if not self.hess_aux_updated:
@@ -208,18 +210,32 @@ class Cone():
             self.congr_aux(A)
 
         p = A.shape[0]
-        out = np.zeros((p, p))
         lhs = np.zeros((p, sum(self.dim)))
 
-        temp = (np.zeros((1, 1)), np.zeros((self.n, self.n)), np.zeros((self.n, self.n)))
+        UxHxUx = self.Ux.conj().T @ self.Ax @ self.Ux
+        UyHxUy = self.Uy.conj().T @ self.Ax @ self.Uy
+        UyHyUy = self.Uy.conj().T @ self.Ay @ self.Uy
 
-        for k in range(p):
-            self.hess_prod_ip(temp, (self.At[[k]], self.Ax[k], self.Ay[k]))
+        # Hessian product of conditional entropy
+        D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
+        D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T
+        D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.conj().T
+        D2PhiYYH = np.array([-mgrad.scnd_frechet(self.D2y_log_UXU, UyHyUy_k, U=self.Uy) for UyHyUy_k in UyHyUy])
+        
+        # Hessian product of barrier function
+        outt = (self.At - np.sum(self.DPhiX * self.Ax, axis=(1, 2)) - np.sum(self.DPhiY * self.Ay, axis=(1, 2))) * self.zi2
 
-            lhs[k, [0]] = temp[0]
-            lhs[k, 1 : 1+self.dim[1]] = temp[1].reshape(-1)
-            lhs[k, 1+self.dim[1] : 1+self.dim[1]+self.dim[2]] = temp[2].reshape(-1)
+        outX  = -np.outer(outt, self.DPhiX).reshape((p, self.n, self.n))
+        outX +=  self.zi * (D2PhiXYH + D2PhiXXH)
+        outX +=  self.inv_X @ self.Ax @ self.inv_X
 
+        outY  = -np.outer(outt, self.DPhiY).reshape((p, self.n, self.n))
+        outY +=  self.zi * (D2PhiYXH + D2PhiYYH)
+        outY +=  self.inv_Y @ self.Ay @ self.inv_Y
+
+        lhs[:, 0] = outt
+        lhs[:, 1 : 1+self.dim[1]] = outX.reshape((p, -1))
+        lhs[:, 1+self.dim[1] : 1+self.dim[1]+self.dim[2]] = outY.reshape((p, -1))    
 
         return lhs @ A.T
 
@@ -480,7 +496,7 @@ class Cone():
             self.X_d + self.grad[1],
             self.Y_d + self.grad[2]
         )
-        temp = (np.zeros((1, 1)), np.zeros((self.n, self.n)), np.zeros((self.n, self.n)))
+        temp = [np.zeros((1, 1)), np.zeros((self.n, self.n)), np.zeros((self.n, self.n))]
         self.invhess_prod_ip(temp, psi)
         return lin.inp(temp[0], psi[0]) + lin.inp(temp[1], psi[1]) + lin.inp(temp[2], psi[2])
 
