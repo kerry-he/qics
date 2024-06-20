@@ -192,8 +192,8 @@ class Cone():
                 for k in range(A_ds.shape[0]):
                     if A_ds_nnzs[k] < 0.1 * self.n*self.n:
                         data_k = A_ds_lil.data[k]
-                        rows_k = np.array(A_ds_lil.rows[k])  % self.n
-                        cols_k = np.array(A_ds_lil.rows[k]) // self.n
+                        rows_k = np.array(A_ds_lil.rows[k]) // self.n
+                        cols_k = np.array(A_ds_lil.rows[k])  % self.n
                         self.Ai_ds.append(sp.sparse.csr_array((data_k, (rows_k, cols_k)), shape=(self.n, self.n)))
                     else:
                         self.Ai_ds.append(A_ds[k, :].toarray().reshape(self.n, self.n))
@@ -203,8 +203,8 @@ class Cone():
                     if self.hermitian:
                         self.triu_indices = np.array(
                             [2 * (i + i*self.n)     for i in range(self.n)] + 
-                            [2 * (i + j*self.n)     for j in range(self.n) for i in range(j)] + 
-                            [2 * (i + j*self.n) + 1 for j in range(self.n) for i in range(j)]
+                            [2 * (j + i*self.n)     for j in range(self.n) for i in range(j)] + 
+                            [2 * (j + i*self.n) + 1 for j in range(self.n) for i in range(j)]
                         )
                         scale = 2 * np.ones(2 * self.n * self.n)
                         scale[::2*self.n+2] = 1
