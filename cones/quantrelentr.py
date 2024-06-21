@@ -157,7 +157,6 @@ class Cone():
 
         return
 
-    # @profile
     def hess_prod_ip(self, out, H):
         assert self.grad_updated
         if not self.hess_aux_updated:
@@ -201,7 +200,6 @@ class Cone():
 
         self.congr_aux_updated = True
 
-    @profile
     def hess_congr(self, A):
         assert self.grad_updated
         if not self.hess_aux_updated:
@@ -220,7 +218,8 @@ class Cone():
         D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
         D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T
         D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.conj().T
-        D2PhiYYH = np.array([-mgrad.scnd_frechet(self.D2y_log_UXU, UyHyUy_k, U=self.Uy) for UyHyUy_k in UyHyUy])
+        D2PhiYYH = -mgrad.scnd_frechet_multi(self.D2y_log_UXU, UyHyUy, U=self.Uy)
+        # D2PhiYYH = np.array([-mgrad.scnd_frechet(self.D2y_log_UXU, UyHyUy_k, U=self.Uy) for UyHyUy_k in UyHyUy])
         
         # Hessian product of barrier function
         outt = (self.At - np.sum(self.DPhiX * self.Ax, axis=(1, 2)) - np.sum(self.DPhiY * self.Ay, axis=(1, 2))) * self.zi2

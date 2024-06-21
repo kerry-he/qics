@@ -111,6 +111,19 @@ def scnd_frechet_single(D2, UHU, UXU=None, U=None):
 
     return out
 
+def scnd_frechet_multi(D2, UHU, UXU=None, U=None):
+    n = D2.shape[0]
+
+    D2_UXU = (D2 * UXU) if (UXU is not None) else (D2)
+    UHU_temp = np.ascontiguousarray(UHU.transpose(2, 1, 0)) 
+    out = D2_UXU @ UHU_temp
+    out = out.transpose(2, 1, 0)
+    out = out + out.conj().transpose(0, 2, 1)
+    out = np.ascontiguousarray(out)
+    out = (U @ out @ U.conj().T) if (U is not None) else (out)
+
+    return out
+
 @nb.njit(parallel=True)
 def scnd_frechet_parallel(D2, UHU, UXU=None, U=None):
     n = D2.shape[0]
