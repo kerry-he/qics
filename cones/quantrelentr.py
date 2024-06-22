@@ -41,7 +41,7 @@ class Cone():
         (t0, x0, y0) = get_central_ray_relentr(self.n)
 
         point = [
-            t0, 
+            np.array([[t0]]), 
             np.eye(self.n, dtype=self.dtype) * x0,
             np.eye(self.n, dtype=self.dtype) * y0,
         ]
@@ -91,7 +91,7 @@ class Cone():
         self.log_X = (self.Ux * self.log_Dx) @ self.Ux.conj().T
         self.log_Y = (self.Uy * self.log_Dy) @ self.Uy.conj().T
         self.log_XY = self.log_X - self.log_Y
-        self.z = self.t - lin.inp(self.X, self.log_XY)
+        self.z = self.t[0, 0] - lin.inp(self.X, self.log_XY)
 
         self.feas = (self.z > 0)
         return self.feas
@@ -198,8 +198,17 @@ class Cone():
         self.Ax = np.array([Ax_k.reshape((self.n, self.n)) for Ax_k in Ax])
         self.Ay = np.array([Ay_k.reshape((self.n, self.n)) for Ay_k in Ay])
 
+        self.work1 = np.empty_like(self.Ax)
+        self.work2 = np.empty_like(self.Ax)
+
+        self.D2PhiXXH = np.empty_like(self.Ax)
+        self.D2PhiYXH = np.empty_like(self.Ax)
+        self.D2PhiXYH = np.empty_like(self.Ax)
+        self.D2PhiYYH = np.empty_like(self.Ax)
+
         self.congr_aux_updated = True
 
+    # @profile
     def hess_congr(self, A):
         assert self.grad_updated
         if not self.hess_aux_updated:
@@ -210,19 +219,35 @@ class Cone():
         p = A.shape[0]
         lhs = np.zeros((p, sum(self.dim)))
 
+        # Hessian product of barrier function
+        outt = (self.At - np.sum(self.DPhiX * self.Ax, axis=(1, 2)) - np.sum(self.DPhiY * self.Ay, axis=(1, 2))) * self.zi2  
+
+        # outt  = self.At
+        # outt -= (self.Ax.reshape((p, 1, -1)) @ self.DPhiX.reshape((-1, 1))).squeeze()
+        # outt -= (self.Ay.reshape((p, 1, -1)) @ self.DPhiY.reshape((-1, 1))).squeeze()
+        # outt *= self.zi2
+
+        # Hessian product of conditional entropy
+        # congr(self.work1, self.Ux.conj().T, self.Ax, self.work2)
+        # self.work1 *= self.D1x_log
+        # congr(self.D2PhiXXH, self.Ux, self.work1, self.work2)
+
+        # congr(self.work1, self.Uy.conj().T, self.Ax, self.work2)
+        # self.work1 *= self.D1y_log
+        # congr(self.D2PhiYXH, self.Uy, self.work1, self.work2)
+
+        # congr(self.work1, self.Uy.conj().T, self.Ay, self.work2)
+        # self.work1 *= self.D1y_log
+        # congr(self.D2PhiXYH, self.Uy, self.work1, self.work2)             
+
         UxHxUx = self.Ux.conj().T @ self.Ax @ self.Ux
         UyHxUy = self.Uy.conj().T @ self.Ax @ self.Uy
         UyHyUy = self.Uy.conj().T @ self.Ay @ self.Uy
 
-        # Hessian product of conditional entropy
         D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
-        D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T
         D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.conj().T
+        D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T
         D2PhiYYH = -mgrad.scnd_frechet_multi(self.D2y_log_UXU, UyHyUy, U=self.Uy)
-        # D2PhiYYH = np.array([-mgrad.scnd_frechet(self.D2y_log_UXU, UyHyUy_k, U=self.Uy) for UyHyUy_k in UyHyUy])
-        
-        # Hessian product of barrier function
-        outt = (self.At - np.sum(self.DPhiX * self.Ax, axis=(1, 2)) - np.sum(self.DPhiY * self.Ay, axis=(1, 2))) * self.zi2
 
         outX  = -np.outer(outt, self.DPhiX).reshape((p, self.n, self.n))
         outX +=  self.zi * (D2PhiXYH + D2PhiXXH)
@@ -529,3 +554,8 @@ central_rays_relentr = np.array([
     [0.384838611966541, 0.871385497883771, 1.155570329098724],
     [0.364899121739834, 0.875838067970643, 1.148735192195660]
 ])
+
+def congr(out, A, X, work):
+    np.matmul(A, X, out=work)
+    np.matmul(work, A.conj().T, out=out)
+    return out
