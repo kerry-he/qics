@@ -11,18 +11,13 @@ class Cone():
         self.n = n                                      # Side dimension of system
         self.hermitian = hermitian                      # Hermitian or symmetric vector space
         self.vn = sym.vec_dim(self.n, self.hermitian)   # Vector dimension of system
-        self.dim = 1 + 2 * self.vn                      # Total dimension of cone
-        self.use_sqrt = False
-
-
 
         self.dim   = [1, n*n, n*n]   if (not hermitian) else [1, 2*n*n, 2*n*n]
         self.type  = ['r', 's', 's'] if (not hermitian) else ['r', 'h', 'h']
         self.dtype = np.float64      if (not hermitian) else np.complex128
 
-
-        self.idx_X = slice(1, 1 + self.vn)
-        self.idx_Y = slice(1 + self.vn, self.dim)
+        self.idx_X = slice(1, 1 + self.dim[1])
+        self.idx_Y = slice(1 + self.dim[1], sum(self.dim))
 
         # Update flags
         self.feas_updated        = False
@@ -200,15 +195,16 @@ class Cone():
 
         self.work1 = np.empty_like(self.Ax)
         self.work2 = np.empty_like(self.Ax)
+        self.work3 = np.empty_like(self.Ax)
+        self.work4 = np.empty((self.Ax.shape[::-1]))
 
         self.D2PhiXXH = np.empty_like(self.Ax)
         self.D2PhiYXH = np.empty_like(self.Ax)
-        self.D2PhiXYH = np.empty_like(self.Ax)
-        self.D2PhiYYH = np.empty_like(self.Ax)
+        self.D2PhiXYH = np.empty_like(self.Ay)
+        self.D2PhiYYH = np.empty_like(self.Ay)
 
         self.congr_aux_updated = True
 
-    # @profile
     def hess_congr(self, A):
         assert self.grad_updated
         if not self.hess_aux_updated:
@@ -219,48 +215,60 @@ class Cone():
         p = A.shape[0]
         lhs = np.zeros((p, sum(self.dim)))
 
-        # Hessian product of barrier function
-        outt = (self.At - np.sum(self.DPhiX * self.Ax, axis=(1, 2)) - np.sum(self.DPhiY * self.Ay, axis=(1, 2))) * self.zi2  
+        # Hessian products for quantum relative entropy:
+        #    D2_XX Phi(X, Y) [Hx] =  Ux [log^[1](Dx) .* (Ux' Hx Ux)] Ux'
+        #    D2_YX Phi(X, Y) [Hx] = -Uy [log^[1](Dy) .* (Uy' Hx Uy)] Uy'
+        #    D2_XY Phi(X, Y) [Hy] = -Uy [log^[1](Dy) .* (Uy' Hy Uy)] Uy'
+        #    D2_YY Phi(X, Y) [Hy] = -Uy [SUM_k log_k^[2](Dy) .* ([Uy' X Uy]_k [Uk' Hy Uy]_k' + [Uy' Hy Uy]_k [Uk' X Uy]_k') ] Uy'
+        congr(self.work1, self.Ux.conj().T, self.Ax, self.work2)
+        self.work1 *= self.D1x_log
+        congr(self.D2PhiXXH, self.Ux, self.work1, self.work2)
 
-        # outt  = self.At
-        # outt -= (self.Ax.reshape((p, 1, -1)) @ self.DPhiX.reshape((-1, 1))).squeeze()
-        # outt -= (self.Ay.reshape((p, 1, -1)) @ self.DPhiY.reshape((-1, 1))).squeeze()
-        # outt *= self.zi2
+        congr(self.work1, self.Uy.conj().T, self.Ax, self.work2)
+        self.work1 *= self.D1y_log
+        congr(self.D2PhiYXH, self.Uy, self.work1, self.work2)
 
-        # Hessian product of conditional entropy
-        # congr(self.work1, self.Ux.conj().T, self.Ax, self.work2)
-        # self.work1 *= self.D1x_log
-        # congr(self.D2PhiXXH, self.Ux, self.work1, self.work2)
+        congr(self.work1, self.Uy.conj().T, self.Ay, self.work2)
+        mgrad.scnd_frechet_multi(self.D2PhiYYH, self.D2y_log_UXU, self.work1, U=self.Uy, work1=self.work2, work2=self.work3, work3=self.work4)
 
-        # congr(self.work1, self.Uy.conj().T, self.Ax, self.work2)
-        # self.work1 *= self.D1y_log
-        # congr(self.D2PhiYXH, self.Uy, self.work1, self.work2)
+        self.work1 *= self.D1y_log
+        congr(self.D2PhiXYH, self.Uy, self.work1, self.work2)
 
-        # congr(self.work1, self.Uy.conj().T, self.Ay, self.work2)
-        # self.work1 *= self.D1y_log
-        # congr(self.D2PhiXYH, self.Uy, self.work1, self.work2)             
-
-        UxHxUx = self.Ux.conj().T @ self.Ax @ self.Ux
-        UyHxUy = self.Uy.conj().T @ self.Ax @ self.Uy
-        UyHyUy = self.Uy.conj().T @ self.Ay @ self.Uy
-
-        D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
-        D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.conj().T
-        D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T
-        D2PhiYYH = -mgrad.scnd_frechet_multi(self.D2y_log_UXU, UyHyUy, U=self.Uy)
-
-        outX  = -np.outer(outt, self.DPhiX).reshape((p, self.n, self.n))
-        outX +=  self.zi * (D2PhiXYH + D2PhiXXH)
-        outX +=  self.inv_X @ self.Ax @ self.inv_X
-
-        outY  = -np.outer(outt, self.DPhiY).reshape((p, self.n, self.n))
-        outY +=  self.zi * (D2PhiYXH + D2PhiYYH)
-        outY +=  self.inv_Y @ self.Ay @ self.inv_Y
+        # Hessian products with respect to t
+        #    D2_tt F(t, X, Y)[Ht] = Ht / z^2
+        #    D2_tX F(t, X, Y)[Hx] = -(D_X Phi(X, Y) [Hx]) / z^2
+        #    D2_tY F(t, X, Y)[Hy] = -(D_Y Phi(X, Y) [Hy]) / z^2
+        outt  = self.At - (self.Ax.reshape((p, 1, -1)) @ self.DPhiX.reshape((-1, 1))).ravel()
+        outt -= (self.Ay.reshape((p, 1, -1)) @ self.DPhiY.reshape((-1, 1))).ravel()
+        outt *= self.zi2
 
         lhs[:, 0] = outt
-        lhs[:, 1 : 1+self.dim[1]] = outX.reshape((p, -1))
-        lhs[:, 1+self.dim[1] : 1+self.dim[1]+self.dim[2]] = outY.reshape((p, -1))    
 
+        # Hessian products with respect to X
+        #    D2_Xt F(t, X, Y)[Ht] = -Ht (D_X Phi(X, Y) [Hx]) / z^2
+        #    D2_XX F(t, X, Y)[Hx] = (D_X Phi(X, Y) [Hx]) D_X Phi(X, Y) / z^2 + (D2_XX Phi(X, Y) [Hx]) / z + X^-1 Hx X^-1
+        #    D2_XY F(t, X, Y)[Hy] = (D_Y Phi(X, Y) [Hy]) D_X Phi(X, Y) / z^2 + (D2_XY Phi(X, Y) [Hy]) / z
+        np.subtract(self.D2PhiXXH, self.D2PhiXYH, out=self.work1)
+        self.work1 *= self.zi
+        congr(self.work3, self.inv_X, self.Ax, self.work2)
+        self.work1 += self.work3
+        self.work1 -= np.outer(outt, self.DPhiX).reshape((p, self.n, self.n))
+
+        lhs[:, self.idx_X] = self.work1.reshape((p, -1))
+
+        # Hessian products with respect to Y
+        #    D2_Yt F(t, X, Y)[Ht] = -Ht (D_X Phi(X, Y) [Hx]) / z^2
+        #    D2_YX F(t, X, Y)[Hx] = (D_X Phi(X, Y) [Hx]) D_Y Phi(X, Y) / z^2 + (D2_YX Phi(X, Y) [Hx]) / z
+        #    D2_YY F(t, X, Y)[Hy] = (D_Y Phi(X, Y) [Hy]) D_Y Phi(X, Y) / z^2 + (D2_YY Phi(X, Y) [Hy]) / z + Y^-1 Hy Y^-1
+        np.add(self.D2PhiYYH, self.D2PhiYXH, out=self.work1)
+        self.work1 *= -self.zi
+        congr(self.work3, self.inv_Y, self.Ay, self.work2)
+        self.work1 += self.work3
+        self.work1 -= np.outer(outt, self.DPhiY).reshape((p, self.n, self.n))
+
+        lhs[:, self.idx_Y] = self.work1.reshape((p, -1))    
+
+        # Multiply A (H A')
         return lhs @ A.T
 
     def hess_prod(self, dirs):
