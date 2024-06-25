@@ -103,8 +103,8 @@ c = np.zeros((sN + 1, 1))
 c[0] = 1.
 
 G1 = np.hstack((np.ones((1, 1)), np.zeros((1, sN))))     # t_qre
-G2 = np.hstack((np.zeros((N*N, 1)), eye))                 # X_qre
-G3 = np.hstack((np.zeros((N*N, 1)), ikr_tr1))             # Y_qre
+G2 = np.hstack((np.zeros((N*N, 1)), eye))                # X_qre
+G3 = np.hstack((np.zeros((N*N, 1)), ikr_tr1))            # Y_qre
 G4 = np.hstack((np.zeros((1, 1)), -Delta.T))             # LP
 G = -np.vstack((G1, G2, G3, G4))
 
