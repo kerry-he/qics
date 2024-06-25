@@ -90,17 +90,6 @@ def D3_log_ij(i, j, D3, D):
     return D3_ij    
 
 def scnd_frechet(D2, UHU, UXU=None, U=None):
-    # If UXU is None, assume UXU has already been pre-multiplied into D2
-    # If U is None, assume we are computing the factorized version without U
-    if D2.shape[0] <= 40:
-        return scnd_frechet_single(D2, UHU, UXU, U)
-    else:
-        if (UHU.dtype == 'complex128') or (D2.dtype == 'complex128') or ((UXU is not None) and (UXU.dtype == 'complex128')):
-            return scnd_frechet_parallel_complex(D2, UHU, UXU, U)
-        else:
-            return scnd_frechet_parallel(D2, UHU, UXU, U)
-
-def scnd_frechet_single(D2, UHU, UXU=None, U=None):
     n = D2.shape[0]
 
     D2_UXU = (D2 * UXU) if (UXU is not None) else (D2)
@@ -126,34 +115,6 @@ def scnd_frechet_multi(out, D2, UHU, UXU=None, U=None, work1=None, work2=None, w
         congr(out, U, work1, work2)
     else:
         np.add(work3.transpose(2, 1, 0), work3.conj().transpose(2, 0, 1), out=out)
-
-    return out
-
-@nb.njit(parallel=True)
-def scnd_frechet_parallel(D2, UHU, UXU=None, U=None):
-    n = D2.shape[0]
-    out = np.zeros((n, n))
-
-    for k in nb.prange(n):
-        D2_UXU = (D2[k] * UXU) if (UXU is not None) else (D2[k])
-        out[k] = UHU[k] @ D2_UXU
-
-    out = out + out.conj().T
-    out = (U @ out @ U.conj().T) if (U is not None) else (out)
-
-    return out
-
-@nb.njit(parallel=True)
-def scnd_frechet_parallel_complex(D2, UHU, UXU=None, U=None):
-    n = D2.shape[0]
-    out = np.zeros((n, n), 'complex128')
-
-    for k in nb.prange(n):
-        D2_UXU = (D2[k] * UXU) if (UXU is not None) else (D2[k])
-        out[k] = UHU[k] @ D2_UXU
-
-    out = out + out.conj().T
-    out = (U @ out @ U.conj().T) if (U is not None) else (out)
 
     return out
 
