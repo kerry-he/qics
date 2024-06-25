@@ -75,7 +75,7 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-n = 6
+n = 10
 N = n * n
 sn = sym.vec_dim(n)
 sN = sym.vec_dim(N)
@@ -113,13 +113,13 @@ h[-1] = D
 
 # Input into model and solve
 cones = [quantrelentr.Cone(N), nonnegorthant.Cone(1)]
-model = model.Model(c, A, b, G, h, cones=cones, offset=entr_A)
-solver = solver.Solver(model)
+mdl = model.Model(c, A, b, G, h, cones=cones, offset=entr_A)
+slv = solver.Solver(mdl)
 
 profiler = cProfile.Profile()
 profiler.enable()
 
-solver.solve()
+slv.solve()
 
 profiler.disable()
 profiler.dump_stats("example.stats")

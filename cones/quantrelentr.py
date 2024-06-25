@@ -407,61 +407,60 @@ class Cone():
 
         return out
     
-    # def invhess_congr(self, A):
-    #     assert self.grad_updated
-    #     if not self.hess_aux_updated:
-    #         self.update_hessprod_aux()
-    #     if not self.invhess_aux_updated:
-    #         self.update_invhessprod_aux()
-    #     if not self.congr_aux_updated:
-    #         self.congr_aux(A)            
+    def invhess_congr(self, A):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+        if not self.invhess_aux_updated:
+            self.update_invhessprod_aux()
+        if not self.congr_aux_updated:
+            self.congr_aux(A)            
 
-    #     p = np.size(dirs, 1)
-    #     out = np.empty((self.dim, p))    
+        p = self.Ax.shape[0]
+        out = np.empty((sum(self.dim), p))    
 
-    #     temp_vec = np.empty((self.vn, p))   
-    #     Wx_list = np.empty((p, self.n, self.n), dtype='complex128') if self.hermitian else np.empty((p, self.n, self.n))
+        temp_vec = np.empty((self.vn, p))   
+        Wx_list = np.empty((p, self.n, self.n), dtype=self.dtype)
 
-    #     for k in range(p):
-    #         Ht = dirs[0, k]
-    #         Hx = sym.vec_to_mat(dirs[self.idx_X, [k]], hermitian=self.hermitian)
-    #         Hy = sym.vec_to_mat(dirs[self.idx_Y, [k]], hermitian=self.hermitian)
+        for k in range(p):
+            Ht = self.At[k]
+            Hx = self.Ax[k]
+            Hy = self.Ay[k]
 
-    #         Wx = Hx + Ht * self.DPhiX
-    #         Wy = Hy + Ht * self.DPhiY
-    #         Wx_list[k, :, :] = Wx
+            Wx = Hx + Ht * self.DPhiX
+            Wy = Hy + Ht * self.DPhiY
+            Wx_list[k, :, :] = Wx
 
-    #         temp = self.Ux.conj().T @ Wx @ self.Ux
-    #         temp = self.UyUx @ (self.D1x_comb_inv * temp) @ self.UyUx.conj().T
-    #         temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.conj().T
-    #         temp = self.Uy.conj().T @ (Wy - temp) @ self.Uy
-    #         temp_vec[:, [k]] = sym.mat_to_vec(temp, hermitian=self.hermitian)
+            temp = self.Ux.conj().T @ Wx @ self.Ux
+            temp = self.UyUx @ (self.D1x_comb_inv * temp) @ self.UyUx.conj().T
+            temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.conj().T
+            temp = self.Uy.conj().T @ (Wy - temp) @ self.Uy
+            temp_vec[:, [k]] = sym.mat_to_vec(temp, hermitian=self.hermitian)
 
-    #     # temp_vec = self.hess_schur_inv @ temp_vec
-    #     temp_vec = lin.fact_solve(self.hess_schur_fact, temp_vec)
+        temp_vec = lin.fact_solve(self.hess_schur_fact, temp_vec)
 
-    #     for k in range(p):
-    #         Ht = dirs[0, k]
-    #         Wx = Wx_list[k, :, :]
+        for k in range(p):
+            Ht = self.At[k]
+            Wx = Wx_list[k, :, :]
 
-    #         temp = sym.vec_to_mat(temp_vec[:, [k]], hermitian=self.hermitian)
-    #         temp = self.Uy @ temp @ self.Uy.conj().T
-    #         outY = sym.mat_to_vec(temp, hermitian=self.hermitian)
+            temp = sym.vec_to_mat(temp_vec[:, [k]], hermitian=self.hermitian)
+            temp = self.Uy @ temp @ self.Uy.conj().T
+            outY = temp
 
-    #         temp = self.Uy.conj().T @ temp @ self.Uy
-    #         temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.conj().T
-    #         temp = Wx - temp
-    #         temp = self.Ux.conj().T @ temp @ self.Ux
-    #         temp = self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.conj().T
-    #         outX = sym.mat_to_vec(temp, hermitian=self.hermitian)
+            temp = self.Uy.conj().T @ temp @ self.Uy
+            temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.conj().T
+            temp = Wx - temp
+            temp = self.Ux.conj().T @ temp @ self.Ux
+            temp = self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.conj().T
+            outX = temp
 
-    #         outt = self.z2 * Ht + self.DPhiX_vec.conj().T @ outX + self.DPhiY_vec.conj().T @ outY
+            outt = self.z2 * Ht + lin.inp(self.DPhiX, outX) + lin.inp(self.DPhiY, outY)
 
-    #         out[0, k] = outt
-    #         out[self.idx_X, [k]] = outX
-    #         out[self.idx_Y, [k]] = outY
+            out[0, k] = outt
+            out[self.idx_X, [k]] = outX.view(dtype=np.float64).reshape(-1, 1)
+            out[self.idx_Y, [k]] = outY.view(dtype=np.float64).reshape(-1, 1)
 
-    #     return out
+        return out.T @ A.T
 
 
     def invhess_prod(self, dirs):
