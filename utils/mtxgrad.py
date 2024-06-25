@@ -166,7 +166,7 @@ def thrd_frechet_complex(D2, D, U, H1, H2, H3):
                     temp += H3[i, k] * H2[k, l] * H1[l, j]
                     out[i, j] = out[i, j] + D3_ij[k, l] * temp
             
-            out[j, i] = out[i, j]
+            out[j, i] = np.conj(out[i, j])
 
     return U @ out @ U.conj().T
 
