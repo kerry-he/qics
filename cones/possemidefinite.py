@@ -213,7 +213,7 @@ class Cone():
                         scale = 2 * np.ones(self.n * self.n)
                         scale[::self.n+1] = 1
                     self.A_triu = sparse.scale_axis(A, scale_cols=scale)
-                    self.A_triu = self.A_triu[:, self.triu_indices]                    
+                    self.A_triu = self.A_triu[:, self.triu_indices]
 
         else:
             # A and all Ai are dense matrices

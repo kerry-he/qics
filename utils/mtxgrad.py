@@ -112,13 +112,14 @@ def scnd_frechet_single(D2, UHU, UXU=None, U=None):
     return out
 
 def congr(out, A, X, work):
+    n = A.shape[0]
     np.matmul(A, X, out=work)
-    np.matmul(work, A.conj().T, out=out)
+    np.matmul(work.reshape((-1, n)), A.conj().T, out=out.reshape((-1, n)))
     return out
 
 def scnd_frechet_multi(out, D2, UHU, UXU=None, U=None, work1=None, work2=None, work3=None):
     D2_UXU = (D2 * UXU) if (UXU is not None) else (D2)
-    np.matmul(D2_UXU, UHU.transpose(1, 2, 0), out=work3)
+    np.matmul(D2_UXU, UHU.conj().transpose(1, 2, 0), out=work3)
 
     if U is not None:
         np.add(work3.transpose(2, 1, 0), work3.conj().transpose(2, 0, 1), out=work1)
