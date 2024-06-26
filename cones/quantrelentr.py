@@ -47,15 +47,14 @@ class Cone():
 
         return out
     
-    def set_point(self, point, dual=None, a=True):
-
+    def set_point(self, point, dual, a=True):
         self.t = point[0] * a
         self.X = point[1] * a
         self.Y = point[2] * a
 
         self.t_d = dual[0] * a
         self.X_d = dual[1] * a
-        self.Y_d = dual[2] * a        
+        self.Y_d = dual[2] * a
 
         self.feas_updated        = False
         self.grad_updated        = False
