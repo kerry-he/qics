@@ -44,21 +44,21 @@ class Cone():
         out[:] = H / (self.x**2)
         return out    
 
-    def invhess_prod_ip(self, out, H):
-        out[:] = H * (self.x**2)
-        return out
+    def hess_congr(self, A):
+        return self.base_congr(A, np.reciprocal(self.x))
 
     def hess_mtx(self):
         return np.reciprocal(self.x * self.x).reshape((-1,))
 
-    def invhess_mtx(self):
-        return (self.x * self.x).reshape((-1,))    
-
-    def hess_congr(self, A):
-        return self.base_congr(A, np.reciprocal(self.x))
+    def invhess_prod_ip(self, out, H):
+        out[:] = H * (self.x**2)
+        return out
 
     def invhess_congr(self, A):
         return self.base_congr(A, self.x)
+
+    def invhess_mtx(self):
+        return (self.x * self.x).reshape((-1,))    
 
     def base_congr(self, A, x):
         if sp.sparse.issparse(A):

@@ -99,134 +99,27 @@ class Cone():
         XHX = self.X_inv @ H @ self.X_inv
         np.add(XHX, XHX.conj().T, out=out)
         out *= 0.5
-        return out    
+        return out
+    
+    def hess_congr(self, A):
+        if not self.grad_updated:
+            self.get_grad()
+        return self.base_congr(A, self.X_inv, self.X_chol_inv)
+    
+    def hess_mtx(self):
+        return lin.kron(self.X_inv, self.X_inv)    
     
     def invhess_prod_ip(self, out, H):
         XHX = self.X @ H @ self.X
         np.add(XHX, XHX.conj().T, out=out)
         out *= 0.5
         return out
-    
-    def invhess_mtx(self):
-        return lin.kron(self.X, self.X)
-    
-    def hess_mtx(self):
-        return lin.kron(self.X_inv, self.X_inv)    
-
-    def hess_congr(self, A):
-        if not self.grad_updated:
-            self.get_grad()
-        return self.base_congr(A, self.X_inv, self.X_chol_inv)
 
     def invhess_congr(self, A):
-        return self.base_congr(A, self.X, self.X_chol)    
+        return self.base_congr(A, self.X, self.X_chol)
     
-    def congr_aux(self, A):
-        assert not self.congr_aux_updated
-
-        if sp.sparse.issparse(A):
-            # Split A into sparse and dense groups
-            A_nnz = A.getnnz(1)
-            self.A_sp_idxs = np.where((A_nnz > 0) & (A_nnz < self.n))[0]
-            self.A_ds_idxs = np.where((A_nnz >= self.n))[0]
-
-            self.A_sp_idxs = self.A_sp_idxs[np.argsort(A_nnz[self.A_sp_idxs])]
-            self.A_ds_ds_idxs = np.ix_(self.A_ds_idxs, self.A_ds_idxs)
-
-            def lil_to_array(ragged):
-                # Converts a list of lists (with possibly different lengths) 
-                # into a numpy array padded with zeros
-                return np.array(list(itertools.zip_longest(*ragged, fillvalue=0))).T
-            
-            def triu_idx_to_ij(idx):
-                # Converts upper triangular indices to (i,j) coordinates
-                #     [ 0  1  3       ]         [ (0,0)  (0,1)  (0,2)       ]
-                #     [    2  4  ...  ]   -->   [        (1,1)  (1,2)  ...  ]
-                #     [       5       ]         [               (2,2)       ]
-                # https://stackoverflow.com/questions/40950460/how-to-convert-triangular-matrix-indexes-in-to-row-column-coordinates
-                j = (np.ceil(np.sqrt(2 * (idx + 1) + 0.25) - 0.5) - 1).astype('int32')
-                i = (idx - (j + 1) * j / 2).astype('int32')
-                return i, j
-
-            # Prepare things we need for Strategy 1:
-            if len(self.A_sp_idxs) > 0:
-
-                A_sp = A[self.A_sp_idxs]  
-
-                triu_indices = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
-
-                if self.hermitian:
-                    A_sp_real = A_sp[:, ::2][:, triu_indices]
-                    A_sp_imag = A_sp[:, 1::2][:, triu_indices]
-                    A_sp_lil  = (A_sp_real + A_sp_imag*1j).tolil()
-                else:
-                    A_sp_lil = A_sp[:, triu_indices].tolil()
-
-                # Get number of nonzeros for each Ai (to account for ragged arrays)
-                self.A_sp_nnzs = A_sp_lil.getnnz(1)
-
-                # Get rows and columns of nonzeros of Ai
-                rowcols = lil_to_array(A_sp_lil.rows)
-                self.A_sp_rows, self.A_sp_cols = triu_idx_to_ij(rowcols)
-
-                # Get values of nonzeros of Ai, and scale off-diagonal elements to account
-                # for us only using upper triangular nonzeros
-                self.A_sp_data = lil_to_array(A_sp_lil.data)
-                self.A_sp_data[self.A_sp_cols != self.A_sp_rows] *= 2
-
-            # Prepare things we need for Strategy 2:
-            if len(self.A_ds_idxs) > 0:
-
-                A_ds = A[self.A_ds_idxs, :]
-
-                # Turn rows of A into matrices Ai
-                if self.hermitian:
-                    A_ds_real = A_ds[:, ::2]
-                    A_ds_imag = A_ds[:, 1::2]
-                    A_ds = A_ds_real + A_ds_imag*1j
-                    
-                A_ds_lil = A_ds.tolil()
-                A_ds_nnzs = A_ds.getnnz(1)
-
-                self.Ai_ds = []
-                for k in range(A_ds.shape[0]):
-                    if A_ds_nnzs[k] < 0.1 * self.n*self.n:
-                        data_k = A_ds_lil.data[k]
-                        rows_k = np.array(A_ds_lil.rows[k]) // self.n
-                        cols_k = np.array(A_ds_lil.rows[k])  % self.n
-                        self.Ai_ds.append(sp.sparse.csr_array((data_k, (rows_k, cols_k)), shape=(self.n, self.n)))
-                    else:
-                        self.Ai_ds.append(A_ds[k, :].toarray().reshape(self.n, self.n))
-
-                # Extract and scale all off-diagonal blocks by 2
-                if len(self.A_sp_idxs) > 0:
-                    if self.hermitian:
-                        self.triu_indices = np.array(
-                            [2 * (i + i*self.n)     for i in range(self.n)] + 
-                            [2 * (j + i*self.n)     for j in range(self.n) for i in range(j)] + 
-                            [2 * (j + i*self.n) + 1 for j in range(self.n) for i in range(j)]
-                        )
-                        scale = 2 * np.ones(2 * self.n * self.n)
-                        scale[::2*self.n+2] = 1
-                    else:
-                        self.triu_indices = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
-                        scale = 2 * np.ones(self.n * self.n)
-                        scale[::self.n+1] = 1
-                    self.A_triu = sparse.scale_axis(A, scale_cols=scale)
-                    self.A_triu = self.A_triu[:, self.triu_indices]
-
-        else:
-            # A and all Ai are dense matrices
-            # Just need to convert the rows of A into dense matrices
-            self.A_sp_idxs = np.array([])
-            self.A_ds_idxs = np.arange(A.shape[0])
-            self.A_ds_ds_idxs = np.ix_(self.A_ds_idxs, self.A_ds_idxs)
-            if self.hermitian:
-                self.Ai_ds = [Ai.reshape((-1, 2)).view(dtype=np.complex128).reshape(self.n, self.n) for Ai in A]
-            else:
-                self.Ai_ds = [Ai.reshape((self.n, self.n)) for Ai in A]
-
-        self.congr_aux_updated = True
+    def invhess_mtx(self):
+        return lin.kron(self.X, self.X)    
 
     def base_congr(self, A, X, X_rt2):
         if not self.congr_aux_updated:
@@ -436,6 +329,117 @@ class Cone():
             return 1.
         else:
             return 1. / max(-min_eig_rho, -min_eig_sig)
+        
+
+    # ========================================================================
+    # Auxilliary functions
+    # ========================================================================
+    def congr_aux(self, A):
+        assert not self.congr_aux_updated
+
+        if sp.sparse.issparse(A):
+            # Split A into sparse and dense groups
+            A_nnz = A.getnnz(1)
+            self.A_sp_idxs = np.where((A_nnz > 0) & (A_nnz < self.n))[0]
+            self.A_ds_idxs = np.where((A_nnz >= self.n))[0]
+
+            self.A_sp_idxs = self.A_sp_idxs[np.argsort(A_nnz[self.A_sp_idxs])]
+            self.A_ds_ds_idxs = np.ix_(self.A_ds_idxs, self.A_ds_idxs)
+
+            def lil_to_array(ragged):
+                # Converts a list of lists (with possibly different lengths) 
+                # into a numpy array padded with zeros
+                return np.array(list(itertools.zip_longest(*ragged, fillvalue=0))).T
+            
+            def triu_idx_to_ij(idx):
+                # Converts upper triangular indices to (i,j) coordinates
+                #     [ 0  1  3       ]         [ (0,0)  (0,1)  (0,2)       ]
+                #     [    2  4  ...  ]   -->   [        (1,1)  (1,2)  ...  ]
+                #     [       5       ]         [               (2,2)       ]
+                # https://stackoverflow.com/questions/40950460/how-to-convert-triangular-matrix-indexes-in-to-row-column-coordinates
+                j = (np.ceil(np.sqrt(2 * (idx + 1) + 0.25) - 0.5) - 1).astype('int32')
+                i = (idx - (j + 1) * j / 2).astype('int32')
+                return i, j
+
+            # Prepare things we need for Strategy 1:
+            if len(self.A_sp_idxs) > 0:
+
+                A_sp = A[self.A_sp_idxs]  
+
+                triu_indices = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
+
+                if self.hermitian:
+                    A_sp_real = A_sp[:, ::2][:, triu_indices]
+                    A_sp_imag = A_sp[:, 1::2][:, triu_indices]
+                    A_sp_lil  = (A_sp_real + A_sp_imag*1j).tolil()
+                else:
+                    A_sp_lil = A_sp[:, triu_indices].tolil()
+
+                # Get number of nonzeros for each Ai (to account for ragged arrays)
+                self.A_sp_nnzs = A_sp_lil.getnnz(1)
+
+                # Get rows and columns of nonzeros of Ai
+                rowcols = lil_to_array(A_sp_lil.rows)
+                self.A_sp_rows, self.A_sp_cols = triu_idx_to_ij(rowcols)
+
+                # Get values of nonzeros of Ai, and scale off-diagonal elements to account
+                # for us only using upper triangular nonzeros
+                self.A_sp_data = lil_to_array(A_sp_lil.data)
+                self.A_sp_data[self.A_sp_cols != self.A_sp_rows] *= 2
+
+            # Prepare things we need for Strategy 2:
+            if len(self.A_ds_idxs) > 0:
+
+                A_ds = A[self.A_ds_idxs, :]
+
+                # Turn rows of A into matrices Ai
+                if self.hermitian:
+                    A_ds_real = A_ds[:, ::2]
+                    A_ds_imag = A_ds[:, 1::2]
+                    A_ds = A_ds_real + A_ds_imag*1j
+                    
+                A_ds_lil = A_ds.tolil()
+                A_ds_nnzs = A_ds.getnnz(1)
+
+                self.Ai_ds = []
+                for k in range(A_ds.shape[0]):
+                    if A_ds_nnzs[k] < 0.1 * self.n*self.n:
+                        data_k = A_ds_lil.data[k]
+                        rows_k = np.array(A_ds_lil.rows[k]) // self.n
+                        cols_k = np.array(A_ds_lil.rows[k])  % self.n
+                        self.Ai_ds.append(sp.sparse.csr_array((data_k, (rows_k, cols_k)), shape=(self.n, self.n)))
+                    else:
+                        self.Ai_ds.append(A_ds[k, :].toarray().reshape(self.n, self.n))
+
+                # Extract and scale all off-diagonal blocks by 2
+                if len(self.A_sp_idxs) > 0:
+                    if self.hermitian:
+                        self.triu_indices = np.array(
+                            [2 * (i + i*self.n)     for i in range(self.n)] + 
+                            [2 * (j + i*self.n)     for j in range(self.n) for i in range(j)] + 
+                            [2 * (j + i*self.n) + 1 for j in range(self.n) for i in range(j)]
+                        )
+                        scale = 2 * np.ones(2 * self.n * self.n)
+                        scale[::2*self.n+2] = 1
+                    else:
+                        self.triu_indices = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
+                        scale = 2 * np.ones(self.n * self.n)
+                        scale[::self.n+1] = 1
+                    self.A_triu = sparse.scale_axis(A, scale_cols=scale)
+                    self.A_triu = self.A_triu[:, self.triu_indices]
+
+        else:
+            # A and all Ai are dense matrices
+            # Just need to convert the rows of A into dense matrices
+            self.A_sp_idxs = np.array([])
+            self.A_ds_idxs = np.arange(A.shape[0])
+            self.A_ds_ds_idxs = np.ix_(self.A_ds_idxs, self.A_ds_idxs)
+            if self.hermitian:
+                self.Ai_ds = [Ai.reshape((-1, 2)).view(dtype=np.complex128).reshape(self.n, self.n) for Ai in A]
+            else:
+                self.Ai_ds = [Ai.reshape((self.n, self.n)) for Ai in A]
+
+        self.congr_aux_updated = True        
         
 
 # ============================================================================

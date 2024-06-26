@@ -1,6 +1,8 @@
 import numpy as np
 import numba as nb
 
+from utils.linear import congr
+
 @nb.njit
 def D1_log(D, log_D):
     eps = np.finfo(np.float64).eps
@@ -98,12 +100,6 @@ def scnd_frechet(D2, UHU, UXU=None, U=None):
     out = out + out.conj().T
     out = (U @ out @ U.conj().T) if (U is not None) else (out)
 
-    return out
-
-def congr(out, A, X, work):
-    n = A.shape[0]
-    np.matmul(A, X, out=work)
-    np.matmul(work.reshape((-1, n)), A.conj().T, out=out.reshape((-1, n)))
     return out
 
 def scnd_frechet_multi(out, D2, UHU, UXU=None, U=None, work1=None, work2=None, work3=None):

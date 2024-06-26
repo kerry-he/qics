@@ -98,6 +98,13 @@ def kron(a, b):
     n2 = n*n
     return (a[:, None, :, None] * b[None, :, None, :]).reshape(n2, n2)
 
+def congr(out, A, X, work):
+    # Performs congruence A X_i A' for i = i,...,n
+    n = A.shape[0]
+    np.matmul(A, X, out=work)
+    np.matmul(work.reshape((-1, n)), A.conj().T, out=out.reshape((-1, n)))
+    return out
+
 if __name__ == "__main__":
     import time
     
