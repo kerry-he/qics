@@ -12,9 +12,9 @@ from utils import quantum as quant
 np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
-def get_eye(n, sn, hermitian):
+def get_eye(n, sn, vn, hermitian):
     dtype = np.float64 if (not hermitian) else np.complex128
-    eye = np.zeros((sn, n*n))
+    eye = np.zeros((sn, vn))
     k = 0
     for j in range(n):
         for i in range(j):
@@ -36,7 +36,7 @@ def get_eye(n, sn, hermitian):
 
 
 # Problem data
-hermitian = False
+hermitian = True
 dtype = np.float64 if (not hermitian) else np.complex128
 
 n = 50
@@ -51,7 +51,7 @@ for i in range(n):
     H[i, i] = 1.0
     Adiag[i] = H.view(dtype=np.float64).reshape(-1)
 
-eye = get_eye(n, sn, hermitian=hermitian)
+eye = get_eye(n, sn, vn, hermitian=hermitian)
 
 A1 = np.hstack((np.zeros((sn, 1)), eye, np.zeros((sn, vn))))
 A2 = np.hstack((np.zeros((n, 1)), np.zeros((n, vn)), Adiag))
