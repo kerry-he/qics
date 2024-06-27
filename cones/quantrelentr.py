@@ -134,21 +134,6 @@ class Cone():
         out[2][:] = self.grad[2]
         
         return out
-    
-    def update_hessprod_aux(self):
-        assert not self.hess_aux_updated
-        assert self.grad_updated
-
-        self.D1x_log = mgrad.D1_log(self.Dx, self.log_Dx)
-        self.D2y_log = mgrad.D2_log(self.Dy, self.D1y_log)
-        self.D2y_log_UXU = self.D2y_log * self.UyXUy
-
-        # Preparing other required variables
-        self.zi2 = self.zi * self.zi
-
-        self.hess_aux_updated = True
-
-        return
 
     def hess_prod_ip(self, out, H):
         assert self.grad_updated
@@ -489,6 +474,21 @@ class Cone():
         self.D2PhiYYH = np.empty_like(self.Ay, dtype=self.dtype)
 
         self.congr_aux_updated = True
+
+    def update_hessprod_aux(self):
+        assert not self.hess_aux_updated
+        assert self.grad_updated
+
+        self.D1x_log = mgrad.D1_log(self.Dx, self.log_Dx)
+        self.D2y_log = mgrad.D2_log(self.Dy, self.D1y_log)
+        self.D2y_log_UXU = self.D2y_log * self.UyXUy
+
+        # Preparing other required variables
+        self.zi2 = self.zi * self.zi
+
+        self.hess_aux_updated = True
+
+        return
 
     def update_invhessprod_aux(self):
         assert not self.invhess_aux_updated
