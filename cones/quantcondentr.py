@@ -157,9 +157,10 @@ class Cone():
         # Hessian product of barrier function
         out[0][:] = (Ht - lin.inp(self.DPhi, Hx)) * self.zi2
 
-        out[1][:] = -out[0] * self.DPhi
-        out[1]   +=  self.zi * D2PhiH
-        out[1]   +=  self.inv_X @ Hx @ self.inv_X
+        out_X     = -out[0] * self.DPhi
+        out_X    +=  self.zi * D2PhiH
+        out_X    +=  self.inv_X @ Hx @ self.inv_X
+        out[1][:] = (out_X + out_X.conj().T) * 0.5
 
         return out
 
@@ -188,7 +189,6 @@ class Cone():
 
         self.congr_aux_updated = True
 
-    # @profile
     def hess_congr(self, A):
         assert self.grad_updated
         if not self.hess_aux_updated:
@@ -336,6 +336,7 @@ class Cone():
 
         temp = self.Ux.conj().T @ temp @ self.Ux
         H_inv_w_x = Hxx_inv_x - self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.conj().T
+        H_inv_w_x = (H_inv_w_x + H_inv_w_x.conj().T) * 0.5
 
         out[0][:] = Ht * self.z2 + lin.inp(H_inv_w_x, self.DPhi)
         out[1][:] = H_inv_w_x
@@ -451,6 +452,7 @@ class Cone():
         dder3_X -= 2 * (self.zi**2) * chi * D2PhiH
         dder3_X += self.zi * D3PhiHH
         dder3_X -= 2 * self.inv_X @ Hx @ self.inv_X @ Hx @ self.inv_X
+        dder3_X = (dder3_X + dder3_X.conj().T) * 0.5
 
         out[0][:] += dder3_t * a
         out[1][:] += dder3_X * a

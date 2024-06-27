@@ -35,7 +35,7 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-hermitian = True
+hermitian = False
 dtype = np.complex128 if hermitian else np.float64
 ni = 8
 no = 8
@@ -86,13 +86,13 @@ c[0] = 1.
 
 G1 = np.hstack((np.ones((1, 1)), np.zeros((1, sni))))
 G2 = np.hstack((np.zeros((vnei, 1)), WNW))
-# G3 = np.hstack((np.zeros((vni, 1)), eye))
-G = -np.vstack((G1, G2))
+G3 = np.hstack((np.zeros((vni, 1)), eye))
+G = -np.vstack((G1, G2, G3))
 
-h = np.zeros((1 + vnei, 1))
+h = np.zeros((1 + vnei + vni, 1))
 
 # Input into model and solve
-cones = [quantcondentr.Cone(ne, ni, 1, hermitian=hermitian)]
+cones = [quantcondentr.Cone(ne, ni, 1, hermitian=hermitian), possemidefinite.Cone(ni, hermitian=hermitian)]
 model = model.Model(c, A, b, G, h, cones=cones)
 solver = solver.Solver(model)
 

@@ -105,7 +105,7 @@ class Cone():
     def hess_congr(self, A):
         if not self.grad_updated:
             self.update_grad()
-        return self.base_congr(A, self.X_inv, self.X_chol_inv)
+        return self.base_congr(A, self.X_inv, self.X_chol_inv.conj().T)
     
     def hess_mtx(self):
         return lin.kron(self.X_inv, self.X_inv)    
@@ -233,6 +233,16 @@ class Cone():
         WHW = self.W_inv @ H @ self.W_inv
         np.add(WHW, WHW.conj().T, out=out)
         out *= 0.5
+
+    def nt_congr(self, A):
+        if not self.nt_aux_updated:
+            self.nt_aux()
+        return self.base_congr(A, self.W_inv, self.R_inv.conj().T)
+     
+    def nt_mtx(self):
+        if not self.nt_aux_updated:
+            self.nt_aux()
+        return lin.kron(self.W_inv, self.W_inv)   
     
     def invnt_prod_ip(self, out, H):
         if not self.nt_aux_updated:
@@ -241,25 +251,15 @@ class Cone():
         np.add(WHW, WHW.conj().T, out=out)
         out *= 0.5    
 
-    def invnt_mtx(self):
-        if not self.nt_aux_updated:
-            self.nt_aux()
-        return lin.kron(self.W, self.W)
-    
-    def nt_mtx(self):
-        if not self.nt_aux_updated:
-            self.nt_aux()
-        return lin.kron(self.W_inv, self.W_inv)
-    
-    def nt_congr(self, A):
-        if not self.nt_aux_updated:
-            self.nt_aux()
-        return self.base_congr(A, self.W_inv, self.R_inv.T)
-
     def invnt_congr(self, A):
         if not self.nt_aux_updated:
             self.nt_aux()
         return self.base_congr(A, self.W, self.R)
+    
+    def invnt_mtx(self):
+        if not self.nt_aux_updated:
+            self.nt_aux()
+        return lin.kron(self.W, self.W)    
 
     def comb_dir(self, out, dS, dZ, sigma_mu):
         # Compute the residual for rs where rs is given as the lhs of

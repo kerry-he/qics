@@ -40,10 +40,9 @@ class NonSymStepper():
         res_norm = max(temp_res_norm, res_norm)
 
         # Get TOA centering direction
-        if not (model.sym and self.syssolver.sym):
-            self.update_rhs_cent_toa(model, point, mu, self.dir_c)
-            temp_res_norm = self.syssolver.solve_sys(self.dir_c_toa, self.rhs)
-            res_norm = max(temp_res_norm, res_norm)
+        self.update_rhs_cent_toa(model, point, mu, self.dir_c)
+        temp_res_norm = self.syssolver.solve_sys(self.dir_c_toa, self.rhs)
+        res_norm = max(temp_res_norm, res_norm)
 
         step_mode = "co_toa"
         point, alpha, success = self.line_search(model, point, step_mode)
@@ -86,8 +85,7 @@ class NonSymStepper():
                 next_point.axpy(alpha             , dir_p)
                 next_point.axpy(alpha ** 2        , dir_p_toa)
                 next_point.axpy((1.0 - alpha)     , dir_c)
-                if not (model.sym and self.syssolver.sym):
-                    next_point.axpy((1.0 - alpha) ** 2, dir_c_toa)
+                next_point.axpy((1.0 - alpha) ** 2, dir_c_toa)
             elif mode == "comb":
                 # step := dir_p * alpha + dir_c * (1.0 - alpha)
                 next_point.axpy(alpha        , dir_p)
