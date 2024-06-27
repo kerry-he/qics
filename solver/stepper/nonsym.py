@@ -174,7 +174,7 @@ class NonSymStepper():
         self.rhs.s.fill(0.)
         for (k, cone_k) in enumerate(model.cones):
             cone_k.third_dir_deriv_axpy(self.rhs.s[k], dir_c.s[k])
-        self.rhs.s.vec *= -0.5*rtmu
+        self.rhs.s.vec *= -0.5 / rtmu
 
         self.rhs.tau[:] = 0.
         self.rhs.kap[:] = (dir_c.tau**2) / (point.tau**3) * mu

@@ -81,7 +81,10 @@ class Cone():
         self.log_Dy = np.log(self.Dy)
 
         self.log_X = (self.Ux * self.log_Dx) @ self.Ux.conj().T
+        self.log_X = (self.log_X + self.log_X.conj().T) * 0.5
         self.log_Y = (self.Uy * self.log_Dy) @ self.Uy.conj().T
+        self.log_Y = (self.log_Y + self.log_Y.conj().T) * 0.5
+
         self.log_XY = self.log_X - self.log_Y
         self.z = self.t[0, 0] - lin.inp(self.X, self.log_XY)
 
@@ -99,8 +102,11 @@ class Cone():
         
         self.inv_Dx = np.reciprocal(self.Dx)
         self.inv_Dy = np.reciprocal(self.Dy)
-        self.inv_X  = (self.Ux * self.inv_Dx) @ self.Ux.conj().T
-        self.inv_Y  = (self.Uy * self.inv_Dy) @ self.Uy.conj().T
+
+        inv_X_rt2 = self.Ux * np.sqrt(self.inv_Dx)
+        self.inv_X = inv_X_rt2 @ inv_X_rt2.conj().T
+        inv_Y_rt2 = self.Uy * np.sqrt(self.inv_Dy)
+        self.inv_Y = inv_Y_rt2 @ inv_Y_rt2.conj().T        
 
         self.D1y_log = mgrad.D1_log(self.Dy, self.log_Dy)
 
@@ -347,12 +353,12 @@ class Cone():
         work  = self.work2.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices]
         work *= self.scale
         # Solve system
-        temp_vec = lin.fact_solve(self.hess_schur_fact, work.T)
+        work = lin.fact_solve(self.hess_schur_fact, work.T)
         # Expand truncated real vectors back into matrices
         self.work1.fill(0.)
-        temp_vec[self.diag_indices, :] *= 0.5
-        temp_vec /= self.scale.reshape((-1, 1))
-        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices] = temp_vec.T
+        work[self.diag_indices, :] *= 0.5
+        work /= self.scale.reshape((-1, 1))
+        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices] = work.T
         self.work1 += self.work1.conj().transpose((0, 2, 1))
 
         # Recover Y

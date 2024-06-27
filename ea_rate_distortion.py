@@ -6,6 +6,7 @@ import cProfile
 
 from cones import *
 from utils import symmetric as sym
+from utils import quantum as qu
 from solver import model, solver
 
 def purify(eig):
@@ -17,8 +18,8 @@ def purify(eig):
 
     return vec @ vec.T
 
-def get_tr2(n, sn, sN):
-    tr2 = np.zeros((sn, sN))
+def get_tr2(n, sn, vN):
+    tr2 = np.zeros((sn, vN))
     k = -1
     for j in range(n):
         for i in range(j + 1):
@@ -31,7 +32,7 @@ def get_tr2(n, sn, sN):
                 H[i, j] = H[j, i] = math.sqrt(0.5)
             
             I_H = sym.i_kr(H, 1, (n, n))
-            tr2[[k], :] = sym.mat_to_vec(I_H).T
+            tr2[k, :] = I_H.view(dtype=np.float64).reshape(1, -1)
 
     return tr2
 
@@ -40,33 +41,34 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-n = 7
+hermitian = False
+
+n = 8
 N = n * n
 sn = sym.vec_dim(n)
+vn = n*n if (not hermitian) else 2*n*n
 sN = sym.vec_dim(N)
+vN = N*N if (not hermitian) else 2*N*N
 
 # Rate-distortion problem data
-eig_A = np.random.rand(n)
-eig_A /= np.sum(eig_A)
-rho_A = np.diag(eig_A)
-rho_AR = purify(eig_A)
-entr_A = -np.sum(eig_A * np.log(eig_A))
+rho    = qu.randDensityMatrix(n, hermitian=hermitian)
+entr_A = qu.quantEntropy(rho)
 
-Delta = sym.mat_to_vec(np.eye(N) - rho_AR)
+Delta = (np.eye(n*n) - qu.purify(rho)).view(dtype=np.float64).reshape(1, -1)
 D = 0.5
 
 # Build problem model
-tr2 = get_tr2(n, sn, sN)
+tr2 = get_tr2(n, sn, vN)
 
 A1 = np.hstack((np.zeros((sn, 1)), tr2, np.zeros((sn, 1))))
-A2 = np.hstack((np.zeros((1, 1)), Delta.T, np.ones((1, 1))))
+A2 = np.hstack((np.zeros((1, 1)), Delta, np.ones((1, 1))))
 A = np.vstack((A1, A2))
 
 b = np.zeros((sn + 1, 1))
-b[:sn] = sym.mat_to_vec(rho_A)
+b[:sn] = sym.mat_to_vec(rho)
 b[-1] = D
 
-c = np.zeros((sN + 2, 1))
+c = np.zeros((vN + 2, 1))
 c[0] = 1.
 
 # Input into model and solve

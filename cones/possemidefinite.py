@@ -78,24 +78,25 @@ class Cone():
         (sign, logabsdet) = np.linalg.slogdet(self.X)
         return -sign * logabsdet
     
-    def get_grad(self, out):
-        assert self.feas_updated
+    def update_grad(self):
+        assert not self.grad_updated
 
-        if self.grad_updated:
-            return self.grad
-        
         self.X_chol_inv, _ = self.cho_inv(self.X_chol, lower=True)
         self.X_inv = self.X_chol_inv.conj().T @ self.X_chol_inv
         self.grad = -self.X_inv
 
         self.grad_updated = True
 
+    def get_grad(self, out):
+        assert self.feas_updated
+        if not self.grad_updated:
+            self.update_grad()
         out[:] = self.grad
         return out
     
     def hess_prod_ip(self, out, H):
         if not self.grad_updated:
-            self.get_grad()
+            self.update_grad()
         XHX = self.X_inv @ H @ self.X_inv
         np.add(XHX, XHX.conj().T, out=out)
         out *= 0.5
@@ -103,7 +104,7 @@ class Cone():
     
     def hess_congr(self, A):
         if not self.grad_updated:
-            self.get_grad()
+            self.update_grad()
         return self.base_congr(A, self.X_inv, self.X_chol_inv)
     
     def hess_mtx(self):
@@ -434,6 +435,7 @@ class Cone():
             self.A_sp_idxs = np.array([])
             self.A_ds_idxs = np.arange(A.shape[0])
             self.A_ds_ds_idxs = np.ix_(self.A_ds_idxs, self.A_ds_idxs)
+            A = np.ascontiguousarray(A)
             if self.hermitian:
                 self.Ai_ds = [Ai.reshape((-1, 2)).view(dtype=np.complex128).reshape(self.n, self.n) for Ai in A]
             else:

@@ -197,37 +197,40 @@ def vec_to_mat_complex_parallel(vec, irt2):
 
     return mat    
 
-def p_tr(mat, sys, dim, hermitian=False):
+def p_tr(mat, sys, dim):
     (n0, n1) = dim
-    assert n0 * n1 == np.size(mat, 0)
-    assert sys == 0 or sys == 1
+    return np.trace(mat.reshape(n0, n1, n0, n1), axis1=sys, axis2=2+sys)
 
-    if sys == 1:
-        out = np.empty((n0, n0), 'complex128') if hermitian else np.empty((n0, n0))
-        for j in range(n0):
-            for i in range(j):
-                out[i, j] = np.trace( mat[i*n1 : (i+1)*n1, j*n1 : (j+1)*n1] )
-                out[j, i] = out[i, j].conj()
-            out[j, j] = np.trace( mat[j*n1 : (j+1)*n1, j*n1 : (j+1)*n1] )
-    else:
-        out = np.zeros((n1, n1), 'complex128') if hermitian else np.zeros((n1, n1))
-        for i in range(n0):
-            out += mat[i*n1 : (i+1)*n1, i*n1 : (i+1)*n1]
-
+def p_tr_multi(out, mat, sys, dim):
+    (n0, n1) = dim
+    np.trace(mat.reshape(-1, n0, n1, n0, n1), axis1=1+sys, axis2=3+sys, out=out)
     return out
 
 def i_kr(mat, sys, dim):
     (n0, n1) = dim
-    assert sys == 0 or sys == 1
-
+    out = np.zeros((n0*n1, n0*n1), dtype=mat.dtype)
     if sys == 1:
-        assert np.size(mat, 0) == n0
-        out = np.kron(mat, np.eye(n1))
+        # Perform (mat kron I)
+        r = np.arange(n1)
+        out.reshape(n0, n1, n0, n1)[:, r, :, r] = mat
     else:
-        assert np.size(mat, 0) == n1
-        out = np.kron(np.eye(n0), mat)
+        # Perform (I kron mat)
+        r = np.arange(n0)
+        out.reshape(n0, n1, n0, n1)[r, :, r, :] = mat
+    return out
 
-    return out 
+def i_kr_multi(out, mat, sys, dim):
+    (n0, n1) = dim
+    out.fill(0.)
+    if sys == 1:
+        # Perform (mat kron I)
+        r = np.arange(n1)
+        out.reshape(-1, n0, n1, n0, n1)[:, :, r, :, r] = mat
+    else:
+        # Perform (I kron mat)
+        r = np.arange(n0)
+        out.reshape(-1, n0, n1, n0, n1)[:, r, :, r, :] = mat
+    return out
 
 def p_transpose(mat, sys, dim):
     # Partial transpose operation: M_ij,kl -> M_kj,il if sys == 0, or
