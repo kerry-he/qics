@@ -139,26 +139,22 @@ class Cone():
 
             if len(self.A_ds_idxs) > 0:
                 lhs = np.zeros((len(self.A_ds_idxs), self.dim))
-
-                for j in range(len(self.A_ds_idxs)):
-                    # Compute X Aj X for sparse Aj
-                    AjX  = self.Ai_ds[j].dot(X)
-                    XAjX = X @ AjX
-                    lhs[j] = XAjX.view(dtype=np.float64).reshape(-1)
+                if self.hermitian:
+                    lin.congr(lhs.reshape((len(self.A_ds_idxs), self.n, 2*self.n)).view(dtype=np.complex128), X, self.Ai_ds, work=self.work)
+                else:
+                    lin.congr(lhs.reshape((len(self.A_ds_idxs), self.n, self.n)), X, self.Ai_ds, work=self.work)
 
                 # Compute inner products between all <Ai, X Aj X>
                 out[:, self.A_ds_idxs] = self.A_triu @ lhs[:, self.triu_indices].T
                 out[self.A_ds_idxs, :] = out[:, self.A_ds_idxs].T
         else:
-            lhs = np.zeros((len(self.A_ds_idxs), self.dim))
-
-            for j in range(len(self.A_ds_idxs)):
-                # Compute L Aj L' for dense Aj
-                AjX    = self.Ai_ds[j] @ X_rt2
-                XAjX   = X_rt2.conj().T @ AjX
-                lhs[j] = XAjX.view(dtype=np.float64).reshape(-1)
             # Compute symmetric matrix multiplication [A (L kr L)] [A (L kr L)]'
-            out[self.A_ds_ds_idxs] = lhs @ lhs.conj().T
+            lhs = np.zeros((len(self.A_ds_idxs), self.dim))
+            if self.hermitian:
+                lin.congr(lhs.reshape((len(self.A_ds_idxs), self.n, 2*self.n)).view(dtype=np.complex128), X_rt2.conj().T, self.Ai_ds, work=self.work)
+            else:
+                lin.congr(lhs.reshape((len(self.A_ds_idxs), self.n, self.n)), X_rt2.conj().T, self.Ai_ds, work=self.work)
+            out[self.A_ds_ds_idxs] = lhs @ lhs.conj().T                        
 
         return out
     
@@ -399,18 +395,13 @@ class Cone():
                     A_ds_imag = A_ds[:, 1::2]
                     A_ds = A_ds_real + A_ds_imag*1j
                     
-                A_ds_lil = A_ds.tolil()
-                A_ds_nnzs = A_ds.getnnz(1)
+                A_ds = A_ds.toarray()
 
-                self.Ai_ds = []
-                for k in range(A_ds.shape[0]):
-                    if A_ds_nnzs[k] < 0.1 * self.n*self.n:
-                        data_k = A_ds_lil.data[k]
-                        rows_k = np.array(A_ds_lil.rows[k]) // self.n
-                        cols_k = np.array(A_ds_lil.rows[k])  % self.n
-                        self.Ai_ds.append(sp.sparse.csr_array((data_k, (rows_k, cols_k)), shape=(self.n, self.n)))
-                    else:
-                        self.Ai_ds.append(A_ds[k, :].toarray().reshape(self.n, self.n))
+                if self.hermitian:
+                    self.Ai_ds = np.array([Ai.reshape((-1, 2)).view(dtype=np.complex128).reshape(self.n, self.n) for Ai in A_ds])
+                else:
+                    self.Ai_ds = np.array([Ai.reshape((self.n, self.n)) for Ai in A_ds])
+                self.work = np.zeros_like(self.Ai_ds, dtype=self.dtype)                
 
                 # Extract and scale all off-diagonal blocks by 2
                 if len(self.A_sp_idxs) > 0:
@@ -437,9 +428,10 @@ class Cone():
             self.A_ds_ds_idxs = np.ix_(self.A_ds_idxs, self.A_ds_idxs)
             A = np.ascontiguousarray(A)
             if self.hermitian:
-                self.Ai_ds = [Ai.reshape((-1, 2)).view(dtype=np.complex128).reshape(self.n, self.n) for Ai in A]
+                self.Ai_ds = np.array([Ai.reshape((-1, 2)).view(dtype=np.complex128).reshape(self.n, self.n) for Ai in A])
             else:
-                self.Ai_ds = [Ai.reshape((self.n, self.n)) for Ai in A]
+                self.Ai_ds = np.array([Ai.reshape((self.n, self.n)) for Ai in A])
+            self.work = np.zeros_like(self.Ai_ds, dtype=self.dtype)
 
         self.congr_aux_updated = True        
         
