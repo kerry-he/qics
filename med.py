@@ -16,6 +16,29 @@ def heisenberg(delta, L):
 
     return ( np.kron(h,np.eye(2**(L-2))) ).real
 
+def get_ptr(n0, n1, sys):
+    n = n0 if sys == 0 else n1      # System being traced out
+    m = n1 if sys == 0 else n0      # Remaining system
+    N = n0 * n1
+    vN = N*N 
+    sm = sym.vec_dim(m)
+    ptr = np.zeros((sm, vN))
+    k = 0
+    for j in range(m):
+        for i in range(j + 1):
+            H = np.zeros((m, m))
+            if i == j:
+                H[i, j] = 1
+                I_H = sym.i_kr(H, sys, (n0, n1))
+                ptr[k, :] = I_H.reshape(-1)         
+                k += 1       
+            else:
+                H[i, j] = H[j, i] = math.sqrt(0.5)
+                I_H = sym.i_kr(H, sys, (n0, n1))
+                ptr[k, :] = I_H.reshape(-1)
+                k += 1
+
+    return ptr
 
 np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
@@ -25,21 +48,19 @@ np.set_printoptions(threshold=np.inf)
 #   s.t. rho >= 0, trace(rho) == 1
 #        Tr_1 rho == Tr_L rho
 #        S(L|1...L-1) >= 0
-
-L = 7
+L = 2
 H = heisenberg(-1, L) # Hamiltonian
 dims = 2*np.ones(L)
 
 N = 2**L
-vN = sym.vec_dim(N)
+vN = N*N
 
 m = 2**(L-1)
 vm = sym.vec_dim(m)
 
-
-tr1   = sym.lin_to_mat(lambda x : sym.p_tr(x, 0, (2, m)), N, m)
-trend = sym.lin_to_mat(lambda x : sym.p_tr(x, 1, (m, 2)), N, m)
-Id    = sym.mat_to_vec(np.eye(N))
+tr1   = get_ptr(2, m, 0)
+trend = get_ptr(m, 2, 1)
+Id    = np.eye(N).reshape((-1, 1))
 
 A1 = np.hstack((np.zeros((vm, 1)), tr1 - trend))
 A2 = np.hstack((np.zeros((1, 1)), Id.T))
@@ -49,7 +70,7 @@ A = np.vstack((A1, A2, A3))
 b = np.zeros((vm + 2, 1))
 b[-2] = 1.
 
-c = np.vstack((np.zeros((1, 1)), sym.mat_to_vec(H)))
+c = np.vstack((np.zeros((1, 1)), H.reshape((-1, 1))))
 
 # Input into model and solve
 cones = [quantcondentr.Cone(m, 2, 1)]
