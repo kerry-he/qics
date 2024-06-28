@@ -88,7 +88,7 @@ def purify(rho):
     n = rho.shape[0]
     D, U = np.linalg.eigh(rho)
 
-    vec = np.zeros((n*n, 1))
+    vec = np.zeros((n*n, 1), dtype=rho.dtype)
     for i in range(n):
         vec += np.sqrt(D[i]) * np.kron(U[:, [i]], U[:, [i]])
 

@@ -18,7 +18,7 @@ class Cone():
         self.n = n0 if (sys == 1) else n1      # Dimension of system not traced out
 
         self.vn = sym.vec_dim(self.n, hermitian=hermitian)      # Dimension of vectorized system being traced out
-        self.vN = sym.vec_dim(self.N, hermitian=hermitian)          # Dimension of vectorized bipartite system
+        self.vN = sym.vec_dim(self.N, hermitian=hermitian)      # Dimension of vectorized bipartite system
 
         self.dim   = [1, self.N*self.N] if (not hermitian) else [1, 2*self.N*self.N]
         self.type  = ['r', 's']         if (not hermitian) else ['r', 'h']
@@ -245,13 +245,16 @@ class Cone():
         #     X = M \ Wx
         #     t = z^2 Ht + <DPhi(X), X>
         # where Wx = Hx + Ht DPhi(X)
-        #     M = D2S(X) - PTr' D2S(PTr(X)) PTr
+        #     M = 1/z D2S(X) - 1/z PTr' D2S(PTr(X)) PTr + X^-1 kron X^-1
+        #       = (Ux kron Ux) (1/z log + inv)^[1](Dx) (Ux' kron Ux')
+        #         - 1/z PTr' (Uy kron Uy) log^[1](Dy) (Uy' kron Uy') PTr
         #
         # Treating [PTr' D2S(PTr(X)) PTr] as a low-rank perturbation of D2S(X), we can solve 
         # linear systems with M by using the matrix inversion lemma
         #     X = [D2S(X)^-1 - D2S(X)^-1 PTr' N^-1 PTr D2S(X)^-1] Wx
         # where
-        #     N = D2S(PTr(X))^-1 - PTr D2S(X)^-1 PTr'
+        #     N = 1/z (Uy kron Uy) [log^[1](Dy)]^-1 (Uy' kron Uy') 
+        #         - PTr (Ux kron Ux) [(1/z log + inv)^[1](Dx)]^-1  (Ux' kron Ux') PTr'
 
         p = A.shape[0]
         lhs = np.zeros((p, sum(self.dim)))
@@ -414,6 +417,11 @@ class Cone():
         if not self.invhess_aux_aux_updated:
             self.update_invhessprod_aux_aux()
 
+        # Precompute and factorize the matrix
+        #     N = 1/z (Uy kron Uy) [log^[1](Dy)]^-1 (Uy' kron Uy')
+        #         - PTr (Ux kron Ux) [(1/z log + inv)^[1](Dx)]^-1  (Ux' kron Ux') PTr'
+        # which we will need to solve linear systems with the Hessian of our barrier function
+
         irt2 = math.sqrt(0.5)
         self.z2 = self.z * self.z
 
@@ -421,9 +429,55 @@ class Cone():
         self.D1x_comb_inv = 1 / (self.D1x_log*self.zi + D1x_inv)
         sqrt_D1x_comb_inv = np.sqrt(self.D1x_comb_inv)
 
-        UxK = np.empty((self.vn, self.vN))
+        # Get [1/z (Uy kron Uy) [log^[1](Dy)]^-1 (Uy' kron Uy')] matrix
         Hy_inv = np.empty((self.vn, self.vn))
+        k = 0
+        for j in range(self.n):
+            for i in range(j):
+                # Build Hyy^-1 matrix
+                UyH_k = self.Uy.conj().T[:, [i]] @ self.Uy[[j], :] * irt2
+                UyH_k = self.Uy @ (UyH_k * self.z / self.D1y_log) @ self.Uy.conj().T
+                Hy_inv[:, [k]] = sym.mat_to_vec(UyH_k + UyH_k.conj().T, hermitian=self.hermitian)
+                k += 1
 
+                if self.hermitian:
+                    UyH_k *= 1j
+                    Hy_inv[:, [k]] = sym.mat_to_vec(UyH_k + UyH_k.conj().T, hermitian=self.hermitian)
+                    k += 1
+
+            # Build UxK matrix
+            UyH_k = self.Uy.conj().T[:, [j]] @ self.Uy[[j], :]
+            UyH_k = self.Uy @ (UyH_k * self.z / self.D1y_log) @ self.Uy.conj().T
+            Hy_inv[:, [k]] = sym.mat_to_vec(UyH_k, hermitian=self.hermitian)
+
+            k += 1
+
+        # Begin with (Uy' kron Uy')
+        np.matmul(self.Uy.conj().reshape(self.n, self.n, 1), self.Uy.reshape(self.n, 1, self.n), out=self.work9)
+        self.work8[self.diag_indices] = self.work9
+        t = 0
+        for j in range(self.n):
+            np.multiply(self.Uy[:j].reshape((j, 1, self.n)).T, np.sqrt(0.5), out=self.work10[:j].T)
+            np.matmul(self.Uy[[j]].conj().T, self.work10[:j], out=self.work9[:j])
+
+            if self.hermitian:
+                np.add(self.work9[:j], self.work9[:j].conj().transpose(0, 2, 1), out=self.work8[t : t+2*j : 2])
+                np.subtract(self.work9[:j], self.work9[:j].conj().transpose(0, 2, 1), out=self.work8[t+1 : t+2*j+1 : 2])
+                self.work8[t+1 : t+2*j+1 : 2] *= -1j
+                t += 2*j + 1
+            else:
+                np.add(self.work9[:j], self.work9[:j].transpose(0, 2, 1), out=self.work8[t : t+j])
+                t += j + 1
+        # Apply z [log^[1](Dy)]^-1
+        self.work8 *= (self.z * np.reciprocal(self.D1y_log))
+        # Apply (Uy kron Uy)
+        lin.congr(self.work6, self.Uy, self.work8, work=self.work7)
+
+        work1  = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
+        work1 *= self.scale
+
+        # Get [PTr (Ux kron Ux) [(1/z log + inv)^[1](Dx)]^-1  (Ux' kron Ux') PTr'] matrix
+        UxK = np.empty((self.vn, self.vN))
         k = 0
         for j in range(self.n):
             for i in range(j):
@@ -437,22 +491,13 @@ class Cone():
                     rhs = self.Ux[self.n1*j:self.n1*(j+1), :]
                     UxK_k = (lhs @ rhs) * irt2
                 UxK_k *= sqrt_D1x_comb_inv
-                UxK[[k], :] = (sym.mat_to_vec(UxK_k + UxK_k.conj().T, hermitian=self.hermitian)).T
-
-                # Build Hyy^-1 matrix
-                UyH_k = self.Uy.conj().T[:, [i]] @ self.Uy[[j], :] * irt2
-                UyH_k = self.Uy @ (UyH_k * self.z / self.D1y_log) @ self.Uy.conj().T
-                Hy_inv[:, [k]] = sym.mat_to_vec(UyH_k + UyH_k.conj().T, hermitian=self.hermitian)
-
+                temp = UxK_k + UxK_k.conj().T
+                UxK[[k], :] = (sym.mat_to_vec(temp, hermitian=self.hermitian)).T
                 k += 1
 
                 if self.hermitian:
                     UxK_k *= 1j
                     UxK[[k], :] = (sym.mat_to_vec(UxK_k + UxK_k.conj().T, hermitian=self.hermitian)).T
-
-                    UyH_k *= 1j
-                    Hy_inv[:, [k]] = sym.mat_to_vec(UyH_k + UyH_k.conj().T, hermitian=self.hermitian)
-
                     k += 1
 
             # Build UxK matrix
@@ -466,13 +511,39 @@ class Cone():
                 UxK_k = lhs @ rhs
             UxK_k *= sqrt_D1x_comb_inv
             UxK[[k], :] = (sym.mat_to_vec(UxK_k, hermitian=self.hermitian)).T
-
-            UyH_k = self.Uy.conj().T[:, [j]] @ self.Uy[[j], :]
-            UyH_k = self.Uy @ (UyH_k * self.z / self.D1y_log) @ self.Uy.conj().T
-            Hy_inv[:, [k]] = sym.mat_to_vec(UyH_k, hermitian=self.hermitian)
-
             k += 1
 
+        # Begin with [(Ux' kron Ux') PTr']
+        temp = self.Ux.T.reshape(self.N, self.n0, self.n1)
+        if self.sys == 1:
+            lhs = np.ascontiguousarray(temp.conj().transpose(1, 0, 2))  # self.n0, self.N, self.n1
+            rhs = np.ascontiguousarray(temp.transpose(1, 2, 0))         # self.n0, self.n1, self.N
+        else:
+            lhs = np.ascontiguousarray(temp.conj().transpose(2, 0, 1))  # self.n1, self.N, self.n0
+            rhs = np.ascontiguousarray(temp.transpose(2, 1, 0))         # self.n1, self.n0, self.N
+
+        np.matmul(lhs, rhs, out=self.Work9)
+        self.Work8[self.diag_indices] = self.Work9
+        rhs *= np.sqrt(0.5)
+        t = 0
+        for j in range(self.n):
+            np.matmul(lhs[j], rhs[:j], out=self.Work9[:j])
+
+            if self.hermitian:
+                np.add(self.Work9[:j], self.Work9[:j].conj().transpose(0, 2, 1), out=self.Work8[t : t+2*j : 2])
+                np.subtract(self.Work9[:j], self.Work9[:j].conj().transpose(0, 2, 1), out=self.Work8[t+1 : t+2*j+1 : 2])
+                self.Work8[t+1 : t+2*j+1 : 2] *= -1j
+                t += 2*j + 1
+            else:
+                np.add(self.Work9[:j], self.Work9[:j].transpose(0, 2, 1), out=self.Work8[t : t+j])
+                t += j + 1
+        # Apply [(1/z log + inv)^[1](Dx)]^-1/2
+        self.Work8 *= sqrt_D1x_comb_inv
+        # Compute A'A where A = [(1/z log + inv)^[1](Dx)]^-1/2  (Ux' kron Ux') PTr'
+        work2 = self.Work8.view(dtype=np.float64).reshape((self.vn, -1))
+        work3 = work2 @ work2.T
+
+        work1 -= work3
 
         KHxK = UxK @ UxK.T
         Hy_KHxK = Hy_inv - KHxK
@@ -481,6 +552,7 @@ class Cone():
         self.invhess_aux_updated = True
 
         return
+    
 
     def update_invhessprod_aux_aux(self):
         assert not self.invhess_aux_aux_updated
@@ -503,5 +575,17 @@ class Cone():
             self.diag_indices = np.append(0, np.cumsum([i for i in range(2, self.n+1, 1)]))
             self.triu_indices = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
             self.scale = np.array([1 if i==j else np.sqrt(2.) for j in range(self.n) for i in range(j + 1)])
+
+        self.work6  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
+        self.work7  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
+        self.work8  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
+        self.work9  = np.empty((self.n, self.n, self.n), dtype=self.dtype)
+        self.work10 = np.empty((self.n, 1, self.n), dtype=self.dtype)
+
+        self.Work6  = np.empty((self.vn, self.N, self.N), dtype=self.dtype)
+        self.Work7  = np.empty((self.vn, self.N, self.N), dtype=self.dtype)
+        self.Work8  = np.empty((self.vn, self.N, self.N), dtype=self.dtype)
+        self.Work9  = np.empty((self.n, self.N, self.N), dtype=self.dtype)
+        self.Work10 = np.empty((self.n, 1, self.n), dtype=self.dtype)        
 
         self.invhess_aux_aux_updated = True

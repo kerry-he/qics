@@ -115,6 +115,7 @@ class Cone():
         self.zi    = np.reciprocal(self.z)
         self.DPhiX = self.log_XY + np.eye(self.n)
         self.DPhiY = -self.Uy @ (self.D1y_log * self.UyXUy) @ self.Uy.conj().T
+        self.DPhiY = (self.DPhiY + self.DPhiY.conj().T) * 0.5
 
         self.grad = [
            -self.zi,
@@ -158,13 +159,15 @@ class Cone():
         # Hessian product of barrier function
         out[0][:] = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
 
-        out[1][:] = -out[0] * self.DPhiX
-        out[1]   +=  self.zi * (D2PhiXYH + D2PhiXXH)
-        out[1]   +=  self.inv_X @ Hx @ self.inv_X
+        out_X     = -out[0] * self.DPhiX
+        out_X    +=  self.zi * (D2PhiXYH + D2PhiXXH)
+        out_X    +=  self.inv_X @ Hx @ self.inv_X
+        out[1][:] = out_X
 
-        out[2][:] = -out[0] * self.DPhiY
-        out[2]   +=  self.zi * (D2PhiYXH + D2PhiYYH)
-        out[2]   +=  self.inv_Y @ Hy @ self.inv_Y
+        out_Y     = -out[0] * self.DPhiY
+        out_Y    +=  self.zi * (D2PhiYXH + D2PhiYYH)
+        out_Y    +=  self.inv_Y @ Hy @ self.inv_Y
+        out[2][:] = out_Y
 
         return out
 
@@ -272,14 +275,18 @@ class Cone():
         temp.view(dtype=np.float64).reshape((-1, 1))[self.triu_indices] = temp_vec
         temp += temp.conj().T
 
-        out[2][:] = self.Uy @ temp @ self.Uy.conj().T
+        temp = self.Uy @ temp @ self.Uy.conj().T
+        temp = (temp + temp.conj().T) * 0.5
+        out[2][:] = temp
 
         # Inverse Hessian products with respect to X
         temp = self.Uy.conj().T @ out[2] @ self.Uy
         temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.conj().T
         temp = Wx - temp
         temp = self.Ux.conj().T @ temp @ self.Ux
-        out[1][:] = self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.conj().T
+        temp = self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.conj().T
+        temp = (temp + temp.conj().T) * 0.5
+        out[1][:] = temp
 
         # Inverse Hessian products with respect to t
         out[0][:] = self.z2 * Ht + lin.inp(self.DPhiX, out[1]) + lin.inp(self.DPhiY, out[2])
@@ -419,11 +426,13 @@ class Cone():
         dder3_X -=  2 * self.zi2 * chi * (D2PhiXXH + D2PhiXYH)
         dder3_X +=  self.zi * (D3PhiXXX + D3PhiXYY)
         dder3_X -=  2 * self.inv_X @ Hx @ self.inv_X @ Hx @ self.inv_X
+        dder3_X  = (dder3_X + dder3_X.conj().T) * 0.5
 
         dder3_Y  = -dder3_t * self.DPhiY
         dder3_Y -=  2 * self.zi2 * chi * (D2PhiYXH + D2PhiYYH)
         dder3_Y +=  self.zi * (D3PhiYYX + D3PhiYXY + D3PhiYYY)
         dder3_Y -=  2 * self.inv_Y @ Hy @ self.inv_Y @ Hy @ self.inv_Y
+        dder3_Y  = (dder3_Y + dder3_Y.conj().T) * 0.5
 
         out[0][:] += dder3_t * a
         out[1][:] += dder3_X * a
@@ -509,7 +518,7 @@ class Cone():
         self.D1x_inv      = np.reciprocal(np.outer(self.Dx, self.Dx))
         self.D1x_comb_inv = np.reciprocal(self.zi * self.D1x_log + self.D1x_inv)
         
-        # Get (-1/z Sy + Dy^-1 kron Dy^-1) matrix
+        # Get [-1/z Sy + Dy^-1 kron Dy^-1] matrix
         hess_schur = mgrad.get_S_matrix(-self.D2y_log * (self.zi * self.UyXUy + np.eye(self.n)), np.sqrt(2.0), hermitian=self.hermitian)
 
         # Get [1/z^2 log^[1](Dy) (Uy'Ux kron Uy'Ux) [(1/z log + inv)^[1](Dx)]^-1 (Ux'Uy kron Ux'Uy) log^[1](Dy)] matrix
