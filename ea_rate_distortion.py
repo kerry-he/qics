@@ -83,7 +83,7 @@ c[0] = 1.
 # Input into model and solve
 cones = [quantcondentr.Cone(n, n, 0, hermitian=hermitian), nonnegorthant.Cone(1)]
 model = model.Model(c, A, b, cones=cones, offset=entr_A)
-solver = solver.Solver(model, max_iter=10)
+solver = solver.Solver(model)
 
 profiler = cProfile.Profile()
 profiler.enable()

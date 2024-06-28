@@ -458,11 +458,11 @@ class Cone():
         # Begin with [(Ux' kron Ux') PTr']
         temp = self.Ux.T.reshape(self.N, self.n0, self.n1)
         if self.sys == 1:
-            lhs = np.ascontiguousarray(temp.conj().transpose(1, 0, 2))  # self.n0, self.N, self.n1
-            rhs = np.ascontiguousarray(temp.transpose(1, 2, 0))         # self.n0, self.n1, self.N
+            lhs = np.copy(temp.conj().transpose(1, 0, 2))  # self.n0, self.N, self.n1
+            rhs = np.copy(temp.transpose(1, 2, 0))         # self.n0, self.n1, self.N
         else:
-            lhs = np.ascontiguousarray(temp.conj().transpose(2, 0, 1))  # self.n1, self.N, self.n0
-            rhs = np.ascontiguousarray(temp.transpose(2, 1, 0))         # self.n1, self.n0, self.N
+            lhs = np.copy(temp.conj().transpose(2, 0, 1))  # self.n1, self.N, self.n0
+            rhs = np.copy(temp.transpose(2, 1, 0))         # self.n1, self.n0, self.N
 
         np.matmul(lhs, rhs, out=self.Work9)
         self.Work8[self.diag_indices] = self.Work9
