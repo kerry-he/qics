@@ -410,6 +410,7 @@ class Cone():
 
         return
     
+    @profile
     def update_invhessprod_aux(self):
         assert not self.invhess_aux_updated
         assert self.grad_updated
@@ -451,9 +452,6 @@ class Cone():
         # Apply (Uy kron Uy)
         lin.congr(self.work6, self.Uy, self.work8, work=self.work7)
 
-        work1  = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
-        work1 *= self.scale
-
         # Get [PTr (Ux kron Ux) [(1/z log + inv)^[1](Dx)]^-1  (Ux' kron Ux') PTr'] matrix
         # Begin with [(Ux' kron Ux') PTr']
         temp = self.Ux.T.reshape(self.N, self.n0, self.n1)
@@ -481,13 +479,13 @@ class Cone():
                 t += j + 1
         # Apply [(1/z log + inv)^[1](Dx)]^-1/2
         self.Work8 *= sqrt_D1x_comb_inv
-        # Compute A'A where A = [(1/z log + inv)^[1](Dx)]^-1/2  (Ux' kron Ux') PTr'
+        # Apply PTr (Ux kron Ux)
         work2 = self.Work8.view(dtype=np.float64).reshape((self.vn, -1))
         work3 = work2 @ work2.T
 
+        # Subtract to obtain N then Cholesky factor
         work1 -= work3
         self.Hy_KHxK_fact = lin.fact(work1)
-
         self.invhess_aux_updated = True
 
         return
