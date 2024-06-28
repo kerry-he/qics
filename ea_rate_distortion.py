@@ -21,19 +21,27 @@ def purify(eig):
 def get_tr2(n, sn, vN, hermitian):
     dtype = np.float64 if (not hermitian) else np.complex128
     tr2 = np.zeros((sn, vN))
-    k = -1
+    k = 0
     for j in range(n):
         for i in range(j + 1):
-            k += 1
-        
             H = np.zeros((n, n), dtype=dtype)
             if i == j:
                 H[i, j] = 1
+                I_H = sym.i_kr(H, 1, (n, n))
+                tr2[k, :] = I_H.view(dtype=np.float64).reshape(1, -1)         
+                k += 1       
             else:
                 H[i, j] = H[j, i] = math.sqrt(0.5)
-            
-            I_H = sym.i_kr(H, 1, (n, n))
-            tr2[k, :] = I_H.view(dtype=np.float64).reshape(1, -1)
+                I_H = sym.i_kr(H, 1, (n, n))
+                tr2[k, :] = I_H.view(dtype=np.float64).reshape(1, -1)
+                k += 1
+                
+                if hermitian:
+                    H[i, j] = math.sqrt(0.5) * 1j
+                    H[j, i] = -math.sqrt(0.5) * 1j
+                    I_H = sym.i_kr(H, 1, (n, n))
+                    tr2[k, :] = I_H.view(dtype=np.float64).reshape(1, -1)
+                    k += 1 
 
     return tr2
 
@@ -44,7 +52,7 @@ np.set_printoptions(threshold=np.inf)
 # Define dimensions
 hermitian = True
 
-n = 2
+n = 16
 N = n * n
 sn = sym.vec_dim(n, hermitian=hermitian)
 vn = n*n if (not hermitian) else 2*n*n
@@ -66,14 +74,14 @@ A2 = np.hstack((np.zeros((1, 1)), Delta, np.ones((1, 1))))
 A = np.vstack((A1, A2))
 
 b = np.zeros((sn + 1, 1))
-b[:sn] = sym.mat_to_vec(rho)
+b[:sn] = sym.mat_to_vec(rho, hermitian=hermitian)
 b[-1] = D
 
 c = np.zeros((vN + 2, 1))
 c[0] = 1.
 
 # Input into model and solve
-cones = [quantcondentr.Cone(n, n, 0), nonnegorthant.Cone(1)]
+cones = [quantcondentr.Cone(n, n, 0, hermitian=hermitian), nonnegorthant.Cone(1)]
 model = model.Model(c, A, b, cones=cones, offset=entr_A)
 solver = solver.Solver(model, max_iter=10)
 

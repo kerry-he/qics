@@ -92,4 +92,4 @@ def purify(rho):
     for i in range(n):
         vec += np.sqrt(D[i]) * np.kron(U[:, [i]], U[:, [i]])
 
-    return vec @ vec.T
+    return vec @ vec.conj().T
