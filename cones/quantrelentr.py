@@ -7,7 +7,7 @@ class Cone():
         # Dimension properties
         self.n = n                                      # Side dimension of system
         self.hermitian = hermitian                      # Hermitian or symmetric vector space
-        self.vn = n*n if hermitian else n*(n+1)//2      # Vector dimension of system
+        self.vn = n*n if hermitian else n*(n+1)//2      # Compact dimension of system
 
         self.dim   = [1, n*n, n*n]   if (not hermitian) else [1, 2*n*n, 2*n*n]
         self.type  = ['r', 's', 's'] if (not hermitian) else ['r', 'h', 'h']
@@ -162,11 +162,13 @@ class Cone():
         out_X     = -out[0] * self.DPhiX
         out_X    +=  self.zi * (D2PhiXYH + D2PhiXXH)
         out_X    +=  self.inv_X @ Hx @ self.inv_X
+        out_X     = (out_X + out_X.conj().T) * 0.5
         out[1][:] = out_X
 
         out_Y     = -out[0] * self.DPhiY
         out_Y    +=  self.zi * (D2PhiYXH + D2PhiYYH)
         out_Y    +=  self.inv_Y @ Hy @ self.inv_Y
+        out_Y     = (out_Y + out_Y.conj().T) * 0.5
         out[2][:] = out_Y
 
         return out

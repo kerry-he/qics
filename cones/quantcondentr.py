@@ -17,8 +17,7 @@ class Cone():
         self.sys   = sys                       # System being traced out
         self.n = n0 if (sys == 1) else n1      # Dimension of system not traced out
 
-        self.vn = sym.vec_dim(self.n, hermitian=hermitian)      # Dimension of vectorized system being traced out
-        self.vN = sym.vec_dim(self.N, hermitian=hermitian)      # Dimension of vectorized bipartite system
+        self.vn = self.n*self.n if hermitian else self.n*(self.n+1)//2      # Compact dimension of vectorized system being traced out
 
         self.dim   = [1, self.N*self.N] if (not hermitian) else [1, 2*self.N*self.N]
         self.type  = ['r', 's']         if (not hermitian) else ['r', 'h']
@@ -76,7 +75,7 @@ class Cone():
         self.Dx, self.Ux = np.linalg.eigh(self.X)
         self.Dy, self.Uy = np.linalg.eigh(self.Y)
 
-        if any(self.Dx <= 0):
+        if any(self.Dx <= 0) or any(self.Dy <= 0):
             self.feas = False
             return self.feas
         
