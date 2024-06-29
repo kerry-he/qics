@@ -167,12 +167,12 @@ class Cone():
         #              - [Uy [log^[1](Dy) .* (Uy' PTr(Hx) Uy)] Uy'] kron I
         sym.p_tr_multi(self.work1, self.Ax, self.sys, (self.n0, self.n1))
         lin.congr(self.work2, self.Uy.conj().T, self.work1, self.work3)
-        self.work2 *= self.D1y_log
+        self.work2 *= self.D1y_log * self.zi
         lin.congr(self.work1, self.Uy, self.work2, self.work3)
         sym.i_kr_multi(self.Work0, self.work1, self.sys, (self.n0, self.n1))
 
         lin.congr(self.Work2, self.Ux.conj().T, self.Ax, self.Work3)
-        self.Work2 *= self.D1x_log
+        self.Work2 *= self.D1x_comb
         lin.congr(self.Work1, self.Ux, self.Work2, self.Work3)
 
         self.Work1 -= self.Work0
@@ -192,10 +192,8 @@ class Cone():
         # ====================================================================
         # D2_Xt F(t, X)[Ht] = -Ht DPhi(X)[Hx] / z^2
         # D2_XX F(t, X)[Hx] =  DPhi(X)[Hx] DPhi(X) / z^2 + D2Phi(X)[Hx] / z + X^-1 Hx X^-1
-        self.Work1 *= self.zi
-        lin.congr(self.Work3, self.inv_X, self.Ax, self.Work2)
-        self.Work1 += self.Work3
-        self.Work1 -= np.outer(outt, self.DPhi).reshape((p, self.N, self.N))
+        np.outer(outt, self.DPhi, out=self.Work0.reshape(p, -1))
+        self.Work1 -= self.Work0
 
         lhs[:, 1:] = self.Work1.reshape((p, -1)).view(dtype=np.float64)
         
@@ -388,7 +386,10 @@ class Cone():
         assert not self.hess_aux_updated
         assert self.grad_updated
 
-        self.D1x_log = mgrad.D1_log(self.Dx, self.log_Dx)
+        D1x_inv       = np.reciprocal(np.outer(self.Dx, self.Dx))
+        self.D1x_log  = mgrad.D1_log(self.Dx, self.log_Dx)
+        self.D1x_comb = self.zi * self.D1x_log + D1x_inv
+        
         self.D1y_log = mgrad.D1_log(self.Dy, self.log_Dy)
 
         # Preparing other required variables
@@ -421,12 +422,8 @@ class Cone():
         #         - PTr (Ux kron Ux) [(1/z log + inv)^[1](Dx)]^-1  (Ux' kron Ux') PTr'
         # which we will need to solve linear systems with the Hessian of our barrier function
 
-        irt2 = math.sqrt(0.5)
         self.z2 = self.z * self.z
-
-        D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
-        self.D1x_comb_inv = 1 / (self.D1x_log*self.zi + D1x_inv)
-        sqrt_D1x_comb_inv = np.sqrt(self.D1x_comb_inv)
+        self.D1x_comb_inv = np.reciprocal(self.D1x_comb)
 
         # Get [1/z (Uy kron Uy) [log^[1](Dy)]^-1 (Uy' kron Uy')] matrix
         # Begin with (Uy' kron Uy')
@@ -449,9 +446,6 @@ class Cone():
         self.work8 *= (self.z * np.reciprocal(self.D1y_log))
         # Apply (Uy kron Uy)
         lin.congr(self.work6, self.Uy, self.work8, work=self.work7)
-
-        work1  = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
-        work1 *= self.scale
 
         # Get [PTr (Ux kron Ux) [(1/z log + inv)^[1](Dx)]^-1  (Ux' kron Ux') PTr'] matrix
         # Begin with [(Ux' kron Ux') PTr']
@@ -479,7 +473,7 @@ class Cone():
                 np.add(self.Work9[:j], self.Work9[:j].transpose(0, 2, 1), out=self.Work8[t : t+j])
                 t += j + 1
         # Apply [(1/z log + inv)^[1](Dx)]^-1/2
-        self.Work8 *= sqrt_D1x_comb_inv
+        self.Work8 *= self.D1x_comb_inv
         # Apply PTr (Ux kron Ux)
         lin.congr(self.Work6, self.Ux, self.Work8, work=self.Work7)
         sym.p_tr_multi(self.work7, self.Work6, self.sys, (self.n0, self.n1))
@@ -493,7 +487,6 @@ class Cone():
         self.invhess_aux_updated = True
 
         return
-    
 
     def update_invhessprod_aux_aux(self):
         assert not self.invhess_aux_aux_updated

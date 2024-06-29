@@ -189,17 +189,17 @@ class Cone():
         # D2_XY Phi(X, Y) [Hy] = -Uy [log^[1](Dy) .* (Uy' Hy Uy)] Uy'
         # D2_YY Phi(X, Y) [Hy] = -Uy [SUM_k log_k^[2](Dy) .* ([Uy' X Uy]_k [Uk' Hy Uy]_k' + [Uy' Hy Uy]_k [Uk' X Uy]_k') ] Uy'
         lin.congr(self.work1, self.Ux.conj().T, self.Ax, self.work2)
-        self.work1 *= self.D1x_log
+        self.work1 *= self.D1x_comb
         lin.congr(self.D2PhiXXH, self.Ux, self.work1, self.work2)
 
         lin.congr(self.work1, self.Uy.conj().T, self.Ax, self.work2)
-        self.work1 *= self.D1y_log
+        self.work1 *= -self.zi * self.D1y_log
         lin.congr(self.D2PhiYXH, self.Uy, self.work1, self.work2)
 
         lin.congr(self.work1, self.Uy.conj().T, self.Ay, self.work2)
-        mgrad.scnd_frechet_multi(self.D2PhiYYH, self.D2y_log_UXU, self.work1, U=self.Uy, work1=self.work2, work2=self.work3, work3=self.work5)
+        mgrad.scnd_frechet_multi(self.D2PhiYYH, self.D2y_comb, self.work1, U=self.Uy, work1=self.work2, work2=self.work3, work3=self.work5)
 
-        self.work1 *= self.D1y_log
+        self.work1 *= self.D1y_log * self.zi
         lin.congr(self.D2PhiXYH, self.Uy, self.work1, self.work2)
 
         # ====================================================================
@@ -221,10 +221,8 @@ class Cone():
         # D2_XX F(t, X, Y)[Hx] = (D_X Phi(X, Y) [Hx]) D_X Phi(X, Y) / z^2 + (D2_XX Phi(X, Y) [Hx]) / z + X^-1 Hx X^-1
         # D2_XY F(t, X, Y)[Hy] = (D_Y Phi(X, Y) [Hy]) D_X Phi(X, Y) / z^2 + (D2_XY Phi(X, Y) [Hy]) / z
         np.subtract(self.D2PhiXXH, self.D2PhiXYH, out=self.work1)
-        self.work1 *= self.zi
-        lin.congr(self.work3, self.inv_X, self.Ax, self.work2)
-        self.work1 += self.work3
-        self.work1 -= np.outer(outt, self.DPhiX).reshape((p, self.n, self.n))
+        np.outer(outt, self.DPhiX, out=self.work2.reshape((p, -1)))
+        self.work1 -= self.work2
 
         lhs[:, self.idx_X] = self.work1.reshape((p, -1)).view(dtype=np.float64)
 
@@ -235,10 +233,8 @@ class Cone():
         # D2_YX F(t, X, Y)[Hx] = (D_X Phi(X, Y) [Hx]) D_Y Phi(X, Y) / z^2 + (D2_YX Phi(X, Y) [Hx]) / z
         # D2_YY F(t, X, Y)[Hy] = (D_Y Phi(X, Y) [Hy]) D_Y Phi(X, Y) / z^2 + (D2_YY Phi(X, Y) [Hy]) / z + Y^-1 Hy Y^-1
         np.add(self.D2PhiYYH, self.D2PhiYXH, out=self.work1)
-        self.work1 *= -self.zi
-        lin.congr(self.work3, self.inv_Y, self.Ay, self.work2)
-        self.work1 += self.work3
-        self.work1 -= np.outer(outt, self.DPhiY).reshape((p, self.n, self.n))
+        np.outer(outt, self.DPhiY, out=self.work2.reshape((p, -1)))
+        self.work1 -= self.work2
 
         lhs[:, self.idx_Y] = self.work1.reshape((p, -1)).view(dtype=np.float64)
 
@@ -490,9 +486,13 @@ class Cone():
         assert not self.hess_aux_updated
         assert self.grad_updated
 
-        self.D1x_log = mgrad.D1_log(self.Dx, self.log_Dx)
+        D1x_inv       = np.reciprocal(np.outer(self.Dx, self.Dx))
+        self.D1x_log  = mgrad.D1_log(self.Dx, self.log_Dx)
+        self.D1x_comb = self.zi * self.D1x_log + D1x_inv
+
         self.D2y_log = mgrad.D2_log(self.Dy, self.D1y_log)
         self.D2y_log_UXU = self.D2y_log * self.UyXUy
+        self.D2y_comb    = -self.D2y_log * (self.zi * self.UyXUy + np.eye(self.n))        
 
         # Preparing other required variables
         self.zi2 = self.zi * self.zi
@@ -517,11 +517,10 @@ class Cone():
 
         self.z2           = self.z * self.z
         self.UyUx         = self.Uy.conj().T @ self.Ux
-        self.D1x_inv      = np.reciprocal(np.outer(self.Dx, self.Dx))
-        self.D1x_comb_inv = np.reciprocal(self.zi * self.D1x_log + self.D1x_inv)
+        self.D1x_comb_inv = np.reciprocal(self.D1x_comb)
         
         # Get [-1/z Sy + Dy^-1 kron Dy^-1] matrix
-        hess_schur = mgrad.get_S_matrix(-self.D2y_log * (self.zi * self.UyXUy + np.eye(self.n)), np.sqrt(2.0), hermitian=self.hermitian)
+        hess_schur = mgrad.get_S_matrix(self.D2y_comb, np.sqrt(2.0), hermitian=self.hermitian)
 
         # Get [1/z^2 log^[1](Dy) (Uy'Ux kron Uy'Ux) [(1/z log + inv)^[1](Dx)]^-1 (Ux'Uy kron Ux'Uy) log^[1](Dy)] matrix
         # Begin with (Ux'Uy kron Ux'Uy) log^[1](Dy)
