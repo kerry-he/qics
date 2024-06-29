@@ -356,6 +356,8 @@ class Cone():
         assert not self.dder3_aux_updated
         assert self.hess_aux_updated
 
+        self.zi3 = self.zi * self.zi2
+        self.ui3 = self.ui * self.ui2
         self.D2x_log = mgrad.D2_log(self.Dx, self.D1x_log)
 
         self.dder3_aux_updated = True
@@ -369,36 +371,50 @@ class Cone():
         if not self.dder3_aux_updated:
             self.update_dder3_aux()
 
-        # Ht = dirs[0]
-        # Hx = sym.vec_to_mat(dirs[1:, [0]], hermitian=self.hermitian)
-        
-        # trH = np.trace(Hx).real
-        # UxHxUx = self.Ux.conj().T @ Hx @ self.Ux
+        (Ht, Hu, Hx) = dir
 
-        # # Quantum conditional entropy oracles
-        # D2PhiH  = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
-        # D2PhiH -= (trH / self.trX) * np.eye(self.n)
+        Hu2 = Hu * Hu
+        trHx = np.trace(Hx).real
 
-        # D3PhiHH  = mgrad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
-        # D3PhiHH += (trH / self.trX) ** 2 * np.eye(self.n)
+        chi = (Ht - self.DPhiu * Hu)[0, 0] - lin.inp(self.DPhiX, Hx)
+        chi2 = chi * chi
 
-        # # Third derivative of barrier
-        # DPhiH = lin.inp(self.DPhi_mat, Hx)
-        # D2PhiHH = lin.inp(D2PhiH, Hx)
-        # chi = Ht - DPhiH
+        UxHxUx = self.Ux.conj().T @ Hx @ self.Ux
 
-        # dder3 = np.empty((self.dim, 1))
-        # dder3[0] = -2 * (self.zi**3) * (chi**2) - (self.zi**2) * D2PhiHH
+        # Quantum relative entropy Hessians
+        D2PhiuuH = self.trX * Hu * self.ui2
+        D2PhiuXH = -np.trace(Hx).real * self.ui
+        D2PhiXuH = -np.eye(self.n) * Hu * self.ui
+        D2PhiXXH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
 
-        # temp = -dder3[0] * self.DPhi_mat
-        # temp -= 2 * (self.zi**2) * chi * D2PhiH
-        # temp += self.zi * D3PhiHH
-        # temp -= 2 * self.inv_X @ Hx @ self.inv_X @ Hx @ self.inv_X
-        # dder3[1:] = sym.mat_to_vec(temp, hermitian=self.hermitian)
+        D2PhiuHH = lin.inp(Hu, D2PhiuXH + D2PhiuuH)
+        D2PhiXHH = lin.inp(Hx, D2PhiXXH + D2PhiXuH)
 
-        out[0][:] += 0.
-        out[1][:] += 0.
-        out[2][:] += 0.
+        # Quantum relative entropy third order derivatives
+        D3Phiuuu = -2 * Hu2 * self.trX * self.ui3
+        D3PhiuXu = Hu * trHx * self.ui2
+        D3PhiuuX = D3PhiuXu
+
+        D3PhiXXX = mgrad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
+        D3PhiXuu = (Hu2 * self.ui2) * np.eye(self.n)
+
+        # Third derivatives of barrier
+        dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhiXHH + D2PhiuHH)
+
+        dder3_u  = -dder3_t * self.DPhiu
+        dder3_u -=  2 * self.zi2 * chi * (D2PhiuXH + D2PhiuuH)
+        dder3_u +=  self.zi * (D3PhiuuX + D3PhiuXu + D3Phiuuu)
+        dder3_u -=  2 * Hu2 * self.ui3
+
+        dder3_X  = -dder3_t * self.DPhiX
+        dder3_X -=  2 * self.zi2 * chi * (D2PhiXXH + D2PhiXuH)
+        dder3_X +=  self.zi * (D3PhiXXX + D3PhiXuu)
+        dder3_X -=  2 * self.inv_X @ Hx @ self.inv_X @ Hx @ self.inv_X
+        dder3_X  = (dder3_X + dder3_X.conj().T) * 0.5
+
+        out[0][:] += dder3_t * a
+        out[1][:] += dder3_u * a
+        out[2][:] += dder3_X * a
 
         return out
 

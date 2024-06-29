@@ -13,8 +13,8 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-hermitian = False
-n = 4
+hermitian = True
+n = 64
 sn = n*n if (not hermitian) else 2*n*n
 
 # cq channel capacity problem data
@@ -37,7 +37,7 @@ G4 = np.hstack((alphabet_vec, np.zeros((sn, 1))))
 G = -np.vstack((G1, G2, G3, G4))
 
 h = np.zeros((n + 2 + sn, 1))
-h[n+2] = 1.
+h[n+1] = 1.
 
 # Input into model and solve
 cones = [nonnegorthant.Cone(n), quantentr.Cone(n, hermitian=hermitian)]
