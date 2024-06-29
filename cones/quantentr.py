@@ -125,9 +125,12 @@ class Cone():
         assert not self.hess_aux_updated
         assert self.grad_updated
 
-        self.D1x_log = mgrad.D1_log(self.Dx, self.log_Dx)
         self.zi2 = self.zi * self.zi
         self.ui2 = self.ui * self.ui
+
+        D1x_inv       = np.reciprocal(np.outer(self.Dx, self.Dx))
+        self.D1x_log  = mgrad.D1_log(self.Dx, self.log_Dx)
+        self.D1x_comb = self.zi * self.D1x_log + D1x_inv
 
         self.hess_aux_updated = True
 
@@ -179,11 +182,9 @@ class Cone():
         else:
             self.Ax = np.array([Ax_k.reshape((self.n, self.n)) for Ax_k in Ax])
 
-        self.work0 = np.empty_like(self.Ax, dtype=self.dtype)
         self.work1 = np.empty_like(self.Ax, dtype=self.dtype)
         self.work2 = np.empty_like(self.Ax, dtype=self.dtype)
         self.work3 = np.empty_like(self.Ax, dtype=self.dtype)
-        self.work4 = np.empty_like(self.Ax, dtype=self.dtype)
 
         self.congr_aux_updated = True
 
@@ -197,33 +198,54 @@ class Cone():
         p = A.shape[0]
         lhs = np.zeros((p, sum(self.dim)))
 
-        for j in range(p):
-            Ht = self.At[j]
-            Hu = self.Au[j]
-            Hx = self.Ax[j]
+        # Precompute Hessian products for quantum entropy
+        # D2_uu Phi(u, X) [Hu] =  tr[X] Hu / u^2
+        # D2_uX Phi(u, X) [Hx] = -tr[Hx] / u
+        # D2_Xu Phi(u, X) [Hu] = -I Hu / u
+        # D2_XX Phi(u, X) [Hx] =  Ux [log^[1](Dx) .* (Ux' Hx Ux)] Ux'
+        D2PhiuuH = (self.trX * self.ui2) * self.Au
+        D2PhiuXH = np.trace(self.Ax, axis1=1, axis2=2).real * self.ui
+        # D2PhiXXH
+        lin.congr(self.work1, self.Ux.conj().T, self.Ax, self.work2)
+        self.work1 *= self.D1x_comb
+        lin.congr(self.work3, self.Ux, self.work1, self.work2)
+        # D2PhiXuH
+        self.work3[:, range(self.n), range(self.n)] -= (self.zi * self.ui[0, 0]) * self.Au.reshape(-1, 1)
 
-            UxHxUx = self.Ux.conj().T @ Hx @ self.Ux
+        # ====================================================================
+        # Hessian products with respect to t
+        # ====================================================================
+        # D2_tt F(t, u, X)[Ht] = Ht / z^2
+        # D2_tu F(t, u, X)[Hu] = -(D_u Phi(u, X) [Hu]) / z^2
+        # D2_tX F(t, u, X)[Hx] = -(D_X Phi(u, X) [Hx]) / z^2
+        outt  = self.At - (self.Ax.view(dtype=np.float64).reshape((p, 1, -1)) @ self.DPhiX.view(dtype=np.float64).reshape((-1, 1))).ravel()
+        outt -= self.Au * self.DPhiu[0, 0]
+        outt *= self.zi2
 
-            # Hessian product of quantum entropy
-            D2PhiuuH = self.trX * Hu * self.ui2
-            D2PhiuXH = -np.trace(Hx).real * self.ui
-            D2PhiXuH = -np.eye(self.n) * Hu * self.ui
-            D2PhiXXH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
-            
-            # Hessian product of barrier function
-            outt = (Ht - self.DPhiu * Hu - lin.inp(self.DPhiX, Hx)) * self.zi2
-            lhs[j, 0] = outt
+        lhs[:, 0] = outt
 
-            out_u     = -outt * self.DPhiu
-            out_u    +=  self.zi * (D2PhiuuH + D2PhiuXH)
-            out_u    +=  Hu * self.ui2
-            lhs[j, 1] = out_u[0, 0]
+        # ====================================================================
+        # Hessian products with respect to u
+        # ====================================================================
+        # D2_ut F(t, u, X)[Ht] = -Ht (D_u Phi(u, X) [Hu]) / z^2
+        # D2_uu F(t, u, X)[Hu] = (D_u Phi(u, X) [Hu]) D_u Phi(u, X) / z^2 + (D2_uu Phi(u, X) [Hu]) / z + Hu / u^2
+        # D2_uX F(t, u, X)[Hx] = (D_X Phi(u, X) [Hx]) D_u Phi(u, X) / z^2 + (D2_uX Phi(u, X) [Hx]) / z
+        outu  = -outt * self.DPhiu
+        outu += self.zi * (D2PhiuuH - D2PhiuXH)
+        outu += self.Au * self.ui2
 
-            out_X     = -outt * self.DPhiX
-            out_X    +=  self.zi * (D2PhiXuH + D2PhiXXH)
-            out_X    +=  self.inv_X @ Hx @ self.inv_X
-            out_X     = (out_X + out_X.conj().T) * 0.5
-            lhs[j, 2:] = out_X.view(dtype=np.float64).reshape(-1)
+        lhs[:, 1] = outu
+
+        # ====================================================================
+        # Hessian products with respect to X
+        # ====================================================================
+        # D2_Xt F(t, u, X)[Ht] = -Ht (D_X Phi(u, X) [Hx]) / z^2
+        # D2_Xu F(t, u, X)[Hu] = (D_u Phi(u, X) [Hu]) D_X Phi(u, X) / z^2 + (D2_Xu Phi(u, X) [Hu]) / z
+        # D2_XX F(t, u, X)[Hx] = (D_X Phi(u, X) [Hx]) D_X Phi(u, X) / z^2 + (D2_XX Phi(u, X) [Hx]) / z + X^-1 Hx X^-1
+        np.outer(outt, self.DPhiX, out=self.work1.reshape((p, -1)))
+        self.work3 -= self.work1
+
+        lhs[:, 2:] = self.work3.reshape((p, -1)).view(dtype=np.float64)
 
         return lhs @ A.T
     
@@ -233,10 +255,7 @@ class Cone():
         assert self.hess_aux_updated
 
         self.z2 = self.z * self.z
-        D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
-        self.D1x_comb_inv = 1 / (self.D1x_log*self.zi + D1x_inv)
-        self.Hinv_tr      = self.Ux @ np.diag(np.diag(self.D1x_comb_inv)) @ self.Ux.conj().T
-        self.tr_Hinv_tr   = np.trace(self.D1x_comb_inv)
+        self.D1x_comb_inv = np.reciprocal(self.D1x_comb)
 
         self.invhess_aux_updated = True
 
