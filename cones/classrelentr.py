@@ -15,6 +15,7 @@ class Cone():
         # Update flags
         self.feas_updated        = False
         self.grad_updated        = False
+        self.congr_aux_updated   = False
         self.hess_aux_updated    = False
         self.invhess_aux_updated = False
         self.dder3_aux_updated   = False
@@ -71,7 +72,7 @@ class Cone():
         self.log_x = np.log(self.x)
         self.log_y = np.log(self.y)
 
-        self.z = self.t - (self.x.T @ (self.log_x - self.log_y))
+        self.z = (self.t - (self.x.T @ (self.log_x - self.log_y)))[0, 0]
 
         self.feas = (self.z > 0)
         return self.feas
@@ -113,9 +114,10 @@ class Cone():
         assert not self.hess_aux_updated
         assert self.grad_updated
 
-        self.zi2 = self.zi * self.zi
-        self.xi2 = self.xi * self.xi
-        self.yi2 = self.yi * self.yi
+        self.zi2  = self.zi * self.zi
+        self.xi2  = self.xi * self.xi
+        self.yi2  = self.yi * self.yi
+        self.xyi2 = self.x * self.yi2
 
         self.hess_aux_updated = True
 
@@ -141,27 +143,76 @@ class Cone():
 
         return out
 
+    def congr_aux(self, A):
+        assert not self.congr_aux_updated
+
+        import scipy as sp
+
+        self.At = A[:, 0]
+        self.Ax = np.ascontiguousarray(A[:, self.idx_X])
+        self.Ay = np.ascontiguousarray(A[:, self.idx_Y])
+
+        self.work0 = np.empty_like(self.Ax)
+        self.work1 = np.empty_like(self.Ax)
+        self.work2 = np.empty_like(self.Ax)
+        self.work3 = np.empty_like(self.Ax)
+        self.work4 = np.empty_like(self.Ax)
+
+        self.congr_aux_updated = True
+
+    @profile
     def hess_congr(self, A):
         assert self.grad_updated
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
+        if not self.congr_aux_updated:
+            self.congr_aux(A)            
 
         p = A.shape[0]
         lhs = np.empty((p, sum(self.dim)))
 
-        for j in range(p):
-            Ht = A[j, 0]
-            Hx = A[[j], self.idx_X].T
-            Hy = A[[j], self.idx_Y].T
+        np.multiply(self.Ax, (self.zi * self.xi + self.xi2).T,   out=self.work0)
+        np.multiply(self.Ay, (self.zi * self.yi).T,              out=self.work1)
+        np.multiply(self.Ax, (self.zi * self.yi).T,              out=self.work2)
+        np.multiply(self.Ay, (self.zi * self.xyi2 + self.yi2).T, out=self.work3)
+        # D2PhiXH =  Hx * self.xi - Hy * self.yi
+        # D2PhiYH = -Hx * self.yi + Hy * self.x * self.yi2
 
-            chi  = self.zi * self.zi * (Ht - Hx.T @ self.DPhiX - Hy.T @ self.DPhiY)
-            D2PhiXH =  Hx * self.xi - Hy * self.yi
-            D2PhiYH = -Hx * self.yi + Hy * self.x * self.yi2
+        # ====================================================================
+        # Hessian products with respect to t
+        # ====================================================================
+        # D2_tt F(t, u, X)[Ht] = Ht / z^2
+        # D2_tu F(t, u, X)[Hu] = -(D_u Phi(u, X) [Hu]) / z^2
+        # D2_tX F(t, u, X)[Hx] = -(D_X Phi(u, X) [Hx]) / z^2
+        outt  = self.At - (self.Ax @ self.DPhiX).ravel()
+        outt -= (self.Ay @ self.DPhiY).ravel()
+        outt *= self.zi2
 
-            # Hessian product of barrier function
-            lhs[j, 0]            =  chi
-            lhs[[j], self.idx_X] = (-chi * self.DPhiX + self.zi * D2PhiXH + Hx * self.xi2).T
-            lhs[[j], self.idx_Y] = (-chi * self.DPhiY + self.zi * D2PhiYH + Hy * self.yi2).T
+        lhs[:, 0] = outt
+
+        # ====================================================================
+        # Hessian products with respect to x
+        # ====================================================================
+        # D2_xt F(t, x, y)[Ht] = -Ht (D_x Phi(x, y)) / z^2
+        # D2_xx F(t, x, y)[Hx] = (D_x Phi(x, y) [Hx]) D_x Phi(x, y) / z^2 + (D2_xx Phi(x, y) [Hx]) / z + Hx / x^2
+        # D2_xy F(t, x, y)[Hy] = (D_y Phi(x, y) [Hy]) D_x Phi(x, y) / z^2 + (D2_xy Phi(x, y) [Hy]) / z
+        self.work0 -= self.work1
+        np.outer(outt, self.DPhiX, out=self.work1)
+        self.work0 -= self.work1
+
+        lhs[:, self.idx_X] = self.work0
+
+        # ====================================================================
+        # Hessian products with respect to y
+        # ====================================================================
+        # D2_yt F(t, x, y)[Ht] = -Ht (D_x Phi(x, y)) / z^2
+        # D2_yx F(t, x, y)[Hx] = (D_x Phi(x, y) [Hx]) D_y Phi(x, y) / z^2 + (D2_yx Phi(x, y) [Hx]) / z
+        # D2_yy F(t, x, y)[Hy] = (D_y Phi(x, y) [Hy]) D_y Phi(x, y) / z^2 + (D2_yy Phi(x, y) [Hy]) / z + Hy / y^2
+        self.work3 -= self.work2
+        np.outer(outt, self.DPhiY, out=self.work1)
+        self.work3 -= self.work1
+
+        lhs[:, self.idx_Y] = self.work3
 
         return lhs @ A.T
     

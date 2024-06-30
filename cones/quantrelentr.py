@@ -217,7 +217,7 @@ class Cone():
         # ====================================================================
         # Hessian products with respect to X
         # ====================================================================
-        # D2_Xt F(t, X, Y)[Ht] = -Ht (D_X Phi(X, Y) [Hx]) / z^2
+        # D2_Xt F(t, X, Y)[Ht] = -Ht (D_X Phi(X, Y)) / z^2
         # D2_XX F(t, X, Y)[Hx] = (D_X Phi(X, Y) [Hx]) D_X Phi(X, Y) / z^2 + (D2_XX Phi(X, Y) [Hx]) / z + X^-1 Hx X^-1
         # D2_XY F(t, X, Y)[Hy] = (D_Y Phi(X, Y) [Hy]) D_X Phi(X, Y) / z^2 + (D2_XY Phi(X, Y) [Hy]) / z
         np.subtract(self.D2PhiXXH, self.D2PhiXYH, out=self.work1)
@@ -229,7 +229,7 @@ class Cone():
         # ====================================================================
         # Hessian products with respect to Y
         # ====================================================================
-        # D2_Yt F(t, X, Y)[Ht] = -Ht (D_X Phi(X, Y) [Hx]) / z^2
+        # D2_Yt F(t, X, Y)[Ht] = -Ht (D_X Phi(X, Y)) / z^2
         # D2_YX F(t, X, Y)[Hx] = (D_X Phi(X, Y) [Hx]) D_Y Phi(X, Y) / z^2 + (D2_YX Phi(X, Y) [Hx]) / z
         # D2_YY F(t, X, Y)[Hy] = (D_Y Phi(X, Y) [Hy]) D_Y Phi(X, Y) / z^2 + (D2_YY Phi(X, Y) [Hy]) / z + Y^-1 Hy Y^-1
         np.add(self.D2PhiYYH, self.D2PhiYXH, out=self.work1)

@@ -190,7 +190,7 @@ class Cone():
         # ====================================================================
         # Hessian products with respect to X
         # ====================================================================
-        # D2_Xt F(t, X)[Ht] = -Ht DPhi(X)[Hx] / z^2
+        # D2_Xt F(t, X)[Ht] = -Ht DPhi(X) / z^2
         # D2_XX F(t, X)[Hx] =  DPhi(X)[Hx] DPhi(X) / z^2 + D2Phi(X)[Hx] / z + X^-1 Hx X^-1
         np.outer(outt, self.DPhi, out=self.Work0.reshape(p, -1))
         self.Work1 -= self.Work0

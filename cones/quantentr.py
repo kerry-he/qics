@@ -194,7 +194,7 @@ class Cone():
         # ====================================================================
         # Hessian products with respect to u
         # ====================================================================
-        # D2_ut F(t, u, X)[Ht] = -Ht (D_u Phi(u, X) [Hu]) / z^2
+        # D2_ut F(t, u, X)[Ht] = -Ht (D_u Phi(u, X)) / z^2
         # D2_uu F(t, u, X)[Hu] = (D_u Phi(u, X) [Hu]) D_u Phi(u, X) / z^2 + (D2_uu Phi(u, X) [Hu]) / z + Hu / u^2
         # D2_uX F(t, u, X)[Hx] = (D_X Phi(u, X) [Hx]) D_u Phi(u, X) / z^2 + (D2_uX Phi(u, X) [Hx]) / z
         outu  = -outt * self.DPhiu
@@ -206,7 +206,7 @@ class Cone():
         # ====================================================================
         # Hessian products with respect to X
         # ====================================================================
-        # D2_Xt F(t, u, X)[Ht] = -Ht (D_X Phi(u, X) [Hx]) / z^2
+        # D2_Xt F(t, u, X)[Ht] = -Ht (D_X Phi(u, X)) / z^2
         # D2_Xu F(t, u, X)[Hu] = (D_u Phi(u, X) [Hu]) D_X Phi(u, X) / z^2 + (D2_Xu Phi(u, X) [Hu]) / z
         # D2_XX F(t, u, X)[Hx] = (D_X Phi(u, X) [Hx]) D_X Phi(u, X) / z^2 + (D2_XX Phi(u, X) [Hx]) / z + X^-1 Hx X^-1
         np.outer(outt, self.DPhiX, out=self.work1.reshape((p, -1)))

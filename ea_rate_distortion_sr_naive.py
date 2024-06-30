@@ -38,7 +38,7 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-n = 16
+n = 32
 N = n * n
 vn = sym.vec_dim(n)
 vN = sym.vec_dim(N)
@@ -128,7 +128,7 @@ c[1] = 1.
 # Input into model and solve
 cones = [classrelentr.Cone(n*(n-1)), quantrelentr.Cone(n), nonnegorthant.Cone(1)]
 model = model.Model(c, A, b, G, h, cones=cones, offset=entr_A)
-solver = solver.Solver(model)
+solver = solver.Solver(model, max_iter=58)
 
 profiler = cProfile.Profile()
 profiler.enable()
