@@ -18,6 +18,21 @@ def purify(eig):
 
     return vec @ vec.T
 
+def get_eye(n, sn):
+    eye = np.zeros((n*n, sn))
+    k = -1
+    for j in range(n):
+        for i in range(j + 1):
+            k += 1
+        
+            H = np.zeros((n, n))
+            if i == j:
+                H[i, j] = 1
+            else:
+                H[i, j] = H[j, i] = math.sqrt(0.5)
+            
+            eye[:, k] = H.ravel()
+    return eye
 
 np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
@@ -59,6 +74,8 @@ for i in range(n):
 A = np.hstack((np.zeros((n, 1)), np.zeros((n, 1)), A_y, A_X))                         # Partial trace constraint
 b = eig_A.reshape((-1, 1))
 
+eye = get_eye(n, vn)
+
 G3_y = np.zeros((n*(n-1), n*(n-1)))
 G3_X = np.zeros((n*(n-1), vn))
 k = 0
@@ -74,48 +91,19 @@ for i in range(n):
 
         k += 1
 
-G6_y = np.zeros((vn, n*(n-1)))
-G6_X = np.zeros((vn, vn))
+G6_y = np.zeros((n*n, n*(n-1)))
+G6_X = np.zeros((n*n, vn))
 k = 0
 for j in range(n):
-    for i in range(j):
-        k += 1
+    for i in range(n):
+        if i == j:
+            idx = IDX.T[j]
+            idx = np.delete(idx, j)
+            G6_y[k, idx] = 1.
 
-    idx = IDX.T[j]
-    idx = np.delete(idx, j)
-    G6_y[k, idx] = 1.
-
-    temp = np.zeros((n, n))
-    temp[j, j] = 1.
-    G6_X[[k], :] = sym.mat_to_vec(temp).T
-
-    k += 1
-
-
-Gtest = np.zeros((vN, vn + n*(n-1)))
-
-k = 0
-p_k = 0
-for j in range(N):
-    for i in range(j + 1):
-        G_Y = np.zeros((1, n*(n-1)))
-        G_X = np.zeros((1, vn))
-
-        # Idx should be in RHO
-        if (i % (n + 1) == 0) and (j % (n + 1) == 0):
-            I = i // (n + 1)
-            J = j // (n + 1)
-            
-            G_X = np.zeros((n, n))
-            G_X[I, J] = 1.0 if (I == J) else np.sqrt(0.5)
-            G_X[J, I] = G_X[I, J]
-            G_X = sym.mat_to_vec(G_X).T
-        
-        elif i == j:
-            G_Y[0, p_k] = 1.0
-            p_k += 1
-
-        Gtest[k, :] = -np.hstack((G_Y, G_X))
+            temp = np.zeros((n, n))
+            temp[j, j] = 1.
+            G6_X[[k], :] = sym.mat_to_vec(temp).T
 
         k += 1
 
@@ -124,12 +112,12 @@ G1 = -np.hstack((np.ones((1, 1)),  np.zeros((1, 1)), np.zeros((1, n*(n-1) + vn))
 G2 = -np.hstack((np.zeros((n*(n-1), 1)), np.zeros((n*(n-1), 1)), np.eye((n*(n-1))), np.zeros((n*(n-1), vn))))   # p
 G3 = -np.hstack((np.zeros((n*(n-1), 1)), np.zeros((n*(n-1), 1)), G3_y, G3_X))                                   # q
 G4 = -np.hstack((np.zeros((1, 1)),  np.ones((1, 1)), np.zeros((1, n*(n-1) + vn))))                              # t
-G5 = -np.hstack((np.zeros((vn, 1)), np.zeros((vn, 1)), np.zeros((vn, n*(n-1))), np.eye(vn)))                    # X
-G6 = -np.hstack((np.zeros((vn, 1)), np.zeros((vn, 1)), G6_y, G6_X))                                             # Y
+G5 = -np.hstack((np.zeros((n*n, 1)), np.zeros((n*n, 1)), np.zeros((n*n, n*(n-1))), eye))                        # X
+G6 = -np.hstack((np.zeros((n*n, 1)), np.zeros((n*n, 1)), G6_y, G6_X))                                           # Y
 G7 = np.hstack((np.zeros((1, 1)), np.zeros((1, 1)), np.ones((1, n*(n-1))), Delta_X.T))                          # Distortion
 G = np.vstack((G1, G2, G3, G4, G5, G6, G7))
 
-h = np.zeros((1 + 2*n*(n-1) + 1 + 2*vn + 1, 1))
+h = np.zeros((1 + 2*n*(n-1) + 1 + 2*n*n + 1, 1))
 h[-1] = D
 
 c = np.zeros((1 + n*(n-1) + vn + 1, 1))
@@ -138,7 +126,7 @@ c[1] = 1.
 
 
 # Input into model and solve
-cones = [classrelentr.ClassRelEntropy(n*(n-1)), quantrelentr.QuantRelEntropy(n), nonnegorthant.NonNegOrthant(1)]
+cones = [classrelentr.Cone(n*(n-1)), quantrelentr.Cone(n), nonnegorthant.Cone(1)]
 model = model.Model(c, A, b, G, h, cones=cones, offset=entr_A)
 solver = solver.Solver(model)
 
