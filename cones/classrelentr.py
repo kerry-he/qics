@@ -110,19 +110,6 @@ class Cone():
         
         return out
 
-    def update_hessprod_aux(self):
-        assert not self.hess_aux_updated
-        assert self.grad_updated
-
-        self.zi2  = self.zi * self.zi
-        self.xi2  = self.xi * self.xi
-        self.yi2  = self.yi * self.yi
-        self.xyi2 = self.x * self.yi2
-
-        self.hess_aux_updated = True
-
-        return
-
     def hess_prod_ip(self, out, H):
         assert self.grad_updated
         if not self.hess_aux_updated:
@@ -143,40 +130,20 @@ class Cone():
 
         return out
 
-    def congr_aux(self, A):
-        assert not self.congr_aux_updated
-
-        import scipy as sp
-
-        self.At = A[:, 0]
-        self.Ax = np.ascontiguousarray(A[:, self.idx_X])
-        self.Ay = np.ascontiguousarray(A[:, self.idx_Y])
-
-        self.work0 = np.empty_like(self.Ax)
-        self.work1 = np.empty_like(self.Ax)
-        self.work2 = np.empty_like(self.Ax)
-        self.work3 = np.empty_like(self.Ax)
-        self.work4 = np.empty_like(self.Ax)
-
-        self.congr_aux_updated = True
-
-    @profile
     def hess_congr(self, A):
         assert self.grad_updated
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
         if not self.congr_aux_updated:
-            self.congr_aux(A)            
+            self.congr_aux(A)  
 
         p = A.shape[0]
         lhs = np.empty((p, sum(self.dim)))
 
-        np.multiply(self.Ax, (self.zi * self.xi + self.xi2).T,   out=self.work0)
-        np.multiply(self.Ay, (self.zi * self.yi).T,              out=self.work1)
-        np.multiply(self.Ax, (self.zi * self.yi).T,              out=self.work2)
-        np.multiply(self.Ay, (self.zi * self.xyi2 + self.yi2).T, out=self.work3)
-        # D2PhiXH =  Hx * self.xi - Hy * self.yi
-        # D2PhiYH = -Hx * self.yi + Hy * self.x * self.yi2
+        np.multiply(self.Ax, self.Hxx.T, out=self.work0)
+        np.multiply(self.Ay, self.Hxy.T, out=self.work1)
+        np.multiply(self.Ax, self.Hxy.T, out=self.work2)
+        np.multiply(self.Ay, self.Hyy.T, out=self.work3)
 
         # ====================================================================
         # Hessian products with respect to t
@@ -196,7 +163,7 @@ class Cone():
         # D2_xt F(t, x, y)[Ht] = -Ht (D_x Phi(x, y)) / z^2
         # D2_xx F(t, x, y)[Hx] = (D_x Phi(x, y) [Hx]) D_x Phi(x, y) / z^2 + (D2_xx Phi(x, y) [Hx]) / z + Hx / x^2
         # D2_xy F(t, x, y)[Hy] = (D_y Phi(x, y) [Hy]) D_x Phi(x, y) / z^2 + (D2_xy Phi(x, y) [Hy]) / z
-        self.work0 -= self.work1
+        self.work0 += self.work1
         np.outer(outt, self.DPhiX, out=self.work1)
         self.work0 -= self.work1
 
@@ -208,28 +175,18 @@ class Cone():
         # D2_yt F(t, x, y)[Ht] = -Ht (D_x Phi(x, y)) / z^2
         # D2_yx F(t, x, y)[Hx] = (D_x Phi(x, y) [Hx]) D_y Phi(x, y) / z^2 + (D2_yx Phi(x, y) [Hx]) / z
         # D2_yy F(t, x, y)[Hy] = (D_y Phi(x, y) [Hy]) D_y Phi(x, y) / z^2 + (D2_yy Phi(x, y) [Hy]) / z + Hy / y^2
-        self.work3 -= self.work2
-        np.outer(outt, self.DPhiY, out=self.work1)
-        self.work3 -= self.work1
+        self.work2 += self.work3
+        np.outer(outt, self.DPhiY, out=self.work3)
+        self.work2 -= self.work3
 
-        lhs[:, self.idx_Y] = self.work3
+        lhs[:, self.idx_Y] = self.work2
 
         return lhs @ A.T
-    
-    def update_invhessprod_aux(self):
-        assert not self.invhess_aux_updated
-        assert self.grad_updated
-
-        self.Hxx_inv = np.reciprocal((1 / self.x + self.zi) / self.x)
-        self.HxyHyy = -self.zi * self.Hxx_inv / self.y
-        self.Hyy_HxyHxxHxy_inv = self.y * self.y / (1 + self.zi * self.x - self.zi * self.zi * self.Hxx_inv)
-
-        return
 
     def invhess_prod_ip(self, out, H):
         assert self.grad_updated
         if not self.hess_aux_updated:
-            self.update_hessprod_aux()        
+            self.update_hessprod_aux()
         if not self.invhess_aux_updated:
             self.update_invhessprod_aux()
 
@@ -241,8 +198,8 @@ class Cone():
         Wx = Hx + Ht * self.DPhiX
         Wy = Hy + Ht * self.DPhiY
 
-        outY = self.Hyy_HxyHxxHxy_inv * (Wy - self.HxyHyy * Wx)
-        outX = self.Hxx_inv * (Wx + self.zi * outY * self.yi)
+        outX = self.Hxx_inv * Wx + self.Hxy_inv * Wy
+        outY = self.Hxy_inv * Wx + self.Hyy_inv * Wy
 
         # Hessian product of barrier function
         out[0][:] = Ht * self.z * self.z + outX.T @ self.DPhiX + outY.T @ self.DPhiY
@@ -253,26 +210,47 @@ class Cone():
 
     def invhess_congr(self, A):
         assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
         if not self.invhess_aux_updated:
             self.update_invhessprod_aux()
+        if not self.congr_aux_updated:
+            self.congr_aux(A)  
 
         p = A.shape[0]
         lhs = np.empty((p, sum(self.dim)))
 
-        for j in range(p):
-            Ht = A[j, 0]
-            Hx = A[[j], self.idx_X].T
-            Hy = A[[j], self.idx_Y].T
+        # Compute Wx
+        np.outer(self.At, self.DPhiX, out=self.work4)
+        self.work4 += self.Ax
+        np.multiply(self.work4, self.Hxx_inv.T, out=self.work0)
+        np.multiply(self.work4, self.Hxy_inv.T, out=self.work2)
 
-            Wx = Hx + Ht * self.DPhiX
-            Wy = Hy + Ht * self.DPhiY
+        # Compute Wy
+        np.outer(self.At, self.DPhiY, out=self.work4)
+        self.work4 += self.Ay
+        np.multiply(self.work4, self.Hxy_inv.T, out=self.work1)
+        np.multiply(self.work4, self.Hyy_inv.T, out=self.work3)
 
-            outY = self.Hyy_HxyHxxHxy_inv * (Wy - self.HxyHyy * Wx)
-            outX = self.Hxx_inv * (Wx + self.zi * outY / self.y)
+        # ====================================================================
+        # Inverse Hessian products with respect to x
+        # ====================================================================
+        self.work0 += self.work1
+        lhs[:, self.idx_X] = self.work0
 
-            lhs[j, 0]            = Ht * self.z * self.z + outX.T @ self.DPhiX + outY.T @ self.DPhiY
-            lhs[[j], self.idx_X] = outX.T
-            lhs[[j], self.idx_Y] = outY.T
+        # ====================================================================
+        # Inverse Hessian products with respect to y
+        # ====================================================================
+        self.work2 += self.work3
+        lhs[:, self.idx_Y] = self.work2
+
+        # ====================================================================
+        # Inverse Hessian products with respect to t
+        # ====================================================================
+        outt  = self.z2 * self.At 
+        outt += (self.work0 @ self.DPhiX).ravel()
+        outt += (self.work2 @ self.DPhiY).ravel()
+        lhs[:, 0] = outt
 
         return lhs @ A.T
 
@@ -325,7 +303,55 @@ class Cone():
         temp = [np.zeros((1, 1)), np.zeros((self.n, 1)), np.zeros((self.n, 1))]
         self.invhess_prod_ip(temp, psi)
         return lin.inp(temp[0], psi[0]) + lin.inp(temp[1], psi[1]) + lin.inp(temp[2], psi[2])
+
+    # ========================================================================
+    # Auxilliary functions
+    # ========================================================================
+    def congr_aux(self, A):
+        assert not self.congr_aux_updated
+
+        import scipy as sp
+
+        self.At = A[:, 0]
+        self.Ax = np.ascontiguousarray(A[:, self.idx_X])
+        self.Ay = np.ascontiguousarray(A[:, self.idx_Y])
+
+        self.work0 = np.empty_like(self.Ax)
+        self.work1 = np.empty_like(self.Ax)
+        self.work2 = np.empty_like(self.Ax)
+        self.work3 = np.empty_like(self.Ax)
+        self.work4 = np.empty_like(self.Ax)
+
+        self.congr_aux_updated = True
+
+    def update_hessprod_aux(self):
+        assert not self.hess_aux_updated
+        assert self.grad_updated
+
+        self.zi2  = self.zi * self.zi
+        self.xi2  = self.xi * self.xi
+        self.yi2  = self.yi * self.yi
+
+        self.Hxx =  self.zi * self.xi + self.xi2
+        self.Hxy = -self.zi * self.yi
+        self.Hyy = (self.zi * self.x + 1) * self.yi2
+
+        self.hess_aux_updated = True
+
+        return
     
+    def update_invhessprod_aux(self):
+        assert not self.invhess_aux_updated
+        assert self.grad_updated
+
+        self.z2 = self.z * self.z
+
+        self.Hxx_inv = np.reciprocal(self.Hxx - self.Hxy * self.Hxy / self.Hyy)
+        self.Hxy_inv = -self.Hxx_inv * self.Hxy / self.Hyy
+        self.Hyy_inv = np.reciprocal(self.Hyy - self.Hxy * self.Hxy / self.Hxx)
+
+        return    
+
 def get_central_ray_relentr(x_dim):
     if x_dim <= 10:
         return central_rays_relentr[x_dim - 1, :]
