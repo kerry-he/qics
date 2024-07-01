@@ -100,7 +100,7 @@ class Cone():
         self.zi    = np.reciprocal(self.z)
         self.ui    = np.reciprocal(self.u)
         self.DPhiu = -self.trX * self.ui
-        self.DPhiX = self.log_X + np.eye(self.n) * (1 - self.log_u)
+        self.DPhiX = self.log_X + np.eye(self.n) * (1. - self.log_u)
 
         self.grad = [
            -self.zi,
@@ -214,6 +214,7 @@ class Cone():
 
         lhs[:, 2:] = self.work3.reshape((p, -1)).view(dtype=np.float64)
 
+        # Multiply A (H A')
         return lhs @ A.T
 
     def invhess_prod_ip(self, out, H):
@@ -273,9 +274,7 @@ class Cone():
         p = A.shape[0]
         lhs = np.zeros((p, sum(self.dim)))
 
-        # ====================================================================
-        # Inverse Hessian products with respect to u
-        # ====================================================================
+        # Compute Wu
         Wu = self.Au + self.At * self.DPhiu[0, 0]
         # Compute Wx
         np.outer(self.At, self.DPhiX, out=self.work2.reshape((p, -1)))
@@ -286,6 +285,9 @@ class Cone():
         self.work2 *= self.D1x_comb_inv
         lin.congr(self.work1, self.Ux, self.work2, self.work3)
 
+        # ====================================================================
+        # Inverse Hessian products with respect to u
+        # ====================================================================
         tr_N_inv_Wx = np.trace(self.work1, axis1=1, axis2=2).real
         outu = (Wu * self.uz2[0, 0] + tr_N_inv_Wx * self.uz[0, 0]) / ((self.z2 + self.trX * self.z) - self.tr_N_inv_I)
 
@@ -326,7 +328,7 @@ class Cone():
 
         UxHxUx = self.Ux.conj().T @ Hx @ self.Ux
 
-        # Quantum relative entropy Hessians
+        # Quantum entropy Hessians
         D2PhiuuH = self.trX * Hu * self.ui2
         D2PhiuXH = -np.trace(Hx).real * self.ui
         D2PhiXuH = -np.eye(self.n) * Hu * self.ui
@@ -335,7 +337,7 @@ class Cone():
         D2PhiuHH = lin.inp(Hu, D2PhiuXH + D2PhiuuH)
         D2PhiXHH = lin.inp(Hx, D2PhiXXH + D2PhiXuH)
 
-        # Quantum relative entropy third order derivatives
+        # Quantum entropy third order derivatives
         D3Phiuuu = -2 * Hu2 * self.trX * self.ui3
         D3PhiuXu = Hu * trHx * self.ui2
         D3PhiuuX = D3PhiuXu

@@ -140,6 +140,11 @@ class Cone():
         p = A.shape[0]
         lhs = np.empty((p, sum(self.dim)))
 
+        # Precompute Hessian products for classical relative entropy
+        # D2_xx Phi(x, y) [Hx] =  Hx / x
+        # D2_yx Phi(x, y) [Hy] = -Hy / y
+        # D2_xy Phi(x, y) [Hx] = -Hx / y
+        # D2_yy Phi(x, y) [Hy] =  Hy * x / y^2
         np.multiply(self.Ax, self.Hxx.T, out=self.work0)
         np.multiply(self.Ay, self.Hxy.T, out=self.work1)
         np.multiply(self.Ax, self.Hxy.T, out=self.work2)
@@ -181,6 +186,7 @@ class Cone():
 
         lhs[:, self.idx_Y] = self.work2
 
+        # Multiply A (H A')
         return lhs @ A.T
 
     def invhess_prod_ip(self, out, H):
@@ -202,7 +208,7 @@ class Cone():
         outY = self.Hxy_inv * Wx + self.Hyy_inv * Wy
 
         # Hessian product of barrier function
-        out[0][:] = Ht * self.z * self.z + outX.T @ self.DPhiX + outY.T @ self.DPhiY
+        out[0][:] = Ht * self.z2 + outX.T @ self.DPhiX + outY.T @ self.DPhiY
         out[1][:] = outX
         out[2][:] = outY
 
