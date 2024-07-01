@@ -4,7 +4,8 @@ from utils import linear as lin
 class Cone():
     def __init__(self, n):
         # Dimension properties
-        self.n = n # Dimension of system
+        self.n  = n # Dimension of system
+        self.nu = 1 + 2 * self.n # Barrier parameter
 
         self.dim   = [1, n, n]
         self.type  = ['r', 'r', 'r']
@@ -21,9 +22,6 @@ class Cone():
         self.dder3_aux_updated   = False
 
         return
-        
-    def get_nu(self):
-        return 1 + 2 * self.n
     
     def get_init_point(self, out):
         (t0, x0, y0) = get_central_ray_relentr(self.n)

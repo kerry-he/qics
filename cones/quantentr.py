@@ -6,7 +6,8 @@ from utils import mtxgrad   as mgrad
 class Cone():
     def __init__(self, n, hermitian=False):
         # Dimension properties
-        self.n = n                          # Side dimension of system
+        self.n  = n                 # Side dimension of system
+        self.nu = 2 + self.n        # Barrier parameter
         self.hermitian = hermitian
 
         self.dim   = [1, 1, n*n]     if (not hermitian) else [1, 1, 2*n*n]
@@ -22,9 +23,6 @@ class Cone():
         self.dder3_aux_updated   = False
 
         return
-
-    def get_nu(self):
-        return 2 + self.n
     
     def get_init_point(self, out):
         (t0, x0, u0) = get_central_ray_relentr(self.n)

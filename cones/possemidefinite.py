@@ -8,8 +8,9 @@ from utils import sparse
 class Cone():
     def __init__(self, n, hermitian=False):
         # Dimension properties
-        self.n  = n                                    # Side length of matrix
-        self.hermitian = hermitian                     # Hermitian or symmetric vector space
+        self.n  = n                 # Side length of matrix
+        self.nu = n                 # Barrier parameter
+        self.hermitian = hermitian  # Hermitian or symmetric vector space
 
         self.dim   = n * n      if (not hermitian) else 2 * n * n
         self.type  = 's'        if (not hermitian) else 'h'
@@ -31,9 +32,6 @@ class Cone():
         self.svd_lwork = sp.linalg.lapack.get_lapack_funcs("gesdd_lwork", (self.X,))(n, n)
 
         return
-
-    def get_nu(self):
-        return self.n
     
     def get_init_point(self, out):
         self.set_point(

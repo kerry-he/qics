@@ -114,7 +114,7 @@ class NonSymStepper():
                 szs = [s_k.T @ z_k for (s_k, z_k) in zip(next_point.s.vecs, next_point.z.vecs)]
                 if abs(taukap / mu - 1) > eta:
                     continue
-                nus = [cone_k.get_nu() for cone_k in model.cones]
+                nus = [cone_k.nu for cone_k in model.cones]
                 rho = [np.abs(sz_k / mu - nu_k) / np.sqrt(nu_k) for (sz_k, nu_k) in zip(szs, nus)]
                 if any(np.array(rho) > eta):
                     continue

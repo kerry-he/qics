@@ -3,9 +3,12 @@ import scipy as sp
 from utils import linear as lin
 
 class Cone():
-    def __init__(self, dim):
+    def __init__(self, n):
         # Dimension properties
-        self.dim = dim
+        self.n  = n
+        self.nu = n
+
+        self.dim = n
         self.type = 'r'
 
         self.Ax = None
@@ -13,13 +16,10 @@ class Cone():
         self.congr_aux_updated = False
         return
 
-    def get_nu(self):
-        return self.dim
-    
     def get_init_point(self, out):
         self.set_point(
-            np.ones((self.dim, 1)), 
-            np.ones((self.dim, 1))
+            np.ones((self.n, 1)), 
+            np.ones((self.n, 1))
         )
 
         out[:] = self.x

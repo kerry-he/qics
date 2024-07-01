@@ -11,6 +11,7 @@ class Cone():
     def __init__(self, K_list, Z_list, protocol=None, hermitian=False):
         # Dimension properties
         self.ni = K_list[0].shape[1]    # Get input dimension
+        self.nu = 1 + self.ni           # Barrier parameter
         self.hermitian = hermitian      # Is the problem complex-valued 
         self.protocol = protocol        # Special oracle available for dprBB84 protocol
         
@@ -70,9 +71,6 @@ class Cone():
         self.dder3_aux_updated   = False
 
         return
-        
-    def get_nu(self):
-        return 1 + self.ni
     
     def set_init_point(self):
         KK_blk   = [sym.congr_map(np.eye(self.ni), K_list)  for K_list  in self.K_list_blk]

@@ -12,6 +12,7 @@ class Cone():
         self.n = n                          # Side dimension of system
         self.vn = sym.vec_dim(self.n)       # Vector dimension of system
         self.dim = 1 + self.vn              # Total dimension of cone
+        self.nu = 1 + self.n                # Barrier parameter
         self.use_sqrt = False
         self.cg = cg
 
@@ -30,9 +31,6 @@ class Cone():
         self.dder3_aux_updated   = False
 
         return
-        
-    def get_nu(self):
-        return 1 + self.n
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))

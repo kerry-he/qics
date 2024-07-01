@@ -24,7 +24,7 @@ class Model():
         self.use_A = (A is not None) and (A.size > 0)
 
         self.cone_idxs = build_cone_idxs(self.q, cones)
-        self.nu = 1 if (len(cones) == 0) else (1 + sum([cone.get_nu() for cone in cones]))
+        self.nu = 1 if (len(cones) == 0) else (1 + sum([cone.nu for cone in cones]))
 
         self.offset = offset
         

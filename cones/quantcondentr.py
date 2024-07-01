@@ -12,6 +12,7 @@ class Cone():
         self.n0 = n0          # Dimension of system 0
         self.n1 = n1          # Dimension of system 1
         self.N  = n0 * n1     # Total dimension of bipartite system
+        self.nu = 1 + self.N  # Barrier parameter
         self.hermitian = hermitian
 
         self.sys   = sys                       # System being traced out
@@ -33,9 +34,6 @@ class Cone():
         self.dder3_aux_updated       = False
 
         return
-        
-    def get_nu(self):
-        return 1 + self.N
     
     def get_init_point(self, out):
         point = [

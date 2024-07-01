@@ -13,6 +13,7 @@ class Cone():
         N, self.ni = np.shape(V)    # Get input dimension
         self.no = no                # Get output dimension
         self.ne = N // no           # Get environment dimension
+        self.nu = 1 + self.ni       # Barrier parameter
         
         self.vni = sym.vec_dim(self.ni)     # Get input vector dimension
         self.vno = sym.vec_dim(self.no)     # Get output vector dimension
@@ -50,10 +51,7 @@ class Cone():
         self.dder3_aux_updated   = False
 
         return
-        
-    def get_nu(self):
-        return 1 + self.ni
-    
+
     def set_init_point(self):
         point = np.empty((self.dim, 1))
         point[0] = 1.

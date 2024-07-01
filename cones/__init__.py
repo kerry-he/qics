@@ -9,6 +9,5 @@ __all__ = [
     "quantrelentr_Y",
     "quantentr",
     "quantmutualinf",
-    "holevoinf",
     "quantkeydist"
     ]

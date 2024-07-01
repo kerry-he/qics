@@ -14,6 +14,7 @@ class Cone():
         self.n = n                       # Dimension of input
         self.vn = sym.vec_dim(self.n)    # Dimension of vectorized system being traced out
         self.m = n * (n - 1)             # Dimension of diagonal component   
+        self.nu = 1 + self.n * self.n    # Barrier parameter
 
         self.dim = 1 + self.m + self.vn  # Dimension of the cone
         self.use_sqrt = False
@@ -29,9 +30,6 @@ class Cone():
         self.dder3_aux_updated   = False
 
         return
-        
-    def get_nu(self):
-        return 1 + self.n * self.n
     
     def set_init_point(self):
         point = np.empty((self.dim, 1))
