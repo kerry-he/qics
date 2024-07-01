@@ -252,17 +252,14 @@ class Cone():
         if not self.invhess_aux_updated:
             self.update_invhessprod_aux()
         if not self.congr_aux_updated:
-            self.congr_aux(A)            
+            self.congr_aux(A)
 
-        # Computes Hessian product of the QE barrier with a single vector (Ht, Hu, Hx)
-        # See hess_congr() for additional comments
-
-        # The inverse Hessian product applied on (Ht, Hx, Hy) for the QRE barrier is 
+        # The inverse Hessian product applied on (Ht, Hu, Hx) for the QE barrier is 
         #     (u, X) =  M \ (Wu, Wx)
         #         t  =  z^2 Ht + <DPhi(u, X), (u, X)>
         # where (Wu, Wx) = [(Hu, Hx) + Ht DPhi(u, X)]
-        #     M = [ (1 + tr[X]/z) / u^2   -vec(I)' / z ]
-        #         [     -vec(I) / z             N      ]
+        #     M = [ (1 + tr[X]/z) / u^2   -vec(I)' / zu ]
+        #         [    -vec(I) / zu              N      ]
         # and
         #     N = (Ux kron Ux) (1/z log + inv)^[1](Dx) (Ux' kron Ux')
         #

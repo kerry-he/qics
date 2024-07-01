@@ -223,6 +223,16 @@ class Cone():
         if not self.congr_aux_updated:
             self.congr_aux(A)  
 
+        # The inverse Hessian product applied on (Ht, Hx, Hy) for the CRE barrier is 
+        #     (x, y) =  M \ (Wx, Wy)
+        #         t  =  z^2 Ht + <DPhi(x, y), (x, y)>
+        # where (Wx, Wy) = [(Hx, Hy) + Ht DPhi(x, y)]
+        #     M = [  diag(1/zx + 1/x^2)       -diag(1/zy)     ] = [ Hxx Hxy ]
+        #         [     -diag(1/zy)      diag(x/zy^2 + 1/y^2) ]   [ Hxy Hyy ]
+        # The inverse of a block matrix with diagonal blocks is another block matrix with diaognal blocks
+        #     M^-1 = [ (Hxx - Hxy^2 * Hyy^-1)^-1  (Hxy - Hxx Hyy Hxy^-1)^-1 ] = [ Hxx_inv Hxy_inv ]
+        #          = [ (Hxy - Hxx Hyy Hxy^-1)^-1  (Hyy - Hxy^2 * Hxx^-1)^-1 ]   [ Hxy_inv Hyy_inv ]
+
         p = A.shape[0]
         lhs = np.empty((p, sum(self.dim)))
 
@@ -261,35 +271,41 @@ class Cone():
         return lhs @ A.T
 
     def third_dir_deriv_axpy(self, out, dir, a=True):
-        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+        if not self.dder3_aux_updated:
+            self.update_dder3_aux()
 
         (Ht, Hx, Hy) = dir
 
+        Hx2 = Hx * Hx
+        Hy2 = Hy * Hy
+
         # Classical relative entropy oracles
-        D2PhiXH =  Hx / self.x - Hy / self.y
-        D2PhiYH = -Hx / self.y + Hy * self.x / self.y / self.y
+        D2PhiXH =  Hx * self.xi - Hy * self.yi
+        D2PhiYH = -Hx * self.yi + Hy * self.x * self.yi2
 
         D2PhiXHH = Hx.T @ D2PhiXH
         D2PhiYHH = Hy.T @ D2PhiYH
 
-        D3PhiXHH = -(Hx / self.x) ** 2 + (Hy / self.y) ** 2
-        D3PhiYHH = 2 * Hy * (Hx - Hy * self.x / self.y) / self.y / self.y
+        D3PhiXHH = -Hx2 * self.xi2 + Hy2 * self.yi2
+        D3PhiYHH = 2 * Hy * (Hx - Hy * self.x * self.yi) * self.yi2
 
         # Third derivatives of barrier
-        chi = Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)
+        chi = (Ht - self.DPhiX.T @ Hx - self.DPhiY.T @ Hy)[0, 0]
         chi2 = chi * chi
 
-        dder3_t = -2 * (self.zi**3) * chi2 - (self.zi**2) * (D2PhiXHH + D2PhiYHH)
+        dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhiXHH + D2PhiYHH)
 
         dder3_X  = -dder3_t * self.DPhiX
-        dder3_X -=  2 * (self.zi**2) * chi * D2PhiXH
+        dder3_X -=  2 * self.zi2 * chi * D2PhiXH
         dder3_X +=  self.zi * D3PhiXHH
-        dder3_X -=  2 * (Hx**2) / (self.x**3)
+        dder3_X -=  2 * Hx2 * self.xi3
 
         dder3_Y  = -dder3_t * self.DPhiY
-        dder3_Y -=  2 * (self.zi**2) * chi * D2PhiYH
+        dder3_Y -=  2 * self.zi2 * chi * D2PhiYH
         dder3_Y +=  self.zi * D3PhiYHH
-        dder3_Y -=  2 * (Hy**2) / (self.y**3)
+        dder3_Y -=  2 * Hy2 * self.yi3
 
         out[0][:] += dder3_t * a
         out[1][:] += dder3_X * a
@@ -353,10 +369,22 @@ class Cone():
         self.z2 = self.z * self.z
 
         self.Hxx_inv = np.reciprocal(self.Hxx - self.Hxy * self.Hxy / self.Hyy)
-        self.Hxy_inv = -self.Hxx_inv * self.Hxy / self.Hyy
+        self.Hxy_inv = np.reciprocal(self.Hxy - self.Hxx * self.Hyy / self.Hxy)
         self.Hyy_inv = np.reciprocal(self.Hyy - self.Hxy * self.Hxy / self.Hxx)
 
-        return    
+        return
+
+    def update_dder3_aux(self):
+        assert not self.dder3_aux_updated
+        assert self.hess_aux_updated
+
+        self.zi3 = self.zi * self.zi2
+        self.xi3 = self.xi * self.xi2
+        self.yi3 = self.yi * self.yi2
+
+        self.dder3_aux_updated = True
+
+        return
 
 def get_central_ray_relentr(x_dim):
     if x_dim <= 10:
