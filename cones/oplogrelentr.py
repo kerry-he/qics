@@ -107,7 +107,7 @@ class Cone():
         self.log_XYX  = (self.Uxyx * self.log_Dxyx) @ self.Uxyx.conj().T
         self.log_XYX  = (self.log_XYX + self.log_XYX.conj().T) * 0.5
 
-        self.z = self.t[0, 0] - lin.inp(self.X, self.log_XYX)
+        self.z = self.t[0, 0] + lin.inp(self.X, self.log_XYX)
 
         self.feas = (self.z > 0)
         return self.feas
@@ -136,8 +136,8 @@ class Cone():
         self.UxyxXUxyx = self.Uxyx.conj().T @ self.X @ self.Uxyx
 
         self.zi    =  np.reciprocal(self.z)
-        self.DPhiX = -self.irt2_Y @ self.Uyxy @ (self.D1yxy_entr * self.UyxyYUyxy) @ self.Uyxy.conj().T @ self.irt2_Y
-        self.DPhiY =  self.irt2_X @ self.Uxyx @ (self.D1xyx_log  * self.UxyxXUxyx) @ self.Uxyx.conj().T @ self.irt2_X
+        self.DPhiX =  self.irt2_Y @ self.Uyxy @ (self.D1yxy_entr * self.UyxyYUyxy) @ self.Uyxy.conj().T @ self.irt2_Y
+        self.DPhiY = -self.irt2_X @ self.Uxyx @ (self.D1xyx_log  * self.UxyxXUxyx) @ self.Uxyx.conj().T @ self.irt2_X
 
         self.grad = [
            -self.zi,
@@ -175,18 +175,18 @@ class Cone():
         UxyxXHxXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hx @ self.irt2_X @ self.Uxyx
 
         # Hessian product of relative entropy
-        D2PhiXXH = -mgrad.scnd_frechet(self.D2yxy_entr_UYU, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
+        D2PhiXXH =  mgrad.scnd_frechet(self.D2yxy_entr_UYU, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
 
-        D2PhiXYH  = self.irt2_X @ self.Uxyx @ (self.D1xyx_log * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
+        D2PhiXYH  = -self.irt2_X @ self.Uxyx @ (self.D1xyx_log * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
         D2PhiXYH += D2PhiXYH.conj().T
-        D2PhiXYH -= mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+        D2PhiXYH += mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
 
         work      = self.Uxyx.conj().T @ self.rt2_X @ Hx @ self.irt2_X @ self.Uxyx
         work     += work.conj().T
-        D2PhiYXH  = self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.irt2_X
-        D2PhiYXH -= mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHxXUxyx, U=self.irt2_X @ self.Uxyx)
+        D2PhiYXH  = -self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.irt2_X
+        D2PhiYXH += mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHxXUxyx, U=self.irt2_X @ self.Uxyx)
 
-        D2PhiYYH  = mgrad.scnd_frechet(self.D2xyx_log_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+        D2PhiYYH  = -mgrad.scnd_frechet(self.D2xyx_log_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
         
         # Hessian product of barrier function
         out[0][:] = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
@@ -537,9 +537,9 @@ class Cone():
                 
                 UyxyYHxYUyxy = self.Uyxy.conj().T @ self.irt2_Y @ Hx @ self.irt2_Y @ self.Uyxy
 
-                D2PhiXXH  = -self.zi * mgrad.scnd_frechet(self.D2yxy_entr_UYU, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
-                D2PhiXXH +=  self.zi2 * self.DPhiX * lin.inp(self.DPhiX, Hx)
-                D2PhiXXH +=  self.inv_X @ Hx @ self.inv_X
+                D2PhiXXH  = self.zi * mgrad.scnd_frechet(self.D2yxy_entr_UYU, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
+                D2PhiXXH += self.zi2 * self.DPhiX * lin.inp(self.DPhiX, Hx)
+                D2PhiXXH += self.inv_X @ Hx @ self.inv_X
 
                 Hxx[:, [k]] = sym.mat_to_vec(D2PhiXXH, hermitian=self.hermitian)
 
@@ -558,9 +558,9 @@ class Cone():
                 
                 UxyxXHyXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hy @ self.irt2_X @ self.Uxyx
 
-                D2PhiXYH  = self.zi * self.irt2_X @ self.Uxyx @ (self.D1xyx_log * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
+                D2PhiXYH  = -self.zi * self.irt2_X @ self.Uxyx @ (self.D1xyx_log * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
                 D2PhiXYH += D2PhiXYH.conj().T
-                D2PhiXYH -= self.zi * mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+                D2PhiXYH += self.zi * mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
                 D2PhiXYH += self.zi2 * self.DPhiX * lin.inp(self.DPhiY, Hy)
 
                 Hxy[:, [k]] = sym.mat_to_vec(D2PhiXYH, hermitian=self.hermitian)
@@ -580,7 +580,7 @@ class Cone():
                 
                 UxyxXHyXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hy @ self.irt2_X @ self.Uxyx
 
-                D2PhiYYH  = self.zi * mgrad.scnd_frechet(self.D2xyx_log_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+                D2PhiYYH  = -self.zi * mgrad.scnd_frechet(self.D2xyx_log_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
                 D2PhiYYH += self.zi2 * self.DPhiY * lin.inp(self.DPhiY, Hy)
                 D2PhiYYH += self.inv_Y @ Hy @ self.inv_Y
 
