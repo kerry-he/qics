@@ -9,5 +9,6 @@ __all__ = [
     "quantrelentr_Y",
     "quantentr",
     "quantmutualinf",
-    "quantkeydist"
+    "quantkeydist",
+    "oplogrelentr"
     ]
