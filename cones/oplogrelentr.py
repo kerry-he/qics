@@ -205,70 +205,58 @@ class Cone():
 
         return out
 
+    @profile
     def hess_congr(self, A):
         assert self.grad_updated
         if not self.hess_aux_updated:
-            self.update_hessprod_aux()
+            self.update_hessprod_aux()       
         if not self.congr_aux_updated:
             self.congr_aux(A)
+        if not self.invhess_aux_updated:
+            self.update_invhessprod_aux()     
 
         p = A.shape[0]
         lhs = np.zeros((p, sum(self.dim)))
 
-        # Precompute Hessian products for quantum relative entropy
-        # D2_XX Phi(X, Y) [Hx] =  Ux [log^[1](Dx) .* (Ux' Hx Ux)] Ux'
-        # D2_YX Phi(X, Y) [Hx] = -Uy [log^[1](Dy) .* (Uy' Hx Uy)] Uy'
-        # D2_XY Phi(X, Y) [Hy] = -Uy [log^[1](Dy) .* (Uy' Hy Uy)] Uy'
-        # D2_YY Phi(X, Y) [Hy] = -Uy [SUM_k log_k^[2](Dy) .* ([Uy' X Uy]_k [Uk' Hy Uy]_k' + [Uy' Hy Uy]_k [Uk' X Uy]_k') ] Uy'
-        lin.congr(self.work1, self.Ux.conj().T, self.Ax, self.work2)
-        self.work1 *= self.D1x_comb
-        lin.congr(self.D2PhiXXH, self.Ux, self.work1, self.work2)
+        for k in range(p):
+            Ht = self.At[k]
+            Hx = self.Ax[k]
+            Hy = self.Ay[k]
 
-        lin.congr(self.work1, self.Uy.conj().T, self.Ax, self.work2)
-        self.work1 *= -self.zi * self.D1y_log
-        lin.congr(self.D2PhiYXH, self.Uy, self.work1, self.work2)
+            UyxyYHxYUyxy = self.Uyxy.conj().T @ self.irt2_Y @ Hx @ self.irt2_Y @ self.Uyxy
+            UxyxXHyXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hy @ self.irt2_X @ self.Uxyx
+            UxyxXHxXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hx @ self.irt2_X @ self.Uxyx
 
-        lin.congr(self.work1, self.Uy.conj().T, self.Ay, self.work2)
-        mgrad.scnd_frechet_multi(self.D2PhiYYH, self.D2y_comb, self.work1, U=self.Uy, work1=self.work2, work2=self.work3, work3=self.work5)
+            # Hessian product of relative entropy
+            D2PhiXXH =  mgrad.scnd_frechet(self.D2yxy_entr_UYU, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
 
-        self.work1 *= self.D1y_log * self.zi
-        lin.congr(self.D2PhiXYH, self.Uy, self.work1, self.work2)
+            D2PhiXYH  = -self.irt2_X @ self.Uxyx @ (self.D1xyx_log * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
+            D2PhiXYH += D2PhiXYH.conj().T
+            D2PhiXYH += mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
 
-        # ====================================================================
-        # Hessian products with respect to t
-        # ====================================================================
-        # D2_tt F(t, X, Y)[Ht] = Ht / z^2
-        # D2_tX F(t, X, Y)[Hx] = -(D_X Phi(X, Y) [Hx]) / z^2
-        # D2_tY F(t, X, Y)[Hy] = -(D_Y Phi(X, Y) [Hy]) / z^2
-        outt  = self.At - (self.Ax.view(dtype=np.float64).reshape((p, 1, -1)) @ self.DPhiX.view(dtype=np.float64).reshape((-1, 1))).ravel()
-        outt -= (self.Ay.view(dtype=np.float64).reshape((p, 1, -1)) @ self.DPhiY.view(dtype=np.float64).reshape((-1, 1))).ravel()
-        outt *= self.zi2
+            work      = self.Uxyx.conj().T @ self.rt2_X @ Hx @ self.irt2_X @ self.Uxyx
+            work     += work.conj().T
+            D2PhiYXH  = -self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.irt2_X
+            D2PhiYXH += mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHxXUxyx, U=self.irt2_X @ self.Uxyx)
 
-        lhs[:, 0] = outt
+            D2PhiYYH  = -mgrad.scnd_frechet(self.D2xyx_log_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+            
+            # Hessian product of barrier function
+            outt = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
 
-        # ====================================================================
-        # Hessian products with respect to X
-        # ====================================================================
-        # D2_Xt F(t, X, Y)[Ht] = -Ht (D_X Phi(X, Y)) / z^2
-        # D2_XX F(t, X, Y)[Hx] = (D_X Phi(X, Y) [Hx]) D_X Phi(X, Y) / z^2 + (D2_XX Phi(X, Y) [Hx]) / z + X^-1 Hx X^-1
-        # D2_XY F(t, X, Y)[Hy] = (D_Y Phi(X, Y) [Hy]) D_X Phi(X, Y) / z^2 + (D2_XY Phi(X, Y) [Hy]) / z
-        np.subtract(self.D2PhiXXH, self.D2PhiXYH, out=self.work1)
-        np.outer(outt, self.DPhiX, out=self.work2.reshape((p, -1)))
-        self.work1 -= self.work2
+            out_X     = -outt * self.DPhiX
+            out_X    +=  self.zi * (D2PhiXYH + D2PhiXXH)
+            out_X    +=  self.inv_X @ Hx @ self.inv_X
+            out_X     = (out_X + out_X.conj().T) * 0.5
 
-        lhs[:, self.idx_X] = self.work1.reshape((p, -1)).view(dtype=np.float64)
+            out_Y     = -outt * self.DPhiY
+            out_Y    +=  self.zi * (D2PhiYXH + D2PhiYYH)
+            out_Y    +=  self.inv_Y @ Hy @ self.inv_Y
+            out_Y     = (out_Y + out_Y.conj().T) * 0.5
 
-        # ====================================================================
-        # Hessian products with respect to Y
-        # ====================================================================
-        # D2_Yt F(t, X, Y)[Ht] = -Ht (D_X Phi(X, Y)) / z^2
-        # D2_YX F(t, X, Y)[Hx] = (D_X Phi(X, Y) [Hx]) D_Y Phi(X, Y) / z^2 + (D2_YX Phi(X, Y) [Hx]) / z
-        # D2_YY F(t, X, Y)[Hy] = (D_Y Phi(X, Y) [Hy]) D_Y Phi(X, Y) / z^2 + (D2_YY Phi(X, Y) [Hy]) / z + Y^-1 Hy Y^-1
-        np.add(self.D2PhiYYH, self.D2PhiYXH, out=self.work1)
-        np.outer(outt, self.DPhiY, out=self.work2.reshape((p, -1)))
-        self.work1 -= self.work2
-
-        lhs[:, self.idx_Y] = self.work1.reshape((p, -1)).view(dtype=np.float64)
+            lhs[k, 0] = outt
+            lhs[k, self.idx_X] = out_X.view(dtype=np.float64).reshape(-1)
+            lhs[k, self.idx_Y] = out_Y.view(dtype=np.float64).reshape(-1)
 
         # Multiply A (H A')
         return lhs @ A.T        
@@ -301,7 +289,7 @@ class Cone():
         if not self.invhess_aux_updated:
             self.update_invhessprod_aux()
         if not self.congr_aux_updated:
-            self.congr_aux(A)            
+            self.congr_aux(A)
 
         # The inverse Hessian product applied on (Ht, Hx, Hy) for the QRE barrier is 
         #     (X, Y) =  M \ (Wx, Wy)
@@ -318,74 +306,10 @@ class Cone():
         #     Ux' X Ux = -(1/z log^[1](Dx) + Dx^-1 kron Dx^-1)^-1 [{Ux' Wx Ux} + 1/z (Ux'Uy kron Ux'Uy) log^[1](Dy) Y]
         # where S is the Schur complement matrix of M.
 
-        p = self.Ax.shape[0]
-        lhs = np.empty((p, sum(self.dim)))
-        
-        # ====================================================================
-        # Inverse Hessian products with respect to Y
-        # ====================================================================
-        # Compute ({Uy' Wy Uy} - [1/z log^[1](Dy) (Uy'Ux kron Uy'Ux) (1/z log^[1](Dx) + Dx^-1 kron Dx^-1)^-1 {Ux' Wx Ux}])
-        # Compute Ux' Wx Ux
-        np.outer(self.At, self.DPhiX, out=self.work2.reshape((p, -1)))
-        np.add(self.Ax, self.work2, out=self.work0)
-        lin.congr(self.work2, self.Ux.conj().T, self.work0, self.work3)
-        # Apply (1/z log^[1](Dx) + Dx^-1 kron Dx^-1)^-1
-        self.work2 *= self.D1x_comb_inv
-        # Apply (Uy'Ux kron Uy'Ux)
-        lin.congr(self.work1, self.UyUx, self.work2, self.work3)
-        # Apply -1/z log^[1](Dy)
-        self.work1 *= (-self.zi * self.D1y_log)
-        # Compute Uy' Wy Uy and subtract previous expression
-        np.outer(self.At, self.DPhiY, out=self.work2.reshape((p, -1)))
-        np.add(self.Ay, self.work2, out=self.work3)
-        lin.congr(self.work2, self.Uy.conj().T, self.work3, self.work4)
-        self.work2 -= self.work1
-
-        # Solve the linear system S \ ( ... ) to obtain Uy' Y Uy
-        # Convert matrices to truncated real vectors
-        work  = self.work2.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices]
-        work *= self.scale
-        # Solve system
-        work = lin.fact_solve(self.hess_schur_fact, work.T)
-        # Expand truncated real vectors back into matrices
-        self.work1.fill(0.)
-        work[self.diag_indices, :] *= 0.5
-        work /= self.scale.reshape((-1, 1))
-        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices] = work.T
-        self.work1 += self.work1.conj().transpose((0, 2, 1))
-
-        # Recover Y
-        lin.congr(self.work4, self.Uy, self.work1, self.work2)
-        lhs[:, self.idx_Y] = self.work4.reshape((p, -1)).view(dtype=np.float64)
-
-        # ====================================================================
-        # Inverse Hessian products with respect to X
-        # ====================================================================
-        # Apply -1/z log^[1](Dy)
-        self.work1 *= (-self.zi * self.D1y_log)
-        # Apply (Uy kron Uy)
-        lin.congr(self.work2, self.Uy, self.work1, self.work3)
-        # Subtract Wx from previous expression
-        self.work0 -= self.work2
-        # Apply (Ux kron Ux)
-        lin.congr(self.work1, self.Ux.conj().T, self.work0, self.work3)
-        # Apply (1/z log^[1](Dx) + Dx^-1 kron Dx^-1)^-1 to obtian Ux' X Ux
-        self.work1 *= self.D1x_comb_inv
-
-        # Recover X
-        lin.congr(self.work2, self.Ux, self.work1, self.work3)
-        lhs[:, self.idx_X] = self.work2.reshape((p, -1)).view(dtype=np.float64)
-
-        # ====================================================================
-        # Inverse Hessian products with respect to t
-        # ====================================================================
-        outt  = self.z2 * self.At 
-        outt += (self.work2.view(dtype=np.float64).reshape((p, 1, -1)) @ self.DPhiX.view(dtype=np.float64).reshape((-1, 1))).ravel()
-        outt += (self.work4.view(dtype=np.float64).reshape((p, 1, -1)) @ self.DPhiY.view(dtype=np.float64).reshape((-1, 1))).ravel()
-        lhs[:, 0] = outt
+        lhs = lin.fact_solve(self.hess_fact, self.A_compact.T)
 
         # Multiply A (H A')
-        return lhs @ A.T
+        return self.A_compact @ lhs
 
     def third_dir_deriv_axpy(self, out, dir, a=True):
         assert self.grad_updated
@@ -489,27 +413,27 @@ class Cone():
         assert not self.congr_aux_updated
 
         self.At = A[:, 0]
-        Ax = np.ascontiguousarray(A[:, self.idx_X])
-        Ay = np.ascontiguousarray(A[:, self.idx_Y])
+        self.Ax_vec = np.ascontiguousarray(A[:, self.idx_X])
+        self.Ay_vec = np.ascontiguousarray(A[:, self.idx_Y])
 
         if self.hermitian:
-            self.Ax = np.array([Ax_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ax_k in Ax])
-            self.Ay = np.array([Ay_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ay_k in Ay])            
+            self.Ax = np.array([Ax_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ax_k in self.Ax_vec])
+            self.Ay = np.array([Ay_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ay_k in self.Ay_vec])            
         else:
-            self.Ax = np.array([Ax_k.reshape((self.n, self.n)) for Ax_k in Ax])
-            self.Ay = np.array([Ay_k.reshape((self.n, self.n)) for Ay_k in Ay])
+            self.Ax = np.array([Ax_k.reshape((self.n, self.n)) for Ax_k in self.Ax_vec])
+            self.Ay = np.array([Ay_k.reshape((self.n, self.n)) for Ay_k in self.Ay_vec])
 
-        self.work0 = np.empty_like(self.Ax, dtype=self.dtype)
-        self.work1 = np.empty_like(self.Ax, dtype=self.dtype)
-        self.work2 = np.empty_like(self.Ax, dtype=self.dtype)
-        self.work3 = np.empty_like(self.Ax, dtype=self.dtype)
-        self.work4 = np.empty_like(self.Ax, dtype=self.dtype)
-        self.work5 = np.empty((self.Ax.shape[::-1]), dtype=self.dtype)
+        # self.work0 = np.empty_like(self.Ax, dtype=self.dtype)
+        # self.work1 = np.empty_like(self.Ax, dtype=self.dtype)
+        # self.work2 = np.empty_like(self.Ax, dtype=self.dtype)
+        # self.work3 = np.empty_like(self.Ax, dtype=self.dtype)
+        # self.work4 = np.empty_like(self.Ax, dtype=self.dtype)
+        # self.work5 = np.empty((self.Ax.shape[::-1]), dtype=self.dtype)
 
-        self.D2PhiXXH = np.empty_like(self.Ax, dtype=self.dtype)
-        self.D2PhiYXH = np.empty_like(self.Ax, dtype=self.dtype)
-        self.D2PhiXYH = np.empty_like(self.Ay, dtype=self.dtype)
-        self.D2PhiYYH = np.empty_like(self.Ay, dtype=self.dtype)
+        # self.D2PhiXXH = np.empty_like(self.Ax, dtype=self.dtype)
+        # self.D2PhiYXH = np.empty_like(self.Ax, dtype=self.dtype)
+        # self.D2PhiXYH = np.empty_like(self.Ay, dtype=self.dtype)
+        # self.D2PhiYYH = np.empty_like(self.Ay, dtype=self.dtype)
 
         self.congr_aux_updated = True
 
@@ -587,8 +511,6 @@ class Cone():
                     Hxx[:, [k]] = sym.mat_to_vec(D2PhiXXH, hermitian=self.hermitian)
 
                     k += 1
-
-                
 
         # Make Hxy block
         k = 0
@@ -699,11 +621,13 @@ class Cone():
             self.triu_indices = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
             self.scale = np.array([1 if i==j else np.sqrt(2.) for j in range(self.n) for i in range(j + 1)])
 
-        # self.work6  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
-        # self.work7  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
-        # self.work8  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
-        # self.work9  = np.empty((self.n, self.n, self.n), dtype=self.dtype)
-        # self.work10 = np.empty((self.n, 1, self.n), dtype=self.dtype)
+        self.Ax_compact = self.Ax_vec[:, self.triu_indices]
+        self.Ay_compact = self.Ay_vec[:, self.triu_indices]
+
+        self.Ax_compact *= self.scale
+        self.Ay_compact *= self.scale
+
+        self.A_compact = np.hstack((self.At.reshape((-1, 1)), self.Ax_compact, self.Ay_compact))
 
         self.invhess_aux_aux_updated = True
 
