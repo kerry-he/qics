@@ -399,39 +399,67 @@ class Cone():
         chi = Ht[0, 0] - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)
         chi2 = chi * chi
 
-        UxHxUx = self.Ux.conj().T @ Hx @ self.Ux
-        UyHyUy = self.Uy.conj().T @ Hy @ self.Uy
-        UyHxUy = self.Uy.conj().T @ Hx @ self.Uy
+        UyxyYHxYUyxy = self.Uyxy.conj().T @ self.irt2_Y @ Hx @ self.irt2_Y @ self.Uyxy
+        UxyxXHyXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hy @ self.irt2_X @ self.Uxyx
+        UxyxXHxXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hx @ self.irt2_X @ self.Uxyx
+        UyxyYHyYUyxy = self.Uyxy.conj().T @ self.irt2_Y @ Hy @ self.irt2_Y @ self.Uyxy
 
-        # Quantum relative entropy Hessians
-        D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
-        D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T
-        D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.conj().T
-        D2PhiYYH = -mgrad.scnd_frechet(self.D2y_log_UXU, UyHyUy, U=self.Uy)
+        # Hessian product of relative entropy
+        D2PhiXXH =  mgrad.scnd_frechet(self.D2yxy_entr_UYU, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
+
+        D2PhiXYH  = -self.irt2_X @ self.Uxyx @ (self.D1xyx_log * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
+        D2PhiXYH += D2PhiXYH.conj().T
+        D2PhiXYH += mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+
+        work      = self.Uxyx.conj().T @ self.rt2_X @ Hx @ self.irt2_X @ self.Uxyx
+        work     += work.conj().T
+        D2PhiYXH  = -self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.irt2_X
+        D2PhiYXH += mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHxXUxyx, U=self.irt2_X @ self.Uxyx)
+
+        D2PhiYYH  = -mgrad.scnd_frechet(self.D2xyx_log_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
 
         D2PhiXHH = lin.inp(Hx, D2PhiXXH + D2PhiXYH)
         D2PhiYHH = lin.inp(Hy, D2PhiYXH + D2PhiYYH)
 
         # Quantum relative entropy third order derivatives
-        D3PhiXXX =  mgrad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
-        D3PhiXYY = -mgrad.scnd_frechet(self.D2y_log, UyHyUy, UyHyUy, self.Uy)
+        # X: XX XY YX YY
+        D3PhiXXX = mgrad.thrd_frechet(self.Dyxy, self.D2yxy_entr, -self.Dyxy**-2, self.irt2_Y @ self.Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy, UyxyYHxYUyxy)
 
-        D3PhiYYX = -mgrad.scnd_frechet(self.D2y_log, UyHyUy, UyHxUy, self.Uy)
-        D3PhiYXY = D3PhiYYX
-        D3PhiYYY = -mgrad.thrd_frechet(self.D2y_log, self.Dy, self.Uy, self.UyXUy, UyHyUy, UyHyUy)
+        work2     = self.Uyxy.conj().T @ self.rt2_Y @ Hy @ self.irt2_Y @ self.Uyxy
+        work2    += work2.conj().T
+        D3PhiXXY  = mgrad.scnd_frechet(self.D2yxy_entr, work2, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
+        D3PhiXXY -= mgrad.thrd_frechet(self.Dyxy, self.D2yxy_x2logx, 2*self.Dyxy**-1, self.irt2_Y @ self.Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy, UyxyYHyYUyxy)
+        D3PhiXYX  = D3PhiXXY
+
+        D3PhiXYY  = -self.irt2_X @ mgrad.scnd_frechet(self.D2xyx_log, UxyxXHyXUxyx, UxyxXHyXUxyx, U=self.Uxyx) @ self.rt2_X
+        D3PhiXYY += D3PhiXYY.conj().T
+        D3PhiXYY += mgrad.thrd_frechet(self.Dxyx, self.D2xyx_entr, -self.Dxyx**-2, self.irt2_X @ self.Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx, UxyxXHyXUxyx)
+
+        
+        # Y: YY YX XY XX
+        D3PhiYYY = -mgrad.thrd_frechet(self.Dxyx, self.D2xyx_log, 2*self.Dxyx**-3, self.irt2_X @ self.Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx, UxyxXHyXUxyx)
+
+        D3PhiYYX  = -mgrad.scnd_frechet(self.D2xyx_log, work, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+        D3PhiYYX += mgrad.thrd_frechet(self.Dxyx, self.D2xyx_entr, -self.Dxyx**-2, self.irt2_X @ self.Uxyx, self.UxyxXUxyx, UxyxXHxXUxyx, UxyxXHyXUxyx)
+        D3PhiYXY  = D3PhiYYX
+    
+        D3PhiYXX  = self.irt2_Y @ mgrad.scnd_frechet(self.D2yxy_entr, UyxyYHxYUyxy, UyxyYHxYUyxy, U=self.Uyxy) @ self.rt2_Y
+        D3PhiYXX += D3PhiYXX.conj().T
+        D3PhiYXX -= mgrad.thrd_frechet(self.Dyxy, self.D2yxy_x2logx, 2*self.Dyxy**-1, self.irt2_Y @ self.Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy, UyxyYHxYUyxy)
+
         
         # Third derivatives of barrier
         dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhiXHH + D2PhiYHH)
 
         dder3_X  = -dder3_t * self.DPhiX
         dder3_X -=  2 * self.zi2 * chi * (D2PhiXXH + D2PhiXYH)
-        dder3_X +=  self.zi * (D3PhiXXX + D3PhiXYY)
+        dder3_X +=  self.zi * (D3PhiXXX + D3PhiXXY + D3PhiXYX + D3PhiXYY)
         dder3_X -=  2 * self.inv_X @ Hx @ self.inv_X @ Hx @ self.inv_X
         dder3_X  = (dder3_X + dder3_X.conj().T) * 0.5
 
         dder3_Y  = -dder3_t * self.DPhiY
         dder3_Y -=  2 * self.zi2 * chi * (D2PhiYXH + D2PhiYYH)
-        dder3_Y +=  self.zi * (D3PhiYYX + D3PhiYXY + D3PhiYYY)
+        dder3_Y +=  self.zi * (D3PhiYYY + D3PhiYYX + D3PhiYXY + D3PhiYXX)
         dder3_Y -=  2 * self.inv_Y @ Hy @ self.inv_Y @ Hy @ self.inv_Y
         dder3_Y  = (dder3_Y + dder3_Y.conj().T) * 0.5
 
@@ -635,7 +663,9 @@ class Cone():
         assert self.hess_aux_updated
 
         self.zi3 = self.zi2 * self.zi
-        self.D2x_log = mgrad.D2_log(self.Dx, self.D1x_log)
+
+        self.D1yxy_x2logx = mgrad.D1_f(self.Dyxy, self.Dyxy**2 * self.log_Dyxy, self.Dyxy + 2*self.entr_Dyxy)
+        self.D2yxy_x2logx = mgrad.D2_f(self.Dyxy, self.D1yxy_x2logx, 3. + 2*self.log_Dyxy)
 
         self.dder3_aux_updated = True
 

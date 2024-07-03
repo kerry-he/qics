@@ -13,7 +13,7 @@ def vec(x):
 
 hermitian = False
 dtype = np.float64 if (not hermitian) else np.complex128
-n = 2
+n = 3
 K = oplogrelentr.Cone(n, hermitian=hermitian)
 
 while True:
@@ -42,7 +42,7 @@ K.get_grad(g0)
 H0 = [np.zeros((1, 1)), np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype)]
 K.hess_prod_ip(H0, H)
 T0 = [np.zeros((1, 1)), np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype)]
-# K.third_dir_deriv_axpy(T0, H)
+K.third_dir_deriv_axpy(T0, H)
 
 # f1 = [np.zeros((1, 1)), np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype)]
 # x1 = [xk.copy() for xk in x0]
@@ -79,7 +79,7 @@ K.get_grad(g1)
 H1 = [np.zeros((1, 1)), np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype)]
 K.hess_prod_ip(H1, H)
 T1 = [np.zeros((1, 1)), np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype)]
-# K.third_dir_deriv_axpy(T1, H)
+K.third_dir_deriv_axpy(T1, H)
 
 # print("Gradient test (FDD=0): ", np.linalg.norm(0.5 * (vec(g0) + vec(g1)) - ((vec(f1) - f0) / eps)))
 print("Gradient test (ID=-nu): ", inp(g0, x0))
@@ -95,5 +95,5 @@ K.invhess_prod_ip(work, H1)
 print("Inv Hessian test (ID=0): ", np.linalg.norm(vec(H) - vec(work)))
 print("Inv Hessian test (ID=nu): ", inp(K.invhess_prod_ip(work, g0), g0))
 
-# print("TOA test: ", np.linalg.norm(0.5 * (vec(T0) + vec(T1)) - ((vec(H1) - vec(H0)) / eps)))
+print("TOA test: ", np.linalg.norm(0.5 * (vec(T0) + vec(T1)) - ((vec(H1) - vec(H0)) / eps)))
 

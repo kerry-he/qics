@@ -414,7 +414,7 @@ class Cone():
 
         D3PhiYYX = -mgrad.scnd_frechet(self.D2y_log, UyHyUy, UyHxUy, self.Uy)
         D3PhiYXY = D3PhiYYX
-        D3PhiYYY = -mgrad.thrd_frechet(self.D2y_log, self.Dy, self.Uy, self.UyXUy, UyHyUy, UyHyUy)
+        D3PhiYYY = -mgrad.thrd_frechet(self.Dy, self.D2y_log, 2*(self.inv_Dy**3), self.Uy, self.UyXUy, UyHyUy, UyHyUy)
         
         # Third derivatives of barrier
         dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhiXHH + D2PhiYHH)
