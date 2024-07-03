@@ -285,12 +285,12 @@ class Cone():
 
         (Ht, Hx, Hy) = H
 
-        vec = np.vstack((Ht, sym.mat_to_vec(Hx), sym.mat_to_vec(Hy)))
+        vec = np.vstack((Ht, sym.mat_to_vec(Hx, hermitian=self.hermitian), sym.mat_to_vec(Hy, hermitian=self.hermitian)))
         sol = lin.fact_solve(self.hess_fact, vec)
 
         out[0][:] = sol[0]
-        out[1][:] = sym.vec_to_mat(sol[1:1+self.vn])
-        out[2][:] = sym.vec_to_mat(sol[1+self.vn:])
+        out[1][:] = sym.vec_to_mat(sol[1:1+self.vn], hermitian=self.hermitian)
+        out[2][:] = sym.vec_to_mat(sol[1+self.vn:], hermitian=self.hermitian)
 
         return out
     
@@ -556,7 +556,7 @@ class Cone():
         k = 0
         for j in range(self.n):
             for i in range(j + 1):
-                Hx = np.zeros((self.n, self.n))
+                Hx = np.zeros((self.n, self.n), dtype=self.dtype)
                 if i == j:
                     Hx[i, j] = 1.
                 else:
@@ -573,11 +573,28 @@ class Cone():
 
                 k += 1
 
+                if self.hermitian and i != j:
+                    Hx = np.zeros((self.n, self.n), dtype=self.dtype)
+                    Hx[i, j] =  np.sqrt(0.5) * 1j
+                    Hx[j, i] = -np.sqrt(0.5) * 1j
+                    
+                    UyxyYHxYUyxy = self.Uyxy.conj().T @ self.irt2_Y @ Hx @ self.irt2_Y @ self.Uyxy
+
+                    D2PhiXXH  = self.zi * mgrad.scnd_frechet(self.D2yxy_entr_UYU, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
+                    D2PhiXXH += self.zi2 * self.DPhiX * lin.inp(self.DPhiX, Hx)
+                    D2PhiXXH += self.inv_X @ Hx @ self.inv_X
+
+                    Hxx[:, [k]] = sym.mat_to_vec(D2PhiXXH, hermitian=self.hermitian)
+
+                    k += 1
+
+                
+
         # Make Hxy block
         k = 0
         for j in range(self.n):
             for i in range(j + 1):
-                Hy = np.zeros((self.n, self.n))
+                Hy = np.zeros((self.n, self.n), dtype=self.dtype)
                 if i == j:
                     Hy[i, j] = 1.
                 else:
@@ -593,13 +610,29 @@ class Cone():
 
                 Hxy[:, [k]] = sym.mat_to_vec(D2PhiXYH, hermitian=self.hermitian)
 
-                k += 1           
+                k += 1
+
+                if self.hermitian and i != j:
+                    Hy = np.zeros((self.n, self.n), dtype=self.dtype)
+                    Hy[i, j] =  np.sqrt(0.5) * 1j
+                    Hy[j, i] = -np.sqrt(0.5) * 1j
+                    
+                    UxyxXHyXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hy @ self.irt2_X @ self.Uxyx
+
+                    D2PhiXYH  = -self.zi * self.irt2_X @ self.Uxyx @ (self.D1xyx_log * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
+                    D2PhiXYH += D2PhiXYH.conj().T
+                    D2PhiXYH += self.zi * mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+                    D2PhiXYH += self.zi2 * self.DPhiX * lin.inp(self.DPhiY, Hy)
+
+                    Hxy[:, [k]] = sym.mat_to_vec(D2PhiXYH, hermitian=self.hermitian)
+
+                    k += 1                       
 
         # Make Hyy block
         k = 0
         for j in range(self.n):
             for i in range(j + 1):
-                Hy = np.zeros((self.n, self.n))
+                Hy = np.zeros((self.n, self.n), dtype=self.dtype)
                 if i == j:
                     Hy[i, j] = 1.
                 else:
@@ -616,10 +649,26 @@ class Cone():
 
                 k += 1
 
+                if self.hermitian and i != j:
+                    Hy = np.zeros((self.n, self.n), dtype=self.dtype)
+                    Hy[i, j] =  np.sqrt(0.5) * 1j
+                    Hy[j, i] = -np.sqrt(0.5) * 1j
+                    
+                    UxyxXHyXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hy @ self.irt2_X @ self.Uxyx
+
+                    D2PhiYYH  = -self.zi * mgrad.scnd_frechet(self.D2xyx_log_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+                    D2PhiYYH += self.zi2 * self.DPhiY * lin.inp(self.DPhiY, Hy)
+                    D2PhiYYH += self.inv_Y @ Hy @ self.inv_Y
+
+                    Hyy[:, [k]] = sym.mat_to_vec(D2PhiYYH, hermitian=self.hermitian)
+
+                    k += 1         
+
+
         self.hess = np.block([
-            [self.zi2,  -self.zi2 * sym.mat_to_vec(self.DPhiX).T, -self.zi2 * sym.mat_to_vec(self.DPhiY).T],
-            [-self.zi2 * sym.mat_to_vec(self.DPhiX), Hxx,   Hxy], 
-            [-self.zi2 * sym.mat_to_vec(self.DPhiY), Hxy.T, Hyy]
+            [self.zi2,  -self.zi2 * sym.mat_to_vec(self.DPhiX, hermitian=self.hermitian).T, -self.zi2 * sym.mat_to_vec(self.DPhiY, hermitian=self.hermitian).T],
+            [-self.zi2 * sym.mat_to_vec(self.DPhiX, hermitian=self.hermitian), Hxx,   Hxy], 
+            [-self.zi2 * sym.mat_to_vec(self.DPhiY, hermitian=self.hermitian), Hxy.T, Hyy]
         ])
 
         # Subtract to obtain Schur complement then Cholesky factor
