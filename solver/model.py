@@ -52,17 +52,17 @@ class Model():
     
     def rescale_model(self):        
         # Rescale c
-        self.c_scale = np.maximum.reduce([
+        self.c_scale = np.sqrt(np.maximum.reduce([
             np.abs(self.c.reshape(-1)),
             sparse.abs_max(self.A, axis=0),
             sparse.abs_max(self.G, axis=0)
-        ])
+        ]))
 
         # Rescale b
-        self.b_scale = np.maximum.reduce([
+        self.b_scale = np.sqrt(np.maximum.reduce([
             np.abs(self.b.reshape(-1)),
             sparse.abs_max(self.A, axis=1)
-        ])
+        ]))
 
         # Rescale h
         # Note we can only scale each cone by a positive factor, and 
@@ -74,15 +74,15 @@ class Model():
         for (k, cone_k) in enumerate(self.cones):
             idxs = self.cone_idxs[k]
             if isinstance(cone_k, nonnegorthant.Cone):
-                self.h_scale[idxs] = np.maximum.reduce([
+                self.h_scale[idxs] = np.sqrt(np.maximum.reduce([
                     h_absmax[idxs],
                     G_absmax_row[idxs]
-                ])
+                ]))
             else:
-                self.h_scale[idxs] = np.max([
+                self.h_scale[idxs] = np.sqrt(np.max([
                     h_absmax[idxs],
                     G_absmax_row[idxs]
-                ])
+                ]))
 
         # Ensure there are no divide by zeros
         self.c_scale[self.c_scale < np.finfo(self.c_scale.dtype).eps] = 1.
