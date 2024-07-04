@@ -1,5 +1,4 @@
 import numpy as np
-import scipy as sp
 from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 from utils import symmetric as sym
@@ -8,24 +7,17 @@ class Cone():
     def __init__(self, n, hermitian=False):
         # Dimension properties
         self.n  = n               # Side dimension of system
-        self.nu = 3 * self.n  # Barrier parameter
+        self.nu = 1 + 2 * self.n  # Barrier parameter
 
         self.hermitian = hermitian                      # Hermitian or symmetric vector space
         self.vn = n*n if hermitian else n*(n+1)//2      # Compact dimension of system
 
-        self.dim   = [n*n, n*n, n*n]   if (not hermitian) else [2*n*n, 2*n*n, 2*n*n]
-        self.type  = ['s', 's', 's'] if (not hermitian) else ['h', 'h', 'h']
+        self.dim   = [1, n*n, n*n]   if (not hermitian) else [1, 2*n*n, 2*n*n]
+        self.type  = ['r', 's', 's'] if (not hermitian) else ['r', 'h', 'h']
         self.dtype = np.float64      if (not hermitian) else np.complex128
 
-        self.idx_T = slice(0, self.dim[0])
-        self.idx_X = slice(self.dim[0], 2 * self.dim[0])
-        self.idx_Y = slice(2 * self.dim[0], 3 * self.dim[0])
-
-        # Get LAPACK operators
-        self.X = np.eye(self.n, dtype=self.dtype)
-
-        self.cho_fact  = sp.linalg.lapack.get_lapack_funcs("potrf", (self.X,))
-        self.cho_inv   = sp.linalg.lapack.get_lapack_funcs("trtri", (self.X,))
+        self.idx_X = slice(1, 1 + self.dim[1])
+        self.idx_Y = slice(1 + self.dim[1], sum(self.dim))
 
         # Update flags
         self.feas_updated            = False
@@ -42,7 +34,7 @@ class Cone():
         (t0, x0, y0) = get_central_ray_relentr(self.n)
 
         point = [
-            np.eye(self.n, dtype=self.dtype) * t0 / self.n,
+            np.array([[t0]]), 
             np.eye(self.n, dtype=self.dtype) * x0,
             np.eye(self.n, dtype=self.dtype) * y0,
         ]
@@ -56,11 +48,11 @@ class Cone():
         return out
     
     def set_point(self, point, dual, a=True):
-        self.T = point[0] * a
+        self.t = point[0] * a
         self.X = point[1] * a
         self.Y = point[2] * a
 
-        self.T_d = dual[0] * a
+        self.t_d = dual[0] * a
         self.X_d = dual[1] * a
         self.Y_d = dual[2] * a
 
@@ -115,29 +107,20 @@ class Cone():
         self.log_XYX  = (self.Uxyx * self.log_Dxyx) @ self.Uxyx.conj().T
         self.log_XYX  = (self.log_XYX + self.log_XYX.conj().T) * 0.5
 
-        self.Z = self.T + self.rt2_X @ self.log_XYX @ self.rt2_X
+        self.z = self.t[0, 0] + lin.inp(self.X, self.log_XYX)
 
-        # Try to perform Cholesky factorization to check PSD
-        self.Z_chol, info = self.cho_fact(self.Z, lower=True)
-        if info != 0:
-            self.feas = False
-            return self.feas
-        self.feas = True
-
+        self.feas = (self.z > 0)
         return self.feas
 
     def get_val(self):
         assert self.feas_updated
-        (sgn, logabsdet_Z) = np.linalg.slogdet(self.Z)
-        return -(sgn * logabsdet_Z) - np.sum(np.log(self.Dx)) - np.sum(np.log(self.Dy))
+
+        return -np.log(self.z) - np.sum(np.log(self.Dx)) - np.sum(np.log(self.Dy))
 
     def update_grad(self):
         assert self.feas_updated
         assert not self.grad_updated
         
-        self.Z_chol_inv, _ = self.cho_inv(self.Z_chol, lower=True)
-        self.inv_Z = self.Z_chol_inv.conj().T @ self.Z_chol_inv
-
         self.inv_Dx = np.reciprocal(self.Dx)
         self.inv_Dy = np.reciprocal(self.Dy)
 
@@ -149,24 +132,22 @@ class Cone():
         self.D1yxy_entr = mgrad.D1_entr(self.Dyxy, self.log_Dyxy, self.entr_Dyxy)
         self.D1xyx_log  = mgrad.D1_log(self.Dxyx, self.log_Dxyx)
 
-        self.irt2Y_Uyxy = self.irt2_Y @ self.Uyxy
-        self.irt2X_Uxyx = self.irt2_X @ self.Uxyx
-
         self.UyxyYUyxy = self.Uyxy.conj().T @ self.Y @ self.Uyxy
         self.UxyxXUxyx = self.Uxyx.conj().T @ self.X @ self.Uxyx
 
-        self.UyxyYZYUyxy = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ self.rt2_Y @ self.Uyxy
-        self.UxyxXZXUxyx = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        self.irt2Y_Uyxy = self.irt2_Y @ self.Uyxy
+        self.irt2X_Uxyx = self.irt2_X @ self.Uxyx
 
-        self.DPhiX =  self.irt2_Y @ self.Uyxy @ (self.D1yxy_entr * self.UyxyYZYUyxy) @ self.Uyxy.conj().T @ self.irt2_Y
+        self.zi    =  np.reciprocal(self.z)
+        self.DPhiX =  self.irt2_Y @ self.Uyxy @ (self.D1yxy_entr * self.UyxyYUyxy) @ self.Uyxy.conj().T @ self.irt2_Y
         self.DPhiX = (self.DPhiX + self.DPhiX.conj().T) * 0.5
-        self.DPhiY = -self.irt2_X @ self.Uxyx @ (self.D1xyx_log  * self.UxyxXZXUxyx) @ self.Uxyx.conj().T @ self.irt2_X
+        self.DPhiY = -self.irt2_X @ self.Uxyx @ (self.D1xyx_log  * self.UxyxXUxyx) @ self.Uxyx.conj().T @ self.irt2_X
         self.DPhiY = (self.DPhiY + self.DPhiY.conj().T) * 0.5
 
         self.grad = [
-           -self.inv_Z,
-            self.DPhiX - self.inv_X,
-            self.DPhiY - self.inv_Y
+           -self.zi,
+            self.zi * self.DPhiX - self.inv_X,
+            self.zi * self.DPhiY - self.inv_Y
         ]
 
         self.grad_updated = True
@@ -186,25 +167,46 @@ class Cone():
         assert self.grad_updated
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
+        if not self.invhess_aux_updated:
+            self.update_invhessprod_aux()            
 
         # Computes Hessian product of the QRE barrier with a single vector (Ht, Hx, Hy)
         # See hess_congr() for additional comments
 
         (Ht, Hx, Hy) = H
 
-        # Hessian product for T
-        # TT
-        Htt = Ht
+        UyxyYHxYUyxy = self.Uyxy.conj().T @ self.irt2_Y @ Hx @ self.irt2_Y @ self.Uyxy
+        UxyxXHyXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hy @ self.irt2_X @ self.Uxyx
+        UxyxXHxXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hx @ self.irt2_X @ self.Uxyx
 
-        work = self.Uyxy.conj().T @ self.irt2_Y @ Hx @ self.irt2_Y @ self.Uyxy
-        Htx = self.rt2_Y @ self.Uyxy @ (self.D1yxy_entr * work) @ self.Uyxy.conj().T @ self.rt2_Y
+        # Hessian product of relative entropy
+        D2PhiXXH =  mgrad.scnd_frechet(self.D2yxy_entr_UYU, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
 
-        work = self.Uxyx.conj().T @ self.irt2_X @ Hy @ self.irt2_X @ self.Uxyx
-        Hty = -self.rt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.rt2_X
+        D2PhiXYH  = -self.irt2_X @ self.Uxyx @ (self.D1xyx_log * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
+        D2PhiXYH += D2PhiXYH.conj().T
+        D2PhiXYH += mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
 
-        Ht = self.inv_Z @ (Htt - Htx - Hty) @ self.inv_Z
+        work      = self.Uxyx.conj().T @ self.rt2_X @ Hx @ self.irt2_X @ self.Uxyx
+        work     += work.conj().T
+        D2PhiYXH  = -self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.irt2_X
+        D2PhiYXH += mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHxXUxyx, U=self.irt2_X @ self.Uxyx)
 
-        out[0][:] = Ht
+        D2PhiYYH  = -mgrad.scnd_frechet(self.D2xyx_log_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+        
+        # Hessian product of barrier function
+        out[0][:] = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
+
+        out_X     = -out[0] * self.DPhiX
+        out_X    +=  self.zi * (D2PhiXYH + D2PhiXXH)
+        out_X    +=  self.inv_X @ Hx @ self.inv_X
+        out_X     = (out_X + out_X.conj().T) * 0.5
+        out[1][:] = out_X
+
+        out_Y     = -out[0] * self.DPhiY
+        out_Y    +=  self.zi * (D2PhiYXH + D2PhiYYH)
+        out_Y    +=  self.inv_Y @ Hy @ self.inv_Y
+        out_Y     = (out_Y + out_Y.conj().T) * 0.5
+        out[2][:] = out_Y
 
         return out
 
@@ -396,6 +398,9 @@ class Cone():
         self.D2xyx_entr_UXU = self.D2xyx_entr * self.UxyxXUxyx
         self.D2yxy_entr_UYU = self.D2yxy_entr * self.UyxyYUyxy
         self.D2xyx_log_UXU  = self.D2xyx_log  * self.UxyxXUxyx
+
+        # Preparing other required variables
+        self.zi2 = self.zi * self.zi
 
         self.hess_aux_updated = True
 
