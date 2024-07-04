@@ -40,8 +40,8 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-n_mat = 40
-m_mat = 80
+n_mat = 50
+m_mat = 100
 A_mat = 1 / (n_mat**0.25) * np.random.randn(n_mat, m_mat)
 k_mat = 2
 eps   = 1e-6
@@ -71,7 +71,7 @@ G = np.vstack((G1, G2, G3, G4, G5, G6, G7))
 h = np.vstack((min(k_mat, n_mat) * np.ones((1, 1)), np.zeros((m_mat, 1)), np.ones((m_mat, 1)), np.eye(n_mat).reshape((-1, 1)), np.zeros((1, 1)), np.zeros((n_mat*n_mat, 1)), np.zeros((n_mat*n_mat, 1))))
 
 # Input into model and solve
-cones = [nonnegorthant.Cone(1 + m_mat + m_mat), possemidefinite.Cone(n_mat), oplogrelentr.Cone(n_mat)]
+cones = [nonnegorthant.Cone(1 + m_mat + m_mat), possemidefinite.Cone(n_mat), troplogrelentr.Cone(n_mat)]
 mdl = model.Model(c, A, b, G, h, cones=cones, offset=-n_mat*np.log(eps))
 slv = solver.Solver(mdl)
 
