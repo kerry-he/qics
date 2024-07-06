@@ -505,11 +505,11 @@ class Cone():
         if not self.grad_updated:
             self.update_grad()
         psi = [
-            self.t_d + self.grad[0],
+            self.T_d + self.grad[0],
             self.X_d + self.grad[1],
             self.Y_d + self.grad[2]
         ]
-        temp = [np.zeros((1, 1)), np.zeros((self.n, self.n), dtype=self.dtype), np.zeros((self.n, self.n), dtype=self.dtype)]
+        temp = [np.zeros((self.n, self.n), dtype=self.dtype), np.zeros((self.n, self.n), dtype=self.dtype), np.zeros((self.n, self.n), dtype=self.dtype)]
         self.invhess_prod_ip(temp, psi)
         return lin.inp(temp[0], psi[0]) + lin.inp(temp[1], psi[1]) + lin.inp(temp[2], psi[2])
     
@@ -519,16 +519,16 @@ class Cone():
     def congr_aux(self, A):
         assert not self.congr_aux_updated
 
-        self.At = A[:, 0]
+        self.At_vec = np.ascontiguousarray(A[:, self.idx_T])
         self.Ax_vec = np.ascontiguousarray(A[:, self.idx_X])
         self.Ay_vec = np.ascontiguousarray(A[:, self.idx_Y])
 
-        if self.hermitian:
-            self.Ax = np.array([Ax_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ax_k in self.Ax_vec])
-            self.Ay = np.array([Ay_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ay_k in self.Ay_vec])            
-        else:
-            self.Ax = np.array([Ax_k.reshape((self.n, self.n)) for Ax_k in self.Ax_vec])
-            self.Ay = np.array([Ay_k.reshape((self.n, self.n)) for Ay_k in self.Ay_vec])
+        # if self.hermitian:
+        #     self.Ax = np.array([Ax_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ax_k in self.Ax_vec])
+        #     self.Ay = np.array([Ay_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ay_k in self.Ay_vec])            
+        # else:
+        #     self.Ax = np.array([Ax_k.reshape((self.n, self.n)) for Ax_k in self.Ax_vec])
+        #     self.Ay = np.array([Ay_k.reshape((self.n, self.n)) for Ay_k in self.Ay_vec])
 
         self.congr_aux_updated = True
 
@@ -717,13 +717,15 @@ class Cone():
             self.E[k, j, j] = 1.
             k += 1
 
-        # self.Ax_compact = self.Ax_vec[:, self.triu_indices]
-        # self.Ay_compact = self.Ay_vec[:, self.triu_indices]
+        self.At_compact = self.At_vec[:, self.triu_indices]
+        self.Ax_compact = self.Ax_vec[:, self.triu_indices]
+        self.Ay_compact = self.Ay_vec[:, self.triu_indices]
 
-        # self.Ax_compact *= self.scale
-        # self.Ay_compact *= self.scale
+        self.At_compact *= self.scale
+        self.Ax_compact *= self.scale
+        self.Ay_compact *= self.scale
 
-        # self.A_compact = np.hstack((self.At.reshape((-1, 1)), self.Ax_compact, self.Ay_compact))
+        self.A_compact = np.hstack((self.At_compact, self.Ax_compact, self.Ay_compact))
 
         self.work4  = np.empty((self.n, self.n, self.vn), dtype=self.dtype)
         self.work5  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
