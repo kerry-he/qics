@@ -321,11 +321,178 @@ class Cone():
         if not self.dder3_aux_updated:
             self.update_dder3_aux()
 
+
         (Ht, Hx, Hy) = dir
 
-        # T
-        # TTT
+        UyxyYHxYUyxy = self.Uyxy.conj().T @ self.irt2_Y @ Hx @ self.irt2_Y @ self.Uyxy
+        UxyxXHyXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hy @ self.irt2_X @ self.Uxyx
+        UxyxXHxXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hx @ self.irt2_X @ self.Uxyx
+        UyxyYHyYUyxy = self.Uyxy.conj().T @ self.irt2_Y @ Hy @ self.irt2_Y @ self.Uyxy        
 
+        DxPhiHx = -self.rt2_Y @ self.Uyxy @ (self.D1yxy_entr * UyxyYHxYUyxy) @ self.Uyxy.conj().T @ self.rt2_Y
+        DyPhiHy =  self.rt2_X @ self.Uxyx @ (self.D1xyx_log  * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
+
+        D2xxPhiHxHx = -mgrad.scnd_frechet(self.D2yxy_entr, UyxyYHxYUyxy, UyxyYHxYUyxy, U=self.rt2_Y @ self.Uyxy)
+        D2yyPhiHyHy =  mgrad.scnd_frechet(self.D2xyx_log,  UxyxXHyXUxyx, UxyxXHyXUxyx, U=self.rt2_X @ self.Uxyx)
+
+        work = Hx @ self.irt2_X @ self.Uxyx @ (self.D1xyx_log * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
+        D2xyPhiHxHy  = work + work.conj().T
+        D2xyPhiHxHy -= mgrad.scnd_frechet(self.D2xyx_entr, UxyxXHxXUxyx, UxyxXHyXUxyx, U=self.rt2_X @ self.Uxyx)
+
+        # T
+        dder3_t  = -2 * self.inv_Z @ Ht @ self.inv_Z @ Ht @ self.inv_Z
+        dder3_t += -2 * (self.inv_Z @ DxPhiHx @ self.inv_Z @ Ht @ self.inv_Z + self.inv_Z @ Ht @ self.inv_Z @ DxPhiHx @ self.inv_Z)
+        dder3_t += -2 * (self.inv_Z @ DyPhiHy @ self.inv_Z @ Ht @ self.inv_Z + self.inv_Z @ Ht @ self.inv_Z @ DyPhiHy @ self.inv_Z)
+        
+        dder3_t += self.inv_Z @ D2xxPhiHxHx @ self.inv_Z - 2 * self.inv_Z @ DxPhiHx @ self.inv_Z @ DxPhiHx @ self.inv_Z
+        dder3_t += self.inv_Z @ D2yyPhiHyHy @ self.inv_Z - 2 * self.inv_Z @ DyPhiHy @ self.inv_Z @ DyPhiHy @ self.inv_Z
+        dder3_t += 2 * (self.inv_Z @ D2xyPhiHxHy @ self.inv_Z - self.inv_Z @ DxPhiHx @ self.inv_Z @ DyPhiHy @ self.inv_Z - self.inv_Z @ DyPhiHy @ self.inv_Z @ DxPhiHx @ self.inv_Z)
+
+
+        # X 
+        # TT
+        work    = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ Ht @ self.inv_Z @ Ht @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X = 2 * self.irt2_Y @ self.Uyxy @ (self.D1yxy_entr * work) @ self.Uyxy.conj().T @ self.irt2_Y
+
+        # 2TX
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ Ht @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X -= 2 * mgrad.scnd_frechet(self.D2yxy_entr, work, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ Ht @ self.inv_Z @ DxPhiHx @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        work += work.conj().T
+        dder3_X += 2 * self.irt2_Y @ self.Uyxy @ (self.D1yxy_entr * work) @ self.Uyxy.conj().T @ self.irt2_Y
+
+        #2TY
+        work = self.inv_Z @ Ht @ self.inv_Z
+        work2 = self.irt2_X @ self.Uxyx @ (self.D1xyx_log * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X @ work
+        dder3_X += 2 * (work2 + work2.conj().T)
+        work = self.Uxyx.conj().T @ self.rt2_X @ work @ self.rt2_X @ self.Uxyx
+        dder3_X -= 2 * mgrad.scnd_frechet(self.D2xyx_entr, work, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ Ht @ self.inv_Z @ DyPhiHy @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        work += work.conj().T
+        dder3_X += 2 * self.irt2_Y @ self.Uyxy @ (self.D1yxy_entr * work) @ self.Uyxy.conj().T @ self.irt2_Y
+
+        # XX
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ (D2xxPhiHxHx - 2 * DxPhiHx @ self.inv_Z @ DxPhiHx) @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X -= self.irt2_Y @ self.Uyxy @ (self.D1yxy_entr * work) @ self.Uyxy.conj().T @ self.irt2_Y
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ DxPhiHx @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X -= 2 * mgrad.scnd_frechet(self.D2yxy_entr, work, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
+        dder3_X += mgrad.thrd_frechet(self.Dyxy, self.D2yxy_entr, -self.Dyxy**-2, self.irt2_Y @ self.Uyxy, UyxyYHxYUyxy, UyxyYHxYUyxy, self.UyxyYZYUyxy)
+        dder3_X -= 2 * self.inv_X @ Hx @ self.inv_X @ Hx @ self.inv_X
+
+        # 2XY
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ D2xyPhiHxHy @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X -= 2 * self.irt2_Y @ self.Uyxy @ (self.D1yxy_entr * work) @ self.Uyxy.conj().T @ self.irt2_Y
+
+        work = self.inv_Z @ DxPhiHx @ self.inv_Z
+        work2 = self.irt2_X @ self.Uxyx @ (self.D1xyx_log * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X @ work
+        dder3_X += 2 * (work2 + work2.conj().T)
+        work = self.Uxyx.conj().T @ self.rt2_X @ work @ self.rt2_X @ self.Uxyx
+        dder3_X -= 2 * mgrad.scnd_frechet(self.D2xyx_entr, work, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ DxPhiHx @ self.inv_Z @ DyPhiHy @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        work += work.conj().T
+        dder3_X += 2 * self.irt2_Y @ self.Uyxy @ (self.D1yxy_entr * work) @ self.Uyxy.conj().T @ self.irt2_Y
+
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ Hy @ self.irt2_Y @ self.Uyxy
+        work += work.conj().T
+        dder3_X += 2 * mgrad.scnd_frechet(self.D2yxy_entr, work, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X -= 2 * mgrad.thrd_frechet(self.Dyxy, self.D2yxy_x2logx, 2*self.Dyxy**-1, self.irt2_Y @ self.Uyxy, work, UyxyYHyYUyxy, UyxyYHxYUyxy)
+
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ DyPhiHy @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X -= 2 * mgrad.scnd_frechet(self.D2yxy_entr, work, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
+
+        # YY
+        work = self.inv_Z @ DyPhiHy @ self.inv_Z
+        work2 = self.irt2_X @ self.Uxyx @ (self.D1xyx_log * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X @ work
+        dder3_X += 2 * (work2 + work2.conj().T)
+        work = self.Uxyx.conj().T @ self.rt2_X @ work @ self.rt2_X @ self.Uxyx
+        dder3_X -= 2 * mgrad.scnd_frechet(self.D2xyx_entr, work, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ DyPhiHy @ self.inv_Z @ DyPhiHy @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X += 2 * self.irt2_Y @ self.Uyxy @ (self.D1yxy_entr * work) @ self.Uyxy.conj().T @ self.irt2_Y
+
+        work = self.irt2_X @ mgrad.scnd_frechet(self.D2xyx_log, UxyxXHyXUxyx, UxyxXHyXUxyx, U=self.Uxyx) @ self.rt2_X @ self.inv_Z
+        dder3_X -= work + work.conj().T
+        dder3_X += mgrad.thrd_frechet(self.Dxyx, self.D2xyx_entr, -self.Dxyx**-2, self.irt2_X @ self.Uxyx, self.UxyxXZXUxyx, UxyxXHyXUxyx, UxyxXHyXUxyx)
+
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ D2yyPhiHyHy @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X -= self.irt2_Y @ self.Uyxy @ (self.D1yxy_entr * work) @ self.Uyxy.conj().T @ self.irt2_Y
+
+
+        # Y
+        # TT
+        work    = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ Ht @ self.inv_Z @ Ht @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y = -2 * self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.irt2_X
+
+        #2TX
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ Ht @ self.inv_Z @ Hx @ self.irt2_X @ self.Uxyx
+        work += work.conj().T
+        dder3_Y += 2 * self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.irt2_X
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ Ht @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y -= 2 * mgrad.scnd_frechet(self.D2xyx_entr, work, UxyxXHxXUxyx, U=self.irt2_X @ self.Uxyx)
+
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ Ht @ self.inv_Z @ DxPhiHx @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        work += work.conj().T
+        dder3_Y -= 2 * self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.irt2_X
+
+        # 2TY
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ Ht @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y += 2 * mgrad.scnd_frechet(self.D2xyx_log, work, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ Ht @ self.inv_Z @ DyPhiHy @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        work += work.conj().T
+        dder3_Y -= 2 * self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.irt2_X
+
+        # YY
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ (D2yyPhiHyHy - 2 * DyPhiHy @ self.inv_Z @ DyPhiHy) @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y += self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.irt2_X
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ DyPhiHy @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y += 2 * mgrad.scnd_frechet(self.D2xyx_log, work, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+        dder3_Y -= mgrad.thrd_frechet(self.Dxyx, self.D2xyx_log, 2*self.Dxyx**-3, self.irt2_X @ self.Uxyx, UxyxXHyXUxyx, UxyxXHyXUxyx, self.UxyxXZXUxyx)
+        dder3_Y -= 2 * self.inv_Y @ Hy @ self.inv_Y @ Hy @ self.inv_Y
+
+        # XY
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ D2xyPhiHxHy @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y += 2 * self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.irt2_X
+
+        work = self.inv_Z @ DyPhiHy @ self.inv_Z
+        work2 = self.Uxyx.conj().T @ self.rt2_X @ work @ Hx @ self.irt2_X @ self.Uxyx
+        work2 += work2.conj().T
+        dder3_Y += 2 * self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work2) @ self.Uxyx.conj().T @ self.irt2_X
+        work = self.Uxyx.conj().T @ self.rt2_X @ work @ self.rt2_X @ self.Uxyx
+        dder3_Y -= 2 * mgrad.scnd_frechet(self.D2xyx_entr, work, UxyxXHxXUxyx, U=self.irt2_X @ self.Uxyx)
+
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ DxPhiHx @ self.inv_Z @ DyPhiHy @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        work += work.conj().T
+        dder3_Y -= 2 * self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.irt2_X
+
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ Hx @ self.irt2_X @ self.Uxyx
+        work += work.conj().T
+        dder3_Y -= 2 * mgrad.scnd_frechet(self.D2xyx_log, work, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y += 2 * mgrad.thrd_frechet(self.Dxyx, self.D2xyx_entr, -self.Dxyx**-2, self.irt2_X @ self.Uxyx, work, UxyxXHyXUxyx, UxyxXHxXUxyx)
+
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ DxPhiHx @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y += 2 * mgrad.scnd_frechet(self.D2xyx_log, work, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+
+        # XX
+        work = self.inv_Z @ DxPhiHx @ self.inv_Z
+        work2 = self.Uxyx.conj().T @ self.rt2_X @ work @ Hx @ self.irt2_X @ self.Uxyx
+        work2 += work2.conj().T
+        dder3_Y += 2 * self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work2) @ self.Uxyx.conj().T @ self.irt2_X
+        work = self.Uxyx.conj().T @ self.rt2_X @ work @ self.rt2_X @ self.Uxyx
+        dder3_Y -= 2 * mgrad.scnd_frechet(self.D2xyx_entr, work, UxyxXHxXUxyx, U=self.irt2_X @ self.Uxyx)
+
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ DxPhiHx @ self.inv_Z @ DxPhiHx @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y -= 2 * self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.irt2_X
+
+        work = self.irt2_Y @ mgrad.scnd_frechet(self.D2yxy_entr, UyxyYHxYUyxy, UyxyYHxYUyxy, U=self.Uyxy) @ self.rt2_Y @ self.inv_Z
+        dder3_Y += work + work.conj().T
+        dder3_Y -= mgrad.thrd_frechet(self.Dyxy, self.D2yxy_x2logx, 2*self.Dyxy**-1, self.irt2_Y @ self.Uyxy, self.UyxyYZYUyxy, UyxyYHxYUyxy, UyxyYHxYUyxy)
+
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ D2xxPhiHxHx @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y += self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.irt2_X
 
         out[0][:] += dder3_t * a
         out[1][:] += dder3_X * a
@@ -571,8 +738,6 @@ class Cone():
     def update_dder3_aux(self):
         assert not self.dder3_aux_updated
         assert self.hess_aux_updated
-
-        self.zi3 = self.zi2 * self.zi
 
         self.D1yxy_x2logx = mgrad.D1_f(self.Dyxy, self.Dyxy**2 * self.log_Dyxy, self.Dyxy + 2*self.entr_Dyxy)
         self.D2yxy_x2logx = mgrad.D2_f(self.Dyxy, self.D1yxy_x2logx, 3. + 2*self.log_Dyxy)
