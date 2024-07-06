@@ -40,10 +40,10 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-n_mat = 2
-m_mat = 4
+n_mat = 40
+m_mat = 80
 A_mat = 1 / (n_mat**0.25) * np.random.randn(n_mat, m_mat)
-k_mat = 2
+k_mat = 20
 eps   = 1e-6
 
 vn = sym.vec_dim(n_mat)
