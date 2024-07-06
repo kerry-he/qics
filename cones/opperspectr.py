@@ -4,7 +4,7 @@ from utils import mtxgrad   as mgrad
 from utils import symmetric as sym
 
 class Cone():
-    def __init__(self, n, hermitian=False):
+    def __init__(self, n, func, hermitian=False):
         # Dimension properties
         self.n  = n               # Side dimension of system
         self.nu = 1 + 2 * self.n  # Barrier parameter
@@ -27,6 +27,54 @@ class Cone():
         self.invhess_aux_aux_updated = False
         self.dder3_aux_updated       = False
         self.congr_aux_updated       = False
+
+        if func == 'log':
+            self.g   = lambda x : -np.log(x)
+            self.dg  = lambda x : -np.reciprocal(x)
+            self.d2g = lambda x :  np.reciprocal(x * x)
+            self.d3g = lambda x : -np.reciprocal(x * x * x) * 2.
+
+            self.xg   = lambda x : -x * np.log(x)
+            self.dxg  = lambda x : -np.log(x) - 1.
+            self.d2xg = lambda x : -np.reciprocal(x)
+            self.d3xg = lambda x :  np.reciprocal(x * x)
+
+            self.h   = lambda x :  x * np.log(x)
+            self.dh  = lambda x :  np.log(x) + 1.
+            self.d2h = lambda x :  np.reciprocal(x)
+            self.d3h = lambda x : -np.reciprocal(x * x)
+
+            self.xh   = lambda x :  x * x * np.log(x)
+            self.dxh  = lambda x :  2. * x * np.log(x) + x
+            self.d2xh = lambda x :  2. * np.log(x) + 3.
+            self.d3xh = lambda x :  2 * np.reciprocal(x)
+        elif isinstance(func, (int, float)):
+            alpha = func
+            if alpha > 0 and alpha < 1:
+                sgn = -1
+            elif (alpha > 1 and alpha < 2) or (alpha > -1 and alpha < 0):
+                sgn = 1
+
+            self.g   = lambda x : sgn * np.power(x, alpha)
+            self.dg  = lambda x : sgn * np.power(x, alpha - 1) * alpha
+            self.d2g = lambda x : sgn * np.power(x, alpha - 2) * (alpha * (alpha - 1))
+            self.d3g = lambda x : sgn * np.power(x, alpha - 3) * (alpha * (alpha - 1) * (alpha - 2))
+
+            self.xg   = lambda x : sgn * np.power(x, alpha + 1)
+            self.dxg  = lambda x : sgn * np.power(x, alpha    ) * (alpha + 1)
+            self.d2xg = lambda x : sgn * np.power(x, alpha - 1) * ((alpha + 1) * alpha)
+            self.d3xg = lambda x : sgn * np.power(x, alpha - 2) * ((alpha + 1) * alpha * (alpha - 1))            
+
+            beta     = 1. - alpha
+            self.h   = lambda x : sgn * np.power(x, beta)
+            self.dh  = lambda x : sgn * np.power(x, beta - 1) * beta
+            self.d2h = lambda x : sgn * np.power(x, beta - 2) * (beta * (beta - 1))
+            self.d3h = lambda x : sgn * np.power(x, beta - 3) * (beta * (beta - 1) * (beta - 2))
+
+            self.xh   = lambda x : sgn * np.power(x, beta + 1)
+            self.dxh  = lambda x : sgn * np.power(x, beta    ) * (beta + 1)
+            self.d2xh = lambda x : sgn * np.power(x, beta - 1) * ((beta + 1) * beta)
+            self.d3xh = lambda x : sgn * np.power(x, beta - 2) * ((beta + 1) * beta * (beta - 1))    
 
         return
     
@@ -70,6 +118,7 @@ class Cone():
         
         self.feas_updated = True
 
+        # Check that X and Y are PSD
         self.Dx, self.Ux = np.linalg.eigh(self.X)
         self.Dy, self.Uy = np.linalg.eigh(self.Y)
 
@@ -77,6 +126,8 @@ class Cone():
             self.feas = False
             return self.feas
         
+        # Construct (X^-1/2 Y X^-1/2) and (Y^-1/2 X Y^-1/2) 
+        # and double check they are also PSD (in case of numerical errors)
         rt2_Dx      = np.sqrt(self.Dx)
         rt4_X       = self.Ux * np.sqrt(rt2_Dx)
         irt4_X      = self.Ux / np.sqrt(rt2_Dx)
@@ -89,25 +140,22 @@ class Cone():
         self.rt2_Y  = rt4_Y @ rt4_Y.conj().T
         self.irt2_Y = irt4_Y @ irt4_Y.conj().T        
 
-        self.XYX = self.irt2_X @ self.Y @ self.irt2_X
-        self.YXY = self.irt2_Y @ self.X @ self.irt2_Y
+        XYX = self.irt2_X @ self.Y @ self.irt2_X
+        YXY = self.irt2_Y @ self.X @ self.irt2_Y
 
-        self.Dxyx, self.Uxyx = np.linalg.eigh(self.XYX)
-        self.Dyxy, self.Uyxy = np.linalg.eigh(self.YXY)
+        self.Dxyx, self.Uxyx = np.linalg.eigh(XYX)
+        self.Dyxy, self.Uyxy = np.linalg.eigh(YXY)
 
         if any(self.Dxyx <= 0) or any(self.Dyxy <= 0):
             self.feas = False
             return self.feas        
         
-        self.log_Dxyx  = np.log(self.Dxyx)
-        self.log_Dyxy  = np.log(self.Dyxy)
-        self.entr_Dxyx = self.Dxyx * self.log_Dxyx
-        self.entr_Dyxy = self.Dyxy * self.log_Dyxy
+        # Check that t > tr[X^0.5 g(X^-1/2 Y X^-1/2) X^0.5]
+        self.g_Dxyx  = self.g(self.Dxyx)
+        self.h_Dyxy  = self.h(self.Dyxy)
+        g_XYX  = (self.Uxyx * self.g_Dxyx) @ self.Uxyx.conj().T
 
-        self.log_XYX  = (self.Uxyx * self.log_Dxyx) @ self.Uxyx.conj().T
-        self.log_XYX  = (self.log_XYX + self.log_XYX.conj().T) * 0.5
-
-        self.z = self.t[0, 0] + lin.inp(self.X, self.log_XYX)
+        self.z = self.t[0, 0] - lin.inp(self.X, g_XYX)
 
         self.feas = (self.z > 0)
         return self.feas
@@ -121,27 +169,31 @@ class Cone():
         assert self.feas_updated
         assert not self.grad_updated
         
-        self.inv_Dx = np.reciprocal(self.Dx)
-        self.inv_Dy = np.reciprocal(self.Dy)
-
-        inv_X_rt2 = self.Ux * np.sqrt(self.inv_Dx)
+        # Compute X^-1 and Y^-1
+        inv_Dx = np.reciprocal(self.Dx)
+        inv_X_rt2 = self.Ux * np.sqrt(inv_Dx)
         self.inv_X = inv_X_rt2 @ inv_X_rt2.conj().T
-        inv_Y_rt2 = self.Uy * np.sqrt(self.inv_Dy)
-        self.inv_Y = inv_Y_rt2 @ inv_Y_rt2.conj().T        
 
-        self.D1yxy_entr = mgrad.D1_entr(self.Dyxy, self.log_Dyxy, self.entr_Dyxy)
-        self.D1xyx_log  = mgrad.D1_log(self.Dxyx, self.log_Dxyx)
+        inv_Dy = np.reciprocal(self.Dy)
+        inv_Y_rt2 = self.Uy * np.sqrt(inv_Dy)
+        self.inv_Y = inv_Y_rt2 @ inv_Y_rt2.conj().T
 
+        # Precompute useful expressions
         self.UyxyYUyxy = self.Uyxy.conj().T @ self.Y @ self.Uyxy
         self.UxyxXUxyx = self.Uxyx.conj().T @ self.X @ self.Uxyx
 
         self.irt2Y_Uyxy = self.irt2_Y @ self.Uyxy
         self.irt2X_Uxyx = self.irt2_X @ self.Uxyx
 
-        self.zi    =  np.reciprocal(self.z)
-        self.DPhiX =  self.irt2_Y @ self.Uyxy @ (self.D1yxy_entr * self.UyxyYUyxy) @ self.Uyxy.conj().T @ self.irt2_Y
+        self.zi =  np.reciprocal(self.z)
+
+        # Compute derivatives of trace operator perspective
+        self.D1yxy_h = mgrad.D1_f(self.Dyxy, self.h_Dyxy, self.dh(self.Dyxy))
+        self.D1xyx_g = mgrad.D1_f(self.Dxyx, self.g_Dxyx, self.dg(self.Dxyx))
+
+        self.DPhiX = self.irt2Y_Uyxy @ (self.D1yxy_h * self.UyxyYUyxy) @ self.irt2Y_Uyxy.conj().T
         self.DPhiX = (self.DPhiX + self.DPhiX.conj().T) * 0.5
-        self.DPhiY = -self.irt2_X @ self.Uxyx @ (self.D1xyx_log  * self.UxyxXUxyx) @ self.Uxyx.conj().T @ self.irt2_X
+        self.DPhiY = self.irt2X_Uxyx @ (self.D1xyx_g  * self.UxyxXUxyx) @ self.irt2X_Uxyx.conj().T
         self.DPhiY = (self.DPhiY + self.DPhiY.conj().T) * 0.5
 
         self.grad = [
@@ -168,30 +220,28 @@ class Cone():
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
         if not self.invhess_aux_updated:
-            self.update_invhessprod_aux()            
+            self.update_invhessprod_aux()
 
         # Computes Hessian product of the QRE barrier with a single vector (Ht, Hx, Hy)
         # See hess_congr() for additional comments
 
         (Ht, Hx, Hy) = H
 
-        UyxyYHxYUyxy = self.Uyxy.conj().T @ self.irt2_Y @ Hx @ self.irt2_Y @ self.Uyxy
-        UxyxXHyXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hy @ self.irt2_X @ self.Uxyx
-        UxyxXHxXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hx @ self.irt2_X @ self.Uxyx
+        UyxyYHxYUyxy = self.irt2Y_Uyxy.conj().T @ Hx @ self.irt2Y_Uyxy
+        UxyxXHyXUxyx = self.irt2X_Uxyx.conj().T @ Hy @ self.irt2X_Uxyx
 
         # Hessian product of relative entropy
-        D2PhiXXH =  mgrad.scnd_frechet(self.D2yxy_entr_UYU, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
+        D2PhiXXH = mgrad.scnd_frechet(self.D2yxy_h, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
 
-        D2PhiXYH  = -self.irt2_X @ self.Uxyx @ (self.D1xyx_log * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
+        D2PhiXYH  = self.irt2_X @ self.Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
         D2PhiXYH += D2PhiXYH.conj().T
-        D2PhiXYH += mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+        D2PhiXYH -= mgrad.scnd_frechet(self.D2xyx_xg, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
 
-        work      = self.Uxyx.conj().T @ self.rt2_X @ Hx @ self.irt2_X @ self.Uxyx
-        work     += work.conj().T
-        D2PhiYXH  = -self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.irt2_X
-        D2PhiYXH += mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHxXUxyx, U=self.irt2_X @ self.Uxyx)
+        D2PhiYXH  = self.irt2_Y @ self.Uyxy @ (self.D1yxy_h * UyxyYHxYUyxy) @ self.Uyxy.conj().T @ self.rt2_Y
+        D2PhiYXH += D2PhiYXH.conj().T
+        D2PhiYXH -= mgrad.scnd_frechet(self.D2yxy_xh, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
 
-        D2PhiYYH  = -mgrad.scnd_frechet(self.D2xyx_log_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+        D2PhiYYH = mgrad.scnd_frechet(self.D2xyx_g, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
         
         # Hessian product of barrier function
         out[0][:] = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
@@ -288,49 +338,46 @@ class Cone():
         UxyxXHxXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hx @ self.irt2_X @ self.Uxyx
         UyxyYHyYUyxy = self.Uyxy.conj().T @ self.irt2_Y @ Hy @ self.irt2_Y @ self.Uyxy
 
-        # Hessian product of relative entropy
-        D2PhiXXH =  mgrad.scnd_frechet(self.D2yxy_entr_UYU, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
+        # Hessian products of Phi
+        D2PhiXXH = mgrad.scnd_frechet(self.D2yxy_h, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
 
-        D2PhiXYH  = -self.irt2_X @ self.Uxyx @ (self.D1xyx_log * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
+        D2PhiXYH  = self.irt2_X @ self.Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
         D2PhiXYH += D2PhiXYH.conj().T
-        D2PhiXYH += mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+        D2PhiXYH -= mgrad.scnd_frechet(self.D2xyx_xg, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
 
-        work      = self.Uxyx.conj().T @ self.rt2_X @ Hx @ self.irt2_X @ self.Uxyx
-        work     += work.conj().T
-        D2PhiYXH  = -self.irt2_X @ self.Uxyx @ (self.D1xyx_log * work) @ self.Uxyx.conj().T @ self.irt2_X
-        D2PhiYXH += mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHxXUxyx, U=self.irt2_X @ self.Uxyx)
+        D2PhiYXH  = self.irt2_Y @ self.Uyxy @ (self.D1yxy_h * UyxyYHxYUyxy) @ self.Uyxy.conj().T @ self.rt2_Y
+        D2PhiYXH += D2PhiYXH.conj().T
+        D2PhiYXH -= mgrad.scnd_frechet(self.D2yxy_xh, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
 
-        D2PhiYYH  = -mgrad.scnd_frechet(self.D2xyx_log_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+        D2PhiYYH = mgrad.scnd_frechet(self.D2xyx_g, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
 
         D2PhiXHH = lin.inp(Hx, D2PhiXXH + D2PhiXYH)
         D2PhiYHH = lin.inp(Hy, D2PhiYXH + D2PhiYYH)
 
         # Quantum relative entropy third order derivatives
-        # X: XX XY YX YY
-        D3PhiXXX = mgrad.thrd_frechet(self.Dyxy, self.D2yxy_entr, -self.Dyxy**-2, self.irt2_Y @ self.Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy, UyxyYHxYUyxy)
+        # Second derivatives of DxPhi
+        D3PhiXXX = mgrad.thrd_frechet(self.Dyxy, self.D2yxy_h, self.d3h(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy, UyxyYHxYUyxy)
 
-        work2     = self.Uyxy.conj().T @ self.rt2_Y @ Hy @ self.irt2_Y @ self.Uyxy
-        work2    += work2.conj().T
-        D3PhiXXY  = mgrad.scnd_frechet(self.D2yxy_entr, work2, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
-        D3PhiXXY -= mgrad.thrd_frechet(self.Dyxy, self.D2yxy_x2logx, 2*self.Dyxy**-1, self.irt2_Y @ self.Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy, UyxyYHyYUyxy)
+        work      = self.Uyxy.conj().T @ self.rt2_Y @ Hy @ self.irt2Y_Uyxy
+        D3PhiXXY  = mgrad.scnd_frechet(self.D2yxy_h, work + work.conj().T, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
+        D3PhiXXY -= mgrad.thrd_frechet(self.Dyxy, self.D2yxy_xh, self.d3xh(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy, UyxyYHyYUyxy)
         D3PhiXYX  = D3PhiXXY
 
-        D3PhiXYY  = -self.irt2_X @ mgrad.scnd_frechet(self.D2xyx_log, UxyxXHyXUxyx, UxyxXHyXUxyx, U=self.Uxyx) @ self.rt2_X
+        D3PhiXYY  = self.irt2_X @ mgrad.scnd_frechet(self.D2xyx_g, UxyxXHyXUxyx, UxyxXHyXUxyx, U=self.Uxyx) @ self.rt2_X
         D3PhiXYY += D3PhiXYY.conj().T
-        D3PhiXYY += mgrad.thrd_frechet(self.Dxyx, self.D2xyx_entr, -self.Dxyx**-2, self.irt2_X @ self.Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx, UxyxXHyXUxyx)
+        D3PhiXYY -= mgrad.thrd_frechet(self.Dxyx, self.D2xyx_xg, self.d3xg(self.Dxyx), self.irt2X_Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx, UxyxXHyXUxyx)
 
-        
-        # Y: YY YX XY XX
-        D3PhiYYY = -mgrad.thrd_frechet(self.Dxyx, self.D2xyx_log, 2*self.Dxyx**-3, self.irt2_X @ self.Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx, UxyxXHyXUxyx)
+        # Second derivatives of DyPhi
+        D3PhiYYY = mgrad.thrd_frechet(self.Dxyx, self.D2xyx_g, self.d3g(self.Dxyx), self.irt2X_Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx, UxyxXHyXUxyx)
 
-        D3PhiYYX  = -mgrad.scnd_frechet(self.D2xyx_log, work, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
-        D3PhiYYX += mgrad.thrd_frechet(self.Dxyx, self.D2xyx_entr, -self.Dxyx**-2, self.irt2_X @ self.Uxyx, self.UxyxXUxyx, UxyxXHxXUxyx, UxyxXHyXUxyx)
+        work      = self.Uxyx.conj().T @ self.rt2_X @ Hx @ self.irt2X_Uxyx
+        D3PhiYYX  = mgrad.scnd_frechet(self.D2xyx_g, work + work.conj().T, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
+        D3PhiYYX -= mgrad.thrd_frechet(self.Dxyx, self.D2xyx_xg, self.d3xg(self.Dxyx), self.irt2X_Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx, UxyxXHxXUxyx)
         D3PhiYXY  = D3PhiYYX
     
-        D3PhiYXX  = self.irt2_Y @ mgrad.scnd_frechet(self.D2yxy_entr, UyxyYHxYUyxy, UyxyYHxYUyxy, U=self.Uyxy) @ self.rt2_Y
+        D3PhiYXX  = self.irt2_Y @ mgrad.scnd_frechet(self.D2yxy_h, UyxyYHxYUyxy, UyxyYHxYUyxy, U=self.Uyxy) @ self.rt2_Y
         D3PhiYXX += D3PhiYXX.conj().T
-        D3PhiYXX -= mgrad.thrd_frechet(self.Dyxy, self.D2yxy_x2logx, 2*self.Dyxy**-1, self.irt2_Y @ self.Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy, UyxyYHxYUyxy)
-
+        D3PhiYXX -= mgrad.thrd_frechet(self.Dyxy, self.D2yxy_xh, self.d3xh(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy, UyxyYHxYUyxy)
         
         # Third derivatives of barrier
         dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhiXHH + D2PhiYHH)
@@ -389,15 +436,13 @@ class Cone():
         assert not self.hess_aux_updated
         assert self.grad_updated
 
-        self.D1xyx_entr = mgrad.D1_entr(self.Dxyx, self.log_Dxyx, self.entr_Dxyx)
+        self.D1yxy_xh = mgrad.D1_f(self.Dyxy, self.xh(self.Dyxy), self.dxh(self.Dyxy))
+        self.D1xyx_xg = mgrad.D1_f(self.Dxyx, self.xg(self.Dxyx), self.dxg(self.Dxyx))
 
-        self.D2xyx_entr = mgrad.D2_entr(self.Dxyx, self.D1xyx_entr)
-        self.D2yxy_entr = mgrad.D2_entr(self.Dyxy, self.D1yxy_entr)
-        self.D2xyx_log  = mgrad.D2_log(self.Dxyx, self.D1xyx_log)
-
-        self.D2xyx_entr_UXU = self.D2xyx_entr * self.UxyxXUxyx
-        self.D2yxy_entr_UYU = self.D2yxy_entr * self.UyxyYUyxy
-        self.D2xyx_log_UXU  = self.D2xyx_log  * self.UxyxXUxyx
+        self.D2yxy_h  = mgrad.D2_f(self.Dyxy, self.D1yxy_h, self.d2h(self.Dyxy))
+        self.D2xyx_g  = mgrad.D2_f(self.Dxyx, self.D1xyx_g, self.d2g(self.Dxyx))
+        self.D2yxy_xh = mgrad.D2_f(self.Dyxy, self.D1yxy_xh, self.d2xh(self.Dyxy))
+        self.D2xyx_xg = mgrad.D2_f(self.Dxyx, self.D1xyx_xg, self.d2xg(self.Dxyx))
 
         # Preparing other required variables
         self.zi2 = self.zi * self.zi
@@ -425,9 +470,9 @@ class Cone():
         Hyy = np.zeros((self.vn, self.vn))
 
         # Make Hxx block
-        # D2PhiXXH  = self.zi * mgrad.scnd_frechet(self.D2yxy_entr_UYU, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
+        # D2PhiXXH  = self.zi * mgrad.scnd_frechet(self.D2yxy_h, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
         lin.congr(self.work8, self.irt2Y_Uyxy.conj().T, self.E, work=self.work7)
-        mgrad.scnd_frechet_multi(self.work5, self.D2yxy_entr_UYU, self.work8, U=self.irt2Y_Uyxy, work1=self.work6, work2=self.work7, work3=self.work4)
+        mgrad.scnd_frechet_multi(self.work5, self.D2yxy_h * self.UyxyYUyxy, self.work8, U=self.irt2Y_Uyxy, work1=self.work6, work2=self.work7, work3=self.work4)
         self.work5 *= self.zi
 
         # D2PhiXXH += self.inv_X @ Hx @ self.inv_X
@@ -443,20 +488,20 @@ class Cone():
 
 
         # Make Hxy block
-        # D2PhiXYH += self.zi * mgrad.scnd_frechet(self.D2xyx_entr_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+        # D2PhiXYH -= self.zi * mgrad.scnd_frechet(self.D2xyx_xg, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
         lin.congr(self.work8, self.irt2X_Uxyx.conj().T, self.E, work=self.work7)
-        mgrad.scnd_frechet_multi(self.work5, self.D2xyx_entr_UXU, self.work8, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
+        mgrad.scnd_frechet_multi(self.work5, self.D2xyx_xg * self.UxyxXUxyx, self.work8, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
 
-        # D2PhiXYH  = -self.zi * self.irt2_X @ self.Uxyx @ (self.D1xyx_log * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
+        # D2PhiXYH  = self.zi * self.irt2_X @ self.Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
         # D2PhiXYH += D2PhiXYH.conj().T
-        self.work8 *= self.D1xyx_log
+        self.work8 *= self.D1xyx_g
         lin.congr(self.work6, self.irt2X_Uxyx, self.work8, work=self.work7, B=self.rt2_X @ self.Uxyx)
         np.add(self.work6, self.work6.conj().transpose(0, 2, 1), out=self.work7)
         
-        self.work5 -= self.work7
-        self.work5 *= self.zi
+        self.work7 -= self.work5
+        self.work7 *= self.zi
 
-        Hyx  = self.work5.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
+        Hyx  = self.work7.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
         Hyx *= self.scale
 
         # D2PhiXYH += self.zi2 * self.DPhiX * lin.inp(self.DPhiY, Hy)
@@ -465,19 +510,19 @@ class Cone():
 
 
         # Make Hyy block
-        # D2PhiYYH  = -self.zi * mgrad.scnd_frechet(self.D2xyx_log_UXU, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+        # D2PhiYYH  = self.zi * mgrad.scnd_frechet(self.D2xyx_g, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
         lin.congr(self.work8, self.irt2X_Uxyx.conj().T, self.E, work=self.work7)
-        mgrad.scnd_frechet_multi(self.work5, self.D2xyx_log_UXU, self.work8, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
+        mgrad.scnd_frechet_multi(self.work5, self.D2xyx_g * self.UxyxXUxyx, self.work8, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
         self.work5 *= self.zi
 
-        # D2PhiXXH += self.inv_Y @ Hy @ self.inv_Y
+        # D2PhiYYH += self.inv_Y @ Hy @ self.inv_Y
         lin.congr(self.work8, self.inv_Y, self.E, work=self.work7)
-        self.work8 -= self.work5
+        self.work8 += self.work5
 
         Hyy  = self.work8.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
         Hyy *= self.scale
 
-        # D2PhiXXH += self.zi2 * self.DPhiY * lin.inp(self.DPhiY, Hy)
+        # D2PhiYYH += self.zi2 * self.DPhiY * lin.inp(self.DPhiY, Hy)
         Hyy += np.outer(DPhiY_vec * self.zi, DPhiY_vec * self.zi)
 
         # Construct Hessian and factorize
@@ -490,7 +535,7 @@ class Cone():
         self.hess += self.hess.T
         self.hess *= 0.5
 
-        self.hess_fact = lin.fact(self.hess)
+        self.hess_fact = lin.fact(self.hess.copy())
         self.invhess_aux_updated = True
 
         return
@@ -518,7 +563,7 @@ class Cone():
             self.scale = np.array([1 if i==j else np.sqrt(2.) for j in range(self.n) for i in range(j + 1)])
 
         rt2 = np.sqrt(0.5)
-        self.E = np.zeros((self.vn, self.n, self.n))
+        self.E = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
         k = 0
         for j in range(self.n):
             for i in range(j):
@@ -555,9 +600,6 @@ class Cone():
         assert self.hess_aux_updated
 
         self.zi3 = self.zi2 * self.zi
-
-        self.D1yxy_x2logx = mgrad.D1_f(self.Dyxy, self.Dyxy**2 * self.log_Dyxy, self.Dyxy + 2*self.entr_Dyxy)
-        self.D2yxy_x2logx = mgrad.D2_f(self.Dyxy, self.D1yxy_x2logx, 3. + 2*self.log_Dyxy)
 
         self.dder3_aux_updated = True
 
