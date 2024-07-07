@@ -385,7 +385,6 @@ class Cone():
 
         return out
     
-    @profile
     def invhess_congr(self, A):
         assert self.grad_updated
         if not self.hess_aux_updated:
@@ -407,22 +406,19 @@ class Cone():
         # ====================================================================
         # Inverse Hessian products with respect to (X, Y)
         # ====================================================================
-        # work = self.rt2Y_Uyxy.conj().T @ Ht @ self.rt2Y_Uyxy
-        # Wx = Hx + self.irt2Y_Uyxy @ (self.D1yxy_h * work) @ self.irt2Y_Uyxy.conj().T        
+        # Compute Wx   
         lin.congr(self.work0, self.rt2Y_Uyxy.conj().T, self.At, work=self.work2)
         self.work0 *= self.D1yxy_h
         lin.congr(self.work1, self.irt2Y_Uyxy, self.work0, work=self.work2)
         self.work1 += self.Ax
 
-        # work = self.rt2X_Uxyx.conj().T @ Ht @ self.rt2X_Uxyx
-        # Wy = Hy + self.irt2X_Uxyx @ (self.D1xyx_g * work) @ self.irt2X_Uxyx.conj().T
+        # Compute Wy
         lin.congr(self.work3, self.rt2X_Uxyx.conj().T, self.At, work=self.work2)
         self.work3 *= self.D1xyx_g
         lin.congr(self.work0, self.irt2X_Uxyx, self.work3, work=self.work2)
         self.work0 += self.Ay
 
-        # vec = np.vstack((sym.mat_to_vec(Wx, hermitian=self.hermitian), sym.mat_to_vec(Wy, hermitian=self.hermitian)))
-        # sol = lin.fact_solve(self.hess_fact, vec)
+        # Solve linear system (X, Y) = M \ (Wx, Wy)
         self.work9[:self.vn] = self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices].T
         self.work9[self.vn:] = self.work0.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices].T
         self.work9 *= np.hstack((self.scale, self.scale)).reshape(-1, 1)
@@ -432,19 +428,17 @@ class Cone():
         # Multiply Axy (H A')xy
         out = self.A_compact @ sol
 
-        # Expand truncated real vectors back into matrices
-        sol[self.diag_indices] *= 0.5
-        sol[self.diag_indices + self.vn] *= 0.5
-        sol /= np.hstack((self.scale, self.scale)).reshape(-1, 1)
-
         # ====================================================================
         # Inverse Hessian products with respect to Z
         # ====================================================================
-        # outT = self.Z @ Ht @ self.Z 
+        # Compute Z Ht Z
         lin.congr(self.work0, self.Z, self.At, work=self.work3)
        
-        # work  = self.irt2Y_Uyxy.conj().T @ out[1] @ self.irt2Y_Uyxy
-        # outT += self.rt2Y_Uyxy @ (self.D1yxy_h * work) @ self.rt2Y_Uyxy.conj().T
+        # Compute DxPhi[X]
+        # Recover X as matrices from compact vectors
+        sol[self.diag_indices] *= 0.5
+        sol[self.diag_indices + self.vn] *= 0.5
+        sol /= np.hstack((self.scale, self.scale)).reshape(-1, 1)                
         self.work1.fill(0.)
         self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices] = sol[:self.vn].T
         self.work1 += self.work1.conj().transpose((0, 2, 1))
@@ -455,8 +449,8 @@ class Cone():
         
         self.work0 += self.work1
 
-        # work  = self.irt2X_Uxyx.conj().T @ out[2] @ self.irt2X_Uxyx
-        # outT += self.rt2X_Uxyx @ (self.D1xyx_g * work) @ self.rt2X_Uxyx.conj().T
+        # Compute DyPhi[Y]
+        # Recover Y as matrices from compact vectors
         self.work1.fill(0.)
         self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices] = sol[self.vn:].T
         self.work1 += self.work1.conj().transpose((0, 2, 1))
@@ -733,57 +727,47 @@ class Cone():
             self.update_invhessprod_aux_aux()
 
         # Precompute and factorize the Schur complement matrix
-        #     S = (-1/z Sy + Dy^-1 kron Dy^-1)
-        #         - [1/z^2 log^[1](Dy) (Uy'Ux kron Uy'Ux) [(1/z log + inv)^[1](Dx)]^-1 (Ux'Uy kron Ux'Uy) log^[1](Dy)]
-        # where
-        #     (Sy)_ij,kl = delta_kl (Uy' X Uy)_ij log^[2]_ijl(Dy) + delta_ij (Uy' X Uy)_kl log^[2]_jkl(Dy)        
-        # which we will need to solve linear systems with the Hessian of our barrier function
+        #     M = [ D2xxPhi'[Z^-1]  D2xyPhi'[Z^-1] ] + [ X^1 kron X^-1               ]
+        #         [ D2yxPhi'[Z^-1]  D2yyPhi'[Z^-1] ]   [               Y^1 kron Y^-1 ]
 
-
-        # Make Hxx block
-        # D2PhiXXH  = mgrad.scnd_frechet(self.D2yxy_h, self.UyxyYZYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
+        # Make Hxx = (D2xxPhi'[Z^-1] + X^1 kron X^-1) block
+        # D2xxPhi'[Z^-1]
         lin.congr(self.work8, self.irt2Y_Uyxy.conj().T, self.E, work=self.work6)
         mgrad.scnd_frechet_multi(self.work5, self.D2yxy_h, self.work8, self.UyxyYZYUyxy, U=self.irt2Y_Uyxy, work1=self.work6, work2=self.work7, work3=self.work4)
-
-        # D2PhiXXH += self.inv_X @ Hx @ self.inv_X
+        # X^1 kron X^-1
         lin.congr(self.work8, self.inv_X, self.E, work=self.work7)
         self.work8 += self.work5
-
+        # Vectorize matrices as compact vectors
         Hxx  = self.work8.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
         Hxx *= self.scale
 
-
-        # Make Hyy block
-        # D2PhiYYH  = mgrad.scnd_frechet(self.D2xyx_g, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
+        # Make Hyy = (D2yyPhi'[Z^-1] + Y^1 kron Y^-1) block
+        # D2yyPhi'[Z^-1]
         lin.congr(self.work8, self.irt2X_Uxyx.conj().T, self.E, work=self.work7)
         mgrad.scnd_frechet_multi(self.work5, self.D2xyx_g, self.work8, self.UxyxXZXUxyx, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
-
-        # D2PhiYYH += self.inv_Y @ Hy @ self.inv_Y
+        # Y^1 kron Y^-1
         lin.congr(self.work6, self.inv_Y, self.E, work=self.work7)
         self.work6 += self.work5
-
+        # Vectorize matrices as compact vectors
         Hyy  = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
         Hyy *= self.scale
 
-
-        # Make Hxy block
-        # D2PhiXYH -= mgrad.scnd_frechet(self.D2xyx_xg, self.UxyxXZXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
+        # Make Hyx = D2yxPhi'[Z^-1] block
+        # Make -D2(xg) component
         mgrad.scnd_frechet_multi(self.work5, self.D2xyx_xg, self.work8, self.UxyxXZXUxyx, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
-
-        # D2PhiXYH  = self.irt2_X @ self.Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z
-        # D2PhiXYH += D2PhiXYH.conj().T
+        # Make Dg + Dg' component
         self.work8 *= self.D1xyx_g
         lin.congr(self.work6, self.irt2X_Uxyx, self.work8, work=self.work7, B=self.inv_Z @ self.rt2X_Uxyx)
         np.add(self.work6, self.work6.conj().transpose(0, 2, 1), out=self.work7)
-        
         self.work7 -= self.work5
-
+        # Vectorize matrices as compact vectors
         Hyx  = self.work7.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
         Hyx *= self.scale
 
         # Construct Hessian and factorize
         Hxx = (Hxx + Hxx.conj().T) * 0.5
         Hyy = (Hyy + Hyy.conj().T) * 0.5
+
         self.hess[:self.vn, :self.vn] = Hxx
         self.hess[self.vn:, self.vn:] = Hyy
         self.hess[self.vn:, :self.vn] = Hyx
