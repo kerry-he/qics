@@ -11,5 +11,6 @@ __all__ = [
     "quantmutualinf",
     "quantkeydist",
     "oplogrelentr",
-    "opperspectr"
+    "opperspectr",
+    "opperspecepi"
     ]

@@ -302,7 +302,7 @@ class Cone():
         # The inverse Hessian product applied on (Ht, Hx, Hy) for the QRE barrier is 
         #     (X, Y) =  M \ (Wx, Wy)
         #         t  =  z^2 Ht + <DPhi(X, Y), (X, Y)>
-        # where (Wx, Wy) = [(Hx, Hy) + Ht DPhi(X, Y)]
+        # where (Wx, Wy) = [(Hx, Hy) + Ht DPhi(X, Y)],
         #     M = Vxy [ 1/z log^[1](Dx) + Dx^-1 kron Dx^-1  -1/z (Ux'Uy kron Ux'Uy) log^[1](Dy) ]
         #             [-1/z log^[1](Dy) (Uy'Ux kron Uy'Ux)      -1/z Sy + Dy^-1 kron Dy^-1      ] Vxy'
         # and 

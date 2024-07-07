@@ -270,7 +270,7 @@ def thrd_frechet(D, D2, d3f_D, U, H1, H2, H3=None):
                         temp += H2[i, k] * H2[k, l] * H1[l, j] 
                         out[i, j] = out[i, j] + D3_ij[k, l] * temp
                 
-                out[j, i] = out[i, j]
+                out[j, i] = np.conj(out[i, j])
 
         out *= 2
 
@@ -290,7 +290,7 @@ def thrd_frechet(D, D2, d3f_D, U, H1, H2, H3=None):
                         temp += H3[i, k] * H2[k, l] * H1[l, j]
                         out[i, j] = out[i, j] + D3_ij[k, l] * temp
                 
-                out[j, i] = out[i, j]
+                out[j, i] = np.conj(out[i, j])
 
     return U @ out @ U.conj().T
 

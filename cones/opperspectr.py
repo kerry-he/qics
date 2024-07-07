@@ -167,7 +167,7 @@ class Cone():
 
         if any(self.Dxyx <= 0) or any(self.Dyxy <= 0):
             self.feas = False
-            return self.feas        
+            return self.feas
         
         # Check that t > tr[X^0.5 g(X^-1/2 Y X^-1/2) X^0.5]
         self.g_Dxyx  = self.g(self.Dxyx)
@@ -334,7 +334,7 @@ class Cone():
         # The inverse Hessian product applied on (Ht, Hx, Hy) for the QRE barrier is 
         #     (X, Y) =  M \ (Wx, Wy)
         #         t  =  z^2 Ht + <DPhi(X, Y), (X, Y)>
-        # where (Wx, Wy) = [(Hx, Hy) + Ht DPhi(X, Y)] and
+        # where (Wx, Wy) = (Hx, Hy) + Ht DPhi(X, Y) and
         #     M = 1/z [ D2xxPhi D2xyPhi ] + [ X^1 kron X^-1               ]
         #             [ D2yxPhi D2yyPhi ]   [               Y^1 kron Y^-1 ]
 

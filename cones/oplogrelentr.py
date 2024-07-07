@@ -186,8 +186,6 @@ class Cone():
         assert self.grad_updated
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
-        if not self.invhess_aux_updated:
-            self.update_invhessprod_aux()
 
         # Computes Hessian product of the QRE barrier with a single vector (Ht, Hx, Hy)
         # See hess_congr() for additional comments

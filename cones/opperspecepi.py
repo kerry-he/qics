@@ -1,0 +1,881 @@
+import numpy as np
+import scipy as sp
+from utils import linear    as lin
+from utils import mtxgrad   as mgrad
+from utils import symmetric as sym
+
+class Cone():
+    def __init__(self, n, func, hermitian=False):
+        # Dimension properties
+        self.n  = n           # Side dimension of system
+        self.nu = 3 * self.n  # Barrier parameter
+
+        self.hermitian = hermitian                      # Hermitian or symmetric vector space
+        self.vn = n*n if hermitian else n*(n+1)//2      # Compact dimension of system
+
+        self.dim   = [n*n, n*n, n*n]   if (not hermitian) else [2*n*n, 2*n*n, 2*n*n]
+        self.type  = ['s', 's', 's'] if (not hermitian) else ['h', 'h', 'h']
+        self.dtype = np.float64      if (not hermitian) else np.complex128
+
+        self.idx_T = slice(0, self.dim[0])
+        self.idx_X = slice(self.dim[0], 2 * self.dim[0])
+        self.idx_Y = slice(2 * self.dim[0], 3 * self.dim[0])
+
+        # Get LAPACK operators
+        self.X = np.eye(self.n, dtype=self.dtype)
+
+        self.cho_fact  = sp.linalg.lapack.get_lapack_funcs("potrf", (self.X,))
+        self.cho_inv   = sp.linalg.lapack.get_lapack_funcs("trtri", (self.X,))
+
+        # Update flags
+        self.feas_updated            = False
+        self.grad_updated            = False
+        self.hess_aux_updated        = False
+        self.invhess_aux_updated     = False
+        self.invhess_aux_aux_updated = False
+        self.dder3_aux_updated       = False
+        self.congr_aux_updated       = False
+
+        if func == 'log':
+            self.g   = lambda x : -np.log(x)
+            self.dg  = lambda x : -np.reciprocal(x)
+            self.d2g = lambda x :  np.reciprocal(x * x)
+            self.d3g = lambda x : -np.reciprocal(x * x * x) * 2.
+
+            self.xg   = lambda x : -x * np.log(x)
+            self.dxg  = lambda x : -np.log(x) - 1.
+            self.d2xg = lambda x : -np.reciprocal(x)
+            self.d3xg = lambda x :  np.reciprocal(x * x)
+
+            self.h   = lambda x :  x * np.log(x)
+            self.dh  = lambda x :  np.log(x) + 1.
+            self.d2h = lambda x :  np.reciprocal(x)
+            self.d3h = lambda x : -np.reciprocal(x * x)
+
+            self.xh   = lambda x :  x * x * np.log(x)
+            self.dxh  = lambda x :  2. * x * np.log(x) + x
+            self.d2xh = lambda x :  2. * np.log(x) + 3.
+            self.d3xh = lambda x :  2 * np.reciprocal(x)
+        elif isinstance(func, (int, float)):
+            alpha = func
+            if alpha > 0 and alpha < 1:
+                sgn = -1
+            elif (alpha > 1 and alpha < 2) or (alpha > -1 and alpha < 0):
+                sgn = 1
+
+            self.g   = lambda x : sgn * np.power(x, alpha)
+            self.dg  = lambda x : sgn * np.power(x, alpha - 1) * alpha
+            self.d2g = lambda x : sgn * np.power(x, alpha - 2) * (alpha * (alpha - 1))
+            self.d3g = lambda x : sgn * np.power(x, alpha - 3) * (alpha * (alpha - 1) * (alpha - 2))
+
+            self.xg   = lambda x : sgn * np.power(x, alpha + 1)
+            self.dxg  = lambda x : sgn * np.power(x, alpha    ) * (alpha + 1)
+            self.d2xg = lambda x : sgn * np.power(x, alpha - 1) * ((alpha + 1) * alpha)
+            self.d3xg = lambda x : sgn * np.power(x, alpha - 2) * ((alpha + 1) * alpha * (alpha - 1))            
+
+            beta     = 1. - alpha
+            self.h   = lambda x : sgn * np.power(x, beta)
+            self.dh  = lambda x : sgn * np.power(x, beta - 1) * beta
+            self.d2h = lambda x : sgn * np.power(x, beta - 2) * (beta * (beta - 1))
+            self.d3h = lambda x : sgn * np.power(x, beta - 3) * (beta * (beta - 1) * (beta - 2))
+
+            self.xh   = lambda x : sgn * np.power(x, beta + 1)
+            self.dxh  = lambda x : sgn * np.power(x, beta    ) * (beta + 1)
+            self.d2xh = lambda x : sgn * np.power(x, beta - 1) * ((beta + 1) * beta)
+            self.d3xh = lambda x : sgn * np.power(x, beta - 2) * ((beta + 1) * beta * (beta - 1))    
+
+        if self.hermitian:
+            self.diag_indices = np.append(0, np.cumsum([i for i in range(3, 2*self.n+1, 2)]))
+            self.triu_indices = np.empty(self.n*self.n, dtype=int)
+            self.scale        = np.empty(self.n*self.n)
+            k = 0
+            for j in range(self.n):
+                for i in range(j):
+                    self.triu_indices[k]     = 2 * (j + i*self.n)
+                    self.triu_indices[k + 1] = 2 * (j + i*self.n) + 1
+                    self.scale[k:k+2]        = np.sqrt(2.)
+                    k += 2
+                self.triu_indices[k] = 2 * (j + j*self.n)
+                self.scale[k]        = 1.
+                k += 1
+        else:
+            self.diag_indices = np.append(0, np.cumsum([i for i in range(2, self.n+1, 1)]))
+            self.triu_indices = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
+            self.scale = np.array([1 if i==j else np.sqrt(2.) for j in range(self.n) for i in range(j + 1)])
+
+        return
+    
+    def get_init_point(self, out):
+        (t0, x0, y0) = get_central_ray_relentr(self.n)
+
+        point = [
+            np.eye(self.n, dtype=self.dtype) * t0 / self.n,
+            np.eye(self.n, dtype=self.dtype) * x0,
+            np.eye(self.n, dtype=self.dtype) * y0,
+        ]
+
+        self.set_point(point, point)
+
+        out[0][:] = point[0]
+        out[1][:] = point[1]
+        out[2][:] = point[2]
+
+        return out
+    
+    def set_point(self, point, dual, a=True):
+        self.T = point[0] * a
+        self.X = point[1] * a
+        self.Y = point[2] * a
+
+        self.T_d = dual[0] * a
+        self.X_d = dual[1] * a
+        self.Y_d = dual[2] * a
+
+        self.feas_updated        = False
+        self.grad_updated        = False
+        self.hess_aux_updated    = False
+        self.invhess_aux_updated = False
+        self.dder3_aux_updated   = False
+
+        return
+    
+    def get_feas(self):
+        if self.feas_updated:
+            return self.feas
+        
+        self.feas_updated = True
+
+        # Check that X and Y are PSD
+        self.Dx, self.Ux = np.linalg.eigh(self.X)
+        self.Dy, self.Uy = np.linalg.eigh(self.Y)
+
+        if any(self.Dx <= 0) or any(self.Dy <= 0):
+            self.feas = False
+            return self.feas
+        
+        # Construct (X^-1/2 Y X^-1/2) and (Y^-1/2 X Y^-1/2) 
+        # and double check they are also PSD (in case of numerical errors)
+        rt2_Dx      = np.sqrt(self.Dx)
+        rt4_X       = self.Ux * np.sqrt(rt2_Dx)
+        irt4_X      = self.Ux / np.sqrt(rt2_Dx)
+        self.rt2_X  = rt4_X @ rt4_X.conj().T
+        self.irt2_X = irt4_X @ irt4_X.conj().T
+
+        rt2_Dy      = np.sqrt(self.Dy)
+        rt4_Y       = self.Uy * np.sqrt(rt2_Dy)
+        irt4_Y      = self.Uy / np.sqrt(rt2_Dy)
+        self.rt2_Y  = rt4_Y @ rt4_Y.conj().T
+        self.irt2_Y = irt4_Y @ irt4_Y.conj().T        
+
+        XYX = self.irt2_X @ self.Y @ self.irt2_X
+        YXY = self.irt2_Y @ self.X @ self.irt2_Y
+
+        self.Dxyx, self.Uxyx = np.linalg.eigh(XYX)
+        self.Dyxy, self.Uyxy = np.linalg.eigh(YXY)
+
+        if any(self.Dxyx <= 0) or any(self.Dyxy <= 0):
+            self.feas = False
+            return self.feas
+        
+        # Check that t > tr[X^0.5 g(X^-1/2 Y X^-1/2) X^0.5]
+        self.g_Dxyx  = self.g(self.Dxyx)
+        self.h_Dyxy  = self.h(self.Dyxy)
+        g_XYX  = (self.Uxyx * self.g_Dxyx) @ self.Uxyx.conj().T
+
+        self.Z = self.T - self.rt2_X @ g_XYX @ self.rt2_X
+
+        # Try to perform Cholesky factorization to check PSD
+        self.Z_chol, info = self.cho_fact(self.Z, lower=True)
+        if info != 0:
+            self.feas = False
+            return self.feas
+        self.feas = True
+
+        return self.feas
+
+    def get_val(self):
+        assert self.feas_updated
+        (sgn, logabsdet_Z) = np.linalg.slogdet(self.Z)
+        return -(sgn * logabsdet_Z) - np.sum(np.log(self.Dx)) - np.sum(np.log(self.Dy))
+
+    def update_grad(self):
+        assert self.feas_updated
+        assert not self.grad_updated
+        
+        # Compute X^-1, Y^-1, and Z^-1
+        inv_Dx = np.reciprocal(self.Dx)
+        inv_X_rt2 = self.Ux * np.sqrt(inv_Dx)
+        self.inv_X = inv_X_rt2 @ inv_X_rt2.conj().T
+
+        inv_Dy = np.reciprocal(self.Dy)
+        inv_Y_rt2 = self.Uy * np.sqrt(inv_Dy)
+        self.inv_Y = inv_Y_rt2 @ inv_Y_rt2.conj().T
+
+        self.Z_chol_inv, _ = self.cho_inv(self.Z_chol, lower=True)
+        self.inv_Z = self.Z_chol_inv.conj().T @ self.Z_chol_inv   
+
+        # Precompute useful expressions
+        self.irt2Y_Uyxy = self.irt2_Y @ self.Uyxy
+        self.irt2X_Uxyx = self.irt2_X @ self.Uxyx
+
+        self.rt2Y_Uyxy = self.rt2_Y @ self.Uyxy
+        self.rt2X_Uxyx = self.rt2_X @ self.Uxyx
+
+        self.UyxyYZYUyxy = self.rt2Y_Uyxy.conj().T @ self.inv_Z @ self.rt2Y_Uyxy
+        self.UxyxXZXUxyx = self.rt2X_Uxyx.conj().T @ self.inv_Z @ self.rt2X_Uxyx
+
+        # Compute derivatives of Pg(X, Y)
+        self.D1yxy_h = mgrad.D1_f(self.Dyxy, self.h_Dyxy, self.dh(self.Dyxy))
+        self.D1xyx_g = mgrad.D1_f(self.Dxyx, self.g_Dxyx, self.dg(self.Dxyx))
+
+        self.DPhiX =  self.irt2Y_Uyxy @ (self.D1yxy_h * self.UyxyYZYUyxy) @ self.irt2Y_Uyxy.conj().T
+        self.DPhiX = (self.DPhiX + self.DPhiX.conj().T) * 0.5
+        self.DPhiY = self.irt2X_Uxyx @ (self.D1xyx_g  * self.UxyxXZXUxyx) @ self.irt2X_Uxyx.conj().T
+        self.DPhiY = (self.DPhiY + self.DPhiY.conj().T) * 0.5
+
+        self.grad = [
+           -self.inv_Z,
+            self.DPhiX - self.inv_X,
+            self.DPhiY - self.inv_Y
+        ]
+
+        self.grad_updated = True
+
+    def get_grad(self, out):
+        assert self.feas_updated
+        if not self.grad_updated:
+            self.update_grad()
+
+        out[0][:] = self.grad[0]
+        out[1][:] = self.grad[1]
+        out[2][:] = self.grad[2]
+        
+        return out
+
+    def hess_prod_ip(self, out, H):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+
+        # Computes Hessian product of Pg(X, Y) barrier with a single vector (Ht, Hx, Hy)
+
+        (Ht, Hx, Hy) = H
+
+        work    = self.irt2Y_Uyxy.conj().T @ Hx @ self.irt2Y_Uyxy
+        DxPhiHx = self.rt2Y_Uyxy @ (self.D1yxy_h * work) @ self.rt2Y_Uyxy.conj().T
+
+        work    = self.irt2X_Uxyx.conj().T @ Hy @ self.irt2X_Uxyx
+        DyPhiHy = self.rt2X_Uxyx @ (self.D1xyx_g * work) @ self.rt2X_Uxyx.conj().T
+        
+        # Hessian product for T
+        out[0][:] = self.inv_Z @ (Ht - DxPhiHx - DyPhiHy) @ self.inv_Z
+
+        # Hessian product for X
+        work = self.inv_Z @ Hy @ self.inv_Y
+        work = self.rt2Y_Uyxy.conj().T @ (work + work.conj().T - out[0]) @ self.rt2Y_Uyxy
+        outX = self.irt2Y_Uyxy @ (self.D1yxy_h * work) @ self.irt2Y_Uyxy.conj().T
+
+        work  = self.irt2Y_Uyxy.conj().T @ Hx @ self.irt2Y_Uyxy
+        outX += mgrad.scnd_frechet(self.D2yxy_h, self.UyxyYZYUyxy, work, U=self.irt2Y_Uyxy)
+
+        work  = self.irt2Y_Uyxy.conj().T @ Hy @ self.irt2Y_Uyxy
+        outX -= mgrad.scnd_frechet(self.D2yxy_xh, self.UyxyYZYUyxy, work, U=self.irt2Y_Uyxy)
+
+        outX += self.inv_X @ Hx @ self.inv_X
+
+        out[1][:] = (outX + outX.conj().T) * 0.5
+
+        # Hessian product for Y
+        work = self.inv_Z @ Hx @ self.inv_X
+        work = self.rt2X_Uxyx.conj().T @ (work + work.conj().T - out[0]) @ self.rt2X_Uxyx
+        outY = self.irt2X_Uxyx @ (self.D1xyx_g * work) @ self.irt2X_Uxyx.conj().T
+
+        work  = self.irt2X_Uxyx.conj().T @ Hy @ self.irt2X_Uxyx
+        outY += mgrad.scnd_frechet(self.D2xyx_g, self.UxyxXZXUxyx, work, U=self.irt2X_Uxyx)
+
+        work  = self.irt2X_Uxyx.conj().T @ Hx @ self.irt2X_Uxyx
+        outY -= mgrad.scnd_frechet(self.D2xyx_xg, self.UxyxXZXUxyx, work, U=self.irt2X_Uxyx)
+
+        outY += self.inv_Y @ Hy @ self.inv_Y
+
+        out[2][:] = (outY + outY.conj().T) * 0.5
+
+        return out
+
+    def hess_congr(self, A):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()       
+        if not self.congr_aux_updated:
+            self.congr_aux(A)
+        if not self.invhess_aux_updated:
+            self.update_invhessprod_aux()
+
+        # The Hessian is of the form 
+        #     H = [ 0  0 ] + [      Z^-1 kron Z^-1           -(Z^-1 kron Z^-1) DxPhi   ]
+        #         [ 0  M ]   [ -DPhi' (Z^-1 kron Z^-1)    DPhi' (Z^-1 kron Z^-1) DxPhi ]
+        #
+        #       = [ 0  0 ] + [      L^-T kron L^-T     ] [      L^-T kron L^-T     ]'
+        #         [ 0  M ]   [ -DPhi' (L^-T kron L^-T) ] [ -DPhi' (L^-T kron L^-T) ]
+        # where Z = L L' and M is precomputed in update_invhess_aux()
+
+        p = A.shape[0]
+
+        # Compute Axy M Axy'
+        out = self.A_compact @ self.hess @ self.A_compact.T
+
+        # Compute L^-T At L^-1
+        lin.congr(self.work3, self.Z_chol_inv, self.At, work=self.work1)
+
+        # Compute L^-T DxPhi[Ax] L^-1
+        lin.congr(self.work1, self.irt2Y_Uyxy.conj().T, self.Ax, work=self.work2)
+        self.work1 *= self.D1yxy_h
+        lin.congr(self.work0, self.Z_chol_inv @ self.rt2Y_Uyxy, self.work1, work=self.work2)
+        self.work3 -= self.work0
+
+        # Compute L^-T DyPhi[Ay] L^-1
+        lin.congr(self.work1, self.irt2X_Uxyx.conj().T, self.Ay, work=self.work2)
+        self.work1 *= self.D1xyx_g
+        lin.congr(self.work0, self.Z_chol_inv @ self.rt2X_Uxyx, self.work1, work=self.work2)
+        self.work3 -= self.work0
+
+        out += self.work3.view(dtype=np.float64).reshape(p, -1) @ self.work3.view(dtype=np.float64).reshape(p, -1).T
+
+        return out
+    
+    def invhess_prod_ip(self, out, H):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+        if not self.invhess_aux_updated:
+            self.update_invhessprod_aux()
+
+        # Computes inverse Hessian product of Pg(X, Y) barrier with a single vector (Ht, Hx, Hy)
+        # See invhess_congr() for additional comments
+
+        (Ht, Hx, Hy) = H
+
+        # ====================================================================
+        # Inverse Hessian products with respect to (X, Y)
+        # ====================================================================
+        work = self.rt2Y_Uyxy.conj().T @ Ht @ self.rt2Y_Uyxy
+        Wx = Hx + self.irt2Y_Uyxy @ (self.D1yxy_h * work) @ self.irt2Y_Uyxy.conj().T
+
+        work = self.rt2X_Uxyx.conj().T @ Ht @ self.rt2X_Uxyx
+        Wy = Hy + self.irt2X_Uxyx @ (self.D1xyx_g * work) @ self.irt2X_Uxyx.conj().T
+
+        vec = np.vstack((sym.mat_to_vec(Wx, hermitian=self.hermitian), sym.mat_to_vec(Wy, hermitian=self.hermitian)))
+        sol = lin.fact_solve(self.hess_fact, vec)
+
+        out[1][:] = sym.vec_to_mat(sol[:self.vn], hermitian=self.hermitian)
+        out[2][:] = sym.vec_to_mat(sol[self.vn:2*self.vn], hermitian=self.hermitian)
+
+        # ====================================================================
+        # Inverse Hessian products with respect to Z
+        # ====================================================================
+        outT = self.Z @ Ht @ self.Z
+
+        work  = self.irt2Y_Uyxy.conj().T @ out[1] @ self.irt2Y_Uyxy
+        outT += self.rt2Y_Uyxy @ (self.D1yxy_h * work) @ self.rt2Y_Uyxy.conj().T
+
+        work  = self.irt2X_Uxyx.conj().T @ out[2] @ self.irt2X_Uxyx
+        outT += self.rt2X_Uxyx @ (self.D1xyx_g * work) @ self.rt2X_Uxyx.conj().T
+
+        out[0][:] = (outT + outT.conj().T) * 0.5
+
+        return out
+    
+    @profile
+    def invhess_congr(self, A):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+        if not self.invhess_aux_updated:
+            self.update_invhessprod_aux()
+        if not self.congr_aux_updated:
+            self.congr_aux(A)
+
+        # The inverse Hessian product applied on (Ht, Hx, Hy) for the QRE barrier is 
+        #     (X, Y) =  M \ (Wx, Wy)
+        #         t  =  Z Ht Z + DPhi[(X, Y)]
+        # where (Wx, Wy) = (Hx, Hy) + DPhi'[Ht],
+        #     M = [ D2xxPhi'[Z^-1]  D2xyPhi'[Z^-1] ] + [ X^1 kron X^-1               ]
+        #         [ D2yxPhi'[Z^-1]  D2yyPhi'[Z^-1] ]   [               Y^1 kron Y^-1 ]
+
+        p = A.shape[0]
+
+        # ====================================================================
+        # Inverse Hessian products with respect to (X, Y)
+        # ====================================================================
+        # work = self.rt2Y_Uyxy.conj().T @ Ht @ self.rt2Y_Uyxy
+        # Wx = Hx + self.irt2Y_Uyxy @ (self.D1yxy_h * work) @ self.irt2Y_Uyxy.conj().T        
+        lin.congr(self.work0, self.rt2Y_Uyxy.conj().T, self.At, work=self.work2)
+        self.work0 *= self.D1yxy_h
+        lin.congr(self.work1, self.irt2Y_Uyxy, self.work0, work=self.work2)
+        self.work1 += self.Ax
+
+        # work = self.rt2X_Uxyx.conj().T @ Ht @ self.rt2X_Uxyx
+        # Wy = Hy + self.irt2X_Uxyx @ (self.D1xyx_g * work) @ self.irt2X_Uxyx.conj().T
+        lin.congr(self.work3, self.rt2X_Uxyx.conj().T, self.At, work=self.work2)
+        self.work3 *= self.D1xyx_g
+        lin.congr(self.work0, self.irt2X_Uxyx, self.work3, work=self.work2)
+        self.work0 += self.Ay
+
+        # vec = np.vstack((sym.mat_to_vec(Wx, hermitian=self.hermitian), sym.mat_to_vec(Wy, hermitian=self.hermitian)))
+        # sol = lin.fact_solve(self.hess_fact, vec)
+        self.work9[:self.vn] = self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices].T
+        self.work9[self.vn:] = self.work0.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices].T
+        self.work9 *= np.hstack((self.scale, self.scale)).reshape(-1, 1)
+
+        sol = lin.fact_solve(self.hess_fact, self.work9)
+
+        # Multiply Axy (H A')xy
+        out = self.A_compact @ sol
+
+        # Expand truncated real vectors back into matrices
+        sol[self.diag_indices] *= 0.5
+        sol[self.diag_indices + self.vn] *= 0.5
+        sol /= np.hstack((self.scale, self.scale)).reshape(-1, 1)
+
+        # ====================================================================
+        # Inverse Hessian products with respect to Z
+        # ====================================================================
+        # outT = self.Z @ Ht @ self.Z 
+        lin.congr(self.work0, self.Z, self.At, work=self.work3)
+       
+        # work  = self.irt2Y_Uyxy.conj().T @ out[1] @ self.irt2Y_Uyxy
+        # outT += self.rt2Y_Uyxy @ (self.D1yxy_h * work) @ self.rt2Y_Uyxy.conj().T
+        self.work1.fill(0.)
+        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices] = sol[:self.vn].T
+        self.work1 += self.work1.conj().transpose((0, 2, 1))
+
+        lin.congr(self.work2, self.irt2Y_Uyxy.conj().T, self.work1, work=self.work3)
+        self.work2 *= self.D1yxy_h
+        lin.congr(self.work1, self.rt2Y_Uyxy, self.work2, work=self.work3)
+        
+        self.work0 += self.work1
+
+        # work  = self.irt2X_Uxyx.conj().T @ out[2] @ self.irt2X_Uxyx
+        # outT += self.rt2X_Uxyx @ (self.D1xyx_g * work) @ self.rt2X_Uxyx.conj().T
+        self.work1.fill(0.)
+        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices] = sol[self.vn:].T
+        self.work1 += self.work1.conj().transpose((0, 2, 1))
+
+        lin.congr(self.work2, self.irt2X_Uxyx.conj().T, self.work1, work=self.work3)
+        self.work2 *= self.D1xyx_g
+        lin.congr(self.work1, self.rt2X_Uxyx, self.work2, work=self.work3)
+
+        self.work0 += self.work1
+        
+        # Multiply At (H A')t
+        out += self.At.view(dtype=np.float64).reshape((p, -1)) @ self.work0.view(dtype=np.float64).reshape((p, -1)).T
+
+        return out
+
+    def third_dir_deriv_axpy(self, out, dir, a=True):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+        if not self.dder3_aux_updated:
+            self.update_dder3_aux()
+
+
+        (Ht, Hx, Hy) = dir
+
+        UyxyYHxYUyxy = self.Uyxy.conj().T @ self.irt2_Y @ Hx @ self.irt2_Y @ self.Uyxy
+        UxyxXHyXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hy @ self.irt2_X @ self.Uxyx
+        UxyxXHxXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hx @ self.irt2_X @ self.Uxyx
+        UyxyYHyYUyxy = self.Uyxy.conj().T @ self.irt2_Y @ Hy @ self.irt2_Y @ self.Uyxy        
+
+        DxPhiHx = -self.rt2_Y @ self.Uyxy @ (self.D1yxy_h * UyxyYHxYUyxy) @ self.Uyxy.conj().T @ self.rt2_Y
+        DyPhiHy =  self.rt2_X @ self.Uxyx @ (-self.D1xyx_g  * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
+
+        D2xxPhiHxHx = -mgrad.scnd_frechet(self.D2yxy_h, UyxyYHxYUyxy, UyxyYHxYUyxy, U=self.rt2_Y @ self.Uyxy)
+        D2yyPhiHyHy =  mgrad.scnd_frechet(-self.D2xyx_g,  UxyxXHyXUxyx, UxyxXHyXUxyx, U=self.rt2_X @ self.Uxyx)
+
+        work = Hx @ self.irt2_X @ self.Uxyx @ (-self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
+        D2xyPhiHxHy  = work + work.conj().T
+        D2xyPhiHxHy -= mgrad.scnd_frechet(-self.D2xyx_xg, UxyxXHxXUxyx, UxyxXHyXUxyx, U=self.rt2_X @ self.Uxyx)
+
+        # T
+        dder3_t  = -2 * self.inv_Z @ Ht @ self.inv_Z @ Ht @ self.inv_Z
+        dder3_t += -2 * (self.inv_Z @ DxPhiHx @ self.inv_Z @ Ht @ self.inv_Z + self.inv_Z @ Ht @ self.inv_Z @ DxPhiHx @ self.inv_Z)
+        dder3_t += -2 * (self.inv_Z @ DyPhiHy @ self.inv_Z @ Ht @ self.inv_Z + self.inv_Z @ Ht @ self.inv_Z @ DyPhiHy @ self.inv_Z)
+        
+        dder3_t += self.inv_Z @ D2xxPhiHxHx @ self.inv_Z - 2 * self.inv_Z @ DxPhiHx @ self.inv_Z @ DxPhiHx @ self.inv_Z
+        dder3_t += self.inv_Z @ D2yyPhiHyHy @ self.inv_Z - 2 * self.inv_Z @ DyPhiHy @ self.inv_Z @ DyPhiHy @ self.inv_Z
+        dder3_t += 2 * (self.inv_Z @ D2xyPhiHxHy @ self.inv_Z - self.inv_Z @ DxPhiHx @ self.inv_Z @ DyPhiHy @ self.inv_Z - self.inv_Z @ DyPhiHy @ self.inv_Z @ DxPhiHx @ self.inv_Z)
+
+
+        # X 
+        # TT
+        work    = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ Ht @ self.inv_Z @ Ht @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X = 2 * self.irt2_Y @ self.Uyxy @ (self.D1yxy_h * work) @ self.Uyxy.conj().T @ self.irt2_Y
+
+        # 2TX
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ Ht @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X -= 2 * mgrad.scnd_frechet(self.D2yxy_h, work, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ Ht @ self.inv_Z @ DxPhiHx @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        work += work.conj().T
+        dder3_X += 2 * self.irt2_Y @ self.Uyxy @ (self.D1yxy_h * work) @ self.Uyxy.conj().T @ self.irt2_Y
+
+        #2TY
+        work = self.inv_Z @ Ht @ self.inv_Z
+        work2 = self.irt2_X @ self.Uxyx @ (-self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X @ work
+        dder3_X += 2 * (work2 + work2.conj().T)
+        work = self.Uxyx.conj().T @ self.rt2_X @ work @ self.rt2_X @ self.Uxyx
+        dder3_X -= 2 * mgrad.scnd_frechet(-self.D2xyx_xg, work, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ Ht @ self.inv_Z @ DyPhiHy @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        work += work.conj().T
+        dder3_X += 2 * self.irt2_Y @ self.Uyxy @ (self.D1yxy_h * work) @ self.Uyxy.conj().T @ self.irt2_Y
+
+        # XX
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ (D2xxPhiHxHx - 2 * DxPhiHx @ self.inv_Z @ DxPhiHx) @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X -= self.irt2_Y @ self.Uyxy @ (self.D1yxy_h * work) @ self.Uyxy.conj().T @ self.irt2_Y
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ DxPhiHx @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X -= 2 * mgrad.scnd_frechet(self.D2yxy_h, work, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
+        dder3_X += mgrad.thrd_frechet(self.Dyxy, self.D2yxy_h, self.d3h(self.Dyxy), self.irt2_Y @ self.Uyxy, UyxyYHxYUyxy, UyxyYHxYUyxy, self.UyxyYZYUyxy)
+        dder3_X -= 2 * self.inv_X @ Hx @ self.inv_X @ Hx @ self.inv_X
+
+        # 2XY
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ D2xyPhiHxHy @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X -= 2 * self.irt2_Y @ self.Uyxy @ (self.D1yxy_h * work) @ self.Uyxy.conj().T @ self.irt2_Y
+
+        work = self.inv_Z @ DxPhiHx @ self.inv_Z
+        work2 = self.irt2_X @ self.Uxyx @ (-self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X @ work
+        dder3_X += 2 * (work2 + work2.conj().T)
+        work = self.Uxyx.conj().T @ self.rt2_X @ work @ self.rt2_X @ self.Uxyx
+        dder3_X -= 2 * mgrad.scnd_frechet(-self.D2xyx_xg, work, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ DxPhiHx @ self.inv_Z @ DyPhiHy @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        work += work.conj().T
+        dder3_X += 2 * self.irt2_Y @ self.Uyxy @ (self.D1yxy_h * work) @ self.Uyxy.conj().T @ self.irt2_Y
+
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ Hy @ self.irt2_Y @ self.Uyxy
+        work += work.conj().T
+        dder3_X += 2 * mgrad.scnd_frechet(self.D2yxy_h, work, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X -= 2 * mgrad.thrd_frechet(self.Dyxy, self.D2yxy_xh, self.d3xh(self.Dyxy), self.irt2_Y @ self.Uyxy, work, UyxyYHyYUyxy, UyxyYHxYUyxy)
+
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ DyPhiHy @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X -= 2 * mgrad.scnd_frechet(self.D2yxy_h, work, UyxyYHxYUyxy, U=self.irt2_Y @ self.Uyxy)
+
+        # YY
+        work = self.inv_Z @ DyPhiHy @ self.inv_Z
+        work2 = self.irt2_X @ self.Uxyx @ (-self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X @ work
+        dder3_X += 2 * (work2 + work2.conj().T)
+        work = self.Uxyx.conj().T @ self.rt2_X @ work @ self.rt2_X @ self.Uxyx
+        dder3_X -= 2 * mgrad.scnd_frechet(-self.D2xyx_xg, work, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ DyPhiHy @ self.inv_Z @ DyPhiHy @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X += 2 * self.irt2_Y @ self.Uyxy @ (self.D1yxy_h * work) @ self.Uyxy.conj().T @ self.irt2_Y
+
+        work = self.irt2_X @ mgrad.scnd_frechet(-self.D2xyx_g, UxyxXHyXUxyx, UxyxXHyXUxyx, U=self.Uxyx) @ self.rt2_X @ self.inv_Z
+        dder3_X -= work + work.conj().T
+        dder3_X -= mgrad.thrd_frechet(self.Dxyx, self.D2xyx_xg, self.d3xg(self.Dxyx), self.irt2_X @ self.Uxyx, self.UxyxXZXUxyx, UxyxXHyXUxyx, UxyxXHyXUxyx)
+
+        work = self.Uyxy.conj().T @ self.rt2_Y @ self.inv_Z @ D2yyPhiHyHy @ self.inv_Z @ self.rt2_Y @ self.Uyxy
+        dder3_X -= self.irt2_Y @ self.Uyxy @ (self.D1yxy_h * work) @ self.Uyxy.conj().T @ self.irt2_Y
+
+
+        # Y
+        # TT
+        work    = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ Ht @ self.inv_Z @ Ht @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y = -2 * self.irt2_X @ self.Uxyx @ (-self.D1xyx_g * work) @ self.Uxyx.conj().T @ self.irt2_X
+
+        #2TX
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ Ht @ self.inv_Z @ Hx @ self.irt2_X @ self.Uxyx
+        work += work.conj().T
+        dder3_Y += 2 * self.irt2_X @ self.Uxyx @ (-self.D1xyx_g * work) @ self.Uxyx.conj().T @ self.irt2_X
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ Ht @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y -= 2 * mgrad.scnd_frechet(-self.D2xyx_xg, work, UxyxXHxXUxyx, U=self.irt2_X @ self.Uxyx)
+
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ Ht @ self.inv_Z @ DxPhiHx @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        work += work.conj().T
+        dder3_Y -= 2 * self.irt2_X @ self.Uxyx @ (-self.D1xyx_g * work) @ self.Uxyx.conj().T @ self.irt2_X
+
+        # 2TY
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ Ht @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y += 2 * mgrad.scnd_frechet(-self.D2xyx_g, work, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ Ht @ self.inv_Z @ DyPhiHy @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        work += work.conj().T
+        dder3_Y -= 2 * self.irt2_X @ self.Uxyx @ (-self.D1xyx_g * work) @ self.Uxyx.conj().T @ self.irt2_X
+
+        # YY
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ (D2yyPhiHyHy - 2 * DyPhiHy @ self.inv_Z @ DyPhiHy) @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y += self.irt2_X @ self.Uxyx @ (-self.D1xyx_g * work) @ self.Uxyx.conj().T @ self.irt2_X
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ DyPhiHy @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y += 2 * mgrad.scnd_frechet(-self.D2xyx_g, work, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+        dder3_Y += mgrad.thrd_frechet(self.Dxyx, self.D2xyx_g, self.d3g(self.Dxyx), self.irt2_X @ self.Uxyx, UxyxXHyXUxyx, UxyxXHyXUxyx, self.UxyxXZXUxyx)
+        dder3_Y -= 2 * self.inv_Y @ Hy @ self.inv_Y @ Hy @ self.inv_Y
+
+        # XY
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ D2xyPhiHxHy @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y += 2 * self.irt2_X @ self.Uxyx @ (-self.D1xyx_g * work) @ self.Uxyx.conj().T @ self.irt2_X
+
+        work = self.inv_Z @ DyPhiHy @ self.inv_Z
+        work2 = self.Uxyx.conj().T @ self.rt2_X @ work @ Hx @ self.irt2_X @ self.Uxyx
+        work2 += work2.conj().T
+        dder3_Y += 2 * self.irt2_X @ self.Uxyx @ (-self.D1xyx_g * work2) @ self.Uxyx.conj().T @ self.irt2_X
+        work = self.Uxyx.conj().T @ self.rt2_X @ work @ self.rt2_X @ self.Uxyx
+        dder3_Y -= 2 * mgrad.scnd_frechet(-self.D2xyx_xg, work, UxyxXHxXUxyx, U=self.irt2_X @ self.Uxyx)
+
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ DxPhiHx @ self.inv_Z @ DyPhiHy @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        work += work.conj().T
+        dder3_Y -= 2 * self.irt2_X @ self.Uxyx @ (-self.D1xyx_g * work) @ self.Uxyx.conj().T @ self.irt2_X
+
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ Hx @ self.irt2_X @ self.Uxyx
+        work += work.conj().T
+        dder3_Y -= 2 * mgrad.scnd_frechet(-self.D2xyx_g, work, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y -= 2 * mgrad.thrd_frechet(self.Dxyx, self.D2xyx_xg, self.d3xg(self.Dxyx), self.irt2_X @ self.Uxyx, work, UxyxXHyXUxyx, UxyxXHxXUxyx)
+
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ DxPhiHx @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y += 2 * mgrad.scnd_frechet(-self.D2xyx_g, work, UxyxXHyXUxyx, U=self.irt2_X @ self.Uxyx)
+
+        # XX
+        work = self.inv_Z @ DxPhiHx @ self.inv_Z
+        work2 = self.Uxyx.conj().T @ self.rt2_X @ work @ Hx @ self.irt2_X @ self.Uxyx
+        work2 += work2.conj().T
+        dder3_Y += 2 * self.irt2_X @ self.Uxyx @ (-self.D1xyx_g * work2) @ self.Uxyx.conj().T @ self.irt2_X
+        work = self.Uxyx.conj().T @ self.rt2_X @ work @ self.rt2_X @ self.Uxyx
+        dder3_Y -= 2 * mgrad.scnd_frechet(-self.D2xyx_xg, work, UxyxXHxXUxyx, U=self.irt2_X @ self.Uxyx)
+
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ DxPhiHx @ self.inv_Z @ DxPhiHx @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y -= 2 * self.irt2_X @ self.Uxyx @ (-self.D1xyx_g * work) @ self.Uxyx.conj().T @ self.irt2_X
+
+        work = self.irt2_Y @ mgrad.scnd_frechet(self.D2yxy_h, UyxyYHxYUyxy, UyxyYHxYUyxy, U=self.Uyxy) @ self.rt2_Y @ self.inv_Z
+        dder3_Y += work + work.conj().T
+        dder3_Y -= mgrad.thrd_frechet(self.Dyxy, self.D2yxy_xh, self.d3xh(self.Dyxy), self.irt2_Y @ self.Uyxy, self.UyxyYZYUyxy, UyxyYHxYUyxy, UyxyYHxYUyxy)
+
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z @ D2xxPhiHxHx @ self.inv_Z @ self.rt2_X @ self.Uxyx
+        dder3_Y += self.irt2_X @ self.Uxyx @ (-self.D1xyx_g * work) @ self.Uxyx.conj().T @ self.irt2_X
+
+        out[0][:] += dder3_t * a
+        out[1][:] += dder3_X * a
+        out[2][:] += dder3_Y * a
+
+        return out
+    
+    def prox(self):
+        assert self.feas_updated
+        if not self.grad_updated:
+            self.update_grad()
+        psi = [
+            self.T_d + self.grad[0],
+            self.X_d + self.grad[1],
+            self.Y_d + self.grad[2]
+        ]
+        temp = [np.zeros((self.n, self.n), dtype=self.dtype), np.zeros((self.n, self.n), dtype=self.dtype), np.zeros((self.n, self.n), dtype=self.dtype)]
+        self.invhess_prod_ip(temp, psi)
+        return lin.inp(temp[0], psi[0]) + lin.inp(temp[1], psi[1]) + lin.inp(temp[2], psi[2])
+    
+    # ========================================================================
+    # Auxilliary functions
+    # ========================================================================
+    def congr_aux(self, A):
+        assert not self.congr_aux_updated
+
+        p = A.shape[0]
+
+        self.At_vec = np.ascontiguousarray(A[:, self.idx_T])
+        self.Ax_vec = np.ascontiguousarray(A[:, self.idx_X])
+        self.Ay_vec = np.ascontiguousarray(A[:, self.idx_Y])
+
+        if self.hermitian:
+            self.At = np.array([At_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for At_k in self.At_vec])
+            self.Ax = np.array([Ax_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ax_k in self.Ax_vec])
+            self.Ay = np.array([Ay_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ay_k in self.Ay_vec])            
+        else:
+            self.At = np.array([At_k.reshape((self.n, self.n)) for At_k in self.At_vec])
+            self.Ax = np.array([Ax_k.reshape((self.n, self.n)) for Ax_k in self.Ax_vec])
+            self.Ay = np.array([Ay_k.reshape((self.n, self.n)) for Ay_k in self.Ay_vec])
+
+        self.Ax_compact = self.Ax_vec[:, self.triu_indices]
+        self.Ay_compact = self.Ay_vec[:, self.triu_indices]
+
+        self.Ax_compact *= self.scale
+        self.Ay_compact *= self.scale
+
+        self.A_compact = np.hstack((self.Ax_compact, self.Ay_compact))
+
+        self.work0  = np.empty_like(self.At)
+        self.work1  = np.empty_like(self.At)
+        self.work2  = np.empty_like(self.At)
+        self.work3  = np.empty_like(self.At)
+
+        self.work9  = np.empty((2*self.vn, p), dtype=self.dtype)
+
+        self.congr_aux_updated = True
+
+    def update_hessprod_aux(self):
+        assert not self.hess_aux_updated
+        assert self.grad_updated
+
+        self.D1yxy_xh = mgrad.D1_f(self.Dyxy, self.xh(self.Dyxy), self.dxh(self.Dyxy))
+        self.D1xyx_xg = mgrad.D1_f(self.Dxyx, self.xg(self.Dxyx), self.dxg(self.Dxyx))
+
+        self.D2yxy_h  = mgrad.D2_f(self.Dyxy, self.D1yxy_h, self.d2h(self.Dyxy))
+        self.D2xyx_g  = mgrad.D2_f(self.Dxyx, self.D1xyx_g, self.d2g(self.Dxyx))
+        self.D2yxy_xh = mgrad.D2_f(self.Dyxy, self.D1yxy_xh, self.d2xh(self.Dyxy))
+        self.D2xyx_xg = mgrad.D2_f(self.Dxyx, self.D1xyx_xg, self.d2xg(self.Dxyx))
+
+        self.hess_aux_updated = True
+
+        return
+
+    def update_invhessprod_aux(self):
+        assert not self.invhess_aux_updated
+        assert self.grad_updated
+        assert self.hess_aux_updated
+        if not self.invhess_aux_aux_updated:
+            self.update_invhessprod_aux_aux()
+
+        # Precompute and factorize the Schur complement matrix
+        #     S = (-1/z Sy + Dy^-1 kron Dy^-1)
+        #         - [1/z^2 log^[1](Dy) (Uy'Ux kron Uy'Ux) [(1/z log + inv)^[1](Dx)]^-1 (Ux'Uy kron Ux'Uy) log^[1](Dy)]
+        # where
+        #     (Sy)_ij,kl = delta_kl (Uy' X Uy)_ij log^[2]_ijl(Dy) + delta_ij (Uy' X Uy)_kl log^[2]_jkl(Dy)        
+        # which we will need to solve linear systems with the Hessian of our barrier function
+
+
+        # Make Hxx block
+        # D2PhiXXH  = mgrad.scnd_frechet(self.D2yxy_h, self.UyxyYZYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
+        lin.congr(self.work8, self.irt2Y_Uyxy.conj().T, self.E, work=self.work6)
+        mgrad.scnd_frechet_multi(self.work5, self.D2yxy_h, self.work8, self.UyxyYZYUyxy, U=self.irt2Y_Uyxy, work1=self.work6, work2=self.work7, work3=self.work4)
+
+        # D2PhiXXH += self.inv_X @ Hx @ self.inv_X
+        lin.congr(self.work8, self.inv_X, self.E, work=self.work7)
+        self.work8 += self.work5
+
+        Hxx  = self.work8.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
+        Hxx *= self.scale
+
+
+        # Make Hyy block
+        # D2PhiYYH  = mgrad.scnd_frechet(self.D2xyx_g, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
+        lin.congr(self.work8, self.irt2X_Uxyx.conj().T, self.E, work=self.work7)
+        mgrad.scnd_frechet_multi(self.work5, self.D2xyx_g, self.work8, self.UxyxXZXUxyx, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
+
+        # D2PhiYYH += self.inv_Y @ Hy @ self.inv_Y
+        lin.congr(self.work6, self.inv_Y, self.E, work=self.work7)
+        self.work6 += self.work5
+
+        Hyy  = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
+        Hyy *= self.scale
+
+
+        # Make Hxy block
+        # D2PhiXYH -= mgrad.scnd_frechet(self.D2xyx_xg, self.UxyxXZXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
+        mgrad.scnd_frechet_multi(self.work5, self.D2xyx_xg, self.work8, self.UxyxXZXUxyx, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
+
+        # D2PhiXYH  = self.irt2_X @ self.Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X @ self.inv_Z
+        # D2PhiXYH += D2PhiXYH.conj().T
+        self.work8 *= self.D1xyx_g
+        lin.congr(self.work6, self.irt2X_Uxyx, self.work8, work=self.work7, B=self.inv_Z @ self.rt2X_Uxyx)
+        np.add(self.work6, self.work6.conj().transpose(0, 2, 1), out=self.work7)
+        
+        self.work7 -= self.work5
+
+        Hyx  = self.work7.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
+        Hyx *= self.scale
+
+        # Construct Hessian and factorize
+        Hxx = (Hxx + Hxx.conj().T) * 0.5
+        Hyy = (Hyy + Hyy.conj().T) * 0.5
+        self.hess[:self.vn, :self.vn] = Hxx
+        self.hess[self.vn:, self.vn:] = Hyy
+        self.hess[self.vn:, :self.vn] = Hyx
+        self.hess[:self.vn, self.vn:] = Hyx.T
+
+        self.hess_fact = lin.fact(self.hess.copy())
+        self.invhess_aux_updated = True
+
+        return
+
+    def update_invhessprod_aux_aux(self):
+        assert not self.invhess_aux_aux_updated
+
+        if self.hermitian:
+            self.diag_indices = np.append(0, np.cumsum([i for i in range(3, 2*self.n+1, 2)]))
+            self.triu_indices = np.empty(self.n*self.n, dtype=int)
+            self.scale        = np.empty(self.n*self.n)
+            k = 0
+            for j in range(self.n):
+                for i in range(j):
+                    self.triu_indices[k]     = 2 * (j + i*self.n)
+                    self.triu_indices[k + 1] = 2 * (j + i*self.n) + 1
+                    self.scale[k:k+2]        = np.sqrt(2.)
+                    k += 2
+                self.triu_indices[k] = 2 * (j + j*self.n)
+                self.scale[k]        = 1.
+                k += 1
+        else:
+            self.diag_indices = np.append(0, np.cumsum([i for i in range(2, self.n+1, 1)]))
+            self.triu_indices = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
+            self.scale = np.array([1 if i==j else np.sqrt(2.) for j in range(self.n) for i in range(j + 1)])
+
+        rt2 = np.sqrt(0.5)
+        self.E = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
+        k = 0
+        for j in range(self.n):
+            for i in range(j):
+                self.E[k, i, j] = rt2
+                self.E[k, j, i] = rt2
+                k += 1
+                if self.hermitian:
+                    self.E[k, i, j] = rt2 *  1j
+                    self.E[k, j, i] = rt2 * -1j
+                    k += 1
+            self.E[k, j, j] = 1.
+            k += 1
+
+        self.work4  = np.empty((self.n, self.n, self.vn), dtype=self.dtype)
+        self.work5  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
+        self.work6  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
+        self.work7  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
+        self.work8  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
+
+        self.hess = np.empty((2*self.vn, 2*self.vn))
+
+        self.invhess_aux_aux_updated = True
+
+    def update_dder3_aux(self):
+        assert not self.dder3_aux_updated
+        assert self.hess_aux_updated
+
+        self.dder3_aux_updated = True
+
+        return    
+
+
+def get_central_ray_relentr(x_dim):
+    if x_dim <= 10:
+        return central_rays_relentr[x_dim - 1, :]
+    
+    # use nonlinear fit for higher dimensions
+    rtx_dim = np.sqrt(x_dim)
+    if x_dim <= 20:
+        t = 1.2023 / rtx_dim - 0.015
+        x = -0.3057 / rtx_dim + 0.972
+        y = 0.432 / rtx_dim + 1.0125
+    else:
+        t = 1.1513 / rtx_dim - 0.0069
+        x = -0.4247 / rtx_dim + 0.9961
+        y = 0.4873 / rtx_dim + 1.0008
+
+    return [t, x, y]
+
+central_rays_relentr = np.array([
+    [0.827838399065679, 0.805102001584795, 1.290927709856958],
+    [0.708612491381680, 0.818070436209846, 1.256859152780596],
+    [0.622618845069333, 0.829317078332457, 1.231401007595669],
+    [0.558111266369854, 0.838978355564968, 1.211710886507694],
+    [0.508038610665358, 0.847300430936648, 1.196018952086134],
+    [0.468039614334303, 0.854521306762642, 1.183194752717249],
+    [0.435316653088949, 0.860840990717540, 1.172492396103674],
+    [0.408009282337263, 0.866420016062860, 1.163403373278751],
+    [0.384838611966541, 0.871385497883771, 1.155570329098724],
+    [0.364899121739834, 0.875838067970643, 1.148735192195660]
+])
