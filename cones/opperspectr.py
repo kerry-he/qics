@@ -206,7 +206,7 @@ class Cone():
 
         self.zi =  np.reciprocal(self.z)
 
-        # Compute derivatives of trace operator perspective
+        # Compute derivatives of tr[Pg(X, Y)]
         self.D1yxy_h = mgrad.D1_f(self.Dyxy, self.h_Dyxy, self.dh(self.Dyxy))
         self.D1xyx_g = mgrad.D1_f(self.Dxyx, self.g_Dxyx, self.dg(self.Dxyx))
 
@@ -245,22 +245,21 @@ class Cone():
         if not self.invhess_aux_updated:
             self.update_invhessprod_aux()
 
-        # Computes Hessian product of the QRE barrier with a single vector (Ht, Hx, Hy)
-        # See hess_congr() for additional comments
+        # Computes Hessian product of tr[Pg(X, Y)] barrier with a single vector (Ht, Hx, Hy)
 
         (Ht, Hx, Hy) = H
 
         UyxyYHxYUyxy = self.irt2Y_Uyxy.conj().T @ Hx @ self.irt2Y_Uyxy
         UxyxXHyXUxyx = self.irt2X_Uxyx.conj().T @ Hy @ self.irt2X_Uxyx
 
-        # Hessian product of relative entropy
+        # Hessian product of tr[Pg(X, Y)]
         D2PhiXXH = mgrad.scnd_frechet(self.D2yxy_h, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
 
-        D2PhiXYH  = self.irt2_X @ self.Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
+        D2PhiXYH  = self.irt2X_Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
         D2PhiXYH += D2PhiXYH.conj().T
         D2PhiXYH -= mgrad.scnd_frechet(self.D2xyx_xg, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
 
-        D2PhiYXH  = self.irt2_Y @ self.Uyxy @ (self.D1yxy_h * UyxyYHxYUyxy) @ self.Uyxy.conj().T @ self.rt2_Y
+        D2PhiYXH  = self.irt2Y_Uyxy @ (self.D1yxy_h * UyxyYHxYUyxy) @ self.Uyxy.conj().T @ self.rt2_Y
         D2PhiYXH += D2PhiYXH.conj().T
         D2PhiYXH -= mgrad.scnd_frechet(self.D2yxy_xh, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
 
@@ -306,23 +305,19 @@ class Cone():
         if not self.invhess_aux_updated:
             self.update_invhessprod_aux()
 
-        # Computes inverse Hessian product of the QRE barrier with a single vector (Ht, Hx, Hy)
+        # Computes inverse Hessian product of tr[Pg(X, Y)] barrier with a single vector (Ht, Hx, Hy)
         # See invhess_congr() for additional comments
-
-        # The inverse Hessian product applied on (Ht, Hx, Hy) for the QRE barrier is 
-        #     (X, Y) =  M \ (Wx, Wy)
-        #         t  =  z^2 Ht + <DPhi(X, Y), (X, Y)>
 
         (Ht, Hx, Hy) = H
 
         Wx = Hx + Ht * self.DPhiX
         Wy = Hy + Ht * self.DPhiY
 
-        vec = np.vstack((sym.mat_to_vec(Wx, hermitian=self.hermitian), sym.mat_to_vec(Wy, hermitian=self.hermitian)))
-        sol = lin.fact_solve(self.hess_fact, vec)
+        Wxy   = np.vstack((sym.mat_to_vec(Wx, hermitian=self.hermitian), sym.mat_to_vec(Wy, hermitian=self.hermitian)))
+        outxy = lin.fact_solve(self.hess_fact, Wxy)
 
-        out[1][:] = sym.vec_to_mat(sol[:self.vn], hermitian=self.hermitian)
-        out[2][:] = sym.vec_to_mat(sol[self.vn:], hermitian=self.hermitian)
+        out[1][:] = sym.vec_to_mat(outxy[:self.vn], hermitian=self.hermitian)
+        out[2][:] = sym.vec_to_mat(outxy[self.vn:], hermitian=self.hermitian)
         out[0][:] = self.z2 * Ht + lin.inp(out[1], self.DPhiX) + lin.inp(out[2], self.DPhiY)
 
         return out
@@ -339,12 +334,17 @@ class Cone():
         # The inverse Hessian product applied on (Ht, Hx, Hy) for the QRE barrier is 
         #     (X, Y) =  M \ (Wx, Wy)
         #         t  =  z^2 Ht + <DPhi(X, Y), (X, Y)>
-        # where (Wx, Wy) = [(Hx, Hy) + Ht DPhi(X, Y)]
+        # where (Wx, Wy) = [(Hx, Hy) + Ht DPhi(X, Y)] and
+        #     M = 1/z [ D2xxPhi D2xyPhi ] + [ X^1 kron X^-1               ]
+        #             [ D2yxPhi D2yyPhi ]   [               Y^1 kron Y^-1 ]
 
+        # Compute (Wx, Wy)
         np.outer(self.DPhi_vec, self.At, out=self.work)
         self.work += self.A_compact.T
         
+        # Solve for (X, Y) =  M \ (Wx, Wy)
         lhsxy = lin.fact_solve(self.hess_fact, self.work)
+        # Solve for t = z^2 Ht + <DPhi(X, Y), (X, Y)>
         lhst  = self.z2 * self.At.reshape(-1, 1) + lhsxy.T @ self.DPhi_vec
 
         # Multiply A (H A')
@@ -367,7 +367,7 @@ class Cone():
         UxyxXHxXUxyx = self.Uxyx.conj().T @ self.irt2_X @ Hx @ self.irt2_X @ self.Uxyx
         UyxyYHyYUyxy = self.Uyxy.conj().T @ self.irt2_Y @ Hy @ self.irt2_Y @ self.Uyxy
 
-        # Hessian products of Phi
+        # Hessian products of tr[Pg(X, Y)]
         D2PhiXXH = mgrad.scnd_frechet(self.D2yxy_h, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
 
         D2PhiXYH  = self.irt2_X @ self.Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
@@ -383,9 +383,9 @@ class Cone():
         D2PhiXHH = lin.inp(Hx, D2PhiXXH + D2PhiXYH)
         D2PhiYHH = lin.inp(Hy, D2PhiYXH + D2PhiYYH)
 
-        # Quantum relative entropy third order derivatives
+        # Operator perspective third order derivatives
         # Second derivatives of DxPhi
-        D3PhiXXX = mgrad.thrd_frechet(self.Dyxy, self.D2yxy_h, self.d3h(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy, UyxyYHxYUyxy)
+        D3PhiXXX = mgrad.thrd_frechet(self.Dyxy, self.D2yxy_h, self.d3h(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy)
 
         work      = self.Uyxy.conj().T @ self.rt2_Y @ Hy @ self.irt2Y_Uyxy
         D3PhiXXY  = mgrad.scnd_frechet(self.D2yxy_h, work + work.conj().T, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
@@ -394,10 +394,10 @@ class Cone():
 
         D3PhiXYY  = self.irt2_X @ mgrad.scnd_frechet(self.D2xyx_g, UxyxXHyXUxyx, UxyxXHyXUxyx, U=self.Uxyx) @ self.rt2_X
         D3PhiXYY += D3PhiXYY.conj().T
-        D3PhiXYY -= mgrad.thrd_frechet(self.Dxyx, self.D2xyx_xg, self.d3xg(self.Dxyx), self.irt2X_Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx, UxyxXHyXUxyx)
+        D3PhiXYY -= mgrad.thrd_frechet(self.Dxyx, self.D2xyx_xg, self.d3xg(self.Dxyx), self.irt2X_Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx)
 
         # Second derivatives of DyPhi
-        D3PhiYYY = mgrad.thrd_frechet(self.Dxyx, self.D2xyx_g, self.d3g(self.Dxyx), self.irt2X_Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx, UxyxXHyXUxyx)
+        D3PhiYYY = mgrad.thrd_frechet(self.Dxyx, self.D2xyx_g, self.d3g(self.Dxyx), self.irt2X_Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx)
 
         work      = self.Uxyx.conj().T @ self.rt2_X @ Hx @ self.irt2X_Uxyx
         D3PhiYYX  = mgrad.scnd_frechet(self.D2xyx_g, work + work.conj().T, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
@@ -406,7 +406,7 @@ class Cone():
     
         D3PhiYXX  = self.irt2_Y @ mgrad.scnd_frechet(self.D2yxy_h, UyxyYHxYUyxy, UyxyYHxYUyxy, U=self.Uyxy) @ self.rt2_Y
         D3PhiYXX += D3PhiYXX.conj().T
-        D3PhiYXX -= mgrad.thrd_frechet(self.Dyxy, self.D2yxy_xh, self.d3xh(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy, UyxyYHxYUyxy)
+        D3PhiYXX -= mgrad.thrd_frechet(self.Dyxy, self.D2yxy_xh, self.d3xh(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy)
         
         # Third derivatives of barrier
         dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhiXHH + D2PhiYHH)
@@ -457,11 +457,9 @@ class Cone():
 
         self.Ax_compact *= self.scale
         self.Ay_compact *= self.scale
-
         self.A_compact = np.hstack((self.Ax_compact, self.Ay_compact))
 
         self.work = np.empty_like(self.A_compact.T)
-
 
         self.congr_aux_updated = True
 
@@ -484,7 +482,6 @@ class Cone():
 
         return
 
-    @profile
     def update_invhessprod_aux(self):
         assert not self.invhess_aux_updated
         assert self.grad_updated
@@ -492,12 +489,9 @@ class Cone():
         if not self.invhess_aux_aux_updated:
             self.update_invhessprod_aux_aux()
 
-        # Precompute and factorize the Schur complement matrix
-        #     S = (-1/z Sy + Dy^-1 kron Dy^-1)
-        #         - [1/z^2 log^[1](Dy) (Uy'Ux kron Uy'Ux) [(1/z log + inv)^[1](Dx)]^-1 (Ux'Uy kron Ux'Uy) log^[1](Dy)]
-        # where
-        #     (Sy)_ij,kl = delta_kl (Uy' X Uy)_ij log^[2]_ijl(Dy) + delta_ij (Uy' X Uy)_kl log^[2]_jkl(Dy)        
-        # which we will need to solve linear systems with the Hessian of our barrier function
+        # Precompute and factorize the matrix
+        #     M = 1/z [ D2xxPhi D2xyPhi ] + [ X^1 kron X^-1               ]
+        #             [ D2yxPhi D2yyPhi ]   [               Y^1 kron Y^-1 ]        
 
         self.z2 = self.z * self.z
 
@@ -544,13 +538,12 @@ class Cone():
         Hyx *= self.scale
 
         # Construct Hessian and factorize
-        self.hess = np.block([
-            [Hxx, Hyx.T], 
-            [Hyx, Hyy]
-        ])
-
-        self.hess += self.hess.T
-        self.hess *= 0.5
+        Hxx = (Hxx + Hxx.conj().T) * 0.5
+        Hyy = (Hyy + Hyy.conj().T) * 0.5
+        self.hess[:self.vn, :self.vn] = Hxx
+        self.hess[self.vn:, self.vn:] = Hyy
+        self.hess[self.vn:, :self.vn] = Hyx
+        self.hess[:self.vn, self.vn:] = Hyx.T
 
         self.hess_fact = lin.fact(self.hess.copy())
         self.invhess_aux_updated = True
@@ -574,6 +567,8 @@ class Cone():
                     k += 1
             self.E[k, j, j] = 1.
             k += 1
+
+        self.hess = np.empty((2*self.vn, 2*self.vn))
 
         self.work4  = np.empty((self.n, self.n, self.vn), dtype=self.dtype)
         self.work5  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)

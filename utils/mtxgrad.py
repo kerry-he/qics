@@ -250,55 +250,47 @@ def scnd_frechet_multi(out, D2, UHU, UXU=None, U=None, work1=None, work2=None, w
 
     return out
 
-def thrd_frechet(D, D2, d3f_D, U, H1, H2, H3):
-    if (H1.dtype == 'complex128') or (H2.dtype == 'complex128') or (H3.dtype == 'complex128'):
-        return thrd_frechet_complex(D, D2, d3f_D, U, H1, H2, H3)
+
+@nb.njit
+def thrd_frechet(D, D2, d3f_D, U, H1, H2, H3=None):
+    n = D.size
+    out = np.zeros_like(H1)
+    
+    # If H3 is None, then assume H2=H3
+    if H3 is None:
+
+        for i in range(n):
+            for j in range(i + 1):
+                D3_ij = D3_f_ij(i, j, D, D2, d3f_D)
+
+                for k in range(n):
+                    for l in range(n):
+                        temp  = H1[i, k] * H2[k, l] * H2[l, j] 
+                        temp += H2[i, k] * H1[k, l] * H2[l, j] 
+                        temp += H2[i, k] * H2[k, l] * H1[l, j] 
+                        out[i, j] = out[i, j] + D3_ij[k, l] * temp
+                
+                out[j, i] = out[i, j]
+
+        out *= 2
+
     else:
-        return thrd_frechet_real(D, D2, d3f_D, U, H1, H2, H3)
 
-@nb.njit
-def thrd_frechet_real(D, D2, d3f_D, U, H1, H2, H3):
-    n = D.size
-    out = np.zeros((n, n))
+        for i in range(n):
+            for j in range(i + 1):
+                D3_ij = D3_f_ij(i, j, D, D2, d3f_D)
 
-    for i in range(n):
-        for j in range(i + 1):
-            D3_ij = D3_f_ij(i, j, D, D2, d3f_D)
-
-            for k in range(n):
-                for l in range(n):
-                    temp  = H1[i, k] * H2[k, l] * H3[l, j] 
-                    temp += H1[i, k] * H3[k, l] * H2[l, j] 
-                    temp += H2[i, k] * H1[k, l] * H3[l, j] 
-                    temp += H2[i, k] * H3[k, l] * H1[l, j] 
-                    temp += H3[i, k] * H1[k, l] * H2[l, j] 
-                    temp += H3[i, k] * H2[k, l] * H1[l, j]
-                    out[i, j] = out[i, j] + D3_ij[k, l] * temp
-            
-            out[j, i] = out[i, j]
-
-    return U @ out @ U.conj().T
-
-@nb.njit
-def thrd_frechet_complex(D, D2, d3f_D, U, H1, H2, H3):
-    n = D.size
-    out = np.zeros((n, n), 'complex128')
-
-    for i in range(n):
-        for j in range(i + 1):
-            D3_ij = D3_f_ij(i, j, D, D2, d3f_D)
-
-            for k in range(n):
-                for l in range(n):
-                    temp  = H1[i, k] * H2[k, l] * H3[l, j] 
-                    temp += H1[i, k] * H3[k, l] * H2[l, j] 
-                    temp += H2[i, k] * H1[k, l] * H3[l, j] 
-                    temp += H2[i, k] * H3[k, l] * H1[l, j] 
-                    temp += H3[i, k] * H1[k, l] * H2[l, j] 
-                    temp += H3[i, k] * H2[k, l] * H1[l, j]
-                    out[i, j] = out[i, j] + D3_ij[k, l] * temp
-            
-            out[j, i] = np.conj(out[i, j])
+                for k in range(n):
+                    for l in range(n):
+                        temp  = H1[i, k] * H2[k, l] * H3[l, j] 
+                        temp += H1[i, k] * H3[k, l] * H2[l, j] 
+                        temp += H2[i, k] * H1[k, l] * H3[l, j] 
+                        temp += H2[i, k] * H3[k, l] * H1[l, j] 
+                        temp += H3[i, k] * H1[k, l] * H2[l, j] 
+                        temp += H3[i, k] * H2[k, l] * H1[l, j]
+                        out[i, j] = out[i, j] + D3_ij[k, l] * temp
+                
+                out[j, i] = out[i, j]
 
     return U @ out @ U.conj().T
 
