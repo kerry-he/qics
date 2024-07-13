@@ -103,9 +103,9 @@ def congr(out, A, X, work, B=None):
         B = A
 
     # Performs congruence A X_i B' for i = i,...,n
-    n = A.shape[0]
+    n, m = A.shape
     np.matmul(A, X, out=work)
-    np.matmul(work.reshape((-1, n)), B.conj().T, out=out.reshape((-1, n)))
+    np.matmul(work.reshape((-1, m)), B.conj().T, out=out.reshape((-1, n)))
     return out
 
 if __name__ == "__main__":
