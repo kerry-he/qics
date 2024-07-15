@@ -54,6 +54,43 @@ class BaseCone():
             out_k[:] = grad_k
         
         return out
+    
+    def precompute_mat_vec_idxs(self):
+        # Indices to convert to and from compact vectors and matrices
+        if self.hermitian:
+            self.diag_indices = np.append(0, np.cumsum([i for i in range(3, 2*self.n+1, 2)]))
+            self.triu_indices = np.empty(self.n*self.n, dtype=int)
+            self.scale        = np.empty(self.n*self.n)
+            k = 0
+            for j in range(self.n):
+                for i in range(j):
+                    self.triu_indices[k]     = 2 * (j + i*self.n)
+                    self.triu_indices[k + 1] = 2 * (j + i*self.n) + 1
+                    self.scale[k:k+2]        = np.sqrt(2.)
+                    k += 2
+                self.triu_indices[k] = 2 * (j + j*self.n)
+                self.scale[k]        = 1.
+                k += 1
+        else:
+            self.diag_indices = np.append(0, np.cumsum([i for i in range(2, self.n+1, 1)]))
+            self.triu_indices = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
+            self.scale = np.array([1 if i==j else np.sqrt(2.) for j in range(self.n) for i in range(j + 1)])
+
+        # Computational basis for symmetric/Hermitian matrices
+        rt2 = np.sqrt(0.5)
+        self.E = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
+        k = 0
+        for j in range(self.n):
+            for i in range(j):
+                self.E[k, i, j] = rt2
+                self.E[k, j, i] = rt2
+                k += 1
+                if self.hermitian:
+                    self.E[k, i, j] = rt2 *  1j
+                    self.E[k, j, i] = rt2 * -1j
+                    k += 1
+            self.E[k, j, j] = 1.
+            k += 1
 
     # Functions that the child class has to implement
     def get_init_point(self, out):

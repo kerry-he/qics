@@ -28,6 +28,8 @@ class Cone(BaseCone):
         self.dder3_aux_updated       = False
         self.congr_aux_updated       = False
 
+        self.precompute_mat_vec_idxs()
+
         return
     
     def get_init_point(self, out):
@@ -485,22 +487,8 @@ class Cone(BaseCone):
 
         # Get [1/z^2 log^[1](Dy) (Uy'Ux kron Uy'Ux) [(1/z log + inv)^[1](Dx)]^-1 (Ux'Uy kron Ux'Uy) log^[1](Dy)] matrix
         # Begin with (Ux'Uy kron Ux'Uy) log^[1](Dy)
-        np.multiply(self.UyUx.reshape(self.n, 1, self.n).T, self.D1y_log.flat[::self.n+1], out=self.work10.T)
-        np.matmul(self.UyUx.conj().reshape(self.n, self.n, 1), self.work10, out=self.work9)
-        self.work8[self.diag_indices] = self.work9
-        t = 0
-        for j in range(self.n):
-            np.multiply(self.UyUx[:j].reshape((j, 1, self.n)).T, np.sqrt(0.5) * self.D1y_log[j, :j], out=self.work10[:j].T)
-            np.matmul(self.UyUx[[j]].conj().T, self.work10[:j], out=self.work9[:j])
-
-            if self.hermitian:
-                np.add(self.work9[:j], self.work9[:j].conj().transpose(0, 2, 1), out=self.work8[t : t+2*j : 2])
-                np.subtract(self.work9[:j], self.work9[:j].conj().transpose(0, 2, 1), out=self.work8[t+1 : t+2*j+1 : 2])
-                self.work8[t+1 : t+2*j+1 : 2] *= -1j
-                t += 2*j + 1
-            else:
-                np.add(self.work9[:j], self.work9[:j].transpose(0, 2, 1), out=self.work8[t : t+j])
-                t += j + 1
+        np.multiply(self.E, self.D1y_log, out=self.work6)
+        lin.congr(self.work8, self.UyUx.conj().T, self.work6, work=self.work7)
         # Apply [(1/z log + inv)^[1](Dx)]^-1
         self.work8 *= self.D1x_comb_inv
         # Apply (Uy'Ux kron Uy'Ux)
@@ -520,30 +508,9 @@ class Cone(BaseCone):
     def update_invhessprod_aux_aux(self):
         assert not self.invhess_aux_aux_updated
 
-        if self.hermitian:
-            self.diag_indices = np.append(0, np.cumsum([i for i in range(3, 2*self.n+1, 2)]))
-            self.triu_indices = np.empty(self.n*self.n, dtype=int)
-            self.scale        = np.empty(self.n*self.n)
-            k = 0
-            for j in range(self.n):
-                for i in range(j):
-                    self.triu_indices[k]     = 2 * (j + i*self.n)
-                    self.triu_indices[k + 1] = 2 * (j + i*self.n) + 1
-                    self.scale[k:k+2]        = np.sqrt(2.)
-                    k += 2
-                self.triu_indices[k] = 2 * (j + j*self.n)
-                self.scale[k]        = 1.
-                k += 1
-        else:
-            self.diag_indices = np.append(0, np.cumsum([i for i in range(2, self.n+1, 1)]))
-            self.triu_indices = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
-            self.scale = np.array([1 if i==j else np.sqrt(2.) for j in range(self.n) for i in range(j + 1)])
-
         self.work6  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
         self.work7  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
         self.work8  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
-        self.work9  = np.empty((self.n, self.n, self.n), dtype=self.dtype)
-        self.work10 = np.empty((self.n, 1, self.n), dtype=self.dtype)
 
         self.invhess_aux_aux_updated = True
 
@@ -556,7 +523,7 @@ class Cone(BaseCone):
 
         self.dder3_aux_updated = True
 
-        return    
+        return
 
 
 def get_central_ray_relentr(x_dim):

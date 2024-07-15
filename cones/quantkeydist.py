@@ -8,13 +8,13 @@ from cones.base import BaseCone
 class Cone(BaseCone):
     def __init__(self, K_list, Z_list, hermitian=False):
         # Dimension properties
-        self.ni = K_list[0].shape[1]    # Get input dimension
-        self.nu = 1 + self.ni           # Barrier parameter
+        self.n = K_list[0].shape[1]    # Get input dimension
+        self.nu = 1 + self.n           # Barrier parameter
         self.hermitian = hermitian      # Is the problem complex-valued 
         
-        self.vni = sym.vec_dim(self.ni, hermitian)     # Get input vector dimension
+        self.vn = sym.vec_dim(self.n, hermitian)     # Get input vector dimension
 
-        self.dim   = [1, self.ni*self.ni] if (not hermitian) else [1, 2*self.ni*self.ni]
+        self.dim   = [1, self.n*self.n] if (not hermitian) else [1, 2*self.n*self.n]
         self.type  = ['r', 's']           if (not hermitian) else ['r', 'h']
         self.dtype = np.float64           if (not hermitian) else np.complex128       
 
@@ -34,30 +34,13 @@ class Cone(BaseCone):
         self.congr_aux_updated = False
         self.invhess_aux_aux_updated = False
 
-        if self.hermitian:
-            self.diag_indices = np.append(0, np.cumsum([i for i in range(3, 2*self.ni+1, 2)]))
-            self.triu_indices = np.empty(self.ni*self.ni, dtype=int)
-            self.scale        = np.empty(self.ni*self.ni)
-            k = 0
-            for j in range(self.ni):
-                for i in range(j):
-                    self.triu_indices[k]     = 2 * (j + i*self.ni)
-                    self.triu_indices[k + 1] = 2 * (j + i*self.ni) + 1
-                    self.scale[k:k+2]        = np.sqrt(2.)
-                    k += 2
-                self.triu_indices[k] = 2 * (j + j*self.ni)
-                self.scale[k]        = 1.
-                k += 1
-        else:
-            self.diag_indices = np.append(0, np.cumsum([i for i in range(2, self.ni+1, 1)]))
-            self.triu_indices = np.array([j + i*self.ni for j in range(self.ni) for i in range(j + 1)])
-            self.scale = np.array([1 if i==j else np.sqrt(2.) for j in range(self.ni) for i in range(j + 1)])        
+        self.precompute_mat_vec_idxs()     
 
         return
 
     def get_init_point(self, out):
-        KK_blk   = [sym.congr_map(np.eye(self.ni), K_list)  for K_list  in self.K_list_blk]
-        ZKKZ_blk = [sym.congr_map(np.eye(self.ni), ZK_list) for ZK_list in self.ZK_list_blk]
+        KK_blk   = [sym.congr_map(np.eye(self.n), K_list)  for K_list  in self.K_list_blk]
+        ZKKZ_blk = [sym.congr_map(np.eye(self.n), ZK_list) for ZK_list in self.ZK_list_blk]
 
         entr_KK   = -sum([quant.quantEntropy(KK)   for KK   in KK_blk])
         entr_ZKKZ = -sum([quant.quantEntropy(ZKKZ) for ZKKZ in ZKKZ_blk])
@@ -66,7 +49,7 @@ class Cone(BaseCone):
 
         point = [
             np.array([[t0]]), 
-            np.eye(self.ni, dtype=self.dtype)
+            np.eye(self.n, dtype=self.dtype)
         ]
 
         self.set_point(point, point)
@@ -352,32 +335,17 @@ class Cone(BaseCone):
     def update_invhessprod_aux_aux(self):
         assert not self.invhess_aux_aux_updated
 
-        rt2 = np.sqrt(0.5)
-        self.E = np.zeros((self.vni, self.ni, self.ni), dtype=self.dtype)
-        k = 0
-        for j in range(self.ni):
-            for i in range(j):
-                self.E[k, i, j] = rt2
-                self.E[k, j, i] = rt2
-                k += 1
-                if self.hermitian:
-                    self.E[k, i, j] = rt2 *  1j
-                    self.E[k, j, i] = rt2 * -1j
-                    k += 1
-            self.E[k, j, j] = 1.
-            k += 1
-
-        self.work2  = [np.zeros((self.vni, self.ni, nk), dtype=self.dtype) for nk in self.nk]
-        self.work2b  = [np.zeros((self.vni, nk, self.ni), dtype=self.dtype) for nk in self.nk]
-        self.work3  = [np.zeros((self.vni, nk, nk), dtype=self.dtype) for nk in self.nk]
-        self.work3b  = [np.zeros((self.vni, nk, nk), dtype=self.dtype) for nk in self.nk]
-        self.work4  = [np.zeros((self.vni, self.ni, nzk), dtype=self.dtype) for nzk in self.nzk]
-        self.work4b  = [np.zeros((self.vni, nzk, self.ni), dtype=self.dtype) for nzk in self.nzk]
-        self.work5  = [np.zeros((self.vni, nzk, nzk), dtype=self.dtype) for nzk in self.nzk]
-        self.work5b  = [np.zeros((self.vni, nzk, nzk), dtype=self.dtype) for nzk in self.nzk]
-        self.work6  = np.zeros((self.vni, self.ni, self.ni), dtype=self.dtype)
-        self.work7  = np.zeros((self.vni, self.ni, self.ni), dtype=self.dtype)
-        self.work8  = np.zeros((self.vni, self.ni, self.ni), dtype=self.dtype)
+        self.work2  = [np.zeros((self.vn, self.n, nk), dtype=self.dtype) for nk in self.nk]
+        self.work2b  = [np.zeros((self.vn, nk, self.n), dtype=self.dtype) for nk in self.nk]
+        self.work3  = [np.zeros((self.vn, nk, nk), dtype=self.dtype) for nk in self.nk]
+        self.work3b  = [np.zeros((self.vn, nk, nk), dtype=self.dtype) for nk in self.nk]
+        self.work4  = [np.zeros((self.vn, self.n, nzk), dtype=self.dtype) for nzk in self.nzk]
+        self.work4b  = [np.zeros((self.vn, nzk, self.n), dtype=self.dtype) for nzk in self.nzk]
+        self.work5  = [np.zeros((self.vn, nzk, nzk), dtype=self.dtype) for nzk in self.nzk]
+        self.work5b  = [np.zeros((self.vn, nzk, nzk), dtype=self.dtype) for nzk in self.nzk]
+        self.work6  = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
+        self.work7  = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
+        self.work8  = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
 
         self.invhess_aux_aux_updated = True
 
@@ -423,7 +391,7 @@ class Cone(BaseCone):
                 self.work8 -= self.work7             
 
         # Get Hessian and factorize
-        self.hess  = self.work8.view(dtype=np.float64).reshape((self.vni, -1))[:, self.triu_indices]
+        self.hess  = self.work8.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
         self.hess *= self.scale
         self.hess_fact = lin.cho_fact(self.hess.copy())
 
