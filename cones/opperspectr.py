@@ -315,7 +315,7 @@ class Cone(BaseCone):
         Wy = Hy + Ht * self.DPhiY
 
         Wxy   = np.vstack((sym.mat_to_vec(Wx, hermitian=self.hermitian), sym.mat_to_vec(Wy, hermitian=self.hermitian)))
-        outxy = lin.fact_solve(self.hess_fact, Wxy)
+        outxy = lin.cho_solve(self.hess_fact, Wxy)
 
         out[1][:] = sym.vec_to_mat(outxy[:self.vn], hermitian=self.hermitian)
         out[2][:] = sym.vec_to_mat(outxy[self.vn:], hermitian=self.hermitian)
@@ -344,7 +344,7 @@ class Cone(BaseCone):
         self.work += self.A_compact.T
         
         # Solve for (X, Y) =  M \ (Wx, Wy)
-        lhsxy = lin.fact_solve(self.hess_fact, self.work)
+        lhsxy = lin.cho_solve(self.hess_fact, self.work)
         # Solve for t = z^2 Ht + <DPhi(X, Y), (X, Y)>
         lhst  = self.z2 * self.At.reshape(-1, 1) + lhsxy.T @ self.DPhi_vec
 
@@ -546,7 +546,7 @@ class Cone(BaseCone):
         self.hess[self.vn:, :self.vn] = Hyx
         self.hess[:self.vn, self.vn:] = Hyx.T
 
-        self.hess_fact = lin.fact(self.hess.copy())
+        self.hess_fact = lin.cho_fact(self.hess.copy())
         self.invhess_aux_updated = True
 
         return

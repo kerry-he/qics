@@ -366,7 +366,7 @@ class Cone(BaseCone):
         Wy = Hy + self.irt2X_Uxyx @ (self.D1xyx_g * work) @ self.irt2X_Uxyx.conj().T
 
         vec = np.vstack((sym.mat_to_vec(Wx, hermitian=self.hermitian), sym.mat_to_vec(Wy, hermitian=self.hermitian)))
-        sol = lin.fact_solve(self.hess_fact, vec)
+        sol = lin.cho_solve(self.hess_fact, vec)
 
         out[1][:] = sym.vec_to_mat(sol[:self.vn], hermitian=self.hermitian)
         out[2][:] = sym.vec_to_mat(sol[self.vn:2*self.vn], hermitian=self.hermitian)
@@ -424,7 +424,7 @@ class Cone(BaseCone):
         self.work9[self.vn:] = self.work0.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices].T
         self.work9 *= np.hstack((self.scale, self.scale)).reshape(-1, 1)
 
-        sol = lin.fact_solve(self.hess_fact, self.work9)
+        sol = lin.cho_solve(self.hess_fact, self.work9)
 
         # Multiply Axy (H A')xy
         out = self.A_compact @ sol
@@ -677,7 +677,7 @@ class Cone(BaseCone):
         self.hess[self.vn:, :self.vn] = Hyx
         self.hess[:self.vn, self.vn:] = Hyx.T
 
-        self.hess_fact = lin.fact(self.hess.copy())
+        self.hess_fact = lin.cho_fact(self.hess.copy())
         self.invhess_aux_updated = True
 
         return

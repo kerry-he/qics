@@ -42,16 +42,10 @@ class BaseCone():
     def hess_congr(self, A):
         pass
 
-    def hess_mtx(self):
-        pass
-
     def invhess_prod_ip(self, out, H):
         pass
 
     def invhess_congr(self, A):
-        pass
-
-    def invhess_mtx(self):
         pass
 
     def third_dir_deriv_axpy(self, out, dir, a=True):
@@ -67,17 +61,11 @@ class SymCone(BaseCone):
 
     def nt_congr(self, A):
         pass
-     
-    def nt_mtx(self):
-        pass
     
     def invnt_prod_ip(self, out, H):
         pass
 
     def invnt_congr(self, A):
-        pass
-    
-    def invnt_mtx(self):
         pass
 
     def comb_dir(self, out, ds, dz, sigma_mu):

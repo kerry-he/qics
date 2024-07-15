@@ -213,7 +213,7 @@ class Cone(BaseCone):
         Hxx_inv_x = self.Ux @ (self.D1x_comb_inv * UxWxUx) @ self.Ux.conj().T
         rhs_y = -sym.p_tr(Hxx_inv_x, self.sys, (self.n0, self.n1))
         temp = sym.mat_to_vec(rhs_y, hermitian=self.hermitian)
-        H_inv_g_y = lin.fact_solve(self.Hy_KHxK_fact, temp)
+        H_inv_g_y = lin.cho_solve(self.Hy_KHxK_fact, temp)
         temp = sym.i_kr(sym.vec_to_mat(H_inv_g_y, hermitian=self.hermitian), self.sys, (self.n0, self.n1))
 
         temp = self.Ux.conj().T @ temp @ self.Ux
@@ -272,7 +272,7 @@ class Cone(BaseCone):
         work  = self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices]
         work *= self.scale
         # Solve system
-        work = lin.fact_solve(self.Hy_KHxK_fact, work.T)
+        work = lin.cho_solve(self.Hy_KHxK_fact, work.T)
         # Expand truncated real vectors back into matrices
         self.work1.fill(0.)
         work[self.diag_indices, :] *= 0.5
@@ -478,7 +478,7 @@ class Cone(BaseCone):
         self.work6 -= self.work7
         work  = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
         work *= self.scale
-        self.Hy_KHxK_fact = lin.fact(work) 
+        self.Hy_KHxK_fact = lin.cho_fact(work) 
 
         self.invhess_aux_updated = True
 

@@ -238,7 +238,7 @@ class Cone(BaseCone):
         temp_vec = work.view(dtype=np.float64).reshape((-1, 1))[self.triu_indices]
         temp_vec *= self.scale.reshape((-1, 1))
 
-        temp_vec = lin.fact_solve(self.hess_fact, temp_vec)
+        temp_vec = lin.cho_solve(self.hess_fact, temp_vec)
 
         work.fill(0.)
         temp_vec[self.diag_indices] *= 0.5
@@ -285,7 +285,7 @@ class Cone(BaseCone):
         np.add(self.Ax_vec, self.work1, out=self.work0)
 
         # Solve system
-        lhsX = lin.fact_solve(self.hess_fact, self.work0.T)
+        lhsX = lin.cho_solve(self.hess_fact, self.work0.T)
 
         # ====================================================================
         # Inverse Hessian products with respect to t
@@ -459,7 +459,7 @@ class Cone(BaseCone):
         # Get Hessian and factorize
         self.hess  = self.work8.view(dtype=np.float64).reshape((self.vni, -1))[:, self.triu_indices]
         self.hess *= self.scale
-        self.hess_fact = lin.fact(self.hess)
+        self.hess_fact = lin.cho_fact(self.hess.copy())
 
         self.invhess_aux_updated = True
 

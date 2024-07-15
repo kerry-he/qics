@@ -47,18 +47,12 @@ class Cone(SymCone):
     def hess_congr(self, A):
         return self.base_congr(A, np.reciprocal(self.x))
 
-    def hess_mtx(self):
-        return np.reciprocal(self.x * self.x).reshape((-1,))
-
     def invhess_prod_ip(self, out, H):
         out[:] = H * (self.x**2)
         return out
 
     def invhess_congr(self, A):
         return self.base_congr(A, self.x)
-
-    def invhess_mtx(self):
-        return (self.x * self.x).reshape((-1,))    
 
     def base_congr(self, A, x):
         if sp.sparse.issparse(A):
@@ -99,18 +93,12 @@ class Cone(SymCone):
         out[:] = H * self.z / self.x
         return out
 
+    def nt_congr(self, A):
+        return self.base_congr(A, np.sqrt(self.z / self.x))
+
     def invnt_prod_ip(self, out, H):
         out[:] = H * self.x / self.z
         return out
-
-    def nt_mtx(self):
-        return (self.z / self.x).reshape((-1,))
-    
-    def invnt_mtx(self):
-        return (self.x / self.z).reshape((-1,))
-
-    def nt_congr(self, A):
-        return self.base_congr(A, np.sqrt(self.z / self.x))
 
     def invnt_congr(self, A):
         return self.base_congr(A, np.sqrt(self.x / self.z))    

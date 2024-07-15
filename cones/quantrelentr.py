@@ -265,7 +265,7 @@ class Cone(BaseCone):
         temp_vec = temp.view(dtype=np.float64).reshape((-1, 1))[self.triu_indices]
         temp_vec *= self.scale.reshape((-1, 1))
 
-        temp_vec = lin.fact_solve(self.hess_schur_fact, temp_vec)
+        temp_vec = lin.cho_solve(self.hess_schur_fact, temp_vec)
 
         temp.fill(0.)
         temp_vec[self.diag_indices] *= 0.5
@@ -343,7 +343,7 @@ class Cone(BaseCone):
         work  = self.work2.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices]
         work *= self.scale
         # Solve system
-        work = lin.fact_solve(self.hess_schur_fact, work.T)
+        work = lin.cho_solve(self.hess_schur_fact, work.T)
         # Expand truncated real vectors back into matrices
         self.work1.fill(0.)
         work[self.diag_indices, :] *= 0.5
@@ -551,7 +551,7 @@ class Cone(BaseCone):
 
         # Subtract to obtain Schur complement then Cholesky factor
         hess_schur -= work
-        self.hess_schur_fact = lin.fact(hess_schur)
+        self.hess_schur_fact = lin.cho_fact(hess_schur)
         self.invhess_aux_updated = True
 
         return
