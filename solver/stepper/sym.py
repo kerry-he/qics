@@ -13,7 +13,6 @@ class SymStepper():
         self.rhs        = Point(model)
         self.dir_a      = Point(model)
         self.dir_comb   = Point(model)
-        self.temp       = Point(model)
         self.next_point = Point(model)
         
         return

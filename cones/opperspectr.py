@@ -115,28 +115,13 @@ class Cone(BaseCone):
 
         return out
     
-    def set_point(self, point, dual, a=True):
-        self.t = point[0] * a
-        self.X = point[1] * a
-        self.Y = point[2] * a
-
-        self.t_d = dual[0] * a
-        self.X_d = dual[1] * a
-        self.Y_d = dual[2] * a
-
-        self.feas_updated        = False
-        self.grad_updated        = False
-        self.hess_aux_updated    = False
-        self.invhess_aux_updated = False
-        self.dder3_aux_updated   = False
-
-        return
-    
     def get_feas(self):
         if self.feas_updated:
             return self.feas
         
         self.feas_updated = True
+
+        (self.t, self.X, self.Y) = self.primal
 
         # Check that X and Y are PSD
         self.Dx, self.Ux = np.linalg.eigh(self.X)
@@ -228,17 +213,6 @@ class Cone(BaseCone):
 
         self.grad_updated = True
 
-    def get_grad(self, out):
-        assert self.feas_updated
-        if not self.grad_updated:
-            self.update_grad()
-
-        out[0][:] = self.grad[0]
-        out[1][:] = self.grad[1]
-        out[2][:] = self.grad[2]
-        
-        return out
-
     def hess_prod_ip(self, out, H):
         assert self.grad_updated
         if not self.hess_aux_updated:
@@ -311,14 +285,29 @@ class Cone(BaseCone):
 
         (Ht, Hx, Hy) = H
 
-        Wx = Hx + Ht * self.DPhiX
-        Wy = Hy + Ht * self.DPhiY
+        Wx      = Hx + Ht * self.DPhiX
+        Wx_vec  = Wx.view(dtype=np.float64).reshape(-1)[self.triu_indices]
+        Wx_vec *= self.scale
 
-        Wxy   = np.vstack((sym.mat_to_vec(Wx, hermitian=self.hermitian), sym.mat_to_vec(Wy, hermitian=self.hermitian)))
-        outxy = lin.cho_solve(self.hess_fact, Wxy)
+        Wy      = Hy + Ht * self.DPhiY
+        Wy_vec  = Wy.view(dtype=np.float64).reshape(-1)[self.triu_indices]
+        Wy_vec *= self.scale
 
-        out[1][:] = sym.vec_to_mat(outxy[:self.vn], hermitian=self.hermitian)
-        out[2][:] = sym.vec_to_mat(outxy[self.vn:], hermitian=self.hermitian)
+        Wxy_vec = np.hstack((Wx_vec, Wy_vec))
+        outxy   = lin.cho_solve(self.hess_fact, Wxy_vec)
+
+        outxy = outxy.reshape(2, -1)
+        outxy[:, self.diag_indices] *= 0.5
+        outxy /= self.scale
+
+        outX = np.zeros_like(Wx)
+        outX.view(dtype=np.float64).reshape(-1)[self.triu_indices] = outxy[0]
+        out[1][:] = outX + outX.conj().T
+
+        outY = np.zeros_like(Wx)
+        outY.view(dtype=np.float64).reshape(-1)[self.triu_indices] = outxy[1]
+        out[2][:] = outY + outY.conj().T
+
         out[0][:] = self.z2 * Ht + lin.inp(out[1], self.DPhiX) + lin.inp(out[2], self.DPhiY)
 
         return out
@@ -351,14 +340,14 @@ class Cone(BaseCone):
         # Multiply A (H A')
         return self.A_compact @ lhsxy + np.outer(self.At, lhst)
 
-    def third_dir_deriv_axpy(self, out, dir, a=True):
+    def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
         if not self.dder3_aux_updated:
             self.update_dder3_aux()
 
-        (Ht, Hx, Hy) = dir
+        (Ht, Hx, Hy) = H
 
         chi = Ht[0, 0] - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)
         chi2 = chi * chi
@@ -429,19 +418,6 @@ class Cone(BaseCone):
         out[2][:] += dder3_Y * a
 
         return out
-    
-    def prox(self):
-        assert self.feas_updated
-        if not self.grad_updated:
-            self.update_grad()
-        psi = [
-            self.t_d + self.grad[0],
-            self.X_d + self.grad[1],
-            self.Y_d + self.grad[2]
-        ]
-        temp = [np.zeros((1, 1)), np.zeros((self.n, self.n), dtype=self.dtype), np.zeros((self.n, self.n), dtype=self.dtype)]
-        self.invhess_prod_ip(temp, psi)
-        return lin.inp(temp[0], psi[0]) + lin.inp(temp[1], psi[1]) + lin.inp(temp[2], psi[2])
     
     # ========================================================================
     # Auxilliary functions

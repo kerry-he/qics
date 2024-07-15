@@ -1,10 +1,8 @@
 import numpy as np
 import scipy as sp
 
-from utils import symmetric as sym
-from utils import linear as lin
 from utils import sparse
-from cones import *
+from cones import nonnegorthant
 
 class Model():
     def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0):
@@ -24,7 +22,7 @@ class Model():
         self.use_A = (A is not None) and (A.size > 0)
 
         self.cone_idxs = build_cone_idxs(self.q, cones)
-        self.nu = 1 if (len(cones) == 0) else (1 + sum([cone.nu for cone in cones]))
+        self.nu = 1 + sum([cone.nu for cone in cones])
 
         self.offset = offset
         

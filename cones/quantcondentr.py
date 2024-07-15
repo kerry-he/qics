@@ -46,27 +46,14 @@ class Cone(BaseCone):
 
         return out
     
-    def set_point(self, point, dual, a=True):
-        self.t = point[0] * a
-        self.X = point[1] * a
-        self.Y = sym.p_tr(self.X, self.sys, (self.n0, self.n1))
-
-        self.t_d = dual[0] * a
-        self.X_d = dual[1] * a        
-
-        self.feas_updated        = False
-        self.grad_updated        = False
-        self.hess_aux_updated    = False
-        self.invhess_aux_updated = False
-        self.dder3_aux_updated   = False
-
-        return
-    
     def get_feas(self):
         if self.feas_updated:
             return self.feas
         
         self.feas_updated = True
+
+        (self.t, self.X) = self.primal
+        self.Y = sym.p_tr(self.X, self.sys, (self.n0, self.n1))
 
         self.Dx, self.Ux = np.linalg.eigh(self.X)
         self.Dy, self.Uy = np.linalg.eigh(self.Y)
@@ -109,16 +96,6 @@ class Cone(BaseCone):
         ]        
 
         self.grad_updated = True
-
-    def get_grad(self, out):
-        assert self.feas_updated
-        if not self.grad_updated:
-            self.update_grad()
-
-        out[0][:] = self.grad[0]
-        out[1][:] = self.grad[1]
-        
-        return out
 
     def hess_prod_ip(self, out, H):
         assert self.grad_updated
@@ -209,13 +186,26 @@ class Cone(BaseCone):
         (Ht, Hx) = H
         Wx = Hx + Ht * self.DPhi
 
+        # Apply D2S(X)^-1 = (Ux kron Ux) log^[1](Dx) (Ux' kron Ux')
         UxWxUx = self.Ux.conj().T @ Wx @ self.Ux
         Hxx_inv_x = self.Ux @ (self.D1x_comb_inv * UxWxUx) @ self.Ux.conj().T
-        rhs_y = -sym.p_tr(Hxx_inv_x, self.sys, (self.n0, self.n1))
-        temp = sym.mat_to_vec(rhs_y, hermitian=self.hermitian)
-        H_inv_g_y = lin.cho_solve(self.Hy_KHxK_fact, temp)
-        temp = sym.i_kr(sym.vec_to_mat(H_inv_g_y, hermitian=self.hermitian), self.sys, (self.n0, self.n1))
+        work = -sym.p_tr(Hxx_inv_x, self.sys, (self.n0, self.n1))
 
+        # Solve linear system N \ ( ... )
+        temp = work.view(dtype=np.float64).reshape((-1, 1))[self.triu_indices]
+        temp *= self.scale.reshape((-1, 1))
+
+        H_inv_g_y = lin.cho_solve(self.Hy_KHxK_fact, temp)
+
+        work.fill(0.)
+        H_inv_g_y[self.diag_indices] *= 0.5
+        H_inv_g_y /= self.scale.reshape((-1, 1))
+        work.view(dtype=np.float64).reshape((-1, 1))[self.triu_indices] = H_inv_g_y
+        work += work.conj().T
+
+        # Apply PTr' = IKr
+        temp = sym.i_kr(work, self.sys, (self.n0, self.n1))
+        # Apply D2S(X)^-1 = (Ux kron Ux) log^[1](Dx) (Ux' kron Ux')
         temp = self.Ux.conj().T @ temp @ self.Ux
         H_inv_w_x = Hxx_inv_x - self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.conj().T
         H_inv_w_x = (H_inv_w_x + H_inv_w_x.conj().T) * 0.5
@@ -301,14 +291,14 @@ class Cone(BaseCone):
         # Multiply A (H A')
         return lhs @ A.T
 
-    def third_dir_deriv_axpy(self, out, dir, a=True):
+    def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
         if not self.dder3_aux_updated:
             self.update_dder3_aux()
 
-        (Ht, Hx) = dir
+        (Ht, Hx) = H
         Hy = sym.p_tr(Hx, self.sys, (self.n0, self.n1))
 
         UxHxUx = self.Ux.conj().T @ Hx @ self.Ux
@@ -338,18 +328,6 @@ class Cone(BaseCone):
         out[1][:] += dder3_X * a
 
         return out
-
-    def prox(self):
-        assert self.feas_updated
-        if not self.grad_updated:
-            self.update_grad()
-        psi = [
-            self.t_d + self.grad[0],
-            self.X_d + self.grad[1]
-        ]
-        temp = [np.zeros((1, 1)), np.zeros((self.N, self.N), dtype=self.dtype)]
-        self.invhess_prod_ip(temp, psi)
-        return lin.inp(temp[0], psi[0]) + lin.inp(temp[1], psi[1])
 
     # ========================================================================
     # Auxilliary functions

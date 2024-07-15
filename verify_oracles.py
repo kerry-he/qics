@@ -39,7 +39,7 @@ H[2] += H[2].conj().T
 eps = 1e-8
 f0 = K.get_val()
 g0 = [np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype)]
-K.get_grad(g0)
+K.grad_ip(g0)
 H0 = [np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype)]
 K.hess_prod_ip(H0, H)
 # T0 = [np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype)]
@@ -80,7 +80,7 @@ x1 = [xk + eps*Hk for (xk, Hk) in zip(x0, H)]
 K.set_point(x1, x1)
 K.get_feas()
 g1 = [np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype)]
-K.get_grad(g1)
+K.grad_ip(g1)
 H1 = [np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype)]
 K.hess_prod_ip(H1, H)
 # T1 = [np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype), np.zeros((n, n), dtype=dtype)]

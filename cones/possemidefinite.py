@@ -43,8 +43,8 @@ class Cone(SymCone):
         out[:] = self.X
         return out
     
-    def set_point(self, point, dual=None, a=True):
-        self.X = point * a
+    def set_point(self, primal, dual=None, a=True):
+        self.X = primal * a
         self.Z = dual * a
 
         self.feas_updated = False
@@ -86,7 +86,7 @@ class Cone(SymCone):
 
         self.grad_updated = True
 
-    def get_grad(self, out):
+    def grad_ip(self, out):
         assert self.feas_updated
         if not self.grad_updated:
             self.update_grad()

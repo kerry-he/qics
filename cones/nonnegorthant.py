@@ -25,8 +25,8 @@ class Cone(SymCone):
         out[:] = self.x
         return out
 
-    def set_point(self, point, dual=None, a=True):
-        self.x = point * a
+    def set_point(self, primal, dual=None, a=True):
+        self.x = primal * a
         self.z = dual * a
         return
 
@@ -36,7 +36,7 @@ class Cone(SymCone):
     def get_val(self):
         return -np.sum(np.log(self.x))    
 
-    def get_grad(self, out):
+    def grad_ip(self, out):
         out[:] = -np.reciprocal(self.x)
         return out
 

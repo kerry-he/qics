@@ -123,28 +123,13 @@ class Cone(BaseCone):
 
         return out
     
-    def set_point(self, point, dual, a=True):
-        self.T = point[0] * a
-        self.X = point[1] * a
-        self.Y = point[2] * a
-
-        self.T_d = dual[0] * a
-        self.X_d = dual[1] * a
-        self.Y_d = dual[2] * a
-
-        self.feas_updated        = False
-        self.grad_updated        = False
-        self.hess_aux_updated    = False
-        self.invhess_aux_updated = False
-        self.dder3_aux_updated   = False
-
-        return
-    
     def get_feas(self):
         if self.feas_updated:
             return self.feas
         
         self.feas_updated = True
+
+        (self.T, self.X, self.Y) = self.primal
 
         # Check that X and Y are PSD
         self.Dx, self.Ux = np.linalg.eigh(self.X)
@@ -241,17 +226,6 @@ class Cone(BaseCone):
         ]
 
         self.grad_updated = True
-
-    def get_grad(self, out):
-        assert self.feas_updated
-        if not self.grad_updated:
-            self.update_grad()
-
-        out[0][:] = self.grad[0]
-        out[1][:] = self.grad[1]
-        out[2][:] = self.grad[2]
-        
-        return out
 
     def hess_prod_ip(self, out, H):
         assert self.grad_updated
@@ -359,17 +333,30 @@ class Cone(BaseCone):
         # ====================================================================
         # Inverse Hessian products with respect to (X, Y)
         # ====================================================================
-        work = self.rt2Y_Uyxy.conj().T @ Ht @ self.rt2Y_Uyxy
-        Wx = Hx + self.irt2Y_Uyxy @ (self.D1yxy_h * work) @ self.irt2Y_Uyxy.conj().T
+        work    = self.rt2Y_Uyxy.conj().T @ Ht @ self.rt2Y_Uyxy
+        Wx      = Hx + self.irt2Y_Uyxy @ (self.D1yxy_h * work) @ self.irt2Y_Uyxy.conj().T
+        Wx_vec  = Wx.view(dtype=np.float64).reshape(-1)[self.triu_indices]
+        Wx_vec *= self.scale        
 
-        work = self.rt2X_Uxyx.conj().T @ Ht @ self.rt2X_Uxyx
-        Wy = Hy + self.irt2X_Uxyx @ (self.D1xyx_g * work) @ self.irt2X_Uxyx.conj().T
+        work    = self.rt2X_Uxyx.conj().T @ Ht @ self.rt2X_Uxyx
+        Wy      = Hy + self.irt2X_Uxyx @ (self.D1xyx_g * work) @ self.irt2X_Uxyx.conj().T
+        Wy_vec  = Wy.view(dtype=np.float64).reshape(-1)[self.triu_indices]
+        Wy_vec *= self.scale        
 
-        vec = np.vstack((sym.mat_to_vec(Wx, hermitian=self.hermitian), sym.mat_to_vec(Wy, hermitian=self.hermitian)))
-        sol = lin.cho_solve(self.hess_fact, vec)
+        Wxy_vec = np.vstack((Wx_vec, Wy_vec))
+        outxy   = lin.cho_solve(self.hess_fact, Wxy_vec)
 
-        out[1][:] = sym.vec_to_mat(sol[:self.vn], hermitian=self.hermitian)
-        out[2][:] = sym.vec_to_mat(sol[self.vn:2*self.vn], hermitian=self.hermitian)
+        outxy = outxy.reshape(2, -1)
+        outxy[:, self.diag_indices] *= 0.5
+        outxy /= self.scale
+
+        outX = np.zeros_like(Wx)
+        outX.view(dtype=np.float64).reshape(-1)[self.triu_indices] = outxy[0]
+        out[1][:] = outX + outX.conj().T
+
+        outY = np.zeros_like(Wx)
+        outY.view(dtype=np.float64).reshape(-1)[self.triu_indices] = outxy[1]
+        out[2][:] = outY + outY.conj().T
 
         # ====================================================================
         # Inverse Hessian products with respect to Z
@@ -467,14 +454,14 @@ class Cone(BaseCone):
 
         return out
 
-    def third_dir_deriv_axpy(self, out, dir, a=True):
+    def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
         if not self.dder3_aux_updated:
             self.update_dder3_aux()
 
-        (Ht, Hx, Hy) = dir
+        (Ht, Hx, Hy) = H
 
         UyxyYHxYUyxy = self.irt2Y_Uyxy.conj().T @ Hx @ self.irt2Y_Uyxy
         UxyxXHyXUxyx = self.irt2X_Uxyx.conj().T @ Hy @ self.irt2X_Uxyx
@@ -555,19 +542,6 @@ class Cone(BaseCone):
         out[2][:] += dder3_Y * a
 
         return out
-    
-    def prox(self):
-        assert self.feas_updated
-        if not self.grad_updated:
-            self.update_grad()
-        psi = [
-            self.T_d + self.grad[0],
-            self.X_d + self.grad[1],
-            self.Y_d + self.grad[2]
-        ]
-        temp = [np.zeros((self.n, self.n), dtype=self.dtype), np.zeros((self.n, self.n), dtype=self.dtype), np.zeros((self.n, self.n), dtype=self.dtype)]
-        self.invhess_prod_ip(temp, psi)
-        return lin.inp(temp[0], psi[0]) + lin.inp(temp[1], psi[1]) + lin.inp(temp[2], psi[2])
     
     # ========================================================================
     # Auxilliary functions

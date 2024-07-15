@@ -15,7 +15,6 @@ class NonSymStepper():
         self.dir_c_toa  = Point(model)
         self.dir_p      = Point(model)
         self.dir_p_toa  = Point(model)
-        self.temp       = Point(model)
         self.next_point = Point(model)
         
         return
@@ -150,7 +149,7 @@ class NonSymStepper():
         # rs := -z - mu*g(s)
         rtmu = math.sqrt(mu)
         for (k, cone_k) in enumerate(model.cones):
-            cone_k.get_grad(self.rhs.s[k])
+            cone_k.grad_ip(self.rhs.s[k])
         self.rhs.s.vec *= -rtmu
         self.rhs.s.vec -= point.z.vec
 

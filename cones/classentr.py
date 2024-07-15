@@ -37,29 +37,14 @@ class Cone(BaseCone):
         out[2][:] = point[2]
 
         return out
-    
-    def set_point(self, point, dual, a=True):
-        self.t = point[0] * a
-        self.u = point[1] * a
-        self.x = point[2] * a
 
-        self.t_d = dual[0] * a
-        self.u_d = dual[1] * a
-        self.x_d = dual[2] * a
-
-        self.feas_updated        = False
-        self.grad_updated        = False
-        self.hess_aux_updated    = False
-        self.invhess_aux_updated = False
-        self.dder3_aux_updated   = False
-
-        return
-    
     def get_feas(self):
         if self.feas_updated:
             return self.feas
         
         self.feas_updated = True
+
+        (self.t, self.u, self.x) = self.primal
 
         if (self.u <= 0) or any(self.x <= 0):
             self.feas = False
@@ -96,17 +81,6 @@ class Cone(BaseCone):
         ]        
 
         self.grad_updated = True
-
-    def get_grad(self, out):
-        assert self.feas_updated
-        if not self.grad_updated:
-            self.update_grad()
-
-        out[0][:] = self.grad[0]
-        out[1][:] = self.grad[1]
-        out[2][:] = self.grad[2]
-        
-        return out
 
     def hess_prod_ip(self, out, H):
         assert self.grad_updated
@@ -268,14 +242,14 @@ class Cone(BaseCone):
         # Multiply A (H A')
         return lhs @ A.T
 
-    def third_dir_deriv_axpy(self, out, dir, a=True):
+    def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
         if not self.dder3_aux_updated:
             self.update_dder3_aux()
 
-        (Ht, Hu, Hx) = dir
+        (Ht, Hu, Hx) = H
 
         Hu2    = Hu * Hu
         Hx2    = Hx * Hx
@@ -316,19 +290,6 @@ class Cone(BaseCone):
         out[2][:] += dder3_x * a
 
         return out
-
-    def prox(self):
-        assert self.feas_updated
-        if not self.grad_updated:
-            self.update_grad()
-        psi = [
-            self.t_d + self.grad[0],
-            self.u_d + self.grad[1],
-            self.x_d + self.grad[2]
-        ]
-        temp = [np.zeros((1, 1)), np.zeros((1, 1)), np.zeros((self.n, 1))]
-        self.invhess_prod_ip(temp, psi)
-        return lin.inp(temp[0], psi[0]) + lin.inp(temp[1], psi[1]) + lin.inp(temp[2], psi[2])
 
     # ========================================================================
     # Auxilliary functions

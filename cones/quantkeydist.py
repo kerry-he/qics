@@ -76,29 +76,13 @@ class Cone(BaseCone):
 
         return out
     
-    def set_point(self, point, dual, a=True):
-        self.t = point[0] * a
-        self.X = point[1] * a
-
-        self.t_d = dual[0] * a
-        self.X_d = dual[1] * a
-
-        self.KX_blk  = [sym.congr_map(self.X, K_list)  for K_list  in self.K_list_blk]
-        self.ZKX_blk = [sym.congr_map(self.X, ZK_list) for ZK_list in self.ZK_list_blk]
-
-        self.feas_updated        = False
-        self.grad_updated        = False
-        self.hess_aux_updated    = False
-        self.invhess_aux_updated = False
-        self.dder3_aux_updated   = False
-
-        return
-    
     def get_feas(self):
         if self.feas_updated:
             return self.feas
         
         self.feas_updated = True
+
+        (self.t, self.X) = self.primal
 
         # Eigendecomposition of X
         self.Dx, self.Ux = np.linalg.eigh(self.X)
@@ -106,8 +90,10 @@ class Cone(BaseCone):
             self.feas = False
             return self.feas
 
-        # Eigendecomposition of G(X)
-        DUkx_blk = [np.linalg.eigh(KX) for KX in self.KX_blk]
+        # Eigendecomposition of G(X)        
+        self.KX_blk  = [sym.congr_map(self.X, K_list)  for K_list  in self.K_list_blk]
+
+        DUkx_blk     = [np.linalg.eigh(KX) for KX in self.KX_blk]
         self.Dkx_blk = [DUkx[0] for DUkx in DUkx_blk]
         self.Ukx_blk = [DUkx[1] for DUkx in DUkx_blk]
 
@@ -116,7 +102,9 @@ class Cone(BaseCone):
             return self.feas        
 
         # Eigendecomposition of Z(G(X))
-        DUzkx_blk = [np.linalg.eigh(ZKX) for ZKX in self.ZKX_blk]
+        self.ZKX_blk = [sym.congr_map(self.X, ZK_list) for ZK_list in self.ZK_list_blk]        
+
+        DUzkx_blk     = [np.linalg.eigh(ZKX) for ZKX in self.ZKX_blk]
         self.Dzkx_blk = [DUzkx[0] for DUzkx in DUzkx_blk]
         self.Uzkx_blk = [DUzkx[1] for DUzkx in DUzkx_blk]
 
@@ -164,16 +152,6 @@ class Cone(BaseCone):
         ]
 
         self.grad_updated = True
-
-    def get_grad(self, out):
-        assert self.feas_updated
-        if not self.grad_updated:
-            self.update_grad()
-
-        out[0][:] = self.grad[0]
-        out[1][:] = self.grad[1]
-        
-        return out
     
     def update_hessprod_aux(self):
         assert not self.hess_aux_updated
@@ -296,14 +274,14 @@ class Cone(BaseCone):
         # Multiply A (H A')
         return np.outer(lhst, self.At) + lhsX.T @ self.Ax_vec.T
 
-    def third_dir_deriv_axpy(self, out, dir, a=True):
+    def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
         if not self.dder3_aux_updated:
             self.update_dder3_aux()
 
-        (Ht, Hx) = dir
+        (Ht, Hx) = H
 
         KH_blk  = [sym.congr_map(Hx, K_list) for K_list in self.K_list_blk]
         ZKH_blk = [sym.congr_map(Hx, ZK_list) for ZK_list in self.ZK_list_blk]
@@ -340,19 +318,7 @@ class Cone(BaseCone):
         out[1][:] += dder3_X * a
 
         return out
-    
-    def prox(self):
-        assert self.feas_updated
-        if not self.grad_updated:
-            self.update_grad()
-        psi = [
-            self.t_d + self.grad[0],
-            self.X_d + self.grad[1]
-        ]
-        temp = [np.zeros((1, 1)), np.zeros((self.ni, self.ni), dtype=self.dtype)]
-        self.invhess_prod_ip(temp, psi)
-        return lin.inp(temp[0], psi[0]) + lin.inp(temp[1], psi[1]) 
-    
+
     # ========================================================================
     # Auxilliary functions
     # ========================================================================

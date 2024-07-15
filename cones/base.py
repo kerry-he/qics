@@ -1,3 +1,4 @@
+import numpy as np
 from utils import linear as lin
 
 class BaseCone():
@@ -8,32 +9,60 @@ class BaseCone():
         return False
     
     def zeros(self):
-        pass
+        out = []
+        for (dim_k, type_k) in zip(self.dim, self.type):
+            if type_k == 'r':
+                out += [np.zeros((dim_k, 1))]
+            elif type_k == 's':
+                n_k = int(np.sqrt(dim_k))
+                out += [np.zeros((n_k, n_k))]
+            elif type_k == 'h':
+                n_k = int(np.sqrt(dim_k // 2))
+                out += [np.zeros((n_k, n_k), dtype=np.complex128)]
+        return out
 
     def prox(self):
         assert self.feas_updated
         if not self.grad_updated:
             self.update_grad()
 
+        # Proximity measure is given by <psi, H^-1 psi>
+        # where psi = z/mu + g(s)
         psi  = [dual_k + grad_k for (dual_k, grad_k) in zip(self.dual, self.grad)]
-        temp = self.zeros()
-        self.invhess_prod_ip(temp, psi)
-        return lin.inp(temp[0], psi[0]) + lin.inp(temp[1], psi[1]) 
+
+        H_psi = self.zeros()
+        self.invhess_prod_ip(H_psi, psi)
+
+        return sum([lin.inp(H_psi_k, psi_k) for (H_psi_k, psi_k) in zip(H_psi, psi)])
+
+    def set_point(self, primal, dual, a=True):
+        self.primal = [primal_k * a for primal_k in primal]
+        self.dual   = [dual_k   * a for dual_k   in dual]
+
+        self.feas_updated        = False
+        self.grad_updated        = False
+        self.hess_aux_updated    = False
+        self.invhess_aux_updated = False
+        self.dder3_aux_updated   = False
+
+    def grad_ip(self, out):
+        assert self.feas_updated
+        if not self.grad_updated:
+            self.update_grad()
+
+        for (out_k, grad_k) in zip(out, self.grad):
+            out_k[:] = grad_k
+        
+        return out
 
     # Functions that the child class has to implement
     def get_init_point(self, out):
-        pass
-    
-    def set_point(self, point, dual, a=True):
         pass
     
     def get_feas(self):
         pass
     
     def update_grad(self):
-        pass
-
-    def get_grad(self, out):
         pass
 
     def hess_prod_ip(self, out, H):
@@ -48,7 +77,7 @@ class BaseCone():
     def invhess_congr(self, A):
         pass
 
-    def third_dir_deriv_axpy(self, out, dir, a=True):
+    def third_dir_deriv_axpy(self, out, H, a=True):
         pass
 
 class SymCone(BaseCone):

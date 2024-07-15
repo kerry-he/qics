@@ -7,10 +7,9 @@ def norm_inf(x):
 
 def inp(x, y):
     # Standard inner product
-    if isinstance(x, list) and isinstance(y, list):
-        return sum([np.sum(xi * yi.conj()).real for (xi, yi) in zip(x, y)])
-    else:
-        return np.sum(x * y.conj()).real
+    x_view = x.view(dtype=np.float64).reshape( 1, -1)
+    y_view = y.view(dtype=np.float64).reshape(-1,  1).conj()
+    return (x_view @ y_view)[0, 0]
 
 def cho_fact(A):
     # Perform a Cholesky decomposition, while increment diagonals if failed     
