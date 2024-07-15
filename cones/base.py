@@ -55,25 +55,25 @@ class BaseCone():
         
         return out
     
-    def precompute_mat_vec_idxs(self):
+    def precompute_mat_vec(self):
         # Indices to convert to and from compact vectors and matrices
         if self.hermitian:
-            self.diag_indices = np.append(0, np.cumsum([i for i in range(3, 2*self.n+1, 2)]))
-            self.triu_indices = np.empty(self.n*self.n, dtype=int)
+            self.diag_idxs = np.append(0, np.cumsum([i for i in range(3, 2*self.n+1, 2)]))
+            self.triu_idxs = np.empty(self.n*self.n, dtype=int)
             self.scale        = np.empty(self.n*self.n)
             k = 0
             for j in range(self.n):
                 for i in range(j):
-                    self.triu_indices[k]     = 2 * (j + i*self.n)
-                    self.triu_indices[k + 1] = 2 * (j + i*self.n) + 1
+                    self.triu_idxs[k]     = 2 * (j + i*self.n)
+                    self.triu_idxs[k + 1] = 2 * (j + i*self.n) + 1
                     self.scale[k:k+2]        = np.sqrt(2.)
                     k += 2
-                self.triu_indices[k] = 2 * (j + j*self.n)
+                self.triu_idxs[k] = 2 * (j + j*self.n)
                 self.scale[k]        = 1.
                 k += 1
         else:
-            self.diag_indices = np.append(0, np.cumsum([i for i in range(2, self.n+1, 1)]))
-            self.triu_indices = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
+            self.diag_idxs = np.append(0, np.cumsum([i for i in range(2, self.n+1, 1)]))
+            self.triu_idxs = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
             self.scale = np.array([1 if i==j else np.sqrt(2.) for j in range(self.n) for i in range(j + 1)])
 
         # Computational basis for symmetric/Hermitian matrices

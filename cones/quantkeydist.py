@@ -34,7 +34,7 @@ class Cone(BaseCone):
         self.congr_aux_updated = False
         self.invhess_aux_aux_updated = False
 
-        self.precompute_mat_vec_idxs()     
+        self.precompute_mat_vec()     
 
         return
 
@@ -196,15 +196,15 @@ class Cone(BaseCone):
         work = Hx + Ht * self.DPhi
 
         # Inverse Hessian products with respect to X
-        temp_vec = work.view(dtype=np.float64).reshape((-1, 1))[self.triu_indices]
+        temp_vec = work.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs]
         temp_vec *= self.scale.reshape((-1, 1))
 
         temp_vec = lin.cho_solve(self.hess_fact, temp_vec)
 
         work.fill(0.)
-        temp_vec[self.diag_indices] *= 0.5
+        temp_vec[self.diag_idxs] *= 0.5
         temp_vec /= self.scale.reshape((-1, 1))
-        work.view(dtype=np.float64).reshape((-1, 1))[self.triu_indices] = temp_vec
+        work.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs] = temp_vec
         work += work.conj().T
 
         out[1][:] = work
@@ -309,7 +309,7 @@ class Cone(BaseCone):
         assert not self.congr_aux_updated
 
         self.At     = A[:, 0]
-        self.Ax_vec = A[:, 1 + self.triu_indices] * self.scale
+        self.Ax_vec = A[:, 1 + self.triu_idxs] * self.scale
 
         self.work0 = np.empty_like(self.Ax_vec)
         self.work1 = np.empty_like(self.Ax_vec)
@@ -357,7 +357,7 @@ class Cone(BaseCone):
             self.update_invhessprod_aux_aux()
 
         self.z2 = self.z * self.z
-        self.DPhi_vec = self.DPhi.view(dtype=np.float64).reshape(-1, 1)[self.triu_indices] * self.scale.reshape(-1, 1)
+        self.DPhi_vec = self.DPhi.view(dtype=np.float64).reshape(-1, 1)[self.triu_idxs] * self.scale.reshape(-1, 1)
 
         # Get X^-1 kron X^-1 
         lin.congr(self.work8, self.inv_X, self.E, work=self.work7)
@@ -391,7 +391,7 @@ class Cone(BaseCone):
                 self.work8 -= self.work7             
 
         # Get Hessian and factorize
-        self.hess  = self.work8.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
+        self.hess  = self.work8.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_idxs]
         self.hess *= self.scale
         self.hess_fact = lin.cho_fact(self.hess.copy())
 

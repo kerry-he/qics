@@ -31,7 +31,7 @@ class Cone(BaseCone):
         self.congr_aux_updated       = False
         self.dder3_aux_updated       = False
 
-        self.precompute_mat_vec_idxs()
+        self.precompute_mat_vec()
 
         return
     
@@ -194,15 +194,15 @@ class Cone(BaseCone):
         work = -sym.p_tr(Hxx_inv_x, self.sys, (self.n0, self.n1))
 
         # Solve linear system N \ ( ... )
-        temp = work.view(dtype=np.float64).reshape((-1, 1))[self.triu_indices]
+        temp = work.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs]
         temp *= self.scale.reshape((-1, 1))
 
         H_inv_g_y = lin.cho_solve(self.Hy_KHxK_fact, temp)
 
         work.fill(0.)
-        H_inv_g_y[self.diag_indices] *= 0.5
+        H_inv_g_y[self.diag_idxs] *= 0.5
         H_inv_g_y /= self.scale.reshape((-1, 1))
-        work.view(dtype=np.float64).reshape((-1, 1))[self.triu_indices] = H_inv_g_y
+        work.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs] = H_inv_g_y
         work += work.conj().T
 
         # Apply PTr' = IKr
@@ -261,15 +261,15 @@ class Cone(BaseCone):
 
         # Solve linear system N \ ( ... )
         # Convert matrices to truncated real vectors
-        work  = self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices]
+        work  = self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs]
         work *= self.scale
         # Solve system
         work = lin.cho_solve(self.Hy_KHxK_fact, work.T)
         # Expand truncated real vectors back into matrices
         self.work1.fill(0.)
-        work[self.diag_indices, :] *= 0.5
+        work[self.diag_idxs, :] *= 0.5
         work /= self.scale.reshape((-1, 1))
-        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices] = work.T
+        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs] = work.T
         self.work1 += self.work1.conj().transpose((0, 2, 1))
 
         # Apply PTr' = IKr
@@ -420,7 +420,7 @@ class Cone(BaseCone):
             rhs = np.copy(temp.transpose(2, 1, 0))         # self.n1, self.n0, self.N
 
         np.matmul(lhs, rhs, out=self.Work9)
-        self.Work8[self.diag_indices] = self.Work9
+        self.Work8[self.diag_idxs] = self.Work9
         rhs *= np.sqrt(0.5)
         t = 0
         for j in range(self.n):
@@ -442,7 +442,7 @@ class Cone(BaseCone):
 
         # Subtract to obtain N then Cholesky factor
         self.work6 -= self.work7
-        work  = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
+        work  = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_idxs]
         work *= self.scale
         self.Hy_KHxK_fact = lin.cho_fact(work) 
 

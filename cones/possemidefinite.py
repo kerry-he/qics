@@ -138,7 +138,7 @@ class Cone(SymCone):
                     lin.congr(lhs.reshape((len(self.A_ds_idxs), self.n, self.n)), X, self.Ai_ds, work=self.work)
 
                 # Compute inner products between all <Ai, X Aj X>
-                out[:, self.A_ds_idxs] = self.A_triu @ lhs[:, self.triu_indices].T
+                out[:, self.A_ds_idxs] = self.A_triu @ lhs[:, self.triu_idxs].T
                 out[self.A_ds_idxs, :] = out[:, self.A_ds_idxs].T
         else:
             # Compute symmetric matrix multiplication [A (L kr L)] [A (L kr L)]'
@@ -346,14 +346,14 @@ class Cone(SymCone):
 
                 A_sp = A[self.A_sp_idxs]  
 
-                triu_indices = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
+                triu_idxs = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
 
                 if self.hermitian:
-                    A_sp_real = A_sp[:, ::2][:, triu_indices]
-                    A_sp_imag = A_sp[:, 1::2][:, triu_indices]
+                    A_sp_real = A_sp[:, ::2][:, triu_idxs]
+                    A_sp_imag = A_sp[:, 1::2][:, triu_idxs]
                     A_sp_lil  = (A_sp_real + A_sp_imag*1j).tolil()
                 else:
-                    A_sp_lil = A_sp[:, triu_indices].tolil()
+                    A_sp_lil = A_sp[:, triu_idxs].tolil()
 
                 # Get number of nonzeros for each Ai (to account for ragged arrays)
                 self.A_sp_nnzs = A_sp_lil.getnnz(1)
@@ -389,7 +389,7 @@ class Cone(SymCone):
                 # Extract and scale all off-diagonal blocks by 2
                 if len(self.A_sp_idxs) > 0:
                     if self.hermitian:
-                        self.triu_indices = np.array(
+                        self.triu_idxs = np.array(
                             [2 * (i + i*self.n)     for i in range(self.n)] + 
                             [2 * (j + i*self.n)     for j in range(self.n) for i in range(j)] + 
                             [2 * (j + i*self.n) + 1 for j in range(self.n) for i in range(j)]
@@ -397,11 +397,11 @@ class Cone(SymCone):
                         scale = 2 * np.ones(2 * self.n * self.n)
                         scale[::2*self.n+2] = 1
                     else:
-                        self.triu_indices = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
+                        self.triu_idxs = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
                         scale = 2 * np.ones(self.n * self.n)
                         scale[::self.n+1] = 1
                     self.A_triu = sparse.scale_axis(A, scale_cols=scale)
-                    self.A_triu = self.A_triu[:, self.triu_indices]
+                    self.A_triu = self.A_triu[:, self.triu_idxs]
 
         else:
             # A and all Ai are dense matrices

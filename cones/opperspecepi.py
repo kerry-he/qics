@@ -85,7 +85,7 @@ class Cone(BaseCone):
             self.d2xh = lambda x : sgn * np.power(x, beta - 1) * ((beta + 1) * beta)
             self.d3xh = lambda x : sgn * np.power(x, beta - 2) * ((beta + 1) * beta * (beta - 1))    
 
-        self.precompute_mat_vec_idxs()
+        self.precompute_mat_vec()
 
         return
     
@@ -318,27 +318,27 @@ class Cone(BaseCone):
         # ====================================================================
         work    = self.rt2Y_Uyxy.conj().T @ Ht @ self.rt2Y_Uyxy
         Wx      = Hx + self.irt2Y_Uyxy @ (self.D1yxy_h * work) @ self.irt2Y_Uyxy.conj().T
-        Wx_vec  = Wx.view(dtype=np.float64).reshape(-1)[self.triu_indices]
+        Wx_vec  = Wx.view(dtype=np.float64).reshape(-1)[self.triu_idxs]
         Wx_vec *= self.scale        
 
         work    = self.rt2X_Uxyx.conj().T @ Ht @ self.rt2X_Uxyx
         Wy      = Hy + self.irt2X_Uxyx @ (self.D1xyx_g * work) @ self.irt2X_Uxyx.conj().T
-        Wy_vec  = Wy.view(dtype=np.float64).reshape(-1)[self.triu_indices]
+        Wy_vec  = Wy.view(dtype=np.float64).reshape(-1)[self.triu_idxs]
         Wy_vec *= self.scale        
 
         Wxy_vec = np.vstack((Wx_vec, Wy_vec))
         outxy   = lin.cho_solve(self.hess_fact, Wxy_vec)
 
         outxy = outxy.reshape(2, -1)
-        outxy[:, self.diag_indices] *= 0.5
+        outxy[:, self.diag_idxs] *= 0.5
         outxy /= self.scale
 
         outX = np.zeros_like(Wx)
-        outX.view(dtype=np.float64).reshape(-1)[self.triu_indices] = outxy[0]
+        outX.view(dtype=np.float64).reshape(-1)[self.triu_idxs] = outxy[0]
         out[1][:] = outX + outX.conj().T
 
         outY = np.zeros_like(Wx)
-        outY.view(dtype=np.float64).reshape(-1)[self.triu_indices] = outxy[1]
+        outY.view(dtype=np.float64).reshape(-1)[self.triu_idxs] = outxy[1]
         out[2][:] = outY + outY.conj().T
 
         # ====================================================================
@@ -390,8 +390,8 @@ class Cone(BaseCone):
         self.work0 += self.Ay
 
         # Solve linear system (X, Y) = M \ (Wx, Wy)
-        self.work9[:self.vn] = self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices].T
-        self.work9[self.vn:] = self.work0.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices].T
+        self.work9[:self.vn] = self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs].T
+        self.work9[self.vn:] = self.work0.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs].T
         self.work9 *= np.hstack((self.scale, self.scale)).reshape(-1, 1)
 
         sol = lin.cho_solve(self.hess_fact, self.work9)
@@ -407,11 +407,11 @@ class Cone(BaseCone):
        
         # Compute DxPhi[X]
         # Recover X as matrices from compact vectors
-        sol[self.diag_indices] *= 0.5
-        sol[self.diag_indices + self.vn] *= 0.5
+        sol[self.diag_idxs] *= 0.5
+        sol[self.diag_idxs + self.vn] *= 0.5
         sol /= np.hstack((self.scale, self.scale)).reshape(-1, 1)                
         self.work1.fill(0.)
-        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices] = sol[:self.vn].T
+        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs] = sol[:self.vn].T
         self.work1 += self.work1.conj().transpose((0, 2, 1))
 
         lin.congr(self.work2, self.irt2Y_Uyxy.conj().T, self.work1, work=self.work3)
@@ -423,7 +423,7 @@ class Cone(BaseCone):
         # Compute DyPhi[Y]
         # Recover Y as matrices from compact vectors
         self.work1.fill(0.)
-        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices] = sol[self.vn:].T
+        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs] = sol[self.vn:].T
         self.work1 += self.work1.conj().transpose((0, 2, 1))
 
         lin.congr(self.work2, self.irt2X_Uxyx.conj().T, self.work1, work=self.work3)
@@ -547,8 +547,8 @@ class Cone(BaseCone):
             self.Ax = np.array([Ax_k.reshape((self.n, self.n)) for Ax_k in self.Ax_vec])
             self.Ay = np.array([Ay_k.reshape((self.n, self.n)) for Ay_k in self.Ay_vec])
 
-        self.Ax_compact = self.Ax_vec[:, self.triu_indices]
-        self.Ay_compact = self.Ay_vec[:, self.triu_indices]
+        self.Ax_compact = self.Ax_vec[:, self.triu_idxs]
+        self.Ay_compact = self.Ay_vec[:, self.triu_idxs]
 
         self.Ax_compact *= self.scale
         self.Ay_compact *= self.scale
@@ -599,7 +599,7 @@ class Cone(BaseCone):
         lin.congr(self.work8, self.inv_X, self.E, work=self.work7)
         self.work8 += self.work5
         # Vectorize matrices as compact vectors
-        Hxx  = self.work8.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
+        Hxx  = self.work8.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_idxs]
         Hxx *= self.scale
 
         # Make Hyy = (D2yyPhi'[Z^-1] + Y^1 kron Y^-1) block
@@ -610,7 +610,7 @@ class Cone(BaseCone):
         lin.congr(self.work6, self.inv_Y, self.E, work=self.work7)
         self.work6 += self.work5
         # Vectorize matrices as compact vectors
-        Hyy  = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
+        Hyy  = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_idxs]
         Hyy *= self.scale
 
         # Make Hyx = D2yxPhi'[Z^-1] block
@@ -622,7 +622,7 @@ class Cone(BaseCone):
         np.add(self.work6, self.work6.conj().transpose(0, 2, 1), out=self.work7)
         self.work7 -= self.work5
         # Vectorize matrices as compact vectors
-        Hyx  = self.work7.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
+        Hyx  = self.work7.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_idxs]
         Hyx *= self.scale
 
         # Construct Hessian and factorize

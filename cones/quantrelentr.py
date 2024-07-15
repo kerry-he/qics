@@ -28,7 +28,7 @@ class Cone(BaseCone):
         self.dder3_aux_updated       = False
         self.congr_aux_updated       = False
 
-        self.precompute_mat_vec_idxs()
+        self.precompute_mat_vec()
 
         return
     
@@ -238,15 +238,15 @@ class Cone(BaseCone):
         temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.conj().T
         temp = self.Uy.conj().T @ (Wy - temp) @ self.Uy
 
-        temp_vec = temp.view(dtype=np.float64).reshape((-1, 1))[self.triu_indices]
+        temp_vec = temp.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs]
         temp_vec *= self.scale.reshape((-1, 1))
 
         temp_vec = lin.cho_solve(self.hess_schur_fact, temp_vec)
 
         temp.fill(0.)
-        temp_vec[self.diag_indices] *= 0.5
+        temp_vec[self.diag_idxs] *= 0.5
         temp_vec /= self.scale.reshape((-1, 1))
-        temp.view(dtype=np.float64).reshape((-1, 1))[self.triu_indices] = temp_vec
+        temp.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs] = temp_vec
         temp += temp.conj().T
 
         temp = self.Uy @ temp @ self.Uy.conj().T
@@ -316,15 +316,15 @@ class Cone(BaseCone):
 
         # Solve the linear system S \ ( ... ) to obtain Uy' Y Uy
         # Convert matrices to truncated real vectors
-        work  = self.work2.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices]
+        work  = self.work2.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs]
         work *= self.scale
         # Solve system
         work = lin.cho_solve(self.hess_schur_fact, work.T)
         # Expand truncated real vectors back into matrices
         self.work1.fill(0.)
-        work[self.diag_indices, :] *= 0.5
+        work[self.diag_idxs, :] *= 0.5
         work /= self.scale.reshape((-1, 1))
-        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_indices] = work.T
+        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs] = work.T
         self.work1 += self.work1.conj().transpose((0, 2, 1))
 
         # Recover Y
@@ -464,6 +464,7 @@ class Cone(BaseCone):
 
         return
 
+    @profile
     def update_invhessprod_aux(self):
         assert not self.invhess_aux_updated
         assert self.grad_updated
@@ -486,16 +487,30 @@ class Cone(BaseCone):
         hess_schur = mgrad.get_S_matrix(self.D2y_comb, np.sqrt(2.0), hermitian=self.hermitian)
 
         # Get [1/z^2 log^[1](Dy) (Uy'Ux kron Uy'Ux) [(1/z log + inv)^[1](Dx)]^-1 (Ux'Uy kron Ux'Uy) log^[1](Dy)] matrix
-        # Begin with (Ux'Uy kron Ux'Uy) log^[1](Dy)
-        np.multiply(self.E, self.D1y_log, out=self.work6)
-        lin.congr(self.work8, self.UyUx.conj().T, self.work6, work=self.work7)
+        # Begin with log^[1](Dy)
+        if self.hermitian:
+            work = self.D1y_log * 1j
+            work.view(np.float64).reshape(-1)[self.tril_idxs] *= -1
+            work += self.D1y_log
+
+            worku = work.view(np.float64).reshape(-1)[self.triu_idxs] / self.scale
+            workl = work.view(np.float64).reshape(-1)[self.tril_idxs] / self.scale
+
+            self.E.view(np.float64).reshape(self.vn, -1)[range(self.vn), self.triu_idxs] = worku
+            self.E.view(np.float64).reshape(self.vn, -1)[range(self.vn), self.tril_idxs] = workl
+        else:
+            work = self.D1y_log.reshape(-1)[self.triu_idxs] / self.scale
+            self.E.reshape(self.vn, -1)[range(self.vn), self.triu_idxs] = work
+            self.E.reshape(self.vn, -1)[range(self.vn), self.tril_idxs] = work
+        # Apply (Ux'Uy kron Ux'Uy)
+        lin.congr(self.work8, self.UyUx.conj().T, self.E, work=self.work7)
         # Apply [(1/z log + inv)^[1](Dx)]^-1
         self.work8 *= self.D1x_comb_inv
         # Apply (Uy'Ux kron Uy'Ux)
         lin.congr(self.work6, self.UyUx, self.work8, work=self.work7)
         # Apply (1/z^2 log^[1](Dy))
         self.work6 *= self.D1y_log
-        work  = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_indices]
+        work  = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_idxs]
         work *= (self.zi2 * self.scale)
 
         # Subtract to obtain Schur complement then Cholesky factor
@@ -507,6 +522,20 @@ class Cone(BaseCone):
 
     def update_invhessprod_aux_aux(self):
         assert not self.invhess_aux_aux_updated
+
+        if self.hermitian:
+            self.tril_idxs = np.empty(self.n*self.n, dtype=int)
+            self.tril_idxs = np.empty(self.n*self.n, dtype=int)
+            k = 0
+            for j in range(self.n):
+                for i in range(j):
+                    self.tril_idxs[k]     = 2 * (i + j*self.n)
+                    self.tril_idxs[k + 1] = 2 * (i + j*self.n) + 1
+                    k += 2
+                self.tril_idxs[k] = 2 * (j + j*self.n)
+                k += 1
+        else:
+            self.tril_idxs = np.array([i + j*self.n for j in range(self.n) for i in range(j + 1)])
 
         self.work6  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
         self.work7  = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
