@@ -1,8 +1,8 @@
 import numpy as np
 import scipy as sp
-from utils import linear as lin
+from cones.base import SymCone
 
-class Cone():
+class Cone(SymCone):
     def __init__(self, n):
         # Dimension properties
         self.n  = n

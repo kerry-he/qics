@@ -2,8 +2,9 @@ import numpy as np
 from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 from utils import symmetric as sym
+from cones.base import BaseCone
 
-class Cone():
+class Cone(BaseCone):
     def __init__(self, n, func, hermitian=False):
         # Dimension properties
         self.n  = n               # Side dimension of system

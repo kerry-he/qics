@@ -2,8 +2,6 @@ import numpy as np
 import scipy as sp
 import math
 from utils.vector import Point
-from utils import linear as lin
-from utils import symmetric as sym
 
 alpha_sched = [0.9999, 0.999, 0.99, 0.9, 0.8, 0.7, 0.5, 0.3, 0.2, 0.1, 0.01, 0.001]
 
@@ -11,7 +9,7 @@ class NonSymStepper():
     def __init__(self, syssolver, model):
         self.syssolver = syssolver
         self.prox = 0.0
-        
+
         self.rhs        = Point(model)
         self.dir_c      = Point(model)
         self.dir_c_toa  = Point(model)
@@ -109,15 +107,14 @@ class NonSymStepper():
             if sz <= 0 or mu <= 0:
                 continue
 
-            # Check cheap proximity conditions first (skip if using NT symmetric stepping)
-            if not (model.sym and self.syssolver.sym):
-                szs = [s_k.T @ z_k for (s_k, z_k) in zip(next_point.s.vecs, next_point.z.vecs)]
-                if abs(taukap / mu - 1) > eta:
-                    continue
-                nus = [cone_k.nu for cone_k in model.cones]
-                rho = [np.abs(sz_k / mu - nu_k) / np.sqrt(nu_k) for (sz_k, nu_k) in zip(szs, nus)]
-                if any(np.array(rho) > eta):
-                    continue
+            # Check cheap proximity conditions first
+            szs = [s_k.T @ z_k for (s_k, z_k) in zip(next_point.s.vecs, next_point.z.vecs)]
+            if abs(taukap / mu - 1) > eta:
+                continue
+            nus = [cone_k.nu for cone_k in model.cones]
+            rho = [np.abs(sz_k / mu - nu_k) / np.sqrt(nu_k) for (sz_k, nu_k) in zip(szs, nus)]
+            if any(np.array(rho) > eta):
+                continue
 
             rtmu = math.sqrt(mu)
             irtmu = np.reciprocal(rtmu)
@@ -133,13 +130,12 @@ class NonSymStepper():
                     in_prox = False
                     break
 
-                # Check if close enough to central path (skip if using NT symmetric stepping)
-                if not (model.sym and self.syssolver.sym):
-                    prox_k = cone_k.prox()
-                    self.prox = max(self.prox, prox_k)
-                    in_prox = (self.prox < eta)
-                    if not in_prox:
-                        break
+                # Check if close enough to central path
+                prox_k = cone_k.prox()
+                self.prox = max(self.prox, prox_k)
+                in_prox = (self.prox < eta)
+                if not in_prox:
+                    break
         
             # If feasible, return point
             if in_prox:
@@ -197,19 +193,11 @@ class NonSymStepper():
         self.rhs.z.fill(0.)
 
         rtmu = math.sqrt(mu)
-        if self.syssolver.sym:
-            for (k, cone_k) in enumerate(model.cones):
-                cone_k.third_dir_deriv_axpy(self.rhs.s[k], dir_p.s[k], dir_p.z[k])
-            self.rhs.s *= 0.5 / rtmu
-        else:
-            for (k, cone_k) in enumerate(model.cones):
-                cone_k.hess_prod_ip(self.rhs.s[k], dir_p.s[k])
-                cone_k.third_dir_deriv_axpy(self.rhs.s[k], dir_p.s[k], a=-0.5 / rtmu) 
+        for (k, cone_k) in enumerate(model.cones):
+            cone_k.hess_prod_ip(self.rhs.s[k], dir_p.s[k])
+            cone_k.third_dir_deriv_axpy(self.rhs.s[k], dir_p.s[k], a=-0.5 / rtmu) 
 
         self.rhs.tau[:] = 0.
-        if self.syssolver.sym:
-            self.rhs.kap[:] = -dir_p.tau * dir_p.kap / point.tau
-        else:
-            self.rhs.kap[:] = (dir_p.tau**2) / (point.tau**3) * mu
+        self.rhs.kap[:] = (dir_p.tau**2) / (point.tau**3) * mu
 
         return self.rhs

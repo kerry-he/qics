@@ -21,8 +21,7 @@ class Solver():
         tol_ip = 1e-13,
         tol_near = 1e3,
         verbose  = True,
-        ir = True,
-        sym = False
+        ir = True
     ):
         self.max_iter = max_iter
         self.max_time = max_time        
@@ -45,8 +44,8 @@ class Solver():
         self.exit_status = None
 
         self.model = model
-        syssolver = SysSolver(model, ir=ir, sym=sym)
-        self.stepper = NonSymStepper(syssolver, model) if (sym is False) else SymStepper(syssolver, model)
+        syssolver = SysSolver(model, ir=ir)
+        self.stepper = SymStepper(syssolver, model) if model.sym else NonSymStepper(syssolver, model)
 
         return
     

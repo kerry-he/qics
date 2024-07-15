@@ -1,13 +1,11 @@
 import numpy as np
-import scipy as sp
-import numba as nb
-import math
 from utils import symmetric as sym
 from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 from utils import quantum   as quant
+from cones.base import BaseCone
 
-class Cone():
+class Cone(BaseCone):
     def __init__(self, K_list, Z_list, hermitian=False):
         # Dimension properties
         self.ni = K_list[0].shape[1]    # Get input dimension

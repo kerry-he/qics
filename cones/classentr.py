@@ -1,7 +1,8 @@
 import numpy as np
 from utils import linear as lin
+from cones.base import BaseCone
 
-class Cone():
+class Cone(BaseCone):
     def __init__(self, n):
         # Dimension properties
         self.n  = n # Dimension of system

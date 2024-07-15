@@ -4,8 +4,9 @@ import numba as nb
 import itertools
 from utils import linear as lin
 from utils import sparse
+from cones.base import SymCone
 
-class Cone():
+class Cone(SymCone):
     def __init__(self, n, hermitian=False):
         # Dimension properties
         self.n  = n                 # Side length of matrix
@@ -158,7 +159,7 @@ class Cone():
     
     def third_dir_deriv_axpy(self, out, dir1, dir2=None, a=True):
         if not self.grad_updated:
-            self.get_grad()
+            self.update_grad()
         if dir2 is None:
             XHX_2 = self.X_inv @ dir1 @ self.X_chol_inv.conj().T
             out -= 2 * a * XHX_2 @ XHX_2.conj().T

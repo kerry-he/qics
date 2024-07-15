@@ -1,12 +1,10 @@
 import numpy as np
-import scipy as sp
-import numba as nb
-import math
 from utils import symmetric as sym
 from utils import linear    as lin
 from utils import mtxgrad   as mgrad
+from cones.base import BaseCone
 
-class Cone():
+class Cone(BaseCone):
     def __init__(self, n0, n1, sys, hermitian=False):
         # Dimension properties
         self.n0 = n0          # Dimension of system 0

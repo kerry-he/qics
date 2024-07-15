@@ -20,7 +20,7 @@ from cones import *
 # by using block elimination and Cholesky factorization of the Schur complement matrix.
 
 class SysSolver():
-    def __init__(self, model, ir=True, sym=False):
+    def __init__(self, model, ir=True):
         self.ir = ir                     # Use iterative refinement or not
         self.ir_settings = {
             'maxiter'     : 1,           # Maximum IR iterations
@@ -29,8 +29,6 @@ class SysSolver():
         }
 
         self.model = model
-
-        self.sym = sym
 
         self.cbh = vec.PointXYZ(model)
         self.cbh.x[:]     = model.c
@@ -75,14 +73,11 @@ class SysSolver():
                 self.H,     _, _ = blk_hess_mtx(model, self.Hrows, self.Hcols)
                 GHG = (model.G_T @ self.H @ model.G).toarray()
             else:
-                GHG = blk_hess_congruence(model.G_T_views, model, self.sym)
+                GHG = blk_hess_congruence(model.G_T_views, model)
 
             self.GHG_fact = lin.fact(GHG)
 
             if model.use_A:
-                # GHGA = np.zeros((model.n, model.p))
-                # for i in range(model.p):
-                #     GHGA[:, [i]] = lin.fact_solve(self.GHG_fact, model.A.T[:, [i]])
                 GHGA = lin.fact_solve(self.GHG_fact, model.A.T)
                 AGHGA = model.A @ GHGA
                 self.AGHGA_fact = lin.fact(AGHGA)
@@ -97,7 +92,7 @@ class SysSolver():
                 self.H,     _, _ = blk_hess_mtx(model, self.Hrows, self.Hcols)
                 AHA = (model.A_invG @ self.H_inv @ model.A_invG_T).toarray()
             else:
-                AHA = blk_invhess_congruence(model.A_invG_views, model, self.sym)
+                AHA = blk_invhess_congruence(model.A_invG_views, model)
             
             self.AHA_fact = lin.fact(AHA, self.AHA_fact)
 
@@ -159,7 +154,7 @@ class SysSolver():
 
         # taunum := rtau + rkap + c' vx + b' vy + h' vz
         tau_num = r.tau + r.kap + self.cbh.inp(self.v_xyz)
-        if self.sym:
+        if model.sym:
             # tauden := kap / tau + c' cx + b' cy + h' cz
             tau_den = (pnt.kap / pnt.tau + self.cbh.inp(self.c_xyz))
         else:
@@ -176,7 +171,7 @@ class SysSolver():
         d.s.vec -= model.G @ d.x
         d.s.vec -= r.z.vec
         
-        if self.sym:
+        if model.sym:
             # dkap := rkap - (kap/tau) * dtau
             d.kap[:] = r.kap - (pnt.kap / pnt.tau) * d.tau
         else:
@@ -202,7 +197,7 @@ class SysSolver():
             #     dz := H (rz + G dx) + rs
             
             # dy := (A (G'HG)^-1 A') \ [ry + A (G'HG) \ [rx - G' (H rz + rs)]]
-            blk_hess_prod_ip(self.vec_temp, r.z, model, self.sym, self.H)
+            blk_hess_prod_ip(self.vec_temp, r.z, model, self.H)
             if rs is not None:
                 self.vec_temp += rs
             temp = r.x - model.G_T @ self.vec_temp.vec
@@ -216,7 +211,7 @@ class SysSolver():
             # dz := H (rz + G dx) + rs
             d.z.vec[:] = self.vec_temp.vec
             self.vec_temp2.vec[:] = model.G @ d.x
-            blk_hess_prod_ip(self.vec_temp, self.vec_temp2, model, self.sym, self.H)
+            blk_hess_prod_ip(self.vec_temp, self.vec_temp2, model, self.H)
             d.z.vec += self.vec_temp.vec
         
         elif model.use_A and not model.use_G:
@@ -232,7 +227,7 @@ class SysSolver():
             np.multiply(r.x, model.G_inv, out=self.vec_temp.vec)
             if rs is not None:
                 self.vec_temp.vec -= rs.vec
-            blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym, self.H_inv)
+            blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.H_inv)
             self.vec_temp2.vec -= r.z.vec
             np.multiply(self.vec_temp2.vec, model.G_inv, out=d.x)
             temp  = model.A @ d.x
@@ -246,7 +241,7 @@ class SysSolver():
 
             # dx := G^-1 (H \ [G^-1 rx - rs] - rz - H \ [G^-1 A' dy])
             np.multiply(A_T_dy, model.G_inv, out=self.vec_temp.vec)
-            blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym, self.H_inv)
+            blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.H_inv)
             self.vec_temp2.vec *= model.G_inv
             d.x -= self.vec_temp2.vec
             
@@ -258,7 +253,7 @@ class SysSolver():
             # dz := H (rz + G dx) + rs
 
             # dx := GHG \ [rx - G' (H rz + rs)]
-            blk_hess_prod_ip(self.vec_temp, r.z, model, self.sym, self.H)
+            blk_hess_prod_ip(self.vec_temp, r.z, model, self.H)
             if rs is not None:
                 self.vec_temp += rs
             temp = r.x - model.G_T @ self.vec_temp.vec
@@ -267,7 +262,7 @@ class SysSolver():
             # dz := H (rz + G dx) + rs
             self.vec_temp.copy_from(model.G @ d.x)
             self.vec_temp += r.z
-            blk_hess_prod_ip(d.z, self.vec_temp, model, self.sym, self.H)
+            blk_hess_prod_ip(d.z, self.vec_temp, model, self.H)
             if rs is not None:
                 d.z += rs
         
@@ -282,14 +277,14 @@ class SysSolver():
             self.vec_temp.vec[:] = r.x
             if rs is not None:
                 self.vec_temp += rs
-            blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym, self.H_inv)
+            blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.H_inv)
             d.x[:] = self.vec_temp2.vec
             d.x   += r.z.vec
 
             # dz := H (rz - dx) + rs
             self.vec_temp.vec[:] = r.z
             self.vec_temp.vec   -= d.x
-            blk_hess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym, self.H)
+            blk_hess_prod_ip(self.vec_temp2, self.vec_temp, model, self.H)
             d.z.vec[:] = self.vec_temp2.vec
             if rs is not None:
                 d.z.vec += rs
@@ -330,13 +325,13 @@ class SysSolver():
         r.z.vec -= d.s.vec
 
         # rs := mu H ds + dz
-        blk_hess_prod_ip(r.s, d.s, model, self.sym, self.H)
+        blk_hess_prod_ip(r.s, d.s, model, self.H)
         r.s.vec += d.z.vec
 
         # rtau := -c' dx - b' dy - h' dz - dkap
         r.tau[:] = -(model.c.T @ d.x) - (model.b.T @ d.y) - (model.h.T @ d.z.vec) - d.kap[0, 0]
 
-        if self.sym:
+        if model.sym:
             # rkap := (kap / tau) dtau + dkap
             r.kap[:] = (pnt.kap / pnt.tau) * d.tau[0, 0] + d.kap[0, 0]
         else:
@@ -365,7 +360,7 @@ class SysSolver():
         r.y   *= -1
 
         # pz := -G dx + H \ dz
-        blk_invhess_prod_ip(r.z, d.z, model, self.sym, self.H_inv)
+        blk_invhess_prod_ip(r.z, d.z, model, self.H_inv)
         r.z.vec -= model.G @ d.x
 
         return r
@@ -468,48 +463,48 @@ def solve_sys_ir(x, b, A, A_inv, res, cor, settings):
     return res_norm
 
 
-def blk_hess_prod_ip(out, dirs, model, sym, H):
+def blk_hess_prod_ip(out, dirs, model, H):
     if H is not None:
         out.vec[:] = H @ dirs.vec
         return out
 
     for (k, cone_k) in enumerate(model.cones):
-        if sym:
+        if model.sym:
             cone_k.nt_prod_ip(out[k], dirs[k])
         else:
             cone_k.hess_prod_ip(out[k], dirs[k])
     return out
 
-def blk_invhess_prod_ip(out, dirs, model, sym, H_inv):
+def blk_invhess_prod_ip(out, dirs, model, H_inv):
     if H_inv is not None:
         out.vec[:] = H_inv @ dirs.vec
         return out
 
     for (k, cone_k) in enumerate(model.cones):
-        if sym:
+        if model.sym:
             cone_k.invnt_prod_ip(out[k], dirs[k])
         else:
             cone_k.invhess_prod_ip(out[k], dirs[k])
     return out
 
-def blk_hess_congruence(dirs, model, sym):
+def blk_hess_congruence(dirs, model):
     n = model.n
     out = np.zeros((n, n))
 
     for (k, cone_k) in enumerate(model.cones):
-        if sym:
+        if model.sym:
             out += cone_k.nt_congr(dirs[k])
         else:
             out += cone_k.hess_congr(dirs[k]) 
 
     return out
 
-def blk_invhess_congruence(dirs, model, sym):
+def blk_invhess_congruence(dirs, model):
     p = model.p
     out = np.zeros((p, p))
 
     for (k, cone_k) in enumerate(model.cones):
-        if sym:
+        if model.sym:
             out += cone_k.invnt_congr(dirs[k])
         else:
             out += cone_k.invhess_congr(dirs[k]) 
@@ -521,7 +516,7 @@ def blk_invhess_mtx(model, Hcols, Hrows):
     H_blks = []
 
     for cone_k in model.cones:
-        if sym:
+        if model.sym:
             H_blks.append(cone_k.invnt_mtx())
         else:
             H_blks.append(cone_k.invhess_mtx())
@@ -533,7 +528,7 @@ def blk_hess_mtx(model, Hcols, Hrows):
     H_blks = []
 
     for cone_k in model.cones:
-        if sym:
+        if model.sym:
             H_blks.append(cone_k.nt_mtx())
         else:
             H_blks.append(cone_k.hess_mtx())
