@@ -464,7 +464,6 @@ class Cone(BaseCone):
 
         return
 
-    @profile
     def update_invhessprod_aux(self):
         assert not self.invhess_aux_updated
         assert self.grad_updated
