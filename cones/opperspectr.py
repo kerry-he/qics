@@ -2,7 +2,7 @@ import numpy as np
 from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 from utils import symmetric as sym
-from cones.base import BaseCone
+from cones.base import BaseCone, get_central_ray_relentr
 
 class Cone(BaseCone):
     def __init__(self, n, func, hermitian=False):
@@ -533,35 +533,4 @@ class Cone(BaseCone):
 
         self.dder3_aux_updated = True
 
-        return    
-
-
-def get_central_ray_relentr(x_dim):
-    if x_dim <= 10:
-        return central_rays_relentr[x_dim - 1, :]
-    
-    # use nonlinear fit for higher dimensions
-    rtx_dim = np.sqrt(x_dim)
-    if x_dim <= 20:
-        t = 1.2023 / rtx_dim - 0.015
-        x = -0.3057 / rtx_dim + 0.972
-        y = 0.432 / rtx_dim + 1.0125
-    else:
-        t = 1.1513 / rtx_dim - 0.0069
-        x = -0.4247 / rtx_dim + 0.9961
-        y = 0.4873 / rtx_dim + 1.0008
-
-    return [t, x, y]
-
-central_rays_relentr = np.array([
-    [0.827838399065679, 0.805102001584795, 1.290927709856958],
-    [0.708612491381680, 0.818070436209846, 1.256859152780596],
-    [0.622618845069333, 0.829317078332457, 1.231401007595669],
-    [0.558111266369854, 0.838978355564968, 1.211710886507694],
-    [0.508038610665358, 0.847300430936648, 1.196018952086134],
-    [0.468039614334303, 0.854521306762642, 1.183194752717249],
-    [0.435316653088949, 0.860840990717540, 1.172492396103674],
-    [0.408009282337263, 0.866420016062860, 1.163403373278751],
-    [0.384838611966541, 0.871385497883771, 1.155570329098724],
-    [0.364899121739834, 0.875838067970643, 1.148735192195660]
-])
+        return
