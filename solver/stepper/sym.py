@@ -41,7 +41,7 @@ class SymStepper():
             point, False
 
         if verbose == 3:
-            print("  | %8.1e" % (res_norm), " %5.3f" % (sigma), " %5.3f" % (alpha), end="")
+            print(f"  |  {res_norm:>7.1e}   {sigma:>5.3f}   {alpha:>5.3f}", end="")
 
         # Take step
         point.vec += alpha * self.dir_comb.vec

@@ -74,22 +74,22 @@ class Solver():
         # Print iteration status
         # ==============================================================
         if self.verbose >= 2:
-            print(self.print_bar, end="")
-            print("\n%5s" % "iter", " %8s" % "mu", " %8s" % "k/t",
-                " | %10s" % "p_obj", " %10s" % "d_obj", " %8s" % "gap", 
-                " | %8s" % "p_feas", " %8s" % "d_feas",
-                f" | {"time (s)":<9}", end="")
+            print(f"\n{"":=^{self.printbar_size}}", end="")
+            print(f"\n {"iter":^4}   {"mu":^7}   {"k/t":^7}  ", end="")
+            print(f"|  {"p_obj":^10}  {"d_obj":^10}  {"gap":^7}  ", end="")
+            print(f"|  {"p_feas":^7}   {"d_feas":^7}  ", end="")
+            print(f"|  {"time (s)":^8}  ", end="")
             if self.verbose == 3:
                 if self.model.sym:
-                    print(" | %8s" % "dir_tol", " %5s" % "sigma", " %5s" % "alpha", end="")
+                    print(f"|  {"dir_tol":^7}   {"sigma":^5}   {"alpha":^5}", end="")
                 else:
-                    print(" | %6s" % "step", "%8s" % "dir_tol", "%8s" % "prox", " %5s" % "alpha", end="")
-            print(self.print_bar, end="")
+                    print(f"|  {"step":^6}   {"dir_tol":^7}   {"prox":^7}   {"alpha":^5}", end="")
+            print(f"\n{"":=^{self.printbar_size}}", end="")
             
-            print("\n%5d" % (self.iter), " %8.1e" % (self.mu), " %8.1e" % (self.point.kap / self.point.tau),
-                  " | %10.3e" % (self.p_obj), " %10.3e" % (self.d_obj), " %8.1e" % (self.gap),
-                  " | %8.1e" % (max(self.y_feas, self.z_feas)), " %8.1e" % (self.x_feas), 
-                  f" | {self.elapsed_time:<8.2f}", end="")
+            print(f"\n {self.iter:>4}   {self.mu:>7.1e}   {self.kap_tau:>7.1e}  ", end="")
+            print(f"| {self.p_obj:>10.3e}  {self.d_obj:>10.3e}  {self.gap:>8.1e}  ", end="")
+            print(f"|  {max(self.y_feas, self.z_feas):>7.1e}   {self.x_feas:>7.1e}  ", end="")
+            print(f"|  {self.elapsed_time:<8.2f}", end="")
         elif self.verbose:
             print()
             sys.stdout.write("Running...")
@@ -157,10 +157,10 @@ class Solver():
         # Print iteration status
         # ==============================================================
         if self.verbose >= 2:
-            print("\n%5d" % (self.iter), " %8.1e" % (self.mu), " %8.1e" % (self.point.kap / self.point.tau),
-                  " | %10.3e" % (self.p_obj), " %10.3e" % (self.d_obj), " %8.1e" % (self.gap),
-                  " | %8.1e" % (max(self.y_feas, self.z_feas)), " %8.1e" % (self.x_feas), 
-                  f" | {self.elapsed_time:<8.2f}", end="")
+            print(f"\n {self.iter:>4}   {self.mu:>7.1e}   {self.kap_tau:>7.1e}  ", end="")
+            print(f"| {self.p_obj:>10.3e}  {self.d_obj:>10.3e}  {self.gap:>8.1e}  ", end="")
+            print(f"|  {max(self.y_feas, self.z_feas):>7.1e}   {self.x_feas:>7.1e}  ", end="")
+            print(f"|  {self.elapsed_time:<8.2f}", end="")        
         elif self.verbose:
             sys.stdout.write(next(spinner))
             sys.stdout.flush()
@@ -233,11 +233,11 @@ class Solver():
 
         if self.verbose == 3:
             if self.model.sym:
-                self.print_bar = f"\n{"":=^122}"
+                self.printbar_size = 125
             else:
-                self.print_bar = f"\n{"":=^131}"
+                self.printbar_size = 136
         else:
-            self.print_bar = f"\n{"":=^96}"
+            self.printbar_size = 97
 
         return
 
@@ -275,6 +275,8 @@ class Solver():
         s   = self.point.s.vec
         tau = self.point.tau[0, 0]
         kap = self.point.kap[0, 0]
+
+        self.kap_tau = kap / tau
 
         # Get primal and dual objectives and optimality gap
         p_obj_tau =  (c.T @ x)[0, 0]
