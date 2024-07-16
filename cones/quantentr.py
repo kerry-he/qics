@@ -4,15 +4,15 @@ from utils import mtxgrad   as mgrad
 from cones.base import BaseCone, get_central_ray_entr
 
 class Cone(BaseCone):
-    def __init__(self, n, hermitian=False):
+    def __init__(self, n, iscomplex=False):
         # Dimension properties
         self.n  = n                 # Side dimension of system
         self.nu = 2 + self.n        # Barrier parameter
-        self.hermitian = hermitian
+        self.iscomplex = iscomplex
 
-        self.dim   = [1, 1, n*n]     if (not hermitian) else [1, 1, 2*n*n]
-        self.type  = ['r', 'r', 's'] if (not hermitian) else ['r', 'r', 'h']
-        self.dtype = np.float64      if (not hermitian) else np.complex128
+        self.dim   = [1, 1, n*n]     if (not iscomplex) else [1, 1, 2*n*n]
+        self.type  = ['r', 'r', 's'] if (not iscomplex) else ['r', 'r', 'h']
+        self.dtype = np.float64      if (not iscomplex) else np.complex128
 
         # Update flags
         self.feas_updated        = False
@@ -23,7 +23,10 @@ class Cone(BaseCone):
         self.dder3_aux_updated   = False
 
         return
-    
+
+    def get_iscomplex(self):
+        return self.iscomplex
+
     def get_init_point(self, out):
         (t0, u0, x0) = get_central_ray_entr(self.n)
 
@@ -344,7 +347,7 @@ class Cone(BaseCone):
         self.Au = A[:, 1]
         Ax = np.ascontiguousarray(A[:, 2:])
 
-        if self.hermitian:
+        if self.iscomplex:
             self.Ax = np.array([Ax_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ax_k in Ax])
         else:
             self.Ax = np.array([Ax_k.reshape((self.n, self.n)) for Ax_k in Ax])

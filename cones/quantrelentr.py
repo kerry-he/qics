@@ -4,17 +4,17 @@ from utils import mtxgrad   as mgrad
 from cones.base import BaseCone, get_central_ray_relentr
 
 class Cone(BaseCone):
-    def __init__(self, n, hermitian=False):
+    def __init__(self, n, iscomplex=False):
         # Dimension properties
         self.n  = n               # Side dimension of system
         self.nu = 1 + 2 * self.n  # Barrier parameter
 
-        self.hermitian = hermitian                      # Hermitian or symmetric vector space
-        self.vn = n*n if hermitian else n*(n+1)//2      # Compact dimension of system
+        self.iscomplex = iscomplex                      # Hermitian or symmetric vector space
+        self.vn = n*n if iscomplex else n*(n+1)//2      # Compact dimension of system
 
-        self.dim   = [1, n*n, n*n]   if (not hermitian) else [1, 2*n*n, 2*n*n]
-        self.type  = ['r', 's', 's'] if (not hermitian) else ['r', 'h', 'h']
-        self.dtype = np.float64      if (not hermitian) else np.complex128
+        self.dim   = [1, n*n, n*n]   if (not iscomplex) else [1, 2*n*n, 2*n*n]
+        self.type  = ['r', 's', 's'] if (not iscomplex) else ['r', 'h', 'h']
+        self.dtype = np.float64      if (not iscomplex) else np.complex128
 
         self.idx_X = slice(1, 1 + self.dim[1])
         self.idx_Y = slice(1 + self.dim[1], sum(self.dim))
@@ -31,7 +31,10 @@ class Cone(BaseCone):
         self.precompute_mat_vec()
 
         return
-    
+
+    def get_iscomplex(self):
+        return self.iscomplex
+
     def get_init_point(self, out):
         (t0, x0, y0) = get_central_ray_relentr(self.n)
 
@@ -424,7 +427,7 @@ class Cone(BaseCone):
         Ax = np.ascontiguousarray(A[:, self.idx_X])
         Ay = np.ascontiguousarray(A[:, self.idx_Y])
 
-        if self.hermitian:
+        if self.iscomplex:
             self.Ax = np.array([Ax_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ax_k in Ax])
             self.Ay = np.array([Ay_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ay_k in Ay])            
         else:
@@ -483,11 +486,11 @@ class Cone(BaseCone):
         self.D1x_comb_inv = np.reciprocal(self.D1x_comb)
         
         # Get [-1/z Sy + Dy^-1 kron Dy^-1] matrix
-        hess_schur = mgrad.get_S_matrix(self.D2y_comb, np.sqrt(2.0), hermitian=self.hermitian)
+        hess_schur = mgrad.get_S_matrix(self.D2y_comb, np.sqrt(2.0), iscomplex=self.iscomplex)
 
         # Get [1/z^2 log^[1](Dy) (Uy'Ux kron Uy'Ux) [(1/z log + inv)^[1](Dx)]^-1 (Ux'Uy kron Ux'Uy) log^[1](Dy)] matrix
         # Begin with log^[1](Dy)
-        if self.hermitian:
+        if self.iscomplex:
             work = self.D1y_log * 1j
             work.view(np.float64).reshape(-1)[self.tril_idxs] *= -1
             work += self.D1y_log
@@ -522,7 +525,7 @@ class Cone(BaseCone):
     def update_invhessprod_aux_aux(self):
         assert not self.invhess_aux_aux_updated
 
-        if self.hermitian:
+        if self.iscomplex:
             self.tril_idxs = np.empty(self.n*self.n, dtype=int)
             self.tril_idxs = np.empty(self.n*self.n, dtype=int)
             k = 0

@@ -35,16 +35,16 @@ def make_problem(file_name, description=["", ""], optval=0.0):
 
     optval = data['optval'][0, 0][0, 0]
     
-    hermitian = any([g.dtype == 'complex128' for g in gamma])
-    hermitian = any([G.dtype == 'complex128' for G in Gamma]) or hermitian
-    hermitian = any([K.dtype == 'complex128' for K in Klist]) or hermitian
-    hermitian = any([Z.dtype == 'complex128' for Z in Zlist]) or hermitian
+    iscomplex = any([g.dtype == 'complex128' for g in gamma])
+    iscomplex = any([G.dtype == 'complex128' for G in Gamma]) or iscomplex
+    iscomplex = any([K.dtype == 'complex128' for K in Klist]) or iscomplex
+    iscomplex = any([Z.dtype == 'complex128' for Z in Zlist]) or iscomplex
 
     no, ni = Klist[0].shape
     nc     = np.size(gamma_fr)
 
-    vni = sym.vec_dim(ni, hermitian=hermitian)
-    vno = sym.vec_dim(no, hermitian=hermitian)
+    vni = sym.vec_dim(ni, iscomplex=iscomplex)
+    vno = sym.vec_dim(no, iscomplex=iscomplex)
 
     # Do our own symmetry reduction (NOTE: Assumes that input has not been symmetry reduced)
     nk = Zlist[0].shape[0]
@@ -54,7 +54,7 @@ def make_problem(file_name, description=["", ""], optval=0.0):
     Dzkkz, Uzkkz = np.linalg.eigh(ZKKZ)
     ZKKZnzidx = np.where(Dzkkz > 1e-12)[0]
     nk_fr = np.size(ZKKZnzidx)
-    vnz_fr = sym.vec_dim(nk_fr, hermitian=hermitian)
+    vnz_fr = sym.vec_dim(nk_fr, iscomplex=iscomplex)
 
     if nk == nk_fr:
         Q = np.eye(nk)
@@ -64,16 +64,16 @@ def make_problem(file_name, description=["", ""], optval=0.0):
     Klist_new  = [Q.conj().T @ K for K in Klist]
     ZKlist_new = [Q.conj().T @ Z @ K for Z in Zlist for K in Klist]
 
-    K_op     = sym.lin_to_mat(lambda x : sym.congr_map(x, Klist_new), ni, nk_fr, hermitian=hermitian)
-    ZK_op    = sym.lin_to_mat(lambda x : sym.congr_map(x, ZKlist_new), ni, nk_fr, hermitian=hermitian)
+    K_op     = sym.lin_to_mat(lambda x : sym.congr_map(x, Klist_new), ni, nk_fr, iscomplex=iscomplex)
+    ZK_op    = sym.lin_to_mat(lambda x : sym.congr_map(x, ZKlist_new), ni, nk_fr, iscomplex=iscomplex)
 
-    K_op_alt     = lin_to_mat_alt(lambda x : sym.congr_map(x, Klist_new), ni, nk_fr, hermitian=hermitian)
-    ZK_op_alt    = lin_to_mat_alt(lambda x : sym.congr_map(x, ZKlist_new), ni, nk_fr, hermitian=hermitian)
-    eye_alt      = lin_to_mat_alt(lambda x : x, ni, ni, hermitian=hermitian)
-    vnz_fr_alt   = sym.vec_dim(2*nk_fr, hermitian=False)
-    vni_alt      = sym.vec_dim(2*ni, hermitian=False)
+    K_op_alt     = lin_to_mat_alt(lambda x : sym.congr_map(x, Klist_new), ni, nk_fr, iscomplex=iscomplex)
+    ZK_op_alt    = lin_to_mat_alt(lambda x : sym.congr_map(x, ZKlist_new), ni, nk_fr, iscomplex=iscomplex)
+    eye_alt      = lin_to_mat_alt(lambda x : x, ni, ni, iscomplex=iscomplex)
+    vnz_fr_alt   = sym.vec_dim(2*nk_fr, iscomplex=False)
+    vni_alt      = sym.vec_dim(2*ni, iscomplex=False)
 
-    Gamma_op = np.array([sym.mat_to_vec(G, hermitian=hermitian).T[0] for G in Gamma_fr])
+    Gamma_op = np.array([sym.mat_to_vec(G, iscomplex=iscomplex).T[0] for G in Gamma_fr])
 
     # Build problem model
     A = np.hstack((np.zeros((nc, 1)), Gamma_op))
@@ -119,13 +119,13 @@ def make_problem(file_name, description=["", ""], optval=0.0):
     cones = [
         {
             'type':      'qre',
-            'hermitian': True,
+            'iscomplex': True,
             'dim':       1 + 2*vnz_fr,
             'n':         nk_fr
         }, 
         {
             'type':      'psd',
-            'hermitian': True,
+            'iscomplex': True,
             'dim':       vni,
             'n':         ni
         }
@@ -134,13 +134,13 @@ def make_problem(file_name, description=["", ""], optval=0.0):
     cones_alt = [
         {
             'type':      'qre',
-            'hermitian': False,
+            'iscomplex': False,
             'dim':       1 + 2*vnz_fr_alt,
             'n':         2*nk_fr
         }, 
         {
             'type':      'psd',
-            'hermitian': False,
+            'iscomplex': False,
             'dim':       vni_alt,
             'n':         2*ni
         }
@@ -167,11 +167,11 @@ def make_problem(file_name, description=["", ""], optval=0.0):
 
 
 
-def lin_to_mat_alt(lin, ni, no, hermitian):
+def lin_to_mat_alt(lin, ni, no, iscomplex):
     # Returns the matrix representation of a linear operator from (ni x ni) symmetric
     # matrices to (no x no) symmetric matrices given as a function handle
-    vni = sym.vec_dim(ni, hermitian=hermitian)
-    vno = sym.vec_dim(2*no, hermitian=False) if hermitian else sym.vec_dim(no, hermitian=False)
+    vni = sym.vec_dim(ni, iscomplex=iscomplex)
+    vno = sym.vec_dim(2*no, iscomplex=False) if iscomplex else sym.vec_dim(no, iscomplex=False)
     mat = np.zeros((vno, vni))
 
     rt2  = np.sqrt(2.0)
@@ -180,16 +180,16 @@ def lin_to_mat_alt(lin, ni, no, hermitian):
     for k in range(vni):
         H = np.zeros((vni, 1))
         H[k] = 1.0
-        H_mat = sym.vec_to_mat(H, irt2, hermitian=hermitian)
+        H_mat = sym.vec_to_mat(H, irt2, iscomplex=iscomplex)
         lin_H = lin(H_mat)
-        if hermitian:
+        if iscomplex:
             lin_H_real = lin_H.real
             lin_H_imag = lin_H.imag
             lin_H = np.vstack((
                 np.hstack((lin_H_real, -lin_H_imag)),
                 np.hstack((lin_H_imag,  lin_H_real)),
             ))
-        vec_out = sym.mat_to_vec(lin_H, rt2, hermitian=False)
+        vec_out = sym.mat_to_vec(lin_H, rt2, iscomplex=False)
         mat[:, [k]] = vec_out
 
     return mat

@@ -38,7 +38,7 @@ if __name__ == "__main__":
         for bi in blockStruct:
             if bi >= 0:
                 if fname[-1] == 'c':
-                    cones.append(possemidefinite.Cone(bi, hermitian=True))
+                    cones.append(possemidefinite.Cone(bi, iscomplex=True))
                     dims.append(2 * bi * bi)
                 else:
                     cones.append(possemidefinite.Cone(bi))

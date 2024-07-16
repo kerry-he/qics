@@ -26,9 +26,9 @@ if unambiguous:
 
 if unambiguous:
     # Only do unambiguous state discrimination for 
-    rhos = [qu.randPureDensityMatrix(n, hermitian=True) for _ in range(p)]
+    rhos = [qu.randPureDensityMatrix(n, iscomplex=True) for _ in range(p)]
 else:
-    rhos = [qu.randDensityMatrix(n, hermitian=True) for _ in range(p)]
+    rhos = [qu.randDensityMatrix(n, iscomplex=True) for _ in range(p)]
 ps = np.random.rand(p)
 if unambiguous:
     ps[-1] = 0
@@ -76,7 +76,7 @@ A = np.array(A)
 A = sp.sparse.csr_matrix(A)
 b = np.array(b).reshape((-1, 1))
 
-cones = [possemidefinite.Cone(n, hermitian=True) for _ in range(p)]
+cones = [possemidefinite.Cone(n, iscomplex=True) for _ in range(p)]
 model = model.Model(c=c,  A=A,   b=b, cones=cones)
 # model = model.Model(c=-b, G=A.T, h=c, cones=cones)
 solver = solver.Solver(model, sym=True, ir=True)

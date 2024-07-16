@@ -40,7 +40,7 @@ Delta_X = sym.mat_to_vec(Delta[::n+1, ::n+1])
 D = 0.5
 
 # Build problem model
-tr2 = sym.lin_to_mat(lambda x : x, n, n, hermitian=False)
+tr2 = sym.lin_to_mat(lambda x : x, n, n, iscomplex=False)
 IDX = np.zeros((n, n), 'uint64')
 temp = np.arange(n*(n-1)).reshape((n, n-1)).T
 IDX[1:, :] += np.tril(temp).astype('uint64')

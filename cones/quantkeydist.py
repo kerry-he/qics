@@ -6,17 +6,17 @@ from utils import quantum   as quant
 from cones.base import BaseCone
 
 class Cone(BaseCone):
-    def __init__(self, K_list, Z_list, hermitian=False):
+    def __init__(self, K_list, Z_list, iscomplex=False):
         # Dimension properties
         self.n = K_list[0].shape[1]    # Get input dimension
         self.nu = 1 + self.n           # Barrier parameter
-        self.hermitian = hermitian      # Is the problem complex-valued 
+        self.iscomplex = iscomplex      # Is the problem complex-valued 
         
-        self.vn = sym.vec_dim(self.n, hermitian)     # Get input vector dimension
+        self.vn = sym.vec_dim(self.n, iscomplex)     # Get input vector dimension
 
-        self.dim   = [1, self.n*self.n] if (not hermitian) else [1, 2*self.n*self.n]
-        self.type  = ['r', 's']           if (not hermitian) else ['r', 'h']
-        self.dtype = np.float64           if (not hermitian) else np.complex128       
+        self.dim   = [1, self.n*self.n] if (not iscomplex) else [1, 2*self.n*self.n]
+        self.type  = ['r', 's']           if (not iscomplex) else ['r', 'h']
+        self.dtype = np.float64           if (not iscomplex) else np.complex128       
 
         # Always block the ZK operator as Z maps to block matrices
         self.K_list_blk  = [facial_reduction(K_list)]
@@ -37,6 +37,9 @@ class Cone(BaseCone):
         self.precompute_mat_vec()     
 
         return
+
+    def get_iscomplex(self):
+        return self.iscomplex
 
     def get_init_point(self, out):
         KK_blk   = [sym.congr_map(np.eye(self.n), K_list)  for K_list  in self.K_list_blk]

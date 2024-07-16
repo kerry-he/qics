@@ -5,23 +5,23 @@ from utils import mtxgrad   as mgrad
 from cones.base import BaseCone
 
 class Cone(BaseCone):
-    def __init__(self, n0, n1, sys, hermitian=False):
+    def __init__(self, n0, n1, sys, iscomplex=False):
         # Dimension properties
         self.n0 = n0          # Dimension of system 0
         self.n1 = n1          # Dimension of system 1
         self.N  = n0 * n1     # Total dimension of bipartite system
         self.nu = 1 + self.N  # Barrier parameter
-        self.hermitian = hermitian
+        self.iscomplex = iscomplex
 
         self.sys   = sys                       # System being traced out
         self.n = n0 if (sys == 1) else n1      # Dimension of system not traced out
         self.m = n1 if (sys == 1) else n0      # Dimension of system traced out
 
-        self.vn = self.n*self.n if hermitian else self.n*(self.n+1)//2      # Compact dimension of vectorized system being traced out
+        self.vn = self.n*self.n if iscomplex else self.n*(self.n+1)//2      # Compact dimension of vectorized system being traced out
 
-        self.dim   = [1, self.N*self.N] if (not hermitian) else [1, 2*self.N*self.N]
-        self.type  = ['r', 's']         if (not hermitian) else ['r', 'h']
-        self.dtype = np.float64         if (not hermitian) else np.complex128        
+        self.dim   = [1, self.N*self.N] if (not iscomplex) else [1, 2*self.N*self.N]
+        self.type  = ['r', 's']         if (not iscomplex) else ['r', 'h']
+        self.dtype = np.float64         if (not iscomplex) else np.complex128        
 
         # Update flags
         self.feas_updated            = False
@@ -35,7 +35,10 @@ class Cone(BaseCone):
         self.precompute_mat_vec()
 
         return
-    
+
+    def get_iscomplex(self):
+        return self.iscomplex
+
     def get_init_point(self, out):
         # This gives the central point satisfying x = -F'(x)
         a = self.N * np.log(self.m)**2 + 1
@@ -350,7 +353,7 @@ class Cone(BaseCone):
         self.At = A[:, 0]
         Ax = np.ascontiguousarray(A[:, 1:])
 
-        if self.hermitian:
+        if self.iscomplex:
             self.Ax = np.array([Ax_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.N, self.N)) for Ax_k in Ax])
         else:
             self.Ax = np.array([Ax_k.reshape((self.N, self.N)) for Ax_k in Ax])
@@ -434,7 +437,7 @@ class Cone(BaseCone):
         for j in range(self.n):
             np.matmul(lhs[j], rhs[:j], out=self.Work9[:j])
 
-            if self.hermitian:
+            if self.iscomplex:
                 np.add(self.Work9[:j], self.Work9[:j].conj().transpose(0, 2, 1), out=self.Work8[t : t+2*j : 2])
                 np.subtract(self.Work9[:j], self.Work9[:j].conj().transpose(0, 2, 1), out=self.Work8[t+1 : t+2*j+1 : 2])
                 self.Work8[t+1 : t+2*j+1 : 2] *= -1j

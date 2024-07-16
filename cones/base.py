@@ -5,9 +5,12 @@ class BaseCone():
     def __init__(self):
         pass
 
-    def issym(self):
+    def get_issymmetric(self):
         return False
     
+    def get_iscomplex(self):
+        return False
+
     def zeros(self):
         out = []
         for (dim_k, type_k) in zip(self.dim, self.type):
@@ -57,7 +60,7 @@ class BaseCone():
     
     def precompute_mat_vec(self):
         # Indices to convert to and from compact vectors and matrices
-        if self.hermitian:
+        if self.iscomplex:
             self.diag_idxs = np.append(0, np.cumsum([i for i in range(3, 2*self.n+1, 2)]))
             self.triu_idxs = np.empty(self.n*self.n, dtype=int)
             self.scale        = np.empty(self.n*self.n)
@@ -85,7 +88,7 @@ class BaseCone():
                 self.E[k, i, j] = rt2
                 self.E[k, j, i] = rt2
                 k += 1
-                if self.hermitian:
+                if self.iscomplex:
                     self.E[k, i, j] = rt2 *  1j
                     self.E[k, j, i] = rt2 * -1j
                     k += 1
@@ -118,7 +121,7 @@ class BaseCone():
         pass
 
 class SymCone(BaseCone):
-    def issym(self):
+    def get_issymmetric(self):
         return True
 
     # Functions that the child class has to implement

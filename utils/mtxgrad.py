@@ -243,8 +243,8 @@ def thrd_frechet(D, D2, d3f_D, U, H1, H2, H3=None):
 
     return U @ out @ U.conj().T
 
-def get_S_matrix(D2_UXU, rt2, hermitian=False):
-    if hermitian:
+def get_S_matrix(D2_UXU, rt2, iscomplex=False):
+    if iscomplex:
         return get_S_matrix_hermitian(D2_UXU, rt2)
     else:
         return get_S_matrix_symmetric(D2_UXU, rt2)

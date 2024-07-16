@@ -6,17 +6,17 @@ from utils import symmetric as sym
 from cones.base import BaseCone, get_perspective_derivatives
 
 class Cone(BaseCone):
-    def __init__(self, n, func, hermitian=False):
+    def __init__(self, n, func, iscomplex=False):
         # Dimension properties
         self.n  = n           # Side dimension of system
         self.nu = 3 * self.n  # Barrier parameter
 
-        self.hermitian = hermitian                      # Hermitian or symmetric vector space
-        self.vn = n*n if hermitian else n*(n+1)//2      # Compact dimension of system
+        self.iscomplex = iscomplex                      # Hermitian or symmetric vector space
+        self.vn = n*n if iscomplex else n*(n+1)//2      # Compact dimension of system
 
-        self.dim   = [n*n, n*n, n*n] if (not hermitian) else [2*n*n, 2*n*n, 2*n*n]
-        self.type  = ['s', 's', 's'] if (not hermitian) else ['h', 'h', 'h']
-        self.dtype = np.float64      if (not hermitian) else np.complex128
+        self.dim   = [n*n, n*n, n*n] if (not iscomplex) else [2*n*n, 2*n*n, 2*n*n]
+        self.type  = ['s', 's', 's'] if (not iscomplex) else ['h', 'h', 'h']
+        self.dtype = np.float64      if (not iscomplex) else np.complex128
 
         self.idx_T = slice(0, self.dim[0])
         self.idx_X = slice(self.dim[0], 2 * self.dim[0])
@@ -48,6 +48,9 @@ class Cone(BaseCone):
 
         return
     
+    def get_iscomplex(self):
+        return self.iscomplex
+
     def get_init_point(self, out):
         (t0, x0, y0) = self.get_central_ray()
 
@@ -497,7 +500,7 @@ class Cone(BaseCone):
         self.Ax_vec = np.ascontiguousarray(A[:, self.idx_X])
         self.Ay_vec = np.ascontiguousarray(A[:, self.idx_Y])
 
-        if self.hermitian:
+        if self.iscomplex:
             self.At = np.array([At_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for At_k in self.At_vec])
             self.Ax = np.array([Ax_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ax_k in self.Ax_vec])
             self.Ay = np.array([Ay_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ay_k in self.Ay_vec])            

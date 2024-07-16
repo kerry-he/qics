@@ -11,16 +11,16 @@ def inp(x, y):
 def vec(x):
     return np.hstack([xk.ravel() for xk in x])
 
-hermitian = False
-dtype = np.float64 if (not hermitian) else np.complex128
+iscomplex = False
+dtype = np.float64 if (not iscomplex) else np.complex128
 n = 3
-K = oplogrelentr.Cone(n, hermitian=hermitian)
+K = oplogrelentr.Cone(n, iscomplex=iscomplex)
 
 while True:
     x0 = [
-        quant.randDensityMatrix(n, hermitian=hermitian),
-        quant.randDensityMatrix(n, hermitian=hermitian),
-        quant.randDensityMatrix(n, hermitian=hermitian)
+        quant.randDensityMatrix(n, iscomplex=iscomplex),
+        quant.randDensityMatrix(n, iscomplex=iscomplex),
+        quant.randDensityMatrix(n, iscomplex=iscomplex)
     ]
     K.set_point(x0, x0)
 

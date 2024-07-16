@@ -13,12 +13,12 @@ np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
-hermitian = True
+iscomplex = True
 n = 64
-sn = n*n if (not hermitian) else 2*n*n
+sn = n*n if (not iscomplex) else 2*n*n
 
 # cq channel capacity problem data
-alphabet = [quantum.randDensityMatrix(n, hermitian=hermitian) for i in range(n)]
+alphabet = [quantum.randDensityMatrix(n, iscomplex=iscomplex) for i in range(n)]
 alphabet_vec = np.hstack([rho.view(dtype=np.float64).reshape(-1, 1) for rho in alphabet])
 entr_alphabet = np.array([quantum.quantEntropy(rho) for rho in alphabet])
 
@@ -40,7 +40,7 @@ h = np.zeros((n + 2 + sn, 1))
 h[n+1] = 1.
 
 # Input into model and solve
-cones = [nonnegorthant.Cone(n), quantentr.Cone(n, hermitian=hermitian)]
+cones = [nonnegorthant.Cone(n), quantentr.Cone(n, iscomplex=iscomplex)]
 model = model.Model(c, A, b, G, h, cones=cones)
 solver = solver.Solver(model)
 

@@ -1,18 +1,18 @@
 import numpy as np
 
-def randDensityMatrix(n, hermitian=False):
+def randDensityMatrix(n, iscomplex=False):
     # Generate random density matrix on Haar measure
-    if hermitian:
+    if iscomplex:
         X = np.random.normal(size=(n, n)) + np.random.normal(size=(n, n)) * 1j
     else:
         X = np.random.normal(size=(n, n))
     rho = X @ X.conj().T
     return rho / np.trace(rho)
 
-def randPureDensityMatrix(n, hermitian=False):
+def randPureDensityMatrix(n, iscomplex=False):
     # Generate random density matrix on Haar measure
     # https://sumeetkhatri.com/wp-content/uploads/2020/05/random_pure_states.pdf
-    if hermitian:
+    if iscomplex:
         psi = np.random.normal(size=(n)) + np.random.normal(size=(n)) * 1j
     else:
         psi = np.random.normal(size=(n))
@@ -21,25 +21,25 @@ def randPureDensityMatrix(n, hermitian=False):
     rho = (rho + rho.conj().T) * 0.5
     return rho
 
-def randUnitary(n, hermitian=False):
+def randUnitary(n, iscomplex=False):
     # Random unitary uniformly distributed on Haar measure
     # https://case.edu/artsci/math/esmeckes/Meckes_SAMSI_Lecture2.pdf
-    if hermitian:
+    if iscomplex:
         X = np.random.normal(size=(n, n)) + np.random.normal(size=(n, n)) * 1j
     else:
         X = np.random.normal(size=(n, n))
     U, _ = np.linalg.qr(X)
     return U
 
-def randStinespringOperator(nin, nout=None, nenv=None, hermitian=False):
+def randStinespringOperator(nin, nout=None, nenv=None, iscomplex=False):
     # Random Stinespring operator uniformly distributed on Hilbert-Schmidt measure
     # https://arxiv.org/abs/2011.02994
     nout = nout if (nout is not None) else nin
     nenv = nenv if (nenv is not None) else nout
-    U = randUnitary(nout * nenv, hermitian=hermitian)
+    U = randUnitary(nout * nenv, iscomplex=iscomplex)
     return U[:, :nin]
 
-def randDegradableChannel(nin, nout, nenv, hermitian=False):
+def randDegradableChannel(nin, nout, nenv, iscomplex=False):
     # Random degradable channel, represented as a Stinespring isometry
     # Returns both Stinespring isometry V such that
     #     N(X)  = Tr_2[VXV']
@@ -49,15 +49,15 @@ def randDegradableChannel(nin, nout, nenv, hermitian=False):
     # See https://arxiv.org/abs/0802.1360
 
     assert nenv <= nin
-    dtype = np.complex128 if hermitian else np.float64
+    dtype = np.complex128 if iscomplex else np.float64
 
     V = np.zeros((nout*nenv, nin), dtype=dtype)    # N Stinespring isometry
     W = np.zeros((nin*nenv, nout), dtype=dtype)    # Ξ Stinespring isometry
 
-    U = randUnitary(nin, hermitian=hermitian)
+    U = randUnitary(nin, iscomplex=iscomplex)
     for k in range(nout):
         # Generate random vector
-        if hermitian:
+        if iscomplex:
             v = np.random.normal(size=(nenv, 1)) + np.random.normal(size=(nenv, 1)) * 1j
         else:
             v = np.random.normal(size=(nenv, 1))

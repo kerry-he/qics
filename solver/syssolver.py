@@ -126,7 +126,7 @@ class SysSolver():
 
         # taunum := rtau + rkap + c' vx + b' vy + h' vz
         tau_num = r.tau + r.kap + self.cbh.inp(self.v_xyz)
-        if model.sym:
+        if model.issymmetric:
             # tauden := kap / tau + c' cx + b' cy + h' cz
             tau_den = (pnt.kap / pnt.tau + self.cbh.inp(self.c_xyz))
         else:
@@ -143,7 +143,7 @@ class SysSolver():
         d.s.vec -= model.G @ d.x
         d.s.vec -= r.z.vec
         
-        if model.sym:
+        if model.issymmetric:
             # dkap := rkap - (kap/tau) * dtau
             d.kap[:] = r.kap - (pnt.kap / pnt.tau) * d.tau
         else:
@@ -303,7 +303,7 @@ class SysSolver():
         # rtau := -c' dx - b' dy - h' dz - dkap
         r.tau[:] = -(model.c.T @ d.x) - (model.b.T @ d.y) - (model.h.T @ d.z.vec) - d.kap[0, 0]
 
-        if model.sym:
+        if model.issymmetric:
             # rkap := (kap / tau) dtau + dkap
             r.kap[:] = (pnt.kap / pnt.tau) * d.tau[0, 0] + d.kap[0, 0]
         else:
@@ -409,7 +409,7 @@ def solve_sys_ir(x, b, A, A_inv, res, cor, settings):
     return res_norm
 
 def blk_hess_prod_ip(out, dirs, model):
-    if model.sym:
+    if model.issymmetric:
         for (k, cone_k) in enumerate(model.cones):
             cone_k.nt_prod_ip(out[k], dirs[k])
     else:
@@ -418,7 +418,7 @@ def blk_hess_prod_ip(out, dirs, model):
     return out
 
 def blk_invhess_prod_ip(out, dirs, model):
-    if model.sym:
+    if model.issymmetric:
         for (k, cone_k) in enumerate(model.cones):
             cone_k.invnt_prod_ip(out[k], dirs[k])
     else:
@@ -430,7 +430,7 @@ def blk_hess_congruence(dirs, model):
     n = model.n
     out = np.zeros((n, n))
 
-    if model.sym:
+    if model.issymmetric:
         for (k, cone_k) in enumerate(model.cones):
             out += cone_k.nt_congr(dirs[k])
     else:
@@ -443,7 +443,7 @@ def blk_invhess_congruence(dirs, model):
     p = model.p
     out = np.zeros((p, p))
 
-    if model.sym:
+    if model.issymmetric:
         for (k, cone_k) in enumerate(model.cones):
             out += cone_k.invnt_congr(dirs[k])
     else:

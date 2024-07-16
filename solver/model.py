@@ -42,7 +42,8 @@ class Model():
             self.A_invG_T = self.A_invG.T.tocsr() if sp.sparse.issparse(self.A_invG) else self.A_invG.T
             self.A_invG_views = [self.A_invG[:, idxs_k] for idxs_k in self.cone_idxs]
 
-        self.sym = all([cone_k.issym() for cone_k in cones])
+        self.issymmetric = all([cone_k.get_issymmetric() for cone_k in cones])
+        self.iscomplex   = any([cone_k.get_iscomplex()   for cone_k in cones])
         
         return
     

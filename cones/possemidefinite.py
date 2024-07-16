@@ -7,15 +7,15 @@ from utils import sparse
 from cones.base import SymCone
 
 class Cone(SymCone):
-    def __init__(self, n, hermitian=False):
+    def __init__(self, n, iscomplex=False):
         # Dimension properties
         self.n  = n                 # Side length of matrix
         self.nu = n                 # Barrier parameter
-        self.hermitian = hermitian  # Hermitian or symmetric vector space
+        self.iscomplex = iscomplex  # Hermitian or symmetric vector space
 
-        self.dim   = n * n      if (not hermitian) else 2 * n * n
-        self.type  = 's'        if (not hermitian) else 'h'
-        self.dtype = np.float64 if (not hermitian) else np.complex128
+        self.dim   = n * n      if (not iscomplex) else 2 * n * n
+        self.type  = 's'        if (not iscomplex) else 'h'
+        self.dtype = np.float64 if (not iscomplex) else np.complex128
         
         # Update flags
         self.feas_updated = False
@@ -29,11 +29,14 @@ class Cone(SymCone):
         self.cho_fact  = sp.linalg.lapack.get_lapack_funcs("potrf", (self.X,))
         self.cho_inv   = sp.linalg.lapack.get_lapack_funcs("trtri", (self.X,))
         self.svd       = sp.linalg.lapack.get_lapack_funcs("gesdd", (self.X,))
-        self.eigvalsh  = sp.linalg.lapack.get_lapack_funcs("heevr", (self.X,)) if self.hermitian else sp.linalg.lapack.get_lapack_funcs("syevr", (self.X,))
+        self.eigvalsh  = sp.linalg.lapack.get_lapack_funcs("heevr", (self.X,)) if self.iscomplex else sp.linalg.lapack.get_lapack_funcs("syevr", (self.X,))
         self.svd_lwork = sp.linalg.lapack.get_lapack_funcs("gesdd_lwork", (self.X,))(n, n)
 
         return
-    
+
+    def get_iscomplex(self):
+        return self.iscomplex
+
     def get_init_point(self, out):
         self.set_point(
             np.eye(self.n, dtype=self.dtype), 
@@ -125,14 +128,14 @@ class Cone(SymCone):
         # Compute sparse-sparse component
         if len(self.A_sp_idxs) > 0:
             # Use fast Numba compiled functions when A is extremely sparse 
-            if self.hermitian:
+            if self.iscomplex:
                 AHA_complex(out, self.A_sp_rows, self.A_sp_cols, self.A_sp_data, self.A_sp_nnzs, X, self.A_sp_idxs)
             else:
                 AHA(out, self.A_sp_rows, self.A_sp_cols, self.A_sp_data, self.A_sp_nnzs, X, self.A_sp_idxs)
 
             if len(self.A_ds_idxs) > 0:
                 lhs = np.zeros((len(self.A_ds_idxs), self.dim))
-                if self.hermitian:
+                if self.iscomplex:
                     lin.congr(lhs.reshape((len(self.A_ds_idxs), self.n, 2*self.n)).view(dtype=np.complex128), X, self.Ai_ds, work=self.work)
                 else:
                     lin.congr(lhs.reshape((len(self.A_ds_idxs), self.n, self.n)), X, self.Ai_ds, work=self.work)
@@ -143,7 +146,7 @@ class Cone(SymCone):
         else:
             # Compute symmetric matrix multiplication [A (L kr L)] [A (L kr L)]'
             lhs = np.zeros((len(self.A_ds_idxs), self.dim))
-            if self.hermitian:
+            if self.iscomplex:
                 lin.congr(lhs.reshape((len(self.A_ds_idxs), self.n, 2*self.n)).view(dtype=np.complex128), X_rt2.conj().T, self.Ai_ds, work=self.work)
             else:
                 lin.congr(lhs.reshape((len(self.A_ds_idxs), self.n, self.n)), X_rt2.conj().T, self.Ai_ds, work=self.work)
@@ -348,7 +351,7 @@ class Cone(SymCone):
 
                 triu_idxs = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
 
-                if self.hermitian:
+                if self.iscomplex:
                     A_sp_real = A_sp[:, ::2][:, triu_idxs]
                     A_sp_imag = A_sp[:, 1::2][:, triu_idxs]
                     A_sp_lil  = (A_sp_real + A_sp_imag*1j).tolil()
@@ -373,14 +376,14 @@ class Cone(SymCone):
                 A_ds = A[self.A_ds_idxs, :]
 
                 # Turn rows of A into matrices Ai
-                if self.hermitian:
+                if self.iscomplex:
                     A_ds_real = A_ds[:, ::2]
                     A_ds_imag = A_ds[:, 1::2]
                     A_ds = A_ds_real + A_ds_imag*1j
                     
                 A_ds = A_ds.toarray()
 
-                if self.hermitian:
+                if self.iscomplex:
                     self.Ai_ds = np.array([Ai.reshape((-1, 2)).view(dtype=np.complex128).reshape(self.n, self.n) for Ai in A_ds])
                 else:
                     self.Ai_ds = np.array([Ai.reshape((self.n, self.n)) for Ai in A_ds])
@@ -388,7 +391,7 @@ class Cone(SymCone):
 
                 # Extract and scale all off-diagonal blocks by 2
                 if len(self.A_sp_idxs) > 0:
-                    if self.hermitian:
+                    if self.iscomplex:
                         self.triu_idxs = np.array(
                             [2 * (i + i*self.n)     for i in range(self.n)] + 
                             [2 * (j + i*self.n)     for j in range(self.n) for i in range(j)] + 
@@ -410,7 +413,7 @@ class Cone(SymCone):
             self.A_ds_idxs = np.arange(A.shape[0])
             self.A_ds_ds_idxs = np.ix_(self.A_ds_idxs, self.A_ds_idxs)
             A = np.ascontiguousarray(A)
-            if self.hermitian:
+            if self.iscomplex:
                 self.Ai_ds = np.array([Ai.reshape((-1, 2)).view(dtype=np.complex128).reshape(self.n, self.n) for Ai in A])
             else:
                 self.Ai_ds = np.array([Ai.reshape((self.n, self.n)) for Ai in A])

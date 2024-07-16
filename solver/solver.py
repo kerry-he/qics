@@ -48,7 +48,7 @@ class Solver():
 
         self.model = model
         syssolver = SysSolver(model, ir=ir)
-        self.stepper = SymStepper(syssolver, model) if model.sym else NonSymStepper(syssolver, model)
+        self.stepper = SymStepper(syssolver, model) if model.issymmetric else NonSymStepper(syssolver, model)
 
         return
     
@@ -60,9 +60,10 @@ class Solver():
             print("                by K. He, J. Saunderson, H. Fawzi (2024)                ")
             print("========================================================================")
             print("Problem summary:")                
-            print(f"        no. cones:  {len(self.model.cones):<10}", f"              no. vars:    {self.model.n:<10}")
-            print(f"        barr par:   {self.model.nu:<10}",         f"              no. constr:  {self.model.p:<10}")
-            print(f"        symmetric:  {self.model.sym!r:<10}",      f"              cone dim:    {self.model.q:<10}")
+            print(f"        no. cones:  {len(self.model.cones):<10}",    f"              no. vars:    {self.model.n:<10}")
+            print(f"        barr. par:  {self.model.nu:<10}",            f"              no. constr:  {self.model.p:<10}")
+            print(f"        symmetric:  {self.model.issymmetric!r:<10}", f"              cone dim:    {self.model.q:<10}")
+            print(f"        complex:    {self.model.iscomplex!r:<10}")
 
         # Setup solver
         self.setup_solver()
@@ -80,7 +81,7 @@ class Solver():
             print(f"|  {"p_feas":^7}   {"d_feas":^7}  ", end="")
             print(f"|  {"time (s)":^8}  ", end="")
             if self.verbose == 3:
-                if self.model.sym:
+                if self.model.issymmetric:
                     print(f"|  {"dir_tol":^7}   {"sigma":^5}   {"alpha":^5}", end="")
                 else:
                     print(f"|  {"step":^6}   {"dir_tol":^7}   {"prox":^7}   {"alpha":^5}", end="")
@@ -130,8 +131,8 @@ class Solver():
             print(f"        sol. status:  {self.solution_status:<10}", f"            num. iter:    {self.iter:<10}")
             print(f"        exit status:  {self.exit_status:<10}",     f"            solve time:   {self.solve_time:<10.3f}")
             print()
-            print(f"        primal obj:   {self.p_obj:<.12e}", f"    primal feas:  {max(self.y_feas, self.z_feas):<.2e}")
-            print(f"        dual obj:     {self.d_obj:<.12e}", f"    dual feas:    {self.x_feas:<.2e}")
+            print(f"        primal obj:  {self.p_obj:>19.12e}", f"    primal feas:  {max(self.y_feas, self.z_feas):<.2e}")
+            print(f"        dual obj:    {self.d_obj:>19.12e}", f"    dual feas:    {self.x_feas:<.2e}")
             print(f"        opt. gap:     {self.gap:<.2e}")
             print()
 
@@ -232,7 +233,7 @@ class Solver():
         self.h_max = lin.norm_inf(model.h)
 
         if self.verbose == 3:
-            if self.model.sym:
+            if self.model.issymmetric:
                 self.printbar_size = 125
             else:
                 self.printbar_size = 136
