@@ -1,5 +1,4 @@
 import numpy as np
-import scipy as sp
 import math
 from utils.vector import Point
 
@@ -53,8 +52,8 @@ class NonSymStepper():
                     step_mode = "cent"
                     point, alpha, success = self.line_search(model, point, step_mode)
         
-        if verbose:
-            print("  | %6s" % step_mode, "%10.3e" % (res_norm), "%10.3e" % (self.prox), " %5.3f" % (alpha))
+        if verbose == 3:
+            print("  | %6s" % (step_mode), "%8.1e" % (res_norm), "%8.1e" % (self.prox), " %5.3f" % (alpha), end="")
         
         return point, success, alpha
     
