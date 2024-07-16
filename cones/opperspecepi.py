@@ -3,7 +3,7 @@ import scipy as sp
 from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 from utils import symmetric as sym
-from cones.base import BaseCone
+from cones.base import BaseCone, get_perspective_derivatives
 
 class Cone(BaseCone):
     def __init__(self, n, func, hermitian=False):
@@ -14,7 +14,7 @@ class Cone(BaseCone):
         self.hermitian = hermitian                      # Hermitian or symmetric vector space
         self.vn = n*n if hermitian else n*(n+1)//2      # Compact dimension of system
 
-        self.dim   = [n*n, n*n, n*n]   if (not hermitian) else [2*n*n, 2*n*n, 2*n*n]
+        self.dim   = [n*n, n*n, n*n] if (not hermitian) else [2*n*n, 2*n*n, 2*n*n]
         self.type  = ['s', 's', 's'] if (not hermitian) else ['h', 'h', 'h']
         self.dtype = np.float64      if (not hermitian) else np.complex128
 
@@ -37,63 +37,22 @@ class Cone(BaseCone):
         self.dder3_aux_updated       = False
         self.congr_aux_updated       = False
 
-        if func == 'log':
-            self.g   = lambda x : -np.log(x)
-            self.dg  = lambda x : -np.reciprocal(x)
-            self.d2g = lambda x :  np.reciprocal(x * x)
-            self.d3g = lambda x : -np.reciprocal(x * x * x) * 2.
-
-            self.xg   = lambda x : -x * np.log(x)
-            self.dxg  = lambda x : -np.log(x) - 1.
-            self.d2xg = lambda x : -np.reciprocal(x)
-            self.d3xg = lambda x :  np.reciprocal(x * x)
-
-            self.h   = lambda x :  x * np.log(x)
-            self.dh  = lambda x :  np.log(x) + 1.
-            self.d2h = lambda x :  np.reciprocal(x)
-            self.d3h = lambda x : -np.reciprocal(x * x)
-
-            self.xh   = lambda x :  x * x * np.log(x)
-            self.dxh  = lambda x :  2. * x * np.log(x) + x
-            self.d2xh = lambda x :  2. * np.log(x) + 3.
-            self.d3xh = lambda x :  2 * np.reciprocal(x)
-        elif isinstance(func, (int, float)):
-            alpha = func
-            if alpha > 0 and alpha < 1:
-                sgn = -1
-            elif (alpha > 1 and alpha < 2) or (alpha > -1 and alpha < 0):
-                sgn = 1
-
-            self.g   = lambda x : sgn * np.power(x, alpha)
-            self.dg  = lambda x : sgn * np.power(x, alpha - 1) * alpha
-            self.d2g = lambda x : sgn * np.power(x, alpha - 2) * (alpha * (alpha - 1))
-            self.d3g = lambda x : sgn * np.power(x, alpha - 3) * (alpha * (alpha - 1) * (alpha - 2))
-
-            self.xg   = lambda x : sgn * np.power(x, alpha + 1)
-            self.dxg  = lambda x : sgn * np.power(x, alpha    ) * (alpha + 1)
-            self.d2xg = lambda x : sgn * np.power(x, alpha - 1) * ((alpha + 1) * alpha)
-            self.d3xg = lambda x : sgn * np.power(x, alpha - 2) * ((alpha + 1) * alpha * (alpha - 1))            
-
-            beta     = 1. - alpha
-            self.h   = lambda x : sgn * np.power(x, beta)
-            self.dh  = lambda x : sgn * np.power(x, beta - 1) * beta
-            self.d2h = lambda x : sgn * np.power(x, beta - 2) * (beta * (beta - 1))
-            self.d3h = lambda x : sgn * np.power(x, beta - 3) * (beta * (beta - 1) * (beta - 2))
-
-            self.xh   = lambda x : sgn * np.power(x, beta + 1)
-            self.dxh  = lambda x : sgn * np.power(x, beta    ) * (beta + 1)
-            self.d2xh = lambda x : sgn * np.power(x, beta - 1) * ((beta + 1) * beta)
-            self.d3xh = lambda x : sgn * np.power(x, beta - 2) * ((beta + 1) * beta * (beta - 1))    
+        (
+            self.g,  self.dg,  self.d2g,  self.d3g, 
+            self.xg, self.dxg, self.d2xg, self.d3xg,
+            self.h,  self.dh,  self.d2h,  self.d3h,
+            self.xh, self.dxh, self.d2xh, self.d3xh
+        ) = get_perspective_derivatives(func)
 
         self.precompute_mat_vec()
 
         return
     
     def get_init_point(self, out):
-        (t0, x0, y0) = get_central_ray_relentr(self.n)
+        (t0, x0, y0) = self.get_central_ray()
 
         point = [
-            np.eye(self.n, dtype=self.dtype) * t0 / self.n,
+            np.eye(self.n, dtype=self.dtype) * t0,
             np.eye(self.n, dtype=self.dtype) * x0,
             np.eye(self.n, dtype=self.dtype) * y0,
         ]
@@ -660,33 +619,49 @@ class Cone(BaseCone):
 
         return    
 
+    def get_central_ray(self):
+        # Solve a 3-dimensional system to get central point
+        (t, x, y) = (1. + self.g(1.), 1., 1.)
 
-def get_central_ray_relentr(x_dim):
-    if x_dim <= 10:
-        return central_rays_relentr[x_dim - 1, :]
-    
-    # use nonlinear fit for higher dimensions
-    rtx_dim = np.sqrt(x_dim)
-    if x_dim <= 20:
-        t = 1.2023 / rtx_dim - 0.015
-        x = -0.3057 / rtx_dim + 0.972
-        y = 0.432 / rtx_dim + 1.0125
-    else:
-        t = 1.1513 / rtx_dim - 0.0069
-        x = -0.4247 / rtx_dim + 0.9961
-        y = 0.4873 / rtx_dim + 1.0008
+        for _ in range(10):
+            # Precompute some useful things
+            z   = t - x * self.g(y / x)
+            zi  = 1 / z
+            zi2 = zi * zi
 
-    return [t, x, y]
+            dx = self.dh(x / y)
+            dy = self.dg(y / x)
 
-central_rays_relentr = np.array([
-    [0.827838399065679, 0.805102001584795, 1.290927709856958],
-    [0.708612491381680, 0.818070436209846, 1.256859152780596],
-    [0.622618845069333, 0.829317078332457, 1.231401007595669],
-    [0.558111266369854, 0.838978355564968, 1.211710886507694],
-    [0.508038610665358, 0.847300430936648, 1.196018952086134],
-    [0.468039614334303, 0.854521306762642, 1.183194752717249],
-    [0.435316653088949, 0.860840990717540, 1.172492396103674],
-    [0.408009282337263, 0.866420016062860, 1.163403373278751],
-    [0.384838611966541, 0.871385497883771, 1.155570329098724],
-    [0.364899121739834, 0.875838067970643, 1.148735192195660]
-])
+            d2dx2  = self.d2h(x / y) / y
+            d2dy2  = self.d2g(y / x) / x
+            d2dxdy = -d2dy2 * y / x
+
+            # Get gradient
+            g = np.array([
+                t - zi,
+                x + dx * zi - 1 / x,
+                y + dy * zi - 1 / y
+            ])
+            
+            # Get Hessian
+            H = np.array([
+                [zi2,     -zi2*dx,                      -zi2*dy                     ],
+                [-zi2*dx, zi2*dx*dx + zi*d2dx2 + 1/x/x, zi2*dx*dy + zi*d2dxdy       ],
+                [-zi2*dy, zi2*dx*dy + zi*d2dxdy,        zi2*dy*dy + zi*d2dy2 + 1/y/y]
+            ]) + np.eye(3)
+
+            # Perform Newton step
+            delta     = -np.linalg.solve(H, g)
+            decrement = -np.dot(delta, g)
+
+            # Check feasible
+            (t1, x1, y1) = (t + delta[0], x + delta[1], y + delta[2])
+            if x1 < 0 or y1 < 0 or t1 < x1 * self.g(y1 / x1):
+                break
+            
+            (t, x, y) = (t1, x1, y1)
+
+            if decrement / 2. <= 1e-12:
+                break
+
+        return (t, x, y)

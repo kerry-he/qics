@@ -203,3 +203,59 @@ central_rays_entr = np.array([
     [0.202708200, 1.656225672, 0.955442068],
     [0.183450062, 1.661379149, 0.959487644]
 ])
+
+def get_perspective_derivatives(func):
+    if func == 'log':
+        g   = lambda x : -np.log(x)
+        dg  = lambda x : -np.reciprocal(x)
+        d2g = lambda x :  np.reciprocal(x * x)
+        d3g = lambda x : -np.reciprocal(x * x * x) * 2.
+
+        xg   = lambda x : -x * np.log(x)
+        dxg  = lambda x : -np.log(x) - 1.
+        d2xg = lambda x : -np.reciprocal(x)
+        d3xg = lambda x :  np.reciprocal(x * x)
+
+        h   = lambda x :  x * np.log(x)
+        dh  = lambda x :  np.log(x) + 1.
+        d2h = lambda x :  np.reciprocal(x)
+        d3h = lambda x : -np.reciprocal(x * x)
+
+        xh   = lambda x :  x * x * np.log(x)
+        dxh  = lambda x :  2. * x * np.log(x) + x
+        d2xh = lambda x :  2. * np.log(x) + 3.
+        d3xh = lambda x :  2 * np.reciprocal(x)
+    elif isinstance(func, (int, float)):
+        alpha = func
+        if alpha > 0 and alpha < 1:
+            sgn = -1
+        elif (alpha > 1 and alpha < 2) or (alpha > -1 and alpha < 0):
+            sgn = 1
+
+        g   = lambda x : sgn * np.power(x, alpha)
+        dg  = lambda x : sgn * np.power(x, alpha - 1) * alpha
+        d2g = lambda x : sgn * np.power(x, alpha - 2) * (alpha * (alpha - 1))
+        d3g = lambda x : sgn * np.power(x, alpha - 3) * (alpha * (alpha - 1) * (alpha - 2))
+
+        xg   = lambda x : sgn * np.power(x, alpha + 1)
+        dxg  = lambda x : sgn * np.power(x, alpha    ) * (alpha + 1)
+        d2xg = lambda x : sgn * np.power(x, alpha - 1) * ((alpha + 1) * alpha)
+        d3xg = lambda x : sgn * np.power(x, alpha - 2) * ((alpha + 1) * alpha * (alpha - 1))            
+
+        beta = 1. - alpha
+        h   = lambda x : sgn * np.power(x, beta)
+        dh  = lambda x : sgn * np.power(x, beta - 1) * beta
+        d2h = lambda x : sgn * np.power(x, beta - 2) * (beta * (beta - 1))
+        d3h = lambda x : sgn * np.power(x, beta - 3) * (beta * (beta - 1) * (beta - 2))
+
+        xh   = lambda x : sgn * np.power(x, beta + 1)
+        dxh  = lambda x : sgn * np.power(x, beta    ) * (beta + 1)
+        d2xh = lambda x : sgn * np.power(x, beta - 1) * ((beta + 1) * beta)
+        d3xh = lambda x : sgn * np.power(x, beta - 2) * ((beta + 1) * beta * (beta - 1))
+    
+    return (
+        g,  dg,  d2g,  d3g, 
+        xg, dxg, d2xg, d3xg,
+        h,  dh,  d2h,  d3h,
+        xh, dxh, d2xh, d3xh
+    )

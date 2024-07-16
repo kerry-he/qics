@@ -15,6 +15,7 @@ class Cone(BaseCone):
 
         self.sys   = sys                       # System being traced out
         self.n = n0 if (sys == 1) else n1      # Dimension of system not traced out
+        self.m = n1 if (sys == 1) else n0      # Dimension of system traced out
 
         self.vn = self.n*self.n if hermitian else self.n*(self.n+1)//2      # Compact dimension of vectorized system being traced out
 
@@ -36,9 +37,16 @@ class Cone(BaseCone):
         return
     
     def get_init_point(self, out):
+        # This gives the central point satisfying x = -F'(x)
+        a = self.N * np.log(self.m)**2 + 1
+        b = -(2. + (1 + self.N) * self.N * np.log(self.m)**2)
+
+        t0 = np.sqrt((-b - np.sqrt(b*b - 4*a)) / (2*a))
+        x0 = np.sqrt((1 + self.N - t0*t0) / self.N)
+
         point = [
-            np.array([[1.]]), 
-            np.eye(self.N, dtype=self.dtype)
+            np.array([[t0]]), 
+            np.eye(self.N, dtype=self.dtype) * x0
         ]
 
         self.set_point(point, point)

@@ -49,27 +49,6 @@ def D1_log(D, log_D):
     return D1
 
 @nb.njit
-def D1_entr(D, log_D, entr_D):
-    eps = np.finfo(np.float64).eps
-    rteps = np.sqrt(eps)
-
-    n = D.size
-    D1 = np.empty((n, n))
-    
-    for j in range(n):
-        for i in range(j):
-            d_ij = D[i] - D[j]
-            if abs(d_ij) < rteps:
-                D1[i, j] = 0.5 * (log_D[i] + log_D[j]) + 1.
-            else:
-                D1[i, j] = (entr_D[i] - entr_D[j]) / d_ij
-            D1[j, i] = D1[i, j]
-
-        D1[j, j] = log_D[j] + 1.
-
-    return D1
-
-@nb.njit
 def D2_f(D, D1, d2f_D):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -130,36 +109,6 @@ def D2_log(D, D1):
     return D2
 
 @nb.njit
-def D2_entr(D, D1):
-    eps = np.finfo(np.float64).eps
-    rteps = np.sqrt(eps)
-
-    n = D.size
-    D2 = np.zeros((n, n, n))
-
-    for k in range(n):
-        for j in range(k + 1):
-            for i in range(j + 1):
-                d_jk = D[j] - D[k]
-                if abs(d_jk) < rteps:
-                    d_ij = D[i] - D[j]
-                    if abs(d_ij) < rteps:
-                        t = (3 / (D[i] + D[j] + D[k])) / 2
-                    else:
-                        t = (D1[i, j] - D1[j, k]) / d_ij
-                else:
-                    t = (D1[i, j] - D1[i, k]) / d_jk
-
-                D2[i, j, k] = t
-                D2[i, k, j] = t
-                D2[j, i, k] = t
-                D2[j, k, i] = t
-                D2[k, i, j] = t
-                D2[k, j, i] = t
-
-    return D2
-
-@nb.njit
 def D3_f_ij(i, j, D, D2, d3f_D):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -178,7 +127,7 @@ def D3_f_ij(i, j, D, D2, d3f_D):
             D_il = D_i - D_l
             B_ik = (abs(D_ik) < rteps)
             B_il = (abs(D_il) < rteps)
-    
+
             if (abs(D_ij) < rteps) and B_ik and B_il:
                 t = d3f_D[i] / 6
             elif B_ik and B_il:
@@ -187,7 +136,7 @@ def D3_f_ij(i, j, D, D2, d3f_D):
                 t = (D2[i, i, j] - D2[i, j, k]) / D_ik
             else:
                 t = (D2[i, j, k] - D2[j, k, l]) / D_il
-    
+
             D3_ij[k, l] = t
             D3_ij[l, k] = t
     
