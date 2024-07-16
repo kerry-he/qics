@@ -1,10 +1,8 @@
 import numpy as np
 import scipy as sp
 
-from utils import symmetric as sym
-from utils import linear as lin
 from utils import sparse
-from cones import *
+from cones import nonnegorthant
 
 class Model():
     def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0):
@@ -24,7 +22,7 @@ class Model():
         self.use_A = (A is not None) and (A.size > 0)
 
         self.cone_idxs = build_cone_idxs(self.q, cones)
-        self.nu = 1 if (len(cones) == 0) else (1 + sum([cone.get_nu() for cone in cones]))
+        self.nu = 1 + sum([cone.nu for cone in cones])
 
         self.offset = offset
         
@@ -44,25 +42,24 @@ class Model():
             self.A_invG_T = self.A_invG.T.tocsr() if sp.sparse.issparse(self.A_invG) else self.A_invG.T
             self.A_invG_views = [self.A_invG[:, idxs_k] for idxs_k in self.cone_idxs]
 
-        self.sym = True
-        for cone_k in cones:
-            self.sym = self.sym and (isinstance(cone_k, nonnegorthant.Cone) or isinstance(cone_k, possemidefinite.Cone))
+        self.issymmetric = all([cone_k.get_issymmetric() for cone_k in cones])
+        self.iscomplex   = any([cone_k.get_iscomplex()   for cone_k in cones])
         
         return
     
     def rescale_model(self):        
         # Rescale c
-        self.c_scale = np.maximum.reduce([
+        self.c_scale = np.sqrt(np.maximum.reduce([
             np.abs(self.c.reshape(-1)),
             sparse.abs_max(self.A, axis=0),
             sparse.abs_max(self.G, axis=0)
-        ])
+        ]))
 
         # Rescale b
-        self.b_scale = np.maximum.reduce([
+        self.b_scale = np.sqrt(np.maximum.reduce([
             np.abs(self.b.reshape(-1)),
             sparse.abs_max(self.A, axis=1)
-        ])
+        ]))
 
         # Rescale h
         # Note we can only scale each cone by a positive factor, and 
@@ -74,15 +71,15 @@ class Model():
         for (k, cone_k) in enumerate(self.cones):
             idxs = self.cone_idxs[k]
             if isinstance(cone_k, nonnegorthant.Cone):
-                self.h_scale[idxs] = np.maximum.reduce([
+                self.h_scale[idxs] = np.sqrt(np.maximum.reduce([
                     h_absmax[idxs],
                     G_absmax_row[idxs]
-                ])
+                ]))
             else:
-                self.h_scale[idxs] = np.max([
+                self.h_scale[idxs] = np.sqrt(np.max([
                     h_absmax[idxs],
                     G_absmax_row[idxs]
-                ])
+                ]))
 
         # Ensure there are no divide by zeros
         self.c_scale[self.c_scale < np.finfo(self.c_scale.dtype).eps] = 1.
@@ -110,7 +107,7 @@ def build_cone_idxs(n, cones):
     cone_idxs = []
     prev_idx = 0
     for cone in cones:
-        dim_k = cone.dim
+        dim_k = np.sum(cone.dim)
         cone_idxs.append(slice(prev_idx, prev_idx + dim_k))
         prev_idx += dim_k
     assert prev_idx == n

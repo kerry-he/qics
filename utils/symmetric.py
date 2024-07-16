@@ -2,14 +2,14 @@ import math
 import numpy as np
 import numba as nb
 
-def vec_dim(side, hermitian=False):
-    if hermitian:
+def vec_dim(side, iscomplex=False):
+    if iscomplex:
         return side * side
     else:
         return side * (side + 1) // 2
 
-def mat_dim(len, hermitian=False):
-    if hermitian:
+def mat_dim(len, iscomplex=False):
+    if iscomplex:
         side = math.isqrt(len)
         assert side * side == len
         return side
@@ -18,8 +18,8 @@ def mat_dim(len, hermitian=False):
         assert side * (side + 1) == 2 * len
         return side
 
-def mat_to_vec(mat, rt2=None, hermitian=False):
-    if hermitian:
+def mat_to_vec(mat, rt2=None, iscomplex=False):
+    if iscomplex:
         if mat.shape[0] <= 450:
             return mat_to_vec_complex_single(mat, rt2)
         else:
@@ -50,7 +50,7 @@ def mat_to_vec_single(mat, rt2):
     return vec
 
 @nb.njit(parallel=True)
-def mat_to_vec_parallel(mat, rt2, hermitian=False):
+def mat_to_vec_parallel(mat, rt2, iscomplex=False):
     rt2 = np.sqrt(2.0) if (rt2 is None) else rt2
 
     n = mat.shape[0]
@@ -108,8 +108,8 @@ def mat_to_vec_complex_parallel(mat, rt2):
     
     return vec
 
-def vec_to_mat(vec, irt2=None, hermitian=False):
-    if hermitian:
+def vec_to_mat(vec, irt2=None, iscomplex=False):
+    if iscomplex:
         if vec.size <= 1000000:
             return vec_to_mat_complex_single(vec, irt2)
         else:
@@ -197,37 +197,40 @@ def vec_to_mat_complex_parallel(vec, irt2):
 
     return mat    
 
-def p_tr(mat, sys, dim, hermitian=False):
+def p_tr(mat, sys, dim):
     (n0, n1) = dim
-    assert n0 * n1 == np.size(mat, 0)
-    assert sys == 0 or sys == 1
+    return np.trace(mat.reshape(n0, n1, n0, n1), axis1=sys, axis2=2+sys)
 
-    if sys == 1:
-        out = np.empty((n0, n0), 'complex128') if hermitian else np.empty((n0, n0))
-        for j in range(n0):
-            for i in range(j):
-                out[i, j] = np.trace( mat[i*n1 : (i+1)*n1, j*n1 : (j+1)*n1] )
-                out[j, i] = out[i, j].conj()
-            out[j, j] = np.trace( mat[j*n1 : (j+1)*n1, j*n1 : (j+1)*n1] )
-    else:
-        out = np.zeros((n1, n1), 'complex128') if hermitian else np.zeros((n1, n1))
-        for i in range(n0):
-            out += mat[i*n1 : (i+1)*n1, i*n1 : (i+1)*n1]
-
+def p_tr_multi(out, mat, sys, dim):
+    (n0, n1) = dim
+    np.trace(mat.reshape(-1, n0, n1, n0, n1), axis1=1+sys, axis2=3+sys, out=out)
     return out
 
 def i_kr(mat, sys, dim):
     (n0, n1) = dim
-    assert sys == 0 or sys == 1
-
+    out = np.zeros((n0*n1, n0*n1), dtype=mat.dtype)
     if sys == 1:
-        assert np.size(mat, 0) == n0
-        out = np.kron(mat, np.eye(n1))
+        # Perform (mat kron I)
+        r = np.arange(n1)
+        out.reshape(n0, n1, n0, n1)[:, r, :, r] = mat
     else:
-        assert np.size(mat, 0) == n1
-        out = np.kron(np.eye(n0), mat)
+        # Perform (I kron mat)
+        r = np.arange(n0)
+        out.reshape(n0, n1, n0, n1)[r, :, r, :] = mat
+    return out
 
-    return out 
+def i_kr_multi(out, mat, sys, dim):
+    (n0, n1) = dim
+    out.fill(0.)
+    if sys == 1:
+        # Perform (mat kron I)
+        r = np.arange(n1)
+        out.reshape(-1, n0, n1, n0, n1)[:, :, r, :, r] = mat
+    else:
+        # Perform (I kron mat)
+        r = np.arange(n0)
+        out.reshape(-1, n0, n1, n0, n1)[:, r, :, r, :] = mat
+    return out
 
 def p_transpose(mat, sys, dim):
     # Partial transpose operation: M_ij,kl -> M_kj,il if sys == 0, or
@@ -245,11 +248,11 @@ def p_transpose(mat, sys, dim):
     return temp.reshape(n0*n1, n0*n1)
 
 
-def lin_to_mat(lin, ni, no, hermitian=False):
+def lin_to_mat(lin, ni, no, iscomplex=False):
     # Returns the matrix representation of a linear operator from (ni x ni) symmetric
     # matrices to (no x no) symmetric matrices given as a function handle
-    vni = vec_dim(ni, hermitian=hermitian)
-    vno = vec_dim(no, hermitian=hermitian)
+    vni = vec_dim(ni, iscomplex=iscomplex)
+    vno = vec_dim(no, iscomplex=iscomplex)
     mat = np.zeros((vno, vni))
 
     rt2  = np.sqrt(2.0)
@@ -258,9 +261,9 @@ def lin_to_mat(lin, ni, no, hermitian=False):
     for k in range(vni):
         H = np.zeros((vni, 1))
         H[k] = 1.0
-        H_mat = vec_to_mat(H, irt2, hermitian=hermitian)
+        H_mat = vec_to_mat(H, irt2, iscomplex=iscomplex)
         lin_H = lin(H_mat)
-        vec_out = mat_to_vec(lin_H, rt2, hermitian=hermitian)
+        vec_out = mat_to_vec(lin_H, rt2, iscomplex=iscomplex)
         mat[:, [k]] = vec_out
 
     return mat

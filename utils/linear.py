@@ -1,6 +1,5 @@
 import numpy as np
 import scipy as sp
-import sksparse.cholmod as cholmod
 import numba as nb
 
 def norm_inf(x):
@@ -8,45 +7,24 @@ def norm_inf(x):
 
 def inp(x, y):
     # Standard inner product
-    if isinstance(x, list) and isinstance(y, list):
-        return sum([np.sum(xi * yi.conj()).real for (xi, yi) in zip(x, y)])
-    else:
-        return np.sum(x * y.conj()).real
+    x_view = x.view(dtype=np.float64).reshape( 1, -1)
+    y_view = y.view(dtype=np.float64).reshape(-1,  1).conj()
+    return (x_view @ y_view)[0, 0]
 
-def fact(A, fact=None):
-    # Perform a Cholesky decomposition, or an LU factorization if Cholesky fails
-    if sp.sparse.issparse(A):
-        while True:
-            try:
-                if fact is None:
-                    fact = cholmod.cholesky(A)
-                    return (fact, "spcho")
-                else:
-                    fact[0].cholesky_inplace(A)
-                    return (fact[0], "spcho")
-            except cholmod.CholmodNotPositiveDefiniteError:
-                A_diag = A.diagonal()
-                A.setdiag(np.max([A_diag, np.ones_like(A_diag) * 1e-12], axis=0) * (1 + 1e-8))
-        
+def cho_fact(A):
+    # Perform a Cholesky decomposition, while increment diagonals if failed     
     diag_incr = np.finfo(A.dtype).eps
     while True:
         try:
             fact = sp.linalg.cho_factor(A, check_finite=False)
-            return (fact, "cho")
+            return fact
         except np.linalg.LinAlgError:
             A.flat[::A.shape[0]+1] += diag_incr
             diag_incr *= 1e1
 
-def fact_solve(A, x):
+def cho_solve(fact, x):
     # Factor solve for either Cholesky or LU factorization of A
-    (fact, type) = A
-
-    if type == "cho":
-        return sp.linalg.cho_solve(fact, x, check_finite=False)
-    elif type == "lu":
-        return sp.linalg.lu_solve(fact, x)
-    elif type == "spcho":
-        return fact.solve_A(x)
+    return sp.linalg.cho_solve(fact, x, check_finite=False)
 
 def pcg(A, b, M, tol=1e-8, max_iter=20):
 
@@ -97,6 +75,16 @@ def kron(a, b):
     n  = a.shape[0]
     n2 = n*n
     return (a[:, None, :, None] * b[None, :, None, :]).reshape(n2, n2)
+
+def congr(out, A, X, work, B=None):
+    if B is None:
+        B = A
+
+    # Performs congruence A X_i B' for i = i,...,n
+    n, m = A.shape
+    np.matmul(A, X, out=work)
+    np.matmul(work.reshape((-1, m)), B.conj().T, out=out.reshape((-1, n)))
+    return out
 
 if __name__ == "__main__":
     import time

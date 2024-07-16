@@ -20,7 +20,10 @@ from cones import *
 # by using block elimination and Cholesky factorization of the Schur complement matrix.
 
 class SysSolver():
-    def __init__(self, model, ir=True, sym=False):
+    def __init__(self, model, ir=True):
+        self.model = model
+
+        # Iterative refinement settings
         self.ir = ir                     # Use iterative refinement or not
         self.ir_settings = {
             'maxiter'     : 1,           # Maximum IR iterations
@@ -28,79 +31,44 @@ class SysSolver():
             'improv_ratio': 5.0          # Expected reduction in tolerance, otherwise slow progress
         }
 
-        self.model = model
-
-        self.sym = sym
-
-        self.cbh = vec.PointXYZ(model)
+        # Preallocate vectors do to computations with
+        self.cbh          = vec.PointXYZ(model)
         self.cbh.x[:]     = model.c
         self.cbh.y[:]     = model.b
         self.cbh.z.vec[:] = model.h
+
+        self.ir_pnt  = vec.Point(model)
+        self.res_pnt = vec.Point(model)
+
+        self.ir_xyz  = vec.PointXYZ(model)
+        self.res_xyz = vec.PointXYZ(model)        
+        self.c_xyz   = vec.PointXYZ(model)
+        self.v_xyz   = vec.PointXYZ(model)
+
+        self.work1 = vec.VecProduct(model.cones)
+        self.work2 = vec.VecProduct(model.cones)
         
-        self.c_xyz = vec.PointXYZ(model)
-        self.v_xyz = vec.PointXYZ(model)
-        self.ir_xyz = vec.PointXYZ(model)
-        self.res_xyz = vec.PointXYZ(model)
-
-        self.rz_Hrs = vec.VecProduct(model.cones)
-        self.vec_temp = vec.VecProduct(model.cones)
-        self.vec_temp2 = vec.VecProduct(model.cones)
-        self.pnt_res = vec.Point(model)
-        self.cor = vec.Point(model)
-        self.res = vec.Point(model)
-
-        self.H = None
-        self.H_inv = None
-        
-        self.AHA_fact = None
-        self.GHG_fact = None
-        self.AHA_is_sparse = None
-        self.GHG_is_sparse = None
-
         return
     
     def update_lhs(self, model, point, mu):
         self.mu  = mu
         self.pnt = point
 
-        # Precompute necessary objects on LHS of Newton system
-
+        # Precompute and factor Schur complement matrix
         if model.use_G:
-            # Check sparisty of AHA
-            if self.GHG_is_sparse is None:
-                self.GHG_is_sparse = self.AHA_sparsity(model, model.G_T)
-
-            if self.GHG_is_sparse:# and not model.is_lp:
-                self.H_inv, _, _ = blk_invhess_mtx(model, self.Hrows, self.Hcols)
-                self.H,     _, _ = blk_hess_mtx(model, self.Hrows, self.Hcols)
-                GHG = (model.G_T @ self.H @ model.G).toarray()
-            else:
-                GHG = blk_hess_congruence(model.G_T_views, model, self.sym)
-
-            self.GHG_fact = lin.fact(GHG)
+            GHG = blk_hess_congruence(model.G_T_views, model)
+            self.GHG_fact = lin.cho_fact(GHG)
 
             if model.use_A:
-                GHGA = np.zeros((model.n, model.p))
-                for i in range(model.p):
-                    GHGA[:, [i]] = lin.fact_solve(self.GHG_fact, model.A.T[:, [i]].toarray())
+                GHGA = lin.cho_solve(self.GHG_fact, model.A.T)
                 AGHGA = model.A @ GHGA
-                self.AGHGA_fact = lin.fact(AGHGA)
+                self.AGHGA_fact = lin.cho_fact(AGHGA)
 
         elif model.use_A:
-            # Check sparisty of AHA
-            if self.AHA_is_sparse is None:
-                self.AHA_is_sparse = self.AHA_sparsity(model, model.A)
+            AHA = blk_invhess_congruence(model.A_invG_views, model)            
+            self.AHA_fact = lin.cho_fact(AHA)
 
-            if self.AHA_is_sparse:
-                self.H_inv, _, _ = blk_invhess_mtx(model, self.Hrows, self.Hcols)
-                self.H,     _, _ = blk_hess_mtx(model, self.Hrows, self.Hcols)
-                AHA = (model.A_invG @ self.H_inv @ model.A_invG_T).toarray()
-            else:
-                AHA = blk_invhess_congruence(model.A_invG_views, model, self.sym)
-            
-            self.AHA_fact = lin.fact(AHA, self.AHA_fact)
-
-        # Compute constant 3x3 subsystem
+        # Solve constant 3x3 subsystem
         self.solve_sys_3(self.c_xyz, self.cbh)
         if self.ir:
             self.solve_sys_3_ir(self.c_xyz, self.cbh)
@@ -158,7 +126,7 @@ class SysSolver():
 
         # taunum := rtau + rkap + c' vx + b' vy + h' vz
         tau_num = r.tau + r.kap + self.cbh.inp(self.v_xyz)
-        if self.sym:
+        if model.issymmetric:
             # tauden := kap / tau + c' cx + b' cy + h' cz
             tau_den = (pnt.kap / pnt.tau + self.cbh.inp(self.c_xyz))
         else:
@@ -175,7 +143,7 @@ class SysSolver():
         d.s.vec -= model.G @ d.x
         d.s.vec -= r.z.vec
         
-        if self.sym:
+        if model.issymmetric:
             # dkap := rkap - (kap/tau) * dtau
             d.kap[:] = r.kap - (pnt.kap / pnt.tau) * d.tau
         else:
@@ -201,22 +169,22 @@ class SysSolver():
             #     dz := H (rz + G dx) + rs
             
             # dy := (A (G'HG)^-1 A') \ [ry + A (G'HG) \ [rx - G' (H rz + rs)]]
-            blk_hess_prod_ip(self.vec_temp, r.z, model, self.sym, self.H)
+            blk_hess_prod_ip(self.work1, r.z, model)
             if rs is not None:
-                self.vec_temp += rs
-            temp = r.x - model.G_T @ self.vec_temp.vec
-            temp = r.y + model.A @ lin.fact_solve(self.GHG_fact, temp)
-            d.y[:] = lin.fact_solve(self.AGHGA_fact, temp)
+                self.work1 += rs
+            temp = r.x - model.G_T @ self.work1.vec
+            temp = r.y + model.A @ lin.cho_solve(self.GHG_fact, temp)
+            d.y[:] = lin.cho_solve(self.AGHGA_fact, temp)
             
             # dx := (G'HG) \ [rx - G' (H rz + rs) - A' dy]
-            temp = r.x - self.vec_temp.vec - model.A_T @ d.y
-            d.x[:] = lin.fact_solve(self.GHG_fact, temp)
+            temp = r.x - model.G_T @ self.work1.vec - model.A_T @ d.y
+            d.x[:] = lin.cho_solve(self.GHG_fact, temp)
             
             # dz := H (rz + G dx) + rs
-            d.z.vec[:] = self.vec_temp.vec
-            self.vec_temp2.vec[:] = model.G @ d.x
-            blk_hess_prod_ip(self.vec_temp, self.vec_temp2, model, self.sym, self.H)
-            d.z.vec += self.vec_temp.vec
+            d.z.vec[:] = self.work1.vec
+            self.work2.vec[:] = model.G @ d.x
+            blk_hess_prod_ip(self.work1, self.work2, model)
+            d.z.vec += self.work1.vec
         
         elif model.use_A and not model.use_G:
             # If G = -I (or some easily invertible square diagonal scaling), then
@@ -228,15 +196,15 @@ class SysSolver():
             # dx := G^-1 (H \ [G^-1 (rx - A' dy) - rs] - rz)
             
             # dy := (AG^-1 H^-1 (AG^-1)') \ [ry + A (G^-1 (H \ [G^-1 rx - rs] - rz)]
-            np.multiply(r.x, model.G_inv, out=self.vec_temp.vec)
+            np.multiply(r.x, model.G_inv, out=self.work1.vec)
             if rs is not None:
-                self.vec_temp.vec -= rs.vec
-            blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym, self.H_inv)
-            self.vec_temp2.vec -= r.z.vec
-            np.multiply(self.vec_temp2.vec, model.G_inv, out=d.x)
+                self.work1.vec -= rs.vec
+            blk_invhess_prod_ip(self.work2, self.work1, model)
+            self.work2.vec -= r.z.vec
+            np.multiply(self.work2.vec, model.G_inv, out=d.x)
             temp  = model.A @ d.x
             temp += r.y
-            d.y[:] = lin.fact_solve(self.AHA_fact, temp)
+            d.y[:] = lin.cho_solve(self.AHA_fact, temp)
 
             # dz := G^-1 (rx - A' dy)
             A_T_dy = model.A_T @ d.y
@@ -244,10 +212,10 @@ class SysSolver():
             d.z.vec *= model.G_inv
 
             # dx := G^-1 (H \ [G^-1 rx - rs] - rz - H \ [G^-1 A' dy])
-            np.multiply(A_T_dy, model.G_inv, out=self.vec_temp.vec)
-            blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym, self.H_inv)
-            self.vec_temp2.vec *= model.G_inv
-            d.x -= self.vec_temp2.vec
+            np.multiply(A_T_dy, model.G_inv, out=self.work1.vec)
+            blk_invhess_prod_ip(self.work2, self.work1, model)
+            self.work2.vec *= model.G_inv
+            d.x -= self.work2.vec
             
         elif not model.use_A and model.use_G:
             # If A = [] (i.e, no primal linear constraints), then
@@ -257,16 +225,16 @@ class SysSolver():
             # dz := H (rz + G dx) + rs
 
             # dx := GHG \ [rx - G' (H rz + rs)]
-            blk_hess_prod_ip(self.vec_temp, r.z, model, self.sym, self.H)
+            blk_hess_prod_ip(self.work1, r.z, model)
             if rs is not None:
-                self.vec_temp += rs
-            temp = r.x - model.G_T @ self.vec_temp.vec
-            d.x[:] = lin.fact_solve(self.GHG_fact, temp)
+                self.work1 += rs
+            temp = r.x - model.G_T @ self.work1.vec
+            d.x[:] = lin.cho_solve(self.GHG_fact, temp)
 
             # dz := H (rz + G dx) + rs
-            self.vec_temp.copy_from(model.G @ d.x)
-            self.vec_temp += r.z
-            blk_hess_prod_ip(d.z, self.vec_temp, model, self.sym, self.H)
+            self.work1.copy_from(model.G @ d.x)
+            self.work1 += r.z
+            blk_hess_prod_ip(d.z, self.work1, model)
             if rs is not None:
                 d.z += rs
         
@@ -278,18 +246,18 @@ class SysSolver():
             # dz := H (rz - dx) + rs
 
             # dx := rz + H \ [rx + rs]
-            self.vec_temp.vec[:] = r.x
+            self.work1.vec[:] = r.x
             if rs is not None:
-                self.vec_temp += rs
-            blk_invhess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym, self.H_inv)
-            d.x[:] = self.vec_temp2.vec
+                self.work1 += rs
+            blk_invhess_prod_ip(self.work2, self.work1, model)
+            d.x[:] = self.work2.vec
             d.x   += r.z.vec
 
             # dz := H (rz - dx) + rs
-            self.vec_temp.vec[:] = r.z
-            self.vec_temp.vec   -= d.x
-            blk_hess_prod_ip(self.vec_temp2, self.vec_temp, model, self.sym, self.H)
-            d.z.vec[:] = self.vec_temp2.vec
+            self.work1.vec[:] = r.z
+            self.work1.vec   -= d.x
+            blk_hess_prod_ip(self.work2, self.work1, model)
+            d.z.vec[:] = self.work2.vec
             if rs is not None:
                 d.z.vec += rs
         
@@ -329,13 +297,13 @@ class SysSolver():
         r.z.vec -= d.s.vec
 
         # rs := mu H ds + dz
-        blk_hess_prod_ip(r.s, d.s, model, self.sym, self.H)
+        blk_hess_prod_ip(r.s, d.s, model)
         r.s.vec += d.z.vec
 
         # rtau := -c' dx - b' dy - h' dz - dkap
         r.tau[:] = -(model.c.T @ d.x) - (model.b.T @ d.y) - (model.h.T @ d.z.vec) - d.kap[0, 0]
 
-        if self.sym:
+        if model.issymmetric:
             # rkap := (kap / tau) dtau + dkap
             r.kap[:] = (pnt.kap / pnt.tau) * d.tau[0, 0] + d.kap[0, 0]
         else:
@@ -364,7 +332,7 @@ class SysSolver():
         r.y   *= -1
 
         # pz := -G dx + H \ dz
-        blk_invhess_prod_ip(r.z, d.z, model, self.sym, self.H_inv)
+        blk_invhess_prod_ip(r.z, d.z, model)
         r.z.vec -= model.G @ d.x
 
         return r
@@ -375,8 +343,8 @@ class SysSolver():
             r, 
             self.apply_sys_6, 
             self.solve_sys_6, 
-            self.res, 
-            self.cor, 
+            self.res_pnt, 
+            self.ir_pnt, 
             self.ir_settings
         )
     
@@ -390,32 +358,6 @@ class SysSolver():
             self.ir_xyz, 
             self.ir_settings
         )    
-    
-    def AHA_sparsity(self, model, A):
-        # Check if A is sparse
-        if not sp.sparse.issparse(A):
-            return False
-        
-        # Check if blocks are "small"
-        H_block = []
-        for cone_k in model.cones:
-            dim_k = cone_k.dim
-            # Cone is too big
-            if isinstance(cone_k, nonnegorthant.Cone):
-                H_block.append(sp.sparse.diags(np.random.rand(dim_k)))
-            elif (dim_k > model.q * 0.05) or (dim_k > 10):         # TODO: Determine a good threshold
-                return False
-            else:
-                H_block.append(np.random.rand(dim_k, dim_k))
-
-        # Check if AHA has a significant sparsity pattern
-        H_dummy, self.Hcols, self.Hrows = blk_diag(H_block, None, None)
-        AHA_dummy = A @ H_dummy @ A.T
-        if AHA_dummy.nnz > model.q ** 1.5:              # TODO: Determine a good threshold
-            return False
-        
-        return True
-
 
 def solve_sys_ir(x, b, A, A_inv, res, cor, settings):
     # Perform iterative refinement on a solution x of a linear system 
@@ -466,124 +408,46 @@ def solve_sys_ir(x, b, A, A_inv, res, cor, settings):
 
     return res_norm
 
-
-def blk_hess_prod_ip(out, dirs, model, sym, H):
-    if H is not None:
-        out.vec[:] = H @ dirs.vec
-        return out
-
-    for (k, cone_k) in enumerate(model.cones):
-        if sym:
+def blk_hess_prod_ip(out, dirs, model):
+    if model.issymmetric:
+        for (k, cone_k) in enumerate(model.cones):
             cone_k.nt_prod_ip(out[k], dirs[k])
-        else:
+    else:
+        for (k, cone_k) in enumerate(model.cones):
             cone_k.hess_prod_ip(out[k], dirs[k])
     return out
 
-def blk_invhess_prod_ip(out, dirs, model, sym, H_inv):
-    if H_inv is not None:
-        out.vec[:] = H_inv @ dirs.vec
-        return out
-
-    for (k, cone_k) in enumerate(model.cones):
-        if sym:
+def blk_invhess_prod_ip(out, dirs, model):
+    if model.issymmetric:
+        for (k, cone_k) in enumerate(model.cones):
             cone_k.invnt_prod_ip(out[k], dirs[k])
-        else:
+    else:
+        for (k, cone_k) in enumerate(model.cones):
             cone_k.invhess_prod_ip(out[k], dirs[k])
     return out
 
-def blk_hess_congruence(dirs, model, sym):
+def blk_hess_congruence(dirs, model):
     n = model.n
     out = np.zeros((n, n))
 
-    for (k, cone_k) in enumerate(model.cones):
-        if sym:
+    if model.issymmetric:
+        for (k, cone_k) in enumerate(model.cones):
             out += cone_k.nt_congr(dirs[k])
-        else:
+    else:
+        for (k, cone_k) in enumerate(model.cones):
             out += cone_k.hess_congr(dirs[k]) 
 
     return out
 
-def blk_invhess_congruence(dirs, model, sym):
+def blk_invhess_congruence(dirs, model):
     p = model.p
     out = np.zeros((p, p))
 
-    for (k, cone_k) in enumerate(model.cones):
-        if sym:
+    if model.issymmetric:
+        for (k, cone_k) in enumerate(model.cones):
             out += cone_k.invnt_congr(dirs[k])
-        else:
+    else:
+        for (k, cone_k) in enumerate(model.cones):    
             out += cone_k.invhess_congr(dirs[k]) 
 
     return out
-
-def blk_invhess_mtx(model, Hcols, Hrows):
-
-    H_blks = []
-
-    for cone_k in model.cones:
-        if sym:
-            H_blks.append(cone_k.invnt_mtx())
-        else:
-            H_blks.append(cone_k.invhess_mtx())
-
-    return blk_diag(H_blks, Hcols, Hrows)
-
-def blk_hess_mtx(model, Hcols, Hrows):
-
-    H_blks = []
-
-    for cone_k in model.cones:
-        if sym:
-            H_blks.append(cone_k.nt_mtx())
-        else:
-            H_blks.append(cone_k.hess_mtx())
-
-    return blk_diag(H_blks, Hcols, Hrows)
-
-def blk_diag(blks, cols, rows):
-    # Precompute sparsity structure
-    if cols is None and rows is None:
-        # Count number of nonzero entries
-        nnz = 0
-        for blk in blks:
-            n = blk.shape[0]
-            if len(blk.shape) == 1:
-                # Diagonal Hessian from nonnegative orthant
-                nnz += n
-            else:
-                # Dense Hessian
-                nnz += n * n
-
-        cols = np.zeros(nnz, dtype='int32')
-        rows = np.zeros(nnz, dtype='int32')
-
-        t = 0   # Row/column counter
-        s = 0   # Index counter
-        for blk in blks:
-            n = blk.shape[0]
-            idxs = np.arange(t, t + n)
-            if len(blk.shape) == 1:
-                # Diagonal Hessian from nonnegative orthant
-                cols[s : s + n] = idxs
-                rows[s : s + n] = idxs
-                s += n
-            else:
-                # Dense Hessian
-                cols[s : s + n*n] = np.tile(idxs, n)
-                rows[s : s + n*n] = np.repeat(idxs, n)
-                s += n*n
-            t += n
-    
-    vals = np.zeros(len(cols))
-    s = 0
-    for blk in blks:
-        n = blk.shape[0]
-        if len(blk.shape) == 1:
-            # Diagonal Hessian from nonnegative orthant
-            vals[s : s + n] = blk
-            s += n
-        else:
-            # Dense Hessian
-            vals[s : s + n*n] = blk.flat
-            s += n*n
-
-    return sp.sparse.csr_matrix((vals, (rows, cols))), cols, rows

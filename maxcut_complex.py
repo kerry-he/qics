@@ -9,7 +9,7 @@ from solver import model, solver
 
 np.random.seed(1)
 
-n = 100
+n = 10
 
 A_is = [i for i in range(n)]
 A_js = [2*i + 2*i*n for i in range(n)]
@@ -21,10 +21,10 @@ C = np.random.randn(n, n) + np.random.randn(n, n)*1j
 C = C + C.conj().T
 c = C.view(dtype=np.float64).reshape(-1, 1)
 
-cones = [possemidefinite.Cone(n, hermitian=True)]
+cones = [possemidefinite.Cone(n, iscomplex=True)]
 model = model.Model(c=c,  A=A,   b=b, cones=cones)
 # model = model.Model(c=-b, G=A.T, h=c, cones=cones)
-solver = solver.Solver(model, sym=True, ir=True)
+solver = solver.Solver(model, ir=True)
 
 profiler = cProfile.Profile()
 profiler.enable()
@@ -85,7 +85,7 @@ import picos
 # Make the output reproducible.
 cvxopt.setseed(1)
 
-# Generate an arbitrary rank-deficient hermitian matrix M.
+# Generate an arbitrary rank-deficient iscomplex matrix M.
 M = picos.Constant("M", C)
 
 # Define the problem.

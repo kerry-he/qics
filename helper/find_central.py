@@ -8,7 +8,7 @@ x = K.set_init_point()
 
 while True:
     assert K.get_feas()
-    g = K.get_grad() + x
+    g = K.grad_ip() + x
     H = K.hess_prod(np.eye(K.dim)) + np.eye(K.dim)
 
     delta_x = -np.linalg.solve(H, g)

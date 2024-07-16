@@ -18,7 +18,7 @@ while True:
 H = np.random.rand(K.dim, 1) - 0.5
 eps = 1e-8
 f0 = K.get_val()
-g0 = K.get_grad()
+g0 = K.grad_ip()
 H0 = K.hess_prod(H)
 T0 = K.third_dir_deriv(H)
 
@@ -35,7 +35,7 @@ for i in range(K.dim):
 x1 = x0 + eps * H
 K.set_point(x1)
 K.get_feas()
-g1 = K.get_grad()
+g1 = K.grad_ip()
 H1 = K.hess_prod(H)
 T1 = K.third_dir_deriv(H)
 

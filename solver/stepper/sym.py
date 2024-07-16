@@ -1,23 +1,17 @@
-import numpy as np
-import math
 from utils.vector import Point
-from utils import linear as lin
-from utils import symmetric as sym
 from cones import *
 
 class SymStepper():
     def __init__(self, syssolver, model):
         self.syssolver = syssolver
-        self.prox = 0.0
         
         self.rhs        = Point(model)
         self.dir_a      = Point(model)
         self.dir_comb   = Point(model)
-        self.temp       = Point(model)
         self.next_point = Point(model)
         
         return
-    
+
     def step(self, model, point, xyztau_res, mu, verbose):
         # Step 1: Pre-build and -factor Schur complement matrix 
         self.syssolver.update_lhs(model, point, mu)
@@ -46,8 +40,8 @@ class SymStepper():
         if alpha == 0:
             point, False
 
-        if verbose:
-            print("  | %6.4f" % sigma, "%10.3e" % (res_norm), "%10.3e" % (self.prox), " %5.3f" % (alpha))
+        if verbose == 3:
+            print(f"  |  {res_norm:>7.1e}   {sigma:>5.3f}   {alpha:>5.3f}", end="")
 
         # Take step
         point.vec += alpha * self.dir_comb.vec

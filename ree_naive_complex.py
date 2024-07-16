@@ -16,18 +16,18 @@ np.set_printoptions(threshold=np.inf)
 n = 6
 m = 6
 N = n * m
-vn = sym.vec_dim(n, hermitian=True)
-vN = sym.vec_dim(N, hermitian=True)
-X = quant.randDensityMatrix(N, hermitian=True)
+vn = sym.vec_dim(n, iscomplex=True)
+vN = sym.vec_dim(N, iscomplex=True)
+X = quant.randDensityMatrix(N, iscomplex=True)
 
 # Build problem model
-A = np.hstack((np.zeros((1, 1)), sym.mat_to_vec(np.eye(N), hermitian=True).T))
+A = np.hstack((np.zeros((1, 1)), sym.mat_to_vec(np.eye(N), iscomplex=True).T))
 b = np.ones((1, 1))
 
 c = np.zeros((1 + vN, 1))
 c[0] = 1.0
 
-p_transpose = sym.lin_to_mat(lambda x : sym.p_transpose(x, 1, (n, m)), n*m, n*m, hermitian=True)
+p_transpose = sym.lin_to_mat(lambda x : sym.p_transpose(x, 1, (n, m)), n*m, n*m, iscomplex=True)
 
 G0 = np.hstack((np.ones((1, 1)), np.zeros((1, vN))))
 G1 = np.hstack((np.zeros((vN, 1)), np.zeros((vN, vN))))
@@ -36,11 +36,11 @@ G3 = np.hstack((np.zeros((vN, 1)), p_transpose))
 G = -np.vstack((G0, G1, G2, G3))
 
 h = np.zeros((1 + 3*vN, 1))
-h[1:1+vN] = sym.mat_to_vec(X, hermitian=True)
+h[1:1+vN] = sym.mat_to_vec(X, iscomplex=True)
 
 
 # Input into model and solve
-cones = [quantrelentr.Cone(N, hermitian=True), possemidefinite.Cone(N, hermitian=True)]
+cones = [quantrelentr.Cone(N, iscomplex=True), possemidefinite.Cone(N, iscomplex=True)]
 model = model.Model(c, A, b, G, h, cones=cones)
 solver = solver.Solver(model,)
 

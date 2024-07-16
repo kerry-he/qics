@@ -89,10 +89,11 @@ class VecProduct(Vector):
         # to a list of cones
         self.dims  = []
         self.types = []
+        self.dim   = 0
         for cone_k in cones:
             self.dims.append(cone_k.dim)
-            self.types.extend(cone_k.type)
-        self.dim = sum(self.dims)
+            self.types.append(cone_k.type)
+            self.dim += np.sum(cone_k.dim)
 
         # Initialize vector
         if vec is not None:
@@ -104,29 +105,38 @@ class VecProduct(Vector):
             self.vec = np.zeros((self.dim, 1))
 
         # Build views of vector
-        self.vecs = []
-        self.mats = []
-        t = 0
-        for (dim_k, type_k) in zip(self.dims, self.types):
-            self.vecs.append(self.vec[t:t+dim_k])
-
-            if type_k == 'r':
+        def vec_to_mat(vec, dim, type, t):
+            if type == 'r':
                 # Real vector
-                self.mats.append(self.vecs[-1])
-            elif type_k == 's':
+                return vec[t:t+dim]
+            elif type == 's':
                 # Symmetric matrix
-                n_k = int(np.sqrt(dim_k))
-                self.mats.append(self.vecs[-1].reshape((n_k, n_k)))
-            elif type_k == 'h':
+                n_k = int(np.sqrt(dim))
+                return vec[t:t+dim].reshape((n_k, n_k))
+            elif type == 'h':
                 # Hermitian matrix
                 # Note that the view is defined so that the real vector
                 #     [0., 1., 2., 3., 4., 5., 6., 7.] 
                 # is reshaped to the complex matrix
                 #     [ 0.+1.j   2.+3.j ]
                 #     [ 4.+5.j   6.+7.j ]
-                n_k = int(np.sqrt(dim_k // 2))
-                self.mats.append(self.vecs[-1].reshape((-1, 2)).view(dtype=np.complex128).reshape(n_k, n_k))
-            t += dim_k
+                n_k = int(np.sqrt(dim // 2))
+                return vec[t:t+dim].reshape((-1, 2)).view(dtype=np.complex128).reshape(n_k, n_k)
+
+        self.vecs = []
+        self.mats = []
+        t = 0
+        for (dim_k, type_k) in zip(self.dims, self.types):
+            self.vecs.append(self.vec[t:t+np.sum(dim_k)])
+            if isinstance(type_k, list):
+                mats_k = []
+                for (dim_k_j, type_k_j) in zip(dim_k, type_k):
+                    mats_k.append(vec_to_mat(self.vec, dim_k_j, type_k_j, t))
+                    t += dim_k_j
+                self.mats.append(mats_k)
+            else:
+                self.mats.append(vec_to_mat(self.vec, dim_k, type_k, t))
+                t += dim_k
 
     def __getitem__(self, key):
         return self.mats[key]

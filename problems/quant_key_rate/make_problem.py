@@ -27,20 +27,20 @@ def make_problem(file_name, description=["", ""], optval=0.0):
 
     optval = data['optval'][0, 0][0, 0]
     
-    hermitian = any([g.dtype == 'complex128' for g in gamma])
-    hermitian = any([G.dtype == 'complex128' for G in Gamma]) or hermitian
-    hermitian = any([K.dtype == 'complex128' for K in Klist]) or hermitian
-    hermitian = any([Z.dtype == 'complex128' for Z in Zlist]) or hermitian
+    iscomplex = any([g.dtype == 'complex128' for g in gamma])
+    iscomplex = any([G.dtype == 'complex128' for G in Gamma]) or iscomplex
+    iscomplex = any([K.dtype == 'complex128' for K in Klist]) or iscomplex
+    iscomplex = any([Z.dtype == 'complex128' for Z in Zlist]) or iscomplex
 
     no, ni = Klist[0].shape
     nc = np.size(gamma)
 
-    vni = sym.vec_dim(ni, hermitian=hermitian)
-    vno = sym.vec_dim(no, hermitian=hermitian)
+    vni = sym.vec_dim(ni, iscomplex=iscomplex)
+    vno = sym.vec_dim(no, iscomplex=iscomplex)
 
-    K_op = sym.lin_to_mat(lambda x : sym.congr_map(x, Klist), ni, no, hermitian=hermitian)
-    ZK_op = sym.lin_to_mat(lambda x : sym.congr_map(sym.congr_map(x, Klist), Zlist), ni, no, hermitian=hermitian)
-    Gamma_op = np.array([sym.mat_to_vec(G, hermitian=hermitian).T[0] for G in Gamma])
+    K_op = sym.lin_to_mat(lambda x : sym.congr_map(x, Klist), ni, no, iscomplex=iscomplex)
+    ZK_op = sym.lin_to_mat(lambda x : sym.congr_map(sym.congr_map(x, Klist), Zlist), ni, no, iscomplex=iscomplex)
+    Gamma_op = np.array([sym.mat_to_vec(G, iscomplex=iscomplex).T[0] for G in Gamma])
 
     # Build problem model
     A = np.hstack((np.zeros((nc, 1)), Gamma_op))
@@ -86,12 +86,12 @@ def make_problem(file_name, description=["", ""], optval=0.0):
         # List of cones
         cones = f.create_group('cones')
         c0 = cones.create_dataset('0', data='qre')
-        c0.attrs['complex'] = int(hermitian)
+        c0.attrs['complex'] = int(iscomplex)
         c0.attrs['dim'] = 1 + 2*vno
         c0.attrs['n'] = no
 
         c1 = cones.create_dataset('1', data='psd')
-        c1.attrs['complex'] = int(hermitian)
+        c1.attrs['complex'] = int(iscomplex)
         c1.attrs['dim'] = 1 + 2*vni
         c1.attrs['n'] = ni
 

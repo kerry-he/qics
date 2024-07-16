@@ -1,30 +1,32 @@
 import numpy as np
 import scipy as sp
-from utils import linear as lin
+from cones.base import SymCone
 
-class Cone():
-    def __init__(self, dim):
+class Cone(SymCone):
+    def __init__(self, n):
         # Dimension properties
-        self.dim = dim
-        self.type = ['r']
+        self.n  = n
+        self.nu = n
+
+        self.dim = n
+        self.type = 'r'
 
         self.Ax = None
 
         self.congr_aux_updated = False
         return
 
-    def get_nu(self):
-        return self.dim
-    
-    def set_init_point(self):
+    def get_init_point(self, out):
         self.set_point(
-            np.ones((self.dim, 1)), 
-            np.ones((self.dim, 1))
+            np.ones((self.n, 1)), 
+            np.ones((self.n, 1))
         )
-        return self.x
 
-    def set_point(self, point, dual=None, a=True):
-        self.x = point * a
+        out[:] = self.x
+        return out
+
+    def set_point(self, primal, dual=None, a=True):
+        self.x = primal * a
         self.z = dual * a
         return
 
@@ -34,25 +36,20 @@ class Cone():
     def get_val(self):
         return -np.sum(np.log(self.x))    
 
-    def get_grad(self):
-        return -np.reciprocal(self.x)
+    def grad_ip(self, out):
+        out[:] = -np.reciprocal(self.x)
+        return out
 
     def hess_prod_ip(self, out, H):
         out[:] = H / (self.x**2)
         return out    
 
+    def hess_congr(self, A):
+        return self.base_congr(A, np.reciprocal(self.x))
+
     def invhess_prod_ip(self, out, H):
         out[:] = H * (self.x**2)
         return out
-
-    def hess_mtx(self):
-        return np.reciprocal(self.x * self.x).reshape((-1,))
-
-    def invhess_mtx(self):
-        return (self.x * self.x).reshape((-1,))    
-
-    def hess_congr(self, A):
-        return self.base_congr(A, np.reciprocal(self.x))
 
     def invhess_congr(self, A):
         return self.base_congr(A, self.x)
@@ -67,11 +64,13 @@ class Cone():
             Ax = x * A.T
             return Ax.T @ Ax
 
-    def third_dir_deriv(self, dir1, dir2=None):
+    def third_dir_deriv_axpy(self, out, dir1, dir2=None, a=True):
         if dir2 is None:
-            return -2 * dir1 * dir1 / (self.x*self.x*self.x)
+            out -= 2 * a * dir1 * dir1 / (self.x*self.x*self.x)
+            return out
         else:
-            return -2 * dir1 * dir2 / self.x
+            out -= 2 * a * dir1 * dir2 / self.x
+            return out
 
     def prox(self):
         return np.linalg.norm(self.x * self.z - 1, np.inf)
@@ -94,18 +93,12 @@ class Cone():
         out[:] = H * self.z / self.x
         return out
 
+    def nt_congr(self, A):
+        return self.base_congr(A, np.sqrt(self.z / self.x))
+
     def invnt_prod_ip(self, out, H):
         out[:] = H * self.x / self.z
         return out
-
-    def nt_mtx(self):
-        return (self.z / self.x).reshape((-1,))
-    
-    def invnt_mtx(self):
-        return (self.x / self.z).reshape((-1,))
-
-    def nt_congr(self, A):
-        return self.base_congr(A, np.sqrt(self.z / self.x))
 
     def invnt_congr(self, A):
         return self.base_congr(A, np.sqrt(self.x / self.z))    

@@ -2,12 +2,15 @@ import numpy as np
 import scipy as sp
 import math
 import time
+import itertools, sys
 
 from utils import linear as lin
 from utils import vector as vec
 from solver.stepper.nonsym import NonSymStepper
 from solver.stepper.sym import SymStepper
 from solver.syssolver import SysSolver
+
+spinner = itertools.cycle(['-', '/', '|', '\\'])
 
 class Solver():
     def __init__(
@@ -20,9 +23,8 @@ class Solver():
         tol_infeas = 1e-12,
         tol_ip = 1e-13,
         tol_near = 1e3,
-        verbose  = True,
-        ir = True,
-        sym = False
+        verbose  = 2,
+        ir = True
     ):
         self.max_iter = max_iter
         self.max_time = max_time        
@@ -45,12 +47,24 @@ class Solver():
         self.exit_status = None
 
         self.model = model
-        syssolver = SysSolver(model, ir=ir, sym=sym)
-        self.stepper = NonSymStepper(syssolver, model) if (sym is False) else SymStepper(syssolver, model)
+        syssolver = SysSolver(model, ir=ir)
+        self.stepper = SymStepper(syssolver, model) if model.issymmetric else NonSymStepper(syssolver, model)
 
         return
     
     def solve(self):
+        # Print header
+        if self.verbose:
+            print("========================================================================")
+            print("       QiCOS v0.0 - Quantum Information Conic Optimization Solver       ")
+            print("                by K. He, J. Saunderson, H. Fawzi (2024)                ")
+            print("========================================================================")
+            print("Problem summary:")                
+            print(f"        no. cones:  {len(self.model.cones):<10}",    f"              no. vars:    {self.model.n:<10}")
+            print(f"        barr. par:  {self.model.nu:<10}",            f"              no. constr:  {self.model.p:<10}")
+            print(f"        symmetric:  {self.model.issymmetric!r:<10}", f"              cone dim:    {self.model.q:<10}")
+            print(f"        complex:    {self.model.iscomplex!r:<10}")
+
         # Setup solver
         self.setup_solver()
         self.setup_point()
@@ -60,24 +74,32 @@ class Solver():
         # ==============================================================
         # Print iteration status
         # ==============================================================
-        if self.verbose:
-            if self.iter % 20 == 0:
-                print("===================================================================================================================================================================")
-                print("%5s" % "iter", " %8s" % "mu", " %8s" % "tau", " %8s" % "kap",
-                    " | %10s" % "p_obj", " %10s" % "d_obj", " %10s" % "gap", 
-                    " | %10s" % "x_feas", " %10s" % "y_feas", " %10s" % "z_feas",
-                    " | %6s" % "step", "%10s" % "dir_tol", "%10s" % "prox", " %5s" % "alpha")
-                print("===================================================================================================================================================================")                
+        if self.verbose >= 2:
+            print(f"\n{"":=^{self.printbar_size}}", end="")
+            print(f"\n {"iter":^4}   {"mu":^7}   {"k/t":^7}  ", end="")
+            print(f"|  {"p_obj":^10}  {"d_obj":^10}  {"gap":^7}  ", end="")
+            print(f"|  {"p_feas":^7}   {"d_feas":^7}  ", end="")
+            print(f"|  {"time (s)":^8}  ", end="")
+            if self.verbose == 3:
+                if self.model.issymmetric:
+                    print(f"|  {"dir_tol":^7}   {"sigma":^5}   {"alpha":^5}", end="")
+                else:
+                    print(f"|  {"step":^6}   {"dir_tol":^7}   {"prox":^7}   {"alpha":^5}", end="")
+            print(f"\n{"":=^{self.printbar_size}}", end="")
             
-            print("%5d" % (self.iter), " %8.1e" % (self.mu), " %8.1e" % (self.point.tau), " %8.1e" % (self.point.kap),
-                  " | %10.3e" % (self.p_obj), " %10.3e" % (self.d_obj), " %10.3e" % (self.gap),
-                  " | %10.3e" % (self.x_feas), " %10.3e" % (self.y_feas), " %10.3e" % (self.z_feas), end="")        
+            print(f"\n {self.iter:>4}   {self.mu:>7.1e}   {self.kap_tau:>7.1e}  ", end="")
+            print(f"| {self.p_obj:>10.3e}  {self.d_obj:>10.3e}  {self.gap:>8.1e}  ", end="")
+            print(f"|  {max(self.y_feas, self.z_feas):>7.1e}   {self.x_feas:>7.1e}  ", end="")
+            print(f"|  {self.elapsed_time:<8.2f}", end="")
+        elif self.verbose:
+            print()
+            sys.stdout.write("Running...")
 
         while True:
             if self.step_and_check():
                 break
 
-        self.solve_time = time.time() - self.solve_time
+        self.solve_time = time.time() - self.start_time
 
         # If we didn't reach a solution, check if we are close to optimal
         if self.exit_status != "solved":
@@ -104,11 +126,14 @@ class Solver():
 
         if self.verbose:
             print()
-            print("Solution status: %s" % (self.solution_status))
-            print("Exit status:     %s" % (self.exit_status))
-            print("Opt value:       %.10f" % (self.p_obj))
-            print("Tolerance:       %.10e" % (self.gap))
-            print("Solve time:      %.10f" % (self.solve_time), " seconds")
+            print()
+            print("Solution summary")
+            print(f"        sol. status:  {self.solution_status:<10}", f"            num. iter:    {self.iter:<10}")
+            print(f"        exit status:  {self.exit_status:<10}",     f"            solve time:   {self.solve_time:<10.3f}")
+            print()
+            print(f"        primal obj:  {self.p_obj:>19.12e}", f"    primal feas:  {max(self.y_feas, self.z_feas):<.2e}")
+            print(f"        dual obj:    {self.d_obj:>19.12e}", f"    dual feas:    {self.x_feas:<.2e}")
+            print(f"        opt. gap:     {self.gap:<.2e}")
             print()
 
         return
@@ -123,6 +148,7 @@ class Solver():
         # Take a step
         self.point, success, alpha = self.stepper.step(self.model, self.point, (self.x_res, self.y_res, self.z_res, self.tau_res), self.mu, self.verbose)
         self.iter += 1
+        self.elapsed_time = time.time() - self.start_time
 
         # Compute barrier parameter and residuals
         self.calc_mu()
@@ -131,18 +157,15 @@ class Solver():
         # ==============================================================
         # Print iteration status
         # ==============================================================
-        if self.verbose:
-            if self.iter % 20 == 0:
-                print("===================================================================================================================================================================")
-                print("%5s" % "iter", " %8s" % "mu", " %8s" % "tau", " %8s" % "kap",
-                    " | %10s" % "p_obj", " %10s" % "d_obj", " %10s" % "gap", 
-                    " | %10s" % "x_feas", " %10s" % "y_feas", " %10s" % "z_feas",
-                    " | %6s" % "step", "%10s" % "dir_tol", "%10s" % "prox", " %5s" % "alpha")
-                print("===================================================================================================================================================================")                
-            
-            print("%5d" % (self.iter), " %8.1e" % (self.mu), " %8.1e" % (self.point.tau), " %8.1e" % (self.point.kap),
-                  " | %10.3e" % (self.p_obj), " %10.3e" % (self.d_obj), " %10.3e" % (self.gap),
-                  " | %10.3e" % (self.x_feas), " %10.3e" % (self.y_feas), " %10.3e" % (self.z_feas), end="")        
+        if self.verbose >= 2:
+            print(f"\n {self.iter:>4}   {self.mu:>7.1e}   {self.kap_tau:>7.1e}  ", end="")
+            print(f"| {self.p_obj:>10.3e}  {self.d_obj:>10.3e}  {self.gap:>8.1e}  ", end="")
+            print(f"|  {max(self.y_feas, self.z_feas):>7.1e}   {self.x_feas:>7.1e}  ", end="")
+            print(f"|  {self.elapsed_time:<8.2f}", end="")        
+        elif self.verbose:
+            sys.stdout.write(next(spinner))
+            sys.stdout.flush()
+            sys.stdout.write("\b")
 
         # ==============================================================
         # Check termination criteria
@@ -178,7 +201,7 @@ class Solver():
             return True
         
         # 5) Check if maximum time is exceeded
-        if time.time() - self.solve_time >= self.max_time:
+        if time.time() - self.elapsed_time >= self.max_time:
             self.exit_status = "max_time"
             return True 
         
@@ -200,13 +223,22 @@ class Solver():
 
     def setup_solver(self):
         self.iter = 0
-        self.solve_time = time.time()
+        self.start_time = time.time()
+        self.elapsed_time = 0.
 
         model = self.model
 
         self.c_max = lin.norm_inf(model.c)
         self.b_max = lin.norm_inf(model.b)
         self.h_max = lin.norm_inf(model.h)
+
+        if self.verbose == 3:
+            if self.model.issymmetric:
+                self.printbar_size = 125
+            else:
+                self.printbar_size = 136
+        else:
+            self.printbar_size = 97
 
         return
 
@@ -217,9 +249,10 @@ class Solver():
         self.point.kap[:] = 1.
 
         for (k, cone_k) in enumerate(model.cones):
-            np.copyto(self.point.s[k], cone_k.set_init_point())
+            cone_k.get_init_point(self.point.s[k])
             assert cone_k.get_feas()
-            np.copyto(self.point.z[k], -cone_k.get_grad())
+            cone_k.grad_ip(self.point.z[k])
+        self.point.z.vec *= -1
 
         self.calc_mu()
         if not math.isclose(self.mu, 1.):
@@ -236,8 +269,6 @@ class Solver():
         c = self.model.c
         b = self.model.b
         h = self.model.h
-        A = self.model.A
-        G = self.model.G
 
         x   = self.point.x
         y   = self.point.y
@@ -245,6 +276,8 @@ class Solver():
         s   = self.point.s.vec
         tau = self.point.tau[0, 0]
         kap = self.point.kap[0, 0]
+
+        self.kap_tau = kap / tau
 
         # Get primal and dual objectives and optimality gap
         p_obj_tau =  (c.T @ x)[0, 0]
