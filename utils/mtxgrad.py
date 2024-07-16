@@ -1,6 +1,29 @@
 import numpy as np
 import numba as nb
 
+from utils.linear import congr
+
+@nb.njit
+def D1_f(D, f_D, df_D):
+    eps = np.finfo(np.float64).eps
+    rteps = np.sqrt(eps)
+
+    n = D.size
+    D1 = np.empty((n, n))
+    
+    for j in range(n):
+        for i in range(j):
+            d_ij = D[i] - D[j]
+            if abs(d_ij) < rteps:
+                D1[i, j] = 0.5 * (df_D[i] + df_D[j])
+            else:
+                D1[i, j] = (f_D[i] - f_D[j]) / d_ij
+            D1[j, i] = D1[i, j]
+
+        D1[j, j] = df_D[j]
+
+    return D1
+
 @nb.njit
 def D1_log(D, log_D):
     eps = np.finfo(np.float64).eps
@@ -24,6 +47,36 @@ def D1_log(D, log_D):
         D1[j, j] = np.reciprocal(D[j])
 
     return D1
+
+@nb.njit
+def D2_f(D, D1, d2f_D):
+    eps = np.finfo(np.float64).eps
+    rteps = np.sqrt(eps)
+
+    n = D.size
+    D2 = np.zeros((n, n, n))
+
+    for k in range(n):
+        for j in range(k + 1):
+            for i in range(j + 1):
+                d_jk = D[j] - D[k]
+                if abs(d_jk) < rteps:
+                    d_ij = D[i] - D[j]
+                    if abs(d_ij) < rteps:
+                        t = (d2f_D[i] + d2f_D[j] + d2f_D[k]) / 6
+                    else:
+                        t = (D1[i, j] - D1[j, k]) / d_ij
+                else:
+                    t = (D1[i, j] - D1[i, k]) / d_jk
+
+                D2[i, j, k] = t
+                D2[i, k, j] = t
+                D2[j, i, k] = t
+                D2[j, k, i] = t
+                D2[k, i, j] = t
+                D2[k, j, i] = t
+
+    return D2
 
 @nb.njit
 def D2_log(D, D1):
@@ -56,7 +109,41 @@ def D2_log(D, D1):
     return D2
 
 @nb.njit
-def D3_log_ij(i, j, D3, D):
+def D3_f_ij(i, j, D, D2, d3f_D):
+    eps = np.finfo(np.float64).eps
+    rteps = np.sqrt(eps)
+    n = D.size
+    D_i = D[i]
+    D_j = D[j]
+
+    D3_ij = np.zeros((n, n))
+
+    for l in range(n):
+        for k in range(l + 1):
+            D_k = D[k]
+            D_l = D[l]
+            D_ij = D_i - D_j
+            D_ik = D_i - D_k
+            D_il = D_i - D_l
+            B_ik = (abs(D_ik) < rteps)
+            B_il = (abs(D_il) < rteps)
+
+            if (abs(D_ij) < rteps) and B_ik and B_il:
+                t = d3f_D[i] / 6
+            elif B_ik and B_il:
+                t = (D2[i, i, i] - D2[i, i, j]) / D_ij
+            elif B_il:
+                t = (D2[i, i, j] - D2[i, j, k]) / D_ik
+            else:
+                t = (D2[i, j, k] - D2[j, k, l]) / D_il
+
+            D3_ij[k, l] = t
+            D3_ij[l, k] = t
+    
+    return D3_ij  
+
+@nb.njit
+def D3_log_ij(i, j, D2, D, f):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
     n = D.size
@@ -76,13 +163,13 @@ def D3_log_ij(i, j, D3, D):
             B_il = (abs(D_il) < rteps)
     
             if (abs(D_ij) < rteps) and B_ik and B_il:
-                t = D_i**-3 / 3
+                t = D_i**-3 / 3 if (f == 'log') else -D_i**-2 / 6
             elif B_ik and B_il:
-                t = (D3[i, i, i] - D3[i, i, j]) / D_ij
+                t = (D2[i, i, i] - D2[i, i, j]) / D_ij
             elif B_il:
-                t = (D3[i, i, j] - D3[i, j, k]) / D_ik
+                t = (D2[i, i, j] - D2[i, j, k]) / D_ik
             else:
-                t = (D3[i, j, k] - D3[j, k, l]) / D_il
+                t = (D2[i, j, k] - D2[j, k, l]) / D_il
     
             D3_ij[k, l] = t
             D3_ij[l, k] = t
@@ -90,17 +177,6 @@ def D3_log_ij(i, j, D3, D):
     return D3_ij    
 
 def scnd_frechet(D2, UHU, UXU=None, U=None):
-    # If UXU is None, assume UXU has already been pre-multiplied into D2
-    # If U is None, assume we are computing the factorized version without U
-    if D2.shape[0] <= 40:
-        return scnd_frechet_single(D2, UHU, UXU, U)
-    else:
-        if (UHU.dtype == 'complex128') or (D2.dtype == 'complex128') or ((UXU is not None) and (UXU.dtype == 'complex128')):
-            return scnd_frechet_parallel_complex(D2, UHU, UXU, U)
-        else:
-            return scnd_frechet_parallel(D2, UHU, UXU, U)
-
-def scnd_frechet_single(D2, UHU, UXU=None, U=None):
     n = D2.shape[0]
 
     D2_UXU = (D2 * UXU) if (UXU is not None) else (D2)
@@ -111,88 +187,64 @@ def scnd_frechet_single(D2, UHU, UXU=None, U=None):
 
     return out
 
-@nb.njit(parallel=True)
-def scnd_frechet_parallel(D2, UHU, UXU=None, U=None):
-    n = D2.shape[0]
-    out = np.zeros((n, n))
+def scnd_frechet_multi(out, D2, UHU, UXU=None, U=None, work1=None, work2=None, work3=None):
+    D2_UXU = (D2 * UXU) if (UXU is not None) else (D2)
+    np.matmul(D2_UXU, UHU.conj().transpose(1, 2, 0), out=work3)
 
-    for k in nb.prange(n):
-        D2_UXU = (D2[k] * UXU) if (UXU is not None) else (D2[k])
-        out[k] = UHU[k] @ D2_UXU
-
-    out = out + out.conj().T
-    out = (U @ out @ U.conj().T) if (U is not None) else (out)
-
-    return out
-
-@nb.njit(parallel=True)
-def scnd_frechet_parallel_complex(D2, UHU, UXU=None, U=None):
-    n = D2.shape[0]
-    out = np.zeros((n, n), 'complex128')
-
-    for k in nb.prange(n):
-        D2_UXU = (D2[k] * UXU) if (UXU is not None) else (D2[k])
-        out[k] = UHU[k] @ D2_UXU
-
-    out = out + out.conj().T
-    out = (U @ out @ U.conj().T) if (U is not None) else (out)
-
-    return out
-
-def thrd_frechet(D2, D, U, H1, H2, H3):
-    if (H1.dtype == 'complex128') or (H2.dtype == 'complex128') or (H3.dtype == 'complex128'):
-        return thrd_frechet_complex(D2, D, U, H1, H2, H3)
+    if U is not None:
+        np.add(work3.transpose(2, 1, 0), work3.conj().transpose(2, 0, 1), out=work1)
+        congr(out, U, work1, work2)
     else:
-        return thrd_frechet_real(D2, D, U, H1, H2, H3)
+        np.add(work3.transpose(2, 1, 0), work3.conj().transpose(2, 0, 1), out=out)
+
+    return out
+
 
 @nb.njit
-def thrd_frechet_real(D2, D, U, H1, H2, H3):
+def thrd_frechet(D, D2, d3f_D, U, H1, H2, H3=None):
     n = D.size
-    out = np.zeros((n, n))
+    out = np.zeros_like(H1)
+    
+    # If H3 is None, then assume H2=H3
+    if H3 is None:
 
-    for i in range(n):
-        for j in range(i + 1):
-            D3_ij = D3_log_ij(i, j, D2, D)
+        for i in range(n):
+            for j in range(i + 1):
+                D3_ij = D3_f_ij(i, j, D, D2, d3f_D)
 
-            for k in range(n):
-                for l in range(n):
-                    temp  = H1[i, k] * H2[k, l] * H3[l, j] 
-                    temp += H1[i, k] * H3[k, l] * H2[l, j] 
-                    temp += H2[i, k] * H1[k, l] * H3[l, j] 
-                    temp += H2[i, k] * H3[k, l] * H1[l, j] 
-                    temp += H3[i, k] * H1[k, l] * H2[l, j] 
-                    temp += H3[i, k] * H2[k, l] * H1[l, j]
-                    out[i, j] = out[i, j] + D3_ij[k, l] * temp
-            
-            out[j, i] = out[i, j]
+                for k in range(n):
+                    for l in range(n):
+                        temp  = H1[i, k] * H2[k, l] * H2[l, j] 
+                        temp += H2[i, k] * H1[k, l] * H2[l, j] 
+                        temp += H2[i, k] * H2[k, l] * H1[l, j] 
+                        out[i, j] = out[i, j] + D3_ij[k, l] * temp
+                
+                out[j, i] = np.conj(out[i, j])
+
+        out *= 2
+
+    else:
+
+        for i in range(n):
+            for j in range(i + 1):
+                D3_ij = D3_f_ij(i, j, D, D2, d3f_D)
+
+                for k in range(n):
+                    for l in range(n):
+                        temp  = H1[i, k] * H2[k, l] * H3[l, j] 
+                        temp += H1[i, k] * H3[k, l] * H2[l, j] 
+                        temp += H2[i, k] * H1[k, l] * H3[l, j] 
+                        temp += H2[i, k] * H3[k, l] * H1[l, j] 
+                        temp += H3[i, k] * H1[k, l] * H2[l, j] 
+                        temp += H3[i, k] * H2[k, l] * H1[l, j]
+                        out[i, j] = out[i, j] + D3_ij[k, l] * temp
+                
+                out[j, i] = np.conj(out[i, j])
 
     return U @ out @ U.conj().T
 
-@nb.njit
-def thrd_frechet_complex(D2, D, U, H1, H2, H3):
-    n = D.size
-    out = np.zeros((n, n), 'complex128')
-
-    for i in range(n):
-        for j in range(i + 1):
-            D3_ij = D3_log_ij(i, j, D2, D)
-
-            for k in range(n):
-                for l in range(n):
-                    temp  = H1[i, k] * H2[k, l] * H3[l, j] 
-                    temp += H1[i, k] * H3[k, l] * H2[l, j] 
-                    temp += H2[i, k] * H1[k, l] * H3[l, j] 
-                    temp += H2[i, k] * H3[k, l] * H1[l, j] 
-                    temp += H3[i, k] * H1[k, l] * H2[l, j] 
-                    temp += H3[i, k] * H2[k, l] * H1[l, j]
-                    out[i, j] = out[i, j] + D3_ij[k, l] * temp
-            
-            out[j, i] = out[i, j]
-
-    return U @ out @ U.conj().T
-
-def get_S_matrix(D2_UXU, rt2, hermitian=False):
-    if hermitian:
+def get_S_matrix(D2_UXU, rt2, iscomplex=False):
+    if iscomplex:
         return get_S_matrix_hermitian(D2_UXU, rt2)
     else:
         return get_S_matrix_symmetric(D2_UXU, rt2)

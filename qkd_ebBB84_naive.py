@@ -23,21 +23,21 @@ gamma = data['gamma']
 Gamma = data['Gamma'][:, 0]
 Klist = data['Klist'][0, :]
 Zlist = data['Zlist'][0, :]
-hermitian = True
+iscomplex = True
 
 no, ni = Klist[0].shape
 nc = np.size(gamma)
 
-vni = sym.vec_dim(ni, hermitian=hermitian)
-vno = sym.vec_dim(no, hermitian=hermitian)
+vni = sym.vec_dim(ni, iscomplex=iscomplex)
+vno = sym.vec_dim(no, iscomplex=iscomplex)
 
 K_op = np.zeros((vno, vni))
 ZK_op = np.zeros((vno, vni))
-Gamma_op = np.array([sym.mat_to_vec(G, hermitian=hermitian).T[0] for G in Gamma])
+Gamma_op = np.array([sym.mat_to_vec(G, iscomplex=iscomplex).T[0] for G in Gamma])
 
 
-K_op = sym.lin_to_mat(lambda x : sym.apply_kraus(x, Klist), ni, no, hermitian=hermitian)
-ZK_op = sym.lin_to_mat(lambda x : sym.apply_kraus(sym.apply_kraus(x, Klist), Zlist), ni, no, hermitian=hermitian)
+K_op = sym.lin_to_mat(lambda x : sym.apply_kraus(x, Klist), ni, no, iscomplex=iscomplex)
+ZK_op = sym.lin_to_mat(lambda x : sym.apply_kraus(sym.apply_kraus(x, Klist), Zlist), ni, no, iscomplex=iscomplex)
 
 # Build problem model
 A = np.hstack((np.zeros((nc, 1)), Gamma_op))
@@ -55,7 +55,7 @@ G = -np.vstack((G1, G2, G3, G4))
 h = np.zeros((1 + 2 * vno + vni, 1))
 
 # Input into model and solve
-cones = [quantrelentr.Cone(no, hermitian=hermitian), possemidefinite.Cone(ni, hermitian=hermitian)]
+cones = [quantrelentr.Cone(no, iscomplex=iscomplex), possemidefinite.Cone(ni, iscomplex=iscomplex)]
 model = model.Model(c, A, b, G, h, cones=cones)
 solver = solver.Solver(model)
 

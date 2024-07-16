@@ -6,8 +6,8 @@ import cProfile
 
 from cones import *
 from utils import symmetric as sym
+from utils import quantum
 from solver import model, solver
-from utils import quantum as quant
 
 np.random.seed(1)
 np.set_printoptions(threshold=np.inf)
@@ -34,41 +34,35 @@ def get_eye(n, sn, iscomplex):
                     k += 1
     return eye
 
-# Problem data
-iscomplex = False
-dtype = np.float64 if (not iscomplex) else np.complex128
-
-n = 50
+# Define dimensions
+iscomplex = True
+n = 64
 vn = sym.vec_dim(n, iscomplex=iscomplex)
 sn = n*n if (not iscomplex) else 2*n*n
-M = quant.randDensityMatrix(n, iscomplex=iscomplex)
 
+# cq channel capacity problem data
+alphabet = [quantum.randDensityMatrix(n, iscomplex=iscomplex) for i in range(n)]
+alphabet_vec = np.hstack([sym.mat_to_vec(rho, iscomplex=iscomplex) for rho in alphabet])
+entr_alphabet = np.array([quantum.quantEntropy(rho) for rho in alphabet])
 
 eye = get_eye(n, vn, iscomplex)
 
-
 # Build problem model
-A = np.zeros((n, 1 + vn))
-for i in range(n):
-    H = np.zeros((n, n), dtype=dtype)
-    H[i, i] = 1.0
-    A[[i], 1:] = sym.mat_to_vec(H, iscomplex=iscomplex).T
-b = np.ones((n, 1))
+A1 = np.hstack((np.ones((1, n)), np.zeros((1, 2)), np.zeros((1, sn))))         # SUM pi = 1
+A2 = np.hstack((np.zeros((1, n + 1)), np.ones((1, 1)), np.zeros((1, sn))))
+A3 = np.hstack((alphabet_vec, np.zeros((vn, 2)), -eye.T))
+A = np.vstack((A1, A2, A3))
 
-c = np.zeros((1 + vn, 1))
-c[0] = 1.
+b = np.zeros((2 + vn, 1))
+b[0:2] = 1
 
-G1 = np.hstack((np.ones((1, 1)), np.zeros((1, vn))))
-G2 = np.hstack((np.zeros((sn, 1)), np.zeros((sn, vn))))
-G3 = np.hstack((np.zeros((sn, 1)), eye))
-G = -np.vstack((G1, G2, G3))
-
-h = np.zeros((1 + 2 * sn, 1))
-h[1:sn+1] = M.view(dtype=np.float64).reshape(-1, 1)
+c = np.zeros((n + 2 + sn, 1))
+c[:n, 0] = entr_alphabet
+c[n] = 1.
 
 # Input into model and solve
-cones = [quantrelentr.Cone(n, iscomplex=iscomplex)]
-model = model.Model(c, A, b, G, h, cones=cones)
+cones = [nonnegorthant.Cone(n), quantentr.Cone(n, iscomplex=iscomplex)]
+model = model.Model(c, A, b, cones=cones)
 solver = solver.Solver(model)
 
 profiler = cProfile.Profile()

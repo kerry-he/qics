@@ -19,8 +19,8 @@ def read_problem(file_name):
     b = np.array(f['b'])
     h = np.array(f['h'])
 
-    A = np.array(f['A'].todense())
-    G = np.array(f['G'].todense())
+    A = np.array(f['A'].toarray())
+    G = np.array(f['G'].toarray())
 
 
     # List of cones
@@ -31,15 +31,15 @@ def read_problem(file_name):
 
         if cone_type == 'qre':
             n         = cone_i['n'][0, 0]
-            hermitian = bool(cone_i['hermitian'][0, 0])
-            cones.append(quantrelentr.Cone(n, hermitian=hermitian))
+            iscomplex = bool(cone_i['iscomplex'][0, 0])
+            cones.append(quantrelentr.Cone(n, iscomplex=iscomplex))
         elif cone_type == 'nn':
             dim = cone_i['dim'][0, 0]
             cones.append(nonnegorthant.Cone(dim))
         elif cone_type == 'psd':
             n         = cone_i['n'][0, 0]
-            hermitian = bool(cone_i['hermitian'][0, 0])
-            cones.append(possemidefinite.Cone(n, hermitian=hermitian))                
+            iscomplex = bool(cone_i['iscomplex'][0, 0])
+            cones.append(possemidefinite.Cone(n, iscomplex=iscomplex))                
 
     return model.Model(c, A, b, G, h, cones=cones, offset=offset)
 

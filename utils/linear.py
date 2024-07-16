@@ -1,37 +1,30 @@
 import numpy as np
 import scipy as sp
+import numba as nb
+
+def norm_inf(x):
+    return max(x.max(initial=0.0), -x.min(initial=0.0))
 
 def inp(x, y):
     # Standard inner product
-    return np.sum(x * y.conj()).real
+    x_view = x.view(dtype=np.float64).reshape( 1, -1)
+    y_view = y.view(dtype=np.float64).reshape(-1,  1).conj()
+    return (x_view @ y_view)[0, 0]
 
-def fact(A):
-    # Perform a Cholesky decomposition, or an LU factorization if Cholesky fails
-    while True:        
+def cho_fact(A):
+    # Perform a Cholesky decomposition, while increment diagonals if failed     
+    diag_incr = np.finfo(A.dtype).eps
+    while True:
         try:
             fact = sp.linalg.cho_factor(A, check_finite=False)
-            return (fact, "cho")
+            return fact
         except np.linalg.LinAlgError:
-            diag_idx = np.diag_indices_from(A)
-            A[diag_idx] = np.max([A[diag_idx], np.ones_like(A[diag_idx]) * 1e-12], axis=0) * (1 + 1e-8)
-        else:
-            break
+            A.flat[::A.shape[0]+1] += diag_incr
+            diag_incr *= 1e1
 
-    # try:
-    #     fact = sp.linalg.cho_factor(A)
-    #     return (fact, "cho")
-    # except np.linalg.LinAlgError:
-    #     fact = sp.linalg.lu_factor(A)
-    #     return (fact, "lu")
-
-def fact_solve(A, x):
+def cho_solve(fact, x):
     # Factor solve for either Cholesky or LU factorization of A
-    (fact, type) = A
-
-    if type == "cho":
-        return sp.linalg.cho_solve(fact, x, check_finite=False)
-    elif type == "lu":
-        return sp.linalg.lu_solve(fact, x)
+    return sp.linalg.cho_solve(fact, x, check_finite=False)
 
 def pcg(A, b, M, tol=1e-8, max_iter=20):
 
@@ -76,3 +69,36 @@ def pcg(A, b, M, tol=1e-8, max_iter=20):
         r_z_k = r_z_k1
 
     return x_k1, (k + 1), abs_res
+
+def kron(a, b):
+    # Kroneker product between two (n x n) matrices
+    n  = a.shape[0]
+    n2 = n*n
+    return (a[:, None, :, None] * b[None, :, None, :]).reshape(n2, n2)
+
+def congr(out, A, X, work, B=None):
+    if B is None:
+        B = A
+
+    # Performs congruence A X_i B' for i = i,...,n
+    n, m = A.shape
+    np.matmul(A, X, out=work)
+    np.matmul(work.reshape((-1, m)), B.conj().T, out=out.reshape((-1, n)))
+    return out
+
+if __name__ == "__main__":
+    import time
+    
+    n = 2
+    X = np.random.rand(n, n)
+    Y = np.random.rand(n, n)
+    
+    tic = time.time()
+    for i in range(10000):
+        out = kron(X, Y)
+    print("Time elapsed: ", time.time() - tic)
+
+    tic = time.time()
+    for i in range(10000):
+        out = np.kron(X, Y)
+    print("Time elapsed: ", time.time() - tic)
