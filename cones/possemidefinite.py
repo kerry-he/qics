@@ -154,19 +154,13 @@ class Cone(SymCone):
 
         return out
     
-    def third_dir_deriv_axpy(self, out, dir1, dir2=None, a=True):
+    def third_dir_deriv_axpy(self, out, H, a=True):
         if not self.grad_updated:
             self.update_grad()
-        if dir2 is None:
-            XHX_2 = self.X_inv @ dir1 @ self.X_chol_inv.conj().T
-            out -= 2 * a * XHX_2 @ XHX_2.conj().T
-            return out
-        else:
-            PD = dir1 @ dir2
-            XiPD = self.X_inv @ PD * a
-            out -= XiPD
-            out -= XiPD.conj().T
-            return out
+
+        XHX_2 = self.X_inv @ H @ self.X_chol_inv.conj().T
+        out -= 2 * a * XHX_2 @ XHX_2.conj().T
+        return out
     
     def prox(self):
         assert self.feas_updated

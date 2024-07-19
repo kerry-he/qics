@@ -8,5 +8,6 @@ __all__ = [
     "quantentr",
     "quantkeydist",
     "opperspectr",
-    "opperspecepi"
+    "opperspecepi",
+    "secondorder"
     ]

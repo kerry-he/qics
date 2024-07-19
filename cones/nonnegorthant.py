@@ -64,13 +64,9 @@ class Cone(SymCone):
             Ax = x * A.T
             return Ax.T @ Ax
 
-    def third_dir_deriv_axpy(self, out, dir1, dir2=None, a=True):
-        if dir2 is None:
-            out -= 2 * a * dir1 * dir1 / (self.x*self.x*self.x)
-            return out
-        else:
-            out -= 2 * a * dir1 * dir2 / self.x
-            return out
+    def third_dir_deriv_axpy(self, out, H, a=True):
+        out -= 2 * a * H * H / (self.x*self.x*self.x)
+        return out
 
     def prox(self):
         return np.linalg.norm(self.x * self.z - 1, np.inf)
