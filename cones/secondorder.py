@@ -40,61 +40,62 @@ class Cone(BaseCone):
         assert self.feas_updated
         assert not self.grad_updated
         
-        self.z = self.t*self.t - self.x.T @ self.x
+        self.z  = self.t*self.t - self.x.T @ self.x
+        self.zi = 1 / self.z
 
         self.grad = [
-           -self.t / self.z,
-            self.x / self.z
+           -self.t * self.zi,
+            self.x * self.zi
         ]
 
         self.grad_updated = True
 
     def hess_prod_ip(self, out, H):
+        assert self.grad_updated
+
         (Ht, Hx) = H
 
-        z = self.t*self.t - self.x.T @ self.x
-        w = self.t*Ht     - self.x.T @ Hx
-        coeff = 2 * w / (z*z)
+        w     = self.t * Ht - self.x.T @ Hx
+        coeff = 2 * w * self.zi * self.zi
 
-        out[0][:] =  coeff * self.t - Ht / z
-        out[1][:] = -coeff * self.x + Hx / z
+        out[0][:] =  coeff * self.t - Ht * self.zi
+        out[1][:] = -coeff * self.x + Hx * self.zi
 
         return out    
 
     def hess_congr(self, A):
+        assert self.grad_updated
         if not self.congr_aux_updated:
             self.congr_aux(A)
 
-        z = self.t*self.t - self.x.T @ self.x
-
         # First term
         lhs = self.t * self.At.T - self.x.T @ self.Ax.T
-        lhs *= np.sqrt(2.) / z
+        lhs *= np.sqrt(2.) * self.zi
         out = lhs.T @ lhs
 
         # Second term
-        out -= (self.At @ self.At.T) / z
-        out += (self.Ax @ self.Ax.T) / z
+        out -= (self.At @ self.At.T) * self.zi
+        out += (self.Ax @ self.Ax.T) * self.zi
 
         return out
 
     def invhess_prod_ip(self, out, H):
+        assert self.grad_updated
+
         (Ht, Hx) = H
 
-        z = self.t*self.t - self.x.T @ self.x
-        w = self.t*Ht     + self.x.T @ Hx
+        w     = self.t * Ht + self.x.T @ Hx
         coeff = 2 * w
 
-        out[0][:] = coeff * self.t - Ht * z
-        out[1][:] = coeff * self.x + Hx * z
+        out[0][:] = coeff * self.t - Ht * self.z
+        out[1][:] = coeff * self.x + Hx * self.z
 
         return out    
 
     def invhess_congr(self, A):
+        assert self.grad_updated
         if not self.congr_aux_updated:
             self.congr_aux(A)
-
-        z = self.t*self.t - self.x.T @ self.x
 
         # First term
         lhs = self.t * self.At.T + self.x.T @ self.Ax.T
@@ -102,15 +103,16 @@ class Cone(BaseCone):
         out = lhs.T @ lhs
 
         # Second term
-        out -= (self.At @ self.At.T) * z
-        out += (self.Ax @ self.Ax.T) * z
+        out -= (self.At @ self.At.T) * self.z
+        out += (self.Ax @ self.Ax.T) * self.z
 
         return out
 
     def third_dir_deriv_axpy(self, out, H, a=True):
+        assert self.grad_updated
+
         (Ht, Hx) = H
 
-        self.zi  = 1 / self.z
         self.zi2 = self.zi * self.zi
         self.zi3 = self.zi * self.zi2
 
@@ -133,10 +135,10 @@ class Cone(BaseCone):
         coeff2 = (self.zi2 * (D2PhitHH + D2PhixHH) - 2 * self.zi3 * coeff1 * coeff1) * 0.5
 
         dder3_t  = coeff2 * DPhit
-        dder3_t += self.zi2 * D2PhittH * coeff1
+        dder3_t += coeff1 * self.zi2 * D2PhittH
         
         dder3_x  = coeff2 * DPhix
-        dder3_x += self.zi2 * D2PhixxH * coeff1
+        dder3_x += coeff1 *  self.zi2 * D2PhixxH
 
         out[0][:] += dder3_t * a
         out[1][:] += dder3_x * a
