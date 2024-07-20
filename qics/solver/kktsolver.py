@@ -1,8 +1,8 @@
 import numpy as np
 import scipy as sp
-from utils import linear as lin
-from utils import vector as vec
-from utils import symmetric as sym
+from qics.utils import linear as lin
+from qics.utils import vector as vec
+from qics.utils import symmetric as sym
 from cones import *
 
 # Solves the following square Newton system
@@ -19,7 +19,7 @@ from cones import *
 # for (dx, dy, dz, dtau, dkap) given right-hand residuals (rx, ry, rz, rtau, rkap)
 # by using block elimination and Cholesky factorization of the Schur complement matrix.
 
-class SysSolver():
+class KKTSolver():
     def __init__(self, model, ir=True):
         self.model = model
 

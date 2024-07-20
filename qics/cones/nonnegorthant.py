@@ -2,7 +2,7 @@ import numpy as np
 import scipy as sp
 from cones.base import SymCone
 
-class Cone(SymCone):
+class NonNegOrthant(SymCone):
     def __init__(self, n):
         # Dimension properties
         self.n  = n

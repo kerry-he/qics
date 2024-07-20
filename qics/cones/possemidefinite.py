@@ -6,7 +6,7 @@ from utils import linear as lin
 from utils import sparse
 from cones.base import SymCone
 
-class Cone(SymCone):
+class PosSemidefinite(SymCone):
     def __init__(self, n, iscomplex=False):
         # Dimension properties
         self.n  = n                 # Side length of matrix

@@ -8,7 +8,7 @@ from utils import linear as lin
 from utils import vector as vec
 from solver.stepper.nonsym import NonSymStepper
 from solver.stepper.sym import SymStepper
-from solver.syssolver import SysSolver
+from solver.kktsolver import KKTSolver
 
 spinner = itertools.cycle(['-', '/', '|', '\\'])
 
@@ -47,8 +47,8 @@ class Solver():
         self.exit_status = None
 
         self.model = model
-        syssolver = SysSolver(model, ir=ir)
-        self.stepper = SymStepper(syssolver, model) if model.issymmetric else NonSymStepper(syssolver, model)
+        kktsolver = KKTSolver(model, ir=ir)
+        self.stepper = SymStepper(kktsolver, model) if model.issymmetric else NonSymStepper(kktsolver, model)
 
         return
     

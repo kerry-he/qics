@@ -4,7 +4,7 @@ from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 from cones.base import BaseCone
 
-class Cone(BaseCone):
+class QuantCondEntr(BaseCone):
     def __init__(self, n0, n1, sys, iscomplex=False):
         # Dimension properties
         self.n0 = n0          # Dimension of system 0

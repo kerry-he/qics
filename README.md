@@ -1,1 +1,1 @@
-# QuICS: Conic solver for quantum information theory
+# QICS: Quantum Information Conic Solver

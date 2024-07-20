@@ -5,7 +5,7 @@ from utils import mtxgrad   as mgrad
 from utils import quantum   as quant
 from cones.base import BaseCone
 
-class Cone(BaseCone):
+class QuantKeyDist(BaseCone):
     def __init__(self, K_list, Z_list, iscomplex=False):
         # Dimension properties
         self.n = K_list[0].shape[1]    # Get input dimension

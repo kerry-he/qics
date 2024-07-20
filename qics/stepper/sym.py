@@ -2,8 +2,8 @@ from utils.vector import Point
 from cones import *
 
 class SymStepper():
-    def __init__(self, syssolver, model):
-        self.syssolver = syssolver
+    def __init__(self, kktsolver, model):
+        self.kktsolver = kktsolver
         
         self.rhs        = Point(model)
         self.dir_a      = Point(model)
@@ -14,11 +14,11 @@ class SymStepper():
 
     def step(self, model, point, xyztau_res, mu, verbose):
         # Step 1: Pre-build and -factor Schur complement matrix 
-        self.syssolver.update_lhs(model, point, mu)
+        self.kktsolver.update_lhs(model, point, mu)
 
         # Step 2: Get affine direction
         self.update_rhs_affine(model, point, xyztau_res)
-        res_norm = self.syssolver.solve_sys(self.dir_a, self.rhs, ir=False)
+        res_norm = self.kktsolver.solve_sys(self.dir_a, self.rhs, ir=False)
 
         # Step 3: Step size and centering parameter
         alpha = self.taukap_step_to_boundary(self.dir_a, point)
@@ -29,7 +29,7 @@ class SymStepper():
 
         # Step 4: Combined direction
         self.update_rhs_comb(model, point, mu, self.dir_a, sigma, xyztau_res)
-        temp_res_norm = self.syssolver.solve_sys(self.dir_comb, self.rhs, ir=True)
+        temp_res_norm = self.kktsolver.solve_sys(self.dir_comb, self.rhs, ir=True)
         res_norm = max(temp_res_norm, res_norm)
 
         # Step 5: Line search

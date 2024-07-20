@@ -3,7 +3,7 @@ from utils import linear    as lin
 from utils import mtxgrad   as mgrad
 from cones.base import BaseCone, get_central_ray_relentr
 
-class Cone(BaseCone):
+class QuantRelEntr(BaseCone):
     def __init__(self, n, iscomplex=False):
         # Dimension properties
         self.n  = n               # Side dimension of system

@@ -2,7 +2,7 @@ import numpy as np
 from utils import linear as lin
 from cones.base import BaseCone, get_central_ray_entr
 
-class Cone(BaseCone):
+class ClassEntr(BaseCone):
     def __init__(self, n):
         # Dimension properties
         self.n  = n # Dimension of system

@@ -5,8 +5,8 @@ from utils.vector import Point
 alpha_sched = [0.9999, 0.999, 0.99, 0.9, 0.8, 0.7, 0.5, 0.3, 0.2, 0.1, 0.01, 0.001]
 
 class NonSymStepper():
-    def __init__(self, syssolver, model):
-        self.syssolver = syssolver
+    def __init__(self, kktsolver, model):
+        self.kktsolver = kktsolver
         self.prox = 0.0
 
         self.rhs        = Point(model)
@@ -19,25 +19,25 @@ class NonSymStepper():
         return
     
     def step(self, model, point, xyztau_res, mu, verbose):
-        self.syssolver.update_lhs(model, point, mu)
+        self.kktsolver.update_lhs(model, point, mu)
 
         # Get prediction direction
         self.update_rhs_pred(model, point, xyztau_res)
-        res_norm = self.syssolver.solve_sys(self.dir_p, self.rhs)
+        res_norm = self.kktsolver.solve_sys(self.dir_p, self.rhs)
 
         # Get TOA prediction direction
         self.update_rhs_pred_toa(model, point, mu, self.dir_p)
-        temp_res_norm = self.syssolver.solve_sys(self.dir_p_toa, self.rhs)
+        temp_res_norm = self.kktsolver.solve_sys(self.dir_p_toa, self.rhs)
         res_norm = max(temp_res_norm, res_norm)
 
         # Get centering direction
         self.update_rhs_cent(model, point, mu)
-        temp_res_norm = self.syssolver.solve_sys(self.dir_c, self.rhs)
+        temp_res_norm = self.kktsolver.solve_sys(self.dir_c, self.rhs)
         res_norm = max(temp_res_norm, res_norm)
 
         # Get TOA centering direction
         self.update_rhs_cent_toa(model, point, mu, self.dir_c)
-        temp_res_norm = self.syssolver.solve_sys(self.dir_c_toa, self.rhs)
+        temp_res_norm = self.kktsolver.solve_sys(self.dir_c_toa, self.rhs)
         res_norm = max(temp_res_norm, res_norm)
 
         step_mode = "co_toa"

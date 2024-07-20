@@ -1,7 +1,7 @@
 import numpy as np
 from cones.base import BaseCone, get_central_ray_relentr
 
-class Cone(BaseCone):
+class ClassRelEntr(BaseCone):
     def __init__(self, n):
         # Dimension properties
         self.n  = n # Dimension of system

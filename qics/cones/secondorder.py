@@ -1,8 +1,7 @@
 import numpy as np
-import scipy as sp
 from cones.base import BaseCone
 
-class Cone(BaseCone):
+class SecondOrder(BaseCone):
     def __init__(self, n):
         # Dimension properties
         self.n  = n
