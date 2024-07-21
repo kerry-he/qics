@@ -1,6 +1,6 @@
 import numpy as np
 import scipy as sp
-from cones.base import SymCone
+from qics.cones.base import SymCone
 
 class NonNegOrthant(SymCone):
     def __init__(self, n):

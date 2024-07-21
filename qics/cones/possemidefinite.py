@@ -2,9 +2,10 @@ import numpy as np
 import scipy as sp
 import numba as nb
 import itertools
-from utils import linear as lin
-from utils import sparse
-from cones.base import SymCone
+
+import qics.utils.linear as lin
+import qics.utils.sparse as sparse
+from qics.cones.base import SymCone
 
 class PosSemidefinite(SymCone):
     def __init__(self, n, iscomplex=False):

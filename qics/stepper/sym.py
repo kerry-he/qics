@@ -1,5 +1,4 @@
-from utils.vector import Point
-from cones import *
+from qics.utils.vector import Point
 
 class SymStepper():
     def __init__(self, kktsolver, model):

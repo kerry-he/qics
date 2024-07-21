@@ -4,11 +4,9 @@ import math
 import time
 import itertools, sys
 
-from utils import linear as lin
-from utils import vector as vec
-from solver.stepper.nonsym import NonSymStepper
-from solver.stepper.sym import SymStepper
-from solver.kktsolver import KKTSolver
+import qics.utils.linear as lin
+import qics.utils.vector as vec
+from qics.stepper import NonSymStepper, SymStepper, KKTSolver
 
 spinner = itertools.cycle(['-', '/', '|', '\\'])
 
@@ -75,17 +73,17 @@ class Solver():
         # Print iteration status
         # ==============================================================
         if self.verbose >= 2:
-            print(f"\n{"":=^{self.printbar_size}}", end="")
-            print(f"\n {"iter":^4}   {"mu":^7}   {"k/t":^7}  ", end="")
-            print(f"|  {"p_obj":^10}  {"d_obj":^10}  {"gap":^7}  ", end="")
-            print(f"|  {"p_feas":^7}   {"d_feas":^7}  ", end="")
-            print(f"|  {"time (s)":^8}  ", end="")
+            print(f"\n{'':=^{self.printbar_size}}", end="")
+            print(f"\n {'iter':^4}   {'mu':^7}   {'k/t':^7}  ", end="")
+            print(f"|  {'p_obj':^10}  {'d_obj':^10}  {'gap':^7}  ", end="")
+            print(f"|  {'p_feas':^7}   {'d_feas':^7}  ", end="")
+            print(f"|  {'time (s)':^8}  ", end="")
             if self.verbose == 3:
                 if self.model.issymmetric:
-                    print(f"|  {"dir_tol":^7}   {"sigma":^5}   {"alpha":^5}", end="")
+                    print(f"|  {'dir_tol':^7}   {'sigma':^5}   {'alpha':^5}", end="")
                 else:
-                    print(f"|  {"step":^6}   {"dir_tol":^7}   {"prox":^7}   {"alpha":^5}", end="")
-            print(f"\n{"":=^{self.printbar_size}}", end="")
+                    print(f"|  {'step':^6}   {'dir_tol':^7}   {'prox':^7}   {'alpha':^5}", end="")
+            print(f"\n{'':=^{self.printbar_size}}", end="")
             
             print(f"\n {self.iter:>4}   {self.mu:>7.1e}   {self.kap_tau:>7.1e}  ", end="")
             print(f"| {self.p_obj:>10.3e}  {self.d_obj:>10.3e}  {self.gap:>8.1e}  ", end="")

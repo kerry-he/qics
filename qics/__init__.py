@@ -1,2 +1,3 @@
 # __init__.py
-from cones import *
+from qics.solver import Solver
+from qics.model import Model

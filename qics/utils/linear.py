@@ -1,6 +1,5 @@
 import numpy as np
 import scipy as sp
-import numba as nb
 
 def norm_inf(x):
     return max(x.max(initial=0.0), -x.min(initial=0.0))

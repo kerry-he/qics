@@ -1,9 +1,9 @@
 import numpy as np
-from utils import symmetric as sym
-from utils import linear    as lin
-from utils import mtxgrad   as mgrad
-from utils import quantum   as quant
-from cones.base import BaseCone
+import qics.utils.linear as lin
+import qics.utils.mtxgrad as mgrad
+import qics.utils.symmetric as sym
+import qics.utils.quantum as quant
+from qics.cones.base import BaseCone
 
 class QuantKeyDist(BaseCone):
     def __init__(self, K_list, Z_list, iscomplex=False):

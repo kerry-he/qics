@@ -1,8 +1,7 @@
 import numpy as np
-from utils import linear    as lin
-from utils import mtxgrad   as mgrad
-from utils import symmetric as sym
-from cones.base import BaseCone, get_perspective_derivatives
+import qics.utils.linear as lin
+import qics.utils.mtxgrad as mgrad
+from qics.cones.base import BaseCone, get_perspective_derivatives
 
 class OpPerspecTr(BaseCone):
     def __init__(self, n, func, iscomplex=False):

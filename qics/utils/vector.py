@@ -1,7 +1,5 @@
 import numpy as np
 import scipy as sp
-import numba as nb
-from utils import linear as lin
 
 class Vector():
     # Base vector class represented by a numpy array called 'vec'

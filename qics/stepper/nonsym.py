@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from utils.vector import Point
+from qics.utils.vector import Point
 
 alpha_sched = [0.9999, 0.999, 0.99, 0.9, 0.8, 0.7, 0.5, 0.3, 0.2, 0.1, 0.01, 0.001]
 

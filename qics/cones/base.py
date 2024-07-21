@@ -1,5 +1,5 @@
 import numpy as np
-from utils import linear as lin
+import qics.utils.linear as lin
 
 class BaseCone():
     def __init__(self):

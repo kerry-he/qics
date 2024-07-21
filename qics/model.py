@@ -1,8 +1,8 @@
 import numpy as np
 import scipy as sp
 
-from utils import sparse
-from cones import nonnegorthant
+from qics.utils import sparse
+import qics.cones
 
 class Model():
     def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0):
@@ -70,7 +70,7 @@ class Model():
         G_absmax_row = sparse.abs_max(self.G, axis=1)
         for (k, cone_k) in enumerate(self.cones):
             idxs = self.cone_idxs[k]
-            if isinstance(cone_k, nonnegorthant.Cone):
+            if isinstance(cone_k, qics.cones.NonNegOrthant):
                 self.h_scale[idxs] = np.sqrt(np.maximum.reduce([
                     h_absmax[idxs],
                     G_absmax_row[idxs]

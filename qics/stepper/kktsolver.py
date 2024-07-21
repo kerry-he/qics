@@ -1,9 +1,7 @@
 import numpy as np
 import scipy as sp
-from qics.utils import linear as lin
-from qics.utils import vector as vec
-from qics.utils import symmetric as sym
-from cones import *
+import qics.utils.linear as lin
+import qics.utils.vector as vec
 
 # Solves the following square Newton system
 #     [ rx ]    [      A'  G'  c ] [ dx ]   [    ]

@@ -1,8 +1,8 @@
 import numpy as np
-from utils import symmetric as sym
-from utils import linear    as lin
-from utils import mtxgrad   as mgrad
-from cones.base import BaseCone
+import qics.utils.linear as lin
+import qics.utils.mtxgrad as mgrad
+import qics.utils.symmetric as sym
+from qics.cones.base import BaseCone
 
 class QuantCondEntr(BaseCone):
     def __init__(self, n0, n1, sys, iscomplex=False):

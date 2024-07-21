@@ -1,5 +1,5 @@
 import numpy as np
-from cones.base import BaseCone, get_central_ray_relentr
+from qics.cones.base import BaseCone, get_central_ray_relentr
 
 class ClassRelEntr(BaseCone):
     def __init__(self, n):

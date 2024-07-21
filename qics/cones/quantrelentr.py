@@ -1,7 +1,7 @@
 import numpy as np
-from utils import linear    as lin
-from utils import mtxgrad   as mgrad
-from cones.base import BaseCone, get_central_ray_relentr
+import qics.utils.linear as lin
+import qics.utils.mtxgrad as mgrad
+from qics.cones.base import BaseCone, get_central_ray_relentr
 
 class QuantRelEntr(BaseCone):
     def __init__(self, n, iscomplex=False):

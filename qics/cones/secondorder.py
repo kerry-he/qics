@@ -1,5 +1,5 @@
 import numpy as np
-from cones.base import BaseCone
+from qics.cones.base import BaseCone
 
 class SecondOrder(BaseCone):
     def __init__(self, n):

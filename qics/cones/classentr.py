@@ -1,6 +1,5 @@
 import numpy as np
-from utils import linear as lin
-from cones.base import BaseCone, get_central_ray_entr
+from qics.cones.base import BaseCone, get_central_ray_entr
 
 class ClassEntr(BaseCone):
     def __init__(self, n):
