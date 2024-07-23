@@ -1,8 +1,23 @@
 import numpy as np
-from qics.cones.base import BaseCone
+from qics.cones.base import Cone
 
-class SecondOrder(BaseCone):
+class SecondOrder(Cone):
+    """A class representing a second order cone
+    
+        K = { (t, x) ∈ R x R^n : t >= ||x||_2 },
+        
+    with barrier function
+    
+        F(t, x) = -log(t^2 - x'x).
+    """    
     def __init__(self, n):
+        """Initialize a SecondOrder instance
+
+        Parameters
+        ----------
+        n : int
+            Dimension of the vector x, i.e., how many terms are in the Euclidean norm.
+        """
         # Dimension properties
         self.n  = n
         self.nu = 1

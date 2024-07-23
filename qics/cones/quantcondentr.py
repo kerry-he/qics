@@ -2,10 +2,37 @@ import numpy as np
 import qics.utils.linear as lin
 import qics.utils.mtxgrad as mgrad
 import qics.utils.symmetric as sym
-from qics.cones.base import BaseCone
+from qics.cones.base import Cone
 
-class QuantCondEntr(BaseCone):
+class QuantCondEntr(Cone):
+    """A class representing a quantum conditional entropy cone
+    
+        K = { (t, X) ∈ R x H^n0n1 : t >= S(X) - S(pTr(X)), X ⪰ 0 },
+        
+    with barrier function
+    
+        F(t, X) = -log(t - S(X) + S(pTr(X))) - logdet(X),
+        
+    where
+
+        S(X) = -tr[X log(X)],
+        
+    is the quantum (von Neumann) entropy, and pTr is the partial trace.
+    """    
     def __init__(self, n0, n1, sys, iscomplex=False):
+        """Initialize a QuantCondEntr instance
+
+        Parameters
+        ----------
+        n0 : int
+            Dimension of the first system.
+        n1 : int
+            Dimension of the second system.
+        sys : int
+            Which system is being traced out by the partial trace (either 0 or 1).
+        iscomplex : bool
+            Whether the matrix X is symmetric (False) or Hermitian (True). Default is False.
+        """              
         # Dimension properties
         self.n0 = n0          # Dimension of system 0
         self.n1 = n1          # Dimension of system 1

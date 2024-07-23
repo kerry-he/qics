@@ -1,10 +1,33 @@
 import numpy as np
 import qics.utils.linear as lin
 import qics.utils.mtxgrad as mgrad
-from qics.cones.base import BaseCone, get_central_ray_entr
+from qics.cones.base import Cone, get_central_ray_entr
 
-class QuantEntr(BaseCone):
+class QuantEntr(Cone):
+    """A class representing a (homogenized) quantum entropy cone
+    
+        K = { (t, u, X) ∈ R x R x H^n : t >= -u S(X / u), u >= 0, X ⪰ 0 },
+        
+    with barrier function
+    
+        F(t, u, X) = -log(t + u S(X / u)) - logdet(X),
+        
+    where
+
+        S(X) = -tr[X log(X)],
+        
+    is the quantum (von Neumann) entropy function.
+    """    
     def __init__(self, n, iscomplex=False):
+        """Initialize a QuantEntr instance
+
+        Parameters
+        ----------
+        n : int
+            Dimension of the (n, n) matrix X.
+        iscomplex : bool
+            Whether the matrix X is symmetric (False) or Hermitian (True). Default is False.
+        """              
         # Dimension properties
         self.n  = n                 # Side dimension of system
         self.nu = 2 + self.n        # Barrier parameter

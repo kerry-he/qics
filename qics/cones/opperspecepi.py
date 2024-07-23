@@ -2,10 +2,38 @@ import numpy as np
 import scipy as sp
 import qics.utils.linear as lin
 import qics.utils.mtxgrad as mgrad
-from qics.cones.base import BaseCone, get_perspective_derivatives
+from qics.cones.base import Cone, get_perspective_derivatives
 
-class OpPerspecEpi(BaseCone):
+class OpPerspecEpi(Cone):
+    """A class representing a operator perspective epigraph cone
+    
+        K = { (T, X, Y) ∈ H^n x H^n x H^n : T ⪰ Pg(X, Y), X,Y ⪰ 0 },
+        
+    with barrier function
+    
+        F(T, X, Y) = -logdet(T - Pg(X, Y)) - logdet(X) - logdet(Y),
+        
+    where
+
+        Pg(X, Y) = X^0.5 g(X^-0.5 Y X^-0.5) X^0.5,
+        
+    is the operator perspective of operator convex function g.
+    """         
     def __init__(self, n, func, iscomplex=False):
+        """Initialize a OpPerspecEpi instance
+
+        Parameters
+        ----------
+        n : int
+            Dimension of the (n, n) matrices T, X, and Y.
+        func : string or float
+            Choice for the function g. Can either be
+            "log"            : g(x) = -log(x)
+            (0, 1)           : g(x) = -x^p
+            (-1, 0) ∪ (1, 2) : g(x) =  x^p
+        iscomplex : bool
+            Whether the matrices T, X, Y are symmetric (False) or Hermitian (True). Default is False.
+        """               
         # Dimension properties
         self.n  = n           # Side dimension of system
         self.nu = 3 * self.n  # Barrier parameter

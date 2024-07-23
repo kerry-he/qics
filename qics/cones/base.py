@@ -1,7 +1,8 @@
 import numpy as np
 import qics.utils.linear as lin
 
-class BaseCone():
+class Cone():
+    """Base class for cones"""
     def __init__(self):
         pass
 
@@ -120,7 +121,8 @@ class BaseCone():
     def third_dir_deriv_axpy(self, out, H, a=True):
         pass
 
-class SymCone(BaseCone):
+class SymCone(Cone):
+    """Base class for symmetric cones"""    
     def get_issymmetric(self):
         return True
 

@@ -1,8 +1,29 @@
 import numpy as np
-from qics.cones.base import BaseCone, get_central_ray_entr
+from qics.cones.base import Cone, get_central_ray_entr
 
-class ClassEntr(BaseCone):
+class ClassEntr(Cone):
+    """A class representing a (homogenized) classical entropy cone
+    
+        K = { (t, u, x) ∈ R x R x R^n : t >= -u H(x / u), u,x >= 0 },
+        
+    with barrier function
+    
+        F(t, u, x) = -log(t + u H(x / u)) - Σ_i log(xi),
+        
+    where
+
+        H(x) = -Σ_i xi log(xi),
+        
+    is the classical (Shannon) entropy function.
+    """    
     def __init__(self, n):
+        """Initialize a ClassEntr instance
+
+        Parameters
+        ----------
+        n : int
+            Dimension of the vector x, i.e., how many terms are in the classical entropy function.
+        """        
         # Dimension properties
         self.n  = n # Dimension of system
         self.nu = 2 + self.n # Barrier parameter

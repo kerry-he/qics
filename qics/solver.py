@@ -11,6 +11,7 @@ from qics.stepper import NonSymStepper, SymStepper, KKTSolver
 spinner = itertools.cycle(['-', '/', '|', '\\'])
 
 class Solver():
+    """A class representing an instance of a solver"""    
     def __init__(
         self, 
         model, 
@@ -24,6 +25,36 @@ class Solver():
         verbose  = 2,
         ir = True
     ):
+        """Initialize a Solver instance
+
+        Parameters
+        ----------
+        model : Model
+            Model class which specifies an instance of a conic program.
+        max_iter : int, optional
+            Maximum number of solver iterations before terminating. Default is 100. 
+        max_time : float, optional
+            Maximum time elapsed, in seconds, before terminating. Default is inf.
+        tol_gap : float, optional
+            Stopping tolerance for (relative) optimality gap. Default is 1e-8.
+        tol_feas : float, optional
+            Stopping tolerance for (relative) primal and dual feasibility. Default is 1e-8.
+        tol_infeas : float, optional
+            Tolerance for detecting infeasible problem. Default is 1e-12.
+        tol_ip : float, optional
+            Tolerance for detecting ill-posed problem. Default is 1e-13.
+        tol_near : float, optional
+            Allowable margin for certifying near optimality when solver is stopped early. Default is 1e3.
+        verbose : int, optional
+            Verbosity level of the solver, where
+            0 : No output.
+            1 : Only print problem and solution summary.
+            2 : Print problem and solution summary, as well as solver summary at each iteration.
+            3 : Print problem and solution summary, solver summary at each iteration.
+            Default is 2.
+        ir : bool, optional
+            Whether to use iterative refinement when solving the KKT system. Default is True.
+        """        
         self.max_iter = max_iter
         self.max_time = max_time        
         self.verbose = verbose

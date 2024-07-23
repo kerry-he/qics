@@ -3,7 +3,22 @@ import scipy as sp
 from qics.cones.base import SymCone
 
 class NonNegOrthant(SymCone):
+    """A class representing a nonnegative orthant
+    
+        K = { x ∈ R^n : x >= 0 },
+        
+    with logarithmic barrier function
+    
+        F(x) = -Σ_i log(xi).
+    """ 
     def __init__(self, n):
+        """Initialize a NonNegOrthant instance
+
+        Parameters
+        ----------
+        n : int
+            Dimension of the cone.
+        """            
         # Dimension properties
         self.n  = n
         self.nu = n

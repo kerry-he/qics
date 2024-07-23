@@ -5,7 +5,32 @@ from qics.utils import sparse
 import qics.cones
 
 class Model():
+    """A class representing an instance of the primal-dual conic program
+    
+        (P)    min  c'x                (D)    max  -b'y - h'z
+               s.t. b - Ax = 0                s.t. c + A'y + G'z = 0
+                    h - Gx ∈ K                     z ∈ K*
+    """
     def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0):
+        """Initialize a Model instance
+
+        Parameters
+        ----------
+        c : (n, 1) ndarray
+            Float array representing linear objective
+        A : (p, n) ndarray, optional
+            Float array representing linear equality constraints. Default is empty matrix.
+        b : (p, 1) ndarray, optional
+            Float array representing linear equality constraints. Default is 0.
+        G : (q, n) ndarray, optional
+            Float array representing linear cone constraints. Default is -Id.
+        h : (q, 1) ndarray, optional
+            Float array representing linear cone constraints. Default is 0.
+        cones : list, optional
+            List of cone classes representing the Cartesian product of cones K. Default is empty set.
+        offset : float, optional
+            Constant offset term to add to the objective function. Default is 0.
+        """
         # Intiialize model parameters and default values for missing data
         self.n = np.size(c)
         self.p = np.size(b) if (b is not None) else 0

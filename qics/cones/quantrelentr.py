@@ -1,10 +1,33 @@
 import numpy as np
 import qics.utils.linear as lin
 import qics.utils.mtxgrad as mgrad
-from qics.cones.base import BaseCone, get_central_ray_relentr
+from qics.cones.base import Cone, get_central_ray_relentr
 
-class QuantRelEntr(BaseCone):
+class QuantRelEntr(Cone):
+    """A class representing a classical relative entropy cone
+    
+        K = { (t, X, Y) ∈ R x H^n x H^n : t >= S(X||Y), X,Y ⪰ 0 },
+        
+    with barrier function
+    
+        F(t, X, Y) = -log(t - S(x||y)) - logdet(X) - logdet(Y),
+        
+    where
+
+        S(X||Y) = tr[X log(X)] - tr[X log(Y)],
+        
+    is the quantum (Umegaki) relative entropy function.
+    """    
     def __init__(self, n, iscomplex=False):
+        """Initialize a QuantRelEntr instance
+
+        Parameters
+        ----------
+        n : int
+            Dimension of the (n, n) matrices X and Y.
+        iscomplex : bool
+            Whether the matrices X, Y are symmetric (False) or Hermitian (True). Default is False.
+        """             
         # Dimension properties
         self.n  = n               # Side dimension of system
         self.nu = 1 + 2 * self.n  # Barrier parameter

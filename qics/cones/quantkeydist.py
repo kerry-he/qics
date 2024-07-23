@@ -3,20 +3,46 @@ import qics.utils.linear as lin
 import qics.utils.mtxgrad as mgrad
 import qics.utils.symmetric as sym
 import qics.utils.quantum as quant
-from qics.cones.base import BaseCone
+from qics.cones.base import Cone
 
-class QuantKeyDist(BaseCone):
+class QuantKeyDist(Cone):
+    """A class representing a quantum key distribution cone
+    
+        K = { (t, X) ∈ R x H^n : t >= -S(G(X)) + S(Z(G(X))), X ⪰ 0 },
+        
+    with barrier function
+    
+        F(t, u, X) = -log(t + S(G(X)) - S(Z(G(X))) - logdet(X),
+        
+    where
+
+        S(X) = -tr[X log(X)],
+        
+    is the quantum (von Neumann) entropy function, G is a positive linear map, 
+    and Z is a pinching map that maps off-diagonal blocks to zero.
+    """    
     def __init__(self, K_list, Z_list, iscomplex=False):
+        """Initialize a QuantKeyDist instance
+
+        Parameters
+        ----------
+        K_list : list of ndarray
+            List of (k, n) Kraus operators corresponding to G such that G(X) = Σ_i Ki X Ki'.
+        Z_list : list of ndarray
+            List of (k, k) Kraus operators corresponding to Z such that Z(Y) = Σ_i Zi Y Zi'.
+        iscomplex : bool
+            Whether the matrix X is symmetric (False) or Hermitian (True). Default is False.
+        """        
         # Dimension properties
         self.n = K_list[0].shape[1]    # Get input dimension
         self.nu = 1 + self.n           # Barrier parameter
         self.iscomplex = iscomplex      # Is the problem complex-valued 
         
-        self.vn = sym.vec_dim(self.n, iscomplex)     # Get input vector dimension
+        self.vn = self.n*self.n if iscomplex else self.n*(self.n+1)//2      # Compact dimension of system
 
         self.dim   = [1, self.n*self.n] if (not iscomplex) else [1, 2*self.n*self.n]
-        self.type  = ['r', 's']           if (not iscomplex) else ['r', 'h']
-        self.dtype = np.float64           if (not iscomplex) else np.complex128       
+        self.type  = ['r', 's']         if (not iscomplex) else ['r', 'h']
+        self.dtype = np.float64         if (not iscomplex) else np.complex128       
 
         # Always block the ZK operator as Z maps to block matrices
         self.K_list_blk  = [facial_reduction(K_list)]
