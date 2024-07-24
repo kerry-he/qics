@@ -1,6 +1,6 @@
 import numpy as np
 import qics.utils.linear as lin
-import qics.utils.mtxgrad as mgrad
+import qics.utils.gradient as grad
 from qics.cones.base import Cone, get_central_ray_entr
 
 class QuantEntr(Cone):
@@ -337,7 +337,7 @@ class QuantEntr(Cone):
         D3PhiuXu = Hu * trHx * self.ui2
         D3PhiuuX = D3PhiuXu
 
-        D3PhiXXX = mgrad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
+        D3PhiXXX = grad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
         D3PhiXuu = (Hu2 * self.ui2) * np.eye(self.n)
 
         # Third derivatives of barrier
@@ -389,7 +389,7 @@ class QuantEntr(Cone):
         self.ui2 = self.ui * self.ui
 
         D1x_inv       = np.reciprocal(np.outer(self.Dx, self.Dx))
-        self.D1x_log  = mgrad.D1_log(self.Dx, self.log_Dx)
+        self.D1x_log  = grad.D1_log(self.Dx, self.log_Dx)
         self.D1x_comb = self.zi * self.D1x_log + D1x_inv
 
         self.hess_aux_updated = True
@@ -420,7 +420,7 @@ class QuantEntr(Cone):
 
         self.zi3 = self.zi * self.zi2
         self.ui3 = self.ui * self.ui2
-        self.D2x_log = mgrad.D2_log(self.Dx, self.D1x_log)
+        self.D2x_log = grad.D2_log(self.Dx, self.D1x_log)
 
         self.dder3_aux_updated = True
 

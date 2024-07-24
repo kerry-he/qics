@@ -1,6 +1,6 @@
 import numpy as np
 import qics.utils.linear as lin
-import qics.utils.mtxgrad as mgrad
+import qics.utils.gradient as grad
 import qics.utils.symmetric as sym
 from qics.cones.base import Cone
 
@@ -348,8 +348,8 @@ class QuantCondEntr(Cone):
         D2PhiH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
         D2PhiH -= sym.i_kr(self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T, self.sys, (self.n0, self.n1))
 
-        D3PhiHH = mgrad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
-        D3PhiHH -= sym.i_kr(mgrad.scnd_frechet(self.D2y_log, UyHyUy, UyHyUy, self.Uy), self.sys, (self.n0, self.n1))
+        D3PhiHH = grad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
+        D3PhiHH -= sym.i_kr(grad.scnd_frechet(self.D2y_log, UyHyUy, UyHyUy, self.Uy), self.sys, (self.n0, self.n1))
 
         # Third derivative of barrier
         DPhiH = lin.inp(self.DPhi, Hx)
@@ -401,10 +401,10 @@ class QuantCondEntr(Cone):
         assert self.grad_updated
 
         D1x_inv       = np.reciprocal(np.outer(self.Dx, self.Dx))
-        self.D1x_log  = mgrad.D1_log(self.Dx, self.log_Dx)
+        self.D1x_log  = grad.D1_log(self.Dx, self.log_Dx)
         self.D1x_comb = self.zi * self.D1x_log + D1x_inv
         
-        self.D1y_log = mgrad.D1_log(self.Dy, self.log_Dy)
+        self.D1y_log = grad.D1_log(self.Dy, self.log_Dy)
 
         # Preparing other required variables
         self.zi2 = self.zi * self.zi        
@@ -417,8 +417,8 @@ class QuantCondEntr(Cone):
         assert not self.dder3_aux_updated
         assert self.hess_aux_updated
 
-        self.D2x_log = mgrad.D2_log(self.Dx, self.D1x_log)
-        self.D2y_log = mgrad.D2_log(self.Dy, self.D1y_log)
+        self.D2x_log = grad.D2_log(self.Dx, self.D1x_log)
+        self.D2y_log = grad.D2_log(self.Dy, self.D1y_log)
 
         self.dder3_aux_updated = True
 

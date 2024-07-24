@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 import qics.utils.linear as lin
-import qics.utils.mtxgrad as mgrad
+import qics.utils.gradient as grad
 from qics.cones.base import Cone, get_perspective_derivatives
 
 class OpPerspecEpi(Cone):
@@ -183,8 +183,8 @@ class OpPerspecEpi(Cone):
         self.UxyxXZXUxyx = self.rt2X_Uxyx.conj().T @ self.inv_Z @ self.rt2X_Uxyx
 
         # Compute derivatives of Pg(X, Y)
-        self.D1yxy_h = mgrad.D1_f(self.Dyxy, self.h_Dyxy, self.dh(self.Dyxy))
-        self.D1xyx_g = mgrad.D1_f(self.Dxyx, self.g_Dxyx, self.dg(self.Dxyx))
+        self.D1yxy_h = grad.D1_f(self.Dyxy, self.h_Dyxy, self.dh(self.Dyxy))
+        self.D1xyx_g = grad.D1_f(self.Dxyx, self.g_Dxyx, self.dg(self.Dxyx))
 
         self.DPhiX =  self.irt2Y_Uyxy @ (self.D1yxy_h * self.UyxyYZYUyxy) @ self.irt2Y_Uyxy.conj().T
         self.DPhiX = (self.DPhiX + self.DPhiX.conj().T) * 0.5
@@ -223,10 +223,10 @@ class OpPerspecEpi(Cone):
         outX = self.irt2Y_Uyxy @ (self.D1yxy_h * work) @ self.irt2Y_Uyxy.conj().T
 
         work  = self.irt2Y_Uyxy.conj().T @ Hx @ self.irt2Y_Uyxy
-        outX += mgrad.scnd_frechet(self.D2yxy_h, self.UyxyYZYUyxy, work, U=self.irt2Y_Uyxy)
+        outX += grad.scnd_frechet(self.D2yxy_h, self.UyxyYZYUyxy, work, U=self.irt2Y_Uyxy)
 
         work  = self.irt2Y_Uyxy.conj().T @ Hy @ self.irt2Y_Uyxy
-        outX -= mgrad.scnd_frechet(self.D2yxy_xh, self.UyxyYZYUyxy, work, U=self.irt2Y_Uyxy)
+        outX -= grad.scnd_frechet(self.D2yxy_xh, self.UyxyYZYUyxy, work, U=self.irt2Y_Uyxy)
 
         outX += self.inv_X @ Hx @ self.inv_X
 
@@ -238,10 +238,10 @@ class OpPerspecEpi(Cone):
         outY = self.irt2X_Uxyx @ (self.D1xyx_g * work) @ self.irt2X_Uxyx.conj().T
 
         work  = self.irt2X_Uxyx.conj().T @ Hy @ self.irt2X_Uxyx
-        outY += mgrad.scnd_frechet(self.D2xyx_g, self.UxyxXZXUxyx, work, U=self.irt2X_Uxyx)
+        outY += grad.scnd_frechet(self.D2xyx_g, self.UxyxXZXUxyx, work, U=self.irt2X_Uxyx)
 
         work  = self.irt2X_Uxyx.conj().T @ Hx @ self.irt2X_Uxyx
-        outY -= mgrad.scnd_frechet(self.D2xyx_xg, self.UxyxXZXUxyx, work, U=self.irt2X_Uxyx)
+        outY -= grad.scnd_frechet(self.D2xyx_xg, self.UxyxXZXUxyx, work, U=self.irt2X_Uxyx)
 
         outY += self.inv_Y @ Hy @ self.inv_Y
 
@@ -443,12 +443,12 @@ class OpPerspecEpi(Cone):
         DxPhiHx = self.rt2Y_Uyxy @ (self.D1yxy_h * UyxyYHxYUyxy) @ self.rt2Y_Uyxy.conj().T
         DyPhiHy = self.rt2X_Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.rt2X_Uxyx.conj().T
 
-        D2xxPhiHxHx = mgrad.scnd_frechet(self.D2yxy_h, UyxyYHxYUyxy, UyxyYHxYUyxy, U=self.rt2Y_Uyxy)
-        D2yyPhiHyHy = mgrad.scnd_frechet(self.D2xyx_g,  UxyxXHyXUxyx, UxyxXHyXUxyx, U=self.rt2X_Uxyx)
+        D2xxPhiHxHx = grad.scnd_frechet(self.D2yxy_h, UyxyYHxYUyxy, UyxyYHxYUyxy, U=self.rt2Y_Uyxy)
+        D2yyPhiHyHy = grad.scnd_frechet(self.D2xyx_g,  UxyxXHyXUxyx, UxyxXHyXUxyx, U=self.rt2X_Uxyx)
 
         work = Hx @ self.irt2X_Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.rt2X_Uxyx.conj().T
         D2xyPhiHxHy  = work + work.conj().T
-        D2xyPhiHxHy -= mgrad.scnd_frechet(self.D2xyx_xg, UxyxXHxXUxyx, UxyxXHyXUxyx, U=self.rt2X_Uxyx)
+        D2xyPhiHxHy -= grad.scnd_frechet(self.D2xyx_xg, UxyxXHxXUxyx, UxyxXHyXUxyx, U=self.rt2X_Uxyx)
 
         # Third order derivative with respect to T
         work = Ht - DxPhiHx - DyPhiHy
@@ -461,24 +461,24 @@ class OpPerspecEpi(Cone):
 
         work2 = -2 * self.inv_Z @ (Ht - DxPhiHx - DyPhiHy) @ self.inv_Z
         work  = self.rt2Y_Uyxy.conj().T @ work2 @ self.rt2Y_Uyxy
-        dder3_X += mgrad.scnd_frechet(self.D2yxy_h, work, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
+        dder3_X += grad.scnd_frechet(self.D2yxy_h, work, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
 
         work = self.irt2X_Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.rt2X_Uxyx.conj().T @ work2
         dder3_X += work + work.conj().T
         work = self.rt2X_Uxyx.conj().T @ work2 @ self.rt2X_Uxyx
-        dder3_X -= mgrad.scnd_frechet(self.D2xyx_xg, work, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
+        dder3_X -= grad.scnd_frechet(self.D2xyx_xg, work, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
 
-        dder3_X += mgrad.thrd_frechet(self.Dyxy, self.D2yxy_h, self.d3h(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYZYUyxy, UyxyYHxYUyxy)
+        dder3_X += grad.thrd_frechet(self.Dyxy, self.D2yxy_h, self.d3h(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYZYUyxy, UyxyYHxYUyxy)
 
         work = self.rt2Y_Uyxy.conj().T @ self.inv_Z @ Hy @ self.irt2Y_Uyxy
         work += work.conj().T
-        dder3_X += 2 * mgrad.scnd_frechet(self.D2yxy_h, work, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
+        dder3_X += 2 * grad.scnd_frechet(self.D2yxy_h, work, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
         work = self.rt2Y_Uyxy.conj().T @ self.inv_Z @ self.rt2Y_Uyxy
-        dder3_X -= 2 * mgrad.thrd_frechet(self.Dyxy, self.D2yxy_xh, self.d3xh(self.Dyxy), self.irt2Y_Uyxy, work, UyxyYHyYUyxy, UyxyYHxYUyxy)
+        dder3_X -= 2 * grad.thrd_frechet(self.Dyxy, self.D2yxy_xh, self.d3xh(self.Dyxy), self.irt2Y_Uyxy, work, UyxyYHyYUyxy, UyxyYHxYUyxy)
 
-        work = self.irt2_X @ mgrad.scnd_frechet(self.D2xyx_g, UxyxXHyXUxyx, UxyxXHyXUxyx, U=self.Uxyx) @ self.rt2_X @ self.inv_Z
+        work = self.irt2_X @ grad.scnd_frechet(self.D2xyx_g, UxyxXHyXUxyx, UxyxXHyXUxyx, U=self.Uxyx) @ self.rt2_X @ self.inv_Z
         dder3_X += work + work.conj().T
-        dder3_X -= mgrad.thrd_frechet(self.Dxyx, self.D2xyx_xg, self.d3xg(self.Dxyx), self.irt2X_Uxyx, self.UxyxXZXUxyx, UxyxXHyXUxyx)
+        dder3_X -= grad.thrd_frechet(self.Dxyx, self.D2xyx_xg, self.d3xg(self.Dxyx), self.irt2X_Uxyx, self.UxyxXZXUxyx, UxyxXHyXUxyx)
 
         dder3_X -= 2 * self.inv_X @ Hx @ self.inv_X @ Hx @ self.inv_X
 
@@ -488,24 +488,24 @@ class OpPerspecEpi(Cone):
 
         work2 = -2 * self.inv_Z @ (Ht - DxPhiHx - DyPhiHy) @ self.inv_Z
         work  = self.rt2X_Uxyx.conj().T @ work2 @ self.rt2X_Uxyx
-        dder3_Y += mgrad.scnd_frechet(self.D2xyx_g, work, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
+        dder3_Y += grad.scnd_frechet(self.D2xyx_g, work, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
 
         work = self.irt2Y_Uyxy @ (self.D1yxy_h * UyxyYHxYUyxy) @ self.rt2Y_Uyxy.conj().T @ work2
         dder3_Y += work + work.conj().T
         work = self.rt2Y_Uyxy.conj().T @ work2 @ self.rt2Y_Uyxy
-        dder3_Y -= mgrad.scnd_frechet(self.D2yxy_xh, work, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
+        dder3_Y -= grad.scnd_frechet(self.D2yxy_xh, work, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
 
-        dder3_Y += mgrad.thrd_frechet(self.Dxyx, self.D2xyx_g, self.d3g(self.Dxyx), self.irt2X_Uxyx, self.UxyxXZXUxyx, UxyxXHyXUxyx)
+        dder3_Y += grad.thrd_frechet(self.Dxyx, self.D2xyx_g, self.d3g(self.Dxyx), self.irt2X_Uxyx, self.UxyxXZXUxyx, UxyxXHyXUxyx)
 
         work = self.rt2X_Uxyx.conj().T @ self.inv_Z @ Hx @ self.irt2X_Uxyx
         work += work.conj().T
-        dder3_Y += 2 * mgrad.scnd_frechet(self.D2xyx_g, work, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
+        dder3_Y += 2 * grad.scnd_frechet(self.D2xyx_g, work, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
         work = self.rt2X_Uxyx.conj().T @ self.inv_Z @ self.rt2X_Uxyx
-        dder3_Y -= 2 * mgrad.thrd_frechet(self.Dxyx, self.D2xyx_xg, self.d3xg(self.Dxyx), self.irt2X_Uxyx, work, UxyxXHxXUxyx, UxyxXHyXUxyx)
+        dder3_Y -= 2 * grad.thrd_frechet(self.Dxyx, self.D2xyx_xg, self.d3xg(self.Dxyx), self.irt2X_Uxyx, work, UxyxXHxXUxyx, UxyxXHyXUxyx)
 
-        work = self.irt2_Y @ mgrad.scnd_frechet(self.D2yxy_h, UyxyYHxYUyxy, UyxyYHxYUyxy, U=self.Uyxy) @ self.rt2_Y @ self.inv_Z
+        work = self.irt2_Y @ grad.scnd_frechet(self.D2yxy_h, UyxyYHxYUyxy, UyxyYHxYUyxy, U=self.Uyxy) @ self.rt2_Y @ self.inv_Z
         dder3_Y += work + work.conj().T
-        dder3_Y -= mgrad.thrd_frechet(self.Dyxy, self.D2yxy_xh, self.d3xh(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYZYUyxy, UyxyYHxYUyxy)
+        dder3_Y -= grad.thrd_frechet(self.Dyxy, self.D2yxy_xh, self.d3xh(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYZYUyxy, UyxyYHxYUyxy)
 
         dder3_Y -= 2 * self.inv_Y @ Hy @ self.inv_Y @ Hy @ self.inv_Y
 
@@ -557,13 +557,13 @@ class OpPerspecEpi(Cone):
         assert not self.hess_aux_updated
         assert self.grad_updated
 
-        self.D1yxy_xh = mgrad.D1_f(self.Dyxy, self.xh(self.Dyxy), self.dxh(self.Dyxy))
-        self.D1xyx_xg = mgrad.D1_f(self.Dxyx, self.xg(self.Dxyx), self.dxg(self.Dxyx))
+        self.D1yxy_xh = grad.D1_f(self.Dyxy, self.xh(self.Dyxy), self.dxh(self.Dyxy))
+        self.D1xyx_xg = grad.D1_f(self.Dxyx, self.xg(self.Dxyx), self.dxg(self.Dxyx))
 
-        self.D2yxy_h  = mgrad.D2_f(self.Dyxy, self.D1yxy_h, self.d2h(self.Dyxy))
-        self.D2xyx_g  = mgrad.D2_f(self.Dxyx, self.D1xyx_g, self.d2g(self.Dxyx))
-        self.D2yxy_xh = mgrad.D2_f(self.Dyxy, self.D1yxy_xh, self.d2xh(self.Dyxy))
-        self.D2xyx_xg = mgrad.D2_f(self.Dxyx, self.D1xyx_xg, self.d2xg(self.Dxyx))
+        self.D2yxy_h  = grad.D2_f(self.Dyxy, self.D1yxy_h, self.d2h(self.Dyxy))
+        self.D2xyx_g  = grad.D2_f(self.Dxyx, self.D1xyx_g, self.d2g(self.Dxyx))
+        self.D2yxy_xh = grad.D2_f(self.Dyxy, self.D1yxy_xh, self.d2xh(self.Dyxy))
+        self.D2xyx_xg = grad.D2_f(self.Dxyx, self.D1xyx_xg, self.d2xg(self.Dxyx))
 
         self.hess_aux_updated = True
 
@@ -583,7 +583,7 @@ class OpPerspecEpi(Cone):
         # Make Hxx = (D2xxPhi'[Z^-1] + X^1 kron X^-1) block
         # D2xxPhi'[Z^-1]
         lin.congr(self.work8, self.irt2Y_Uyxy.conj().T, self.E, work=self.work6)
-        mgrad.scnd_frechet_multi(self.work5, self.D2yxy_h, self.work8, self.UyxyYZYUyxy, U=self.irt2Y_Uyxy, work1=self.work6, work2=self.work7, work3=self.work4)
+        grad.scnd_frechet_multi(self.work5, self.D2yxy_h, self.work8, self.UyxyYZYUyxy, U=self.irt2Y_Uyxy, work1=self.work6, work2=self.work7, work3=self.work4)
         # X^1 kron X^-1
         lin.congr(self.work8, self.inv_X, self.E, work=self.work7)
         self.work8 += self.work5
@@ -594,7 +594,7 @@ class OpPerspecEpi(Cone):
         # Make Hyy = (D2yyPhi'[Z^-1] + Y^1 kron Y^-1) block
         # D2yyPhi'[Z^-1]
         lin.congr(self.work8, self.irt2X_Uxyx.conj().T, self.E, work=self.work7)
-        mgrad.scnd_frechet_multi(self.work5, self.D2xyx_g, self.work8, self.UxyxXZXUxyx, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
+        grad.scnd_frechet_multi(self.work5, self.D2xyx_g, self.work8, self.UxyxXZXUxyx, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
         # Y^1 kron Y^-1
         lin.congr(self.work6, self.inv_Y, self.E, work=self.work7)
         self.work6 += self.work5
@@ -604,7 +604,7 @@ class OpPerspecEpi(Cone):
 
         # Make Hyx = D2yxPhi'[Z^-1] block
         # Make -D2(xg) component
-        mgrad.scnd_frechet_multi(self.work5, self.D2xyx_xg, self.work8, self.UxyxXZXUxyx, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
+        grad.scnd_frechet_multi(self.work5, self.D2xyx_xg, self.work8, self.UxyxXZXUxyx, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
         # Make Dg + Dg' component
         self.work8 *= self.D1xyx_g
         lin.congr(self.work6, self.irt2X_Uxyx, self.work8, work=self.work7, B=self.inv_Z @ self.rt2X_Uxyx)

@@ -2,7 +2,7 @@ import numpy as np
 import scipy as sp
 
 class Vector():
-    # Base vector class represented by a numpy array called 'vec'
+    """Base class for a vector"""
     def __init__(self):
         self.vec = None
 
@@ -40,9 +40,9 @@ class Vector():
         return self
     
 class Point(Vector):
+    """A class for a vector containing the variables involved in a homogeneous 
+    self-dual embedding of a primal-dual conic program (x, y, z, s, tau, kap)"""    
     def __init__(self, model):
-        # Vector class containing the variables involved in a homogeneous 
-        # self-dual embedding of a primal-dual conic program
         (n, p, q) = (model.n, model.p, model.q)
 
         # Initialize vector
@@ -60,9 +60,9 @@ class Point(Vector):
         return
     
 class PointXYZ(Vector):
+    """A class for a vector containing only the (x,y,z) variables invovled in a  
+    primal-dual conic program"""    
     def __init__(self, model, vec=None):
-        # Vector class containing the (x,y,z) variables invovled in a 
-        # primal-dual conic program
         (n, p, q) = (model.n, model.p, model.q)
 
         # Initialize vector
@@ -82,9 +82,20 @@ class PointXYZ(Vector):
         return
     
 class VecProduct(Vector):
+    """A class for a Cartesian product of vector spaces corresponding
+    to a list of cones.
+    
+    Note that there are two ways to access the vector:
+        self.vec : View as a stacked, 1D vector
+        self[i]  : View of the i-th component in the Certesian product
+    
+    Also note that a complex matrix 
+        [ 0.+1.j   2.+3.j ]
+        [ 4.+5.j   6.+7.j ]
+    is vectorized as the real 1D vector
+        [0., 1., 2., 3., 4., 5., 6., 7.]
+    """
     def __init__(self, cones, vec=None):
-        # Vector class of a Cartesian product of vector spaces corresponding
-        # to a list of cones
         self.dims  = []
         self.types = []
         self.dim   = 0
@@ -113,11 +124,6 @@ class VecProduct(Vector):
                 return vec[t:t+dim].reshape((n_k, n_k))
             elif type == 'h':
                 # Hermitian matrix
-                # Note that the view is defined so that the real vector
-                #     [0., 1., 2., 3., 4., 5., 6., 7.] 
-                # is reshaped to the complex matrix
-                #     [ 0.+1.j   2.+3.j ]
-                #     [ 4.+5.j   6.+7.j ]
                 n_k = int(np.sqrt(dim // 2))
                 return vec[t:t+dim].reshape((-1, 2)).view(dtype=np.complex128).reshape(n_k, n_k)
 

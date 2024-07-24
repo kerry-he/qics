@@ -3,21 +3,27 @@ import scipy as sp
 import qics.utils.linear as lin
 import qics.utils.vector as vec
 
-# Solves the following square Newton system
-#     [ rx ]    [      A'  G'  c ] [ dx ]   [    ]
-#     [ ry ] := [ -A           b ] [ dy ] - [    ]
-#     [ rz ]    [ -G           h ] [ dz ]   [ ds ] 
-#     [rtau]    [ -c' -b' -h'    ] [dtau]   [dkap]
-# and
-#       rs   :=  mu H(s) ds + dz
-#      rkap  :=  (mu / tau^2) dtau + dkap   
-# or, if NT scaling is used,
-#       rs   :=  H(w) ds + dz
-#      rkap  :=  (kap / tau) dtau + dkap
-# for (dx, dy, dz, dtau, dkap) given right-hand residuals (rx, ry, rz, rtau, rkap)
-# by using block elimination and Cholesky factorization of the Schur complement matrix.
-
 class KKTSolver():
+    """A class which is used to solve the KKT system
+    
+        [ rx ]    [      A'  G'  c ] [ dx ]   [    ]
+        [ ry ] := [ -A           b ] [ dy ] - [    ]
+        [ rz ]    [ -G           h ] [ dz ]   [ ds ] 
+        [rtau]    [ -c' -b' -h'    ] [dtau]   [dkap]
+
+    and
+
+        rs   :=  mu H(s) ds + dz
+        rkap :=  (mu / tau^2) dtau + dkap   
+
+    or, if NT scaling is used,
+        
+        rs   :=  H(w) ds + dz
+        rkap :=  (kap / tau) dtau + dkap
+             
+    for (dx, dy, dz, dtau, dkap) given right-hand residuals (rx, ry, rz, rtau, rkap)
+    by using block elimination and Cholesky factorization of the Schur complement matrix.
+    """    
     def __init__(self, model, ir=True):
         self.model = model
 

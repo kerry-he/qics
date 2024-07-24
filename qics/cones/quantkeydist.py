@@ -1,6 +1,6 @@
 import numpy as np
 import qics.utils.linear as lin
-import qics.utils.mtxgrad as mgrad
+import qics.utils.gradient as grad
 import qics.utils.symmetric as sym
 import qics.utils.quantum as quant
 from qics.cones.base import Cone
@@ -171,8 +171,8 @@ class QuantKeyDist(Cone):
 
         self.zi2 = self.zi * self.zi
 
-        self.D1kx_log_blk  = [mgrad.D1_log(D, log_D) for (D, log_D) in zip(self.Dkx_blk,  self.log_Dkx_blk)]
-        self.D1zkx_log_blk = [mgrad.D1_log(D, log_D) for (D, log_D) in zip(self.Dzkx_blk, self.log_Dzkx_blk)]
+        self.D1kx_log_blk  = [grad.D1_log(D, log_D) for (D, log_D) in zip(self.Dkx_blk,  self.log_Dkx_blk)]
+        self.D1zkx_log_blk = [grad.D1_log(D, log_D) for (D, log_D) in zip(self.Dzkx_blk, self.log_Dzkx_blk)]
 
         self.hess_aux_updated = True
 
@@ -307,9 +307,9 @@ class QuantKeyDist(Cone):
         D2PhiH -= sum([sym.congr_map(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
                         for (U, D1, UHU, K_list) in zip(self.Uzkx_blk, self.D1zkx_log_blk, UkzZKHUkz_blk, self.ZK_list_blk)])
 
-        D3PhiHH  = sum([sym.congr_map(mgrad.scnd_frechet(D2 * UHU, UHU, U=U), K_list, adjoint=True)
+        D3PhiHH  = sum([sym.congr_map(grad.scnd_frechet(D2 * UHU, UHU, U=U), K_list, adjoint=True)
                         for (U, D2, UHU, K_list) in zip(self.Ukx_blk, self.D2kx_log_blk, UkKHUk_blk, self.K_list_blk)])
-        D3PhiHH -= sum([sym.congr_map(mgrad.scnd_frechet(D2 * UHU, UHU, U=U), K_list, adjoint=True)
+        D3PhiHH -= sum([sym.congr_map(grad.scnd_frechet(D2 * UHU, UHU, U=U), K_list, adjoint=True)
                         for (U, D2, UHU, K_list) in zip(self.Uzkx_blk, self.D2zkx_log_blk, UkzZKHUkz_blk, self.ZK_list_blk)])
 
         # Third derivative of barrier
@@ -434,8 +434,8 @@ class QuantKeyDist(Cone):
 
         self.zi3 = self.zi2 * self.zi
 
-        self.D2kx_log_blk  = [mgrad.D2_log(D, D1) for (D, D1) in zip(self.Dkx_blk,  self.D1kx_log_blk)]
-        self.D2zkx_log_blk = [mgrad.D2_log(D, D1) for (D, D1) in zip(self.Dzkx_blk, self.D1zkx_log_blk)]
+        self.D2kx_log_blk  = [grad.D2_log(D, D1) for (D, D1) in zip(self.Dkx_blk,  self.D1kx_log_blk)]
+        self.D2zkx_log_blk = [grad.D2_log(D, D1) for (D, D1) in zip(self.Dzkx_blk, self.D1zkx_log_blk)]
 
         self.dder3_aux_updated = True
 

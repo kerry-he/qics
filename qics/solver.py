@@ -82,6 +82,39 @@ class Solver():
         return
     
     def solve(self):
+        """Run the primal-dual interior point solver
+        
+        Returns
+        -------
+        dict
+            Dictionary containing solver output, with the following fields
+            x_opt : Optimal primal variable x
+            y_opt : Optimal dual variable y
+            z_opt : Optimal dual variable z
+            s_opt : Optimal primal variable s
+            
+            sol_status : Solution status. Can either be
+                optimal       : Primal-dual optimal solution reached
+                p_infeas      : Detected primal infeasibility
+                d_infeas      : Detected dual infeasibility
+                near_optimal  : Near primal-dual optimal solution
+                near_pinfeas  : Near primal infeasibility
+                near_dinfeas  : Near dual infeasibiltiy
+                unknown       : Unknown solution status
+            exit_status : Solver exit status. Can either be
+                solved        : Terminated at desired tolerance
+                step_failure  : Unable to take another step
+                slow_progress : Residuals are decreasing too slowly
+            
+            num_iter : Number of solver iterations
+            solve_time : Total time elapsed (in seconds)
+            
+            p_obj : Optimal primal objective
+            d_obj : Optimal dual objective
+            opt_gap : Relative optimality gap
+            p_feas : Primal feasibility
+            d_feas : Dual feasibiltiy
+        """
         # Print header
         if self.verbose:
             print("========================================================================")
@@ -165,7 +198,32 @@ class Solver():
             print(f"        opt. gap:     {self.gap:<.2e}")
             print()
 
-        return
+        # Scale variables back
+        x_opt = self.point.x / self.model.c_scale.reshape((-1, 1)) / self.point.tau
+        y_opt = self.point.y / self.model.b_scale.reshape((-1, 1)) / self.point.tau
+        z_opt = self.point.z
+        z_opt.vec /= self.model.h_scale.reshape((-1, 1)) * self.point.tau
+        s_opt = self.point.s
+        s_opt.vec /= self.model.h_scale.reshape((-1, 1)) * self.point.tau
+
+        return {
+            "x_opt": x_opt,
+            "y_opt": y_opt,
+            "z_opt": z_opt,
+            "s_opt": s_opt,
+            
+            "sol_status": self.solution_status,
+            "exit_status": self.exit_status,
+            
+            "num_iter": self.iter,
+            "solve_time": self.solve_time,
+            
+            "p_obj": self.p_obj,
+            "d_obj": self.d_obj,
+            "opt_gap": self.gap,
+            "p_feas": max(self.y_feas, self.z_feas),
+            "d_feas": self.x_feas
+        }
     
     def step_and_check(self): 
         # ==============================================================

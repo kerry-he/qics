@@ -1,7 +1,21 @@
 import numpy as np
 
-def randDensityMatrix(n, iscomplex=False):
-    # Generate random density matrix on Haar measure
+def rand_density_matrix(n, iscomplex=False):
+    """Generate random density matrix on Haar measure,
+    i.e., positive semifedinite matrix X satisfying tr[X] = 1.
+
+    Parameters
+    ----------
+    n : int
+        Dimension of random (n, n) matrix
+    iscomplex : bool, optional
+        Whether the matrix is symmetric (False) or Hermitian (True). Default is False.
+        
+    Returns
+    -------
+    ndarray
+        Random density matrix of dimension (n, n)        
+    """
     if iscomplex:
         X = np.random.normal(size=(n, n)) + np.random.normal(size=(n, n)) * 1j
     else:
@@ -9,9 +23,23 @@ def randDensityMatrix(n, iscomplex=False):
     rho = X @ X.conj().T
     return rho / np.trace(rho)
 
-def randPureDensityMatrix(n, iscomplex=False):
-    # Generate random density matrix on Haar measure
-    # https://sumeetkhatri.com/wp-content/uploads/2020/05/random_pure_states.pdf
+def rand_pure_density_matrix(n, iscomplex=False):
+    """Generate random pure density matrix
+    i.e., rank 1 positive semifedinite matrix X satisfying tr[X] = 1.
+    See: https://sumeetkhatri.com/wp-content/uploads/2020/05/random_pure_states.pdf
+
+    Parameters
+    ----------
+    n : int
+        Dimension of random (n, n) matrix
+    iscomplex : bool, optional
+        Whether the matrix is symmetric (False) or Hermitian (True). Default is False.
+        
+    Returns
+    -------
+    ndarray
+        Random density matrix of dimension (n, n)        
+    """    
     if iscomplex:
         psi = np.random.normal(size=(n)) + np.random.normal(size=(n)) * 1j
     else:
@@ -21,9 +49,23 @@ def randPureDensityMatrix(n, iscomplex=False):
     rho = (rho + rho.conj().T) * 0.5
     return rho
 
-def randUnitary(n, iscomplex=False):
-    # Random unitary uniformly distributed on Haar measure
-    # https://case.edu/artsci/math/esmeckes/Meckes_SAMSI_Lecture2.pdf
+def rand_unitary(n, iscomplex=False):
+    """Generate random unitary uniformly distributed on Haar measure
+    i.e., matrix U satisfying U'U = UU' = I.
+    See: https://case.edu/artsci/math/esmeckes/Meckes_SAMSI_Lecture2.pdf
+
+    Parameters
+    ----------
+    n : int
+        Dimension of random (n, n) unitary
+    iscomplex : bool, optional
+        Whether the unitary is real (False) or complex (True). Default is False.
+        
+    Returns
+    -------
+    ndarray
+        Random unitary of dimension (n, n)        
+    """       
     if iscomplex:
         X = np.random.normal(size=(n, n)) + np.random.normal(size=(n, n)) * 1j
     else:
@@ -31,30 +73,69 @@ def randUnitary(n, iscomplex=False):
     U, _ = np.linalg.qr(X)
     return U
 
-def randStinespringOperator(nin, nout=None, nenv=None, iscomplex=False):
-    # Random Stinespring operator uniformly distributed on Hilbert-Schmidt measure
-    # https://arxiv.org/abs/2011.02994
+def rand_stinespring_operator(nin, nout=None, nenv=None, iscomplex=False):
+    """Generate random Stinespring operator uniformly distributed on Hilbert-Schmidt measure
+    i.e., isometry V corresponding to quantum channel N(X) = tr_E[V X V'].
+    See: https://arxiv.org/abs/2011.02994
+
+    Parameters
+    ----------
+    nin : int
+        Dimension of input system.
+    nout : int, optional
+        Dimension of output system. Default is nin.
+    nenv : int, optional
+        Dimension of environment system. Default is nout.         
+    iscomplex : bool, optional
+        Whether the Stinespring is real (False) or complex (True). Default is False.
+        
+    Returns
+    -------
+    ndarray
+        Random Stinespring operator of dimension (nout*nenv, nin)
+    """
     nout = nout if (nout is not None) else nin
     nenv = nenv if (nenv is not None) else nout
-    U = randUnitary(nout * nenv, iscomplex=iscomplex)
+    U = rand_unitary(nout * nenv, iscomplex=iscomplex)
     return U[:, :nin]
 
-def randDegradableChannel(nin, nout, nenv, iscomplex=False):
-    # Random degradable channel, represented as a Stinespring isometry
-    # Returns both Stinespring isometry V such that
-    #     N(X)  = Tr_2[VXV']
-    #     Nc(X) = Tr_1[VXV']
-    # Also returns Stinespring isometry W such that
-    #     Nc(X) = Tr_2[WN(X)W']
-    # See https://arxiv.org/abs/0802.1360
+def rand_degradable_channel(nin, nout, nenv, iscomplex=False):
+    """Generate random degradable channel, represented as a Stinespring isometry V such that
+    
+        N(X)  = Tr_2[V X V']
+        Nc(X) = Tr_1[V X V']
+        
+    Also returns Stinespring isometry W such that
+    
+        Nc(X) = Tr_2[W N(X) W']
+        
+    See https://arxiv.org/abs/0802.1360
 
+    Parameters
+    ----------
+    nin : int
+        Dimension of input system.
+    nout : int, optional
+        Dimension of output system. Default is nin.
+    nenv : int, optional
+        Dimension of environment system. Default is nout.
+    iscomplex : bool, optional
+        Whether the Stinespring is real (False) or complex (True). Default is False.
+        
+    Returns
+    -------
+    ndarray
+        Stinespring operator V of dimension (nout*nenv, nin) corresponding to N(X) = Tr_2[V X V'].
+    ndarray
+        Stinespring operator W of dimension (nin*nenv, nout) corresponding to Nc(X) = Tr_2[W N(X) W'].
+    """
     assert nenv <= nin
     dtype = np.complex128 if iscomplex else np.float64
 
     V = np.zeros((nout*nenv, nin), dtype=dtype)    # N Stinespring isometry
     W = np.zeros((nin*nenv, nout), dtype=dtype)    # Ξ Stinespring isometry
 
-    U = randUnitary(nin, iscomplex=iscomplex)
+    U = rand_unitary(nin, iscomplex=iscomplex)
     for k in range(nout):
         # Generate random vector
         if iscomplex:
@@ -72,23 +153,69 @@ def randDegradableChannel(nin, nout, nenv, iscomplex=False):
 
     return V, W
 
-def quantEntropy(rho):
-    # "Safe" quantum entropy for positive definite matrices
-    eig = np.linalg.eigvalsh(rho)
-    eig = eig[eig > 0]
-    return -sum(eig * np.log(eig))
-
 def entropy(x):
-    # "Safe" entropy for positive vectors
+    """Computes classical (Shannon) entropy 
+    
+        H(x) = -Σ_i xi log(xi),
+        
+    for nonnegative vector x.
+    
+    Parameters
+    ----------
+    x : ndarray
+        Nonnegative (n, 1) vector to compute classical entropy of.
+        
+    Returns
+    -------
+    float
+        Classical entropy of x.
+    """    
     x = x[x > 0]
     return -sum(x * np.log(x))
 
-def purify(rho):
-    # Returns a purification of a quantum state
-    n = rho.shape[0]
-    D, U = np.linalg.eigh(rho)
+def quant_entropy(X):
+    """Computes quantum (von Neumann) entropy 
+    
+        S(X) = -tr[X log(X)],
+        
+    for positive semidefinite matrix X.
+    
+    Parameters
+    ----------
+    X : ndarray
+        Positive semidefinite (n, n) matrix to compute quantum entropy of.
+        
+    Returns
+    -------
+    float
+        Quantum entropy of X.
+    """
+    eig = np.linalg.eigvalsh(X)
+    return entropy(eig)
 
-    vec = np.zeros((n*n, 1), dtype=rho.dtype)
+def purify(X):
+    """Returns a purification of a quantum state X. If X has spectral decomposition
+    
+        X = Σ_i xi (vi vi'),
+        
+    then the purification is pp' where
+    
+        p = Σ_i sqrt(xi) (vi ⊗ vi).
+    
+    Parameters
+    ----------
+    X : ndarray
+        Density matrix of size (n, n).
+        
+    Returns
+    -------
+    ndarray
+        Purification matrix of X of size (n^2, n^2).
+    """    
+    n = X.shape[0]
+    D, U = np.linalg.eigh(X)
+
+    vec = np.zeros((n*n, 1), dtype=X.dtype)
     for i in range(n):
         vec += np.sqrt(D[i]) * np.kron(U[:, [i]], U[:, [i]])
 

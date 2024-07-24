@@ -1,6 +1,6 @@
 import numpy as np
 import qics.utils.linear as lin
-import qics.utils.mtxgrad as mgrad
+import qics.utils.gradient as grad
 from qics.cones.base import Cone, get_central_ray_relentr
 
 class QuantRelEntr(Cone):
@@ -121,7 +121,7 @@ class QuantRelEntr(Cone):
         inv_Y_rt2 = self.Uy * np.sqrt(self.inv_Dy)
         self.inv_Y = inv_Y_rt2 @ inv_Y_rt2.conj().T        
 
-        self.D1y_log = mgrad.D1_log(self.Dy, self.log_Dy)
+        self.D1y_log = grad.D1_log(self.Dy, self.log_Dy)
 
         self.UyXUy = self.Uy.conj().T @ self.X @ self.Uy
 
@@ -156,7 +156,7 @@ class QuantRelEntr(Cone):
         D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
         D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T
         D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.conj().T
-        D2PhiYYH = -mgrad.scnd_frechet(self.D2y_log_UXU, UyHyUy, U=self.Uy)
+        D2PhiYYH = -grad.scnd_frechet(self.D2y_log_UXU, UyHyUy, U=self.Uy)
         
         # Hessian product of barrier function
         out[0][:] = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
@@ -199,7 +199,7 @@ class QuantRelEntr(Cone):
         lin.congr(self.D2PhiYXH, self.Uy, self.work1, self.work2)
 
         lin.congr(self.work1, self.Uy.conj().T, self.Ay, self.work2)
-        mgrad.scnd_frechet_multi(self.D2PhiYYH, self.D2y_comb, self.work1, U=self.Uy, work1=self.work2, work2=self.work3, work3=self.work5)
+        grad.scnd_frechet_multi(self.D2PhiYYH, self.D2y_comb, self.work1, U=self.Uy, work1=self.work2, work2=self.work3, work3=self.work5)
 
         self.work1 *= self.D1y_log * self.zi
         lin.congr(self.D2PhiXYH, self.Uy, self.work1, self.work2)
@@ -406,18 +406,18 @@ class QuantRelEntr(Cone):
         D2PhiXXH =  self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
         D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T
         D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.conj().T
-        D2PhiYYH = -mgrad.scnd_frechet(self.D2y_log_UXU, UyHyUy, U=self.Uy)
+        D2PhiYYH = -grad.scnd_frechet(self.D2y_log_UXU, UyHyUy, U=self.Uy)
 
         D2PhiXHH = lin.inp(Hx, D2PhiXXH + D2PhiXYH)
         D2PhiYHH = lin.inp(Hy, D2PhiYXH + D2PhiYYH)
 
         # Quantum relative entropy third order derivatives
-        D3PhiXXX =  mgrad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
-        D3PhiXYY = -mgrad.scnd_frechet(self.D2y_log, UyHyUy, UyHyUy, self.Uy)
+        D3PhiXXX =  grad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
+        D3PhiXYY = -grad.scnd_frechet(self.D2y_log, UyHyUy, UyHyUy, self.Uy)
 
-        D3PhiYYX = -mgrad.scnd_frechet(self.D2y_log, UyHyUy, UyHxUy, self.Uy)
+        D3PhiYYX = -grad.scnd_frechet(self.D2y_log, UyHyUy, UyHxUy, self.Uy)
         D3PhiYXY = D3PhiYYX
-        D3PhiYYY = -mgrad.thrd_frechet(self.Dy, self.D2y_log, 2*(self.inv_Dy**3), self.Uy, self.UyXUy, UyHyUy, UyHyUy)
+        D3PhiYYY = -grad.thrd_frechet(self.Dy, self.D2y_log, 2*(self.inv_Dy**3), self.Uy, self.UyXUy, UyHyUy, UyHyUy)
         
         # Third derivatives of barrier
         dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhiXHH + D2PhiYHH)
@@ -476,10 +476,10 @@ class QuantRelEntr(Cone):
         assert self.grad_updated
 
         D1x_inv       = np.reciprocal(np.outer(self.Dx, self.Dx))
-        self.D1x_log  = mgrad.D1_log(self.Dx, self.log_Dx)
+        self.D1x_log  = grad.D1_log(self.Dx, self.log_Dx)
         self.D1x_comb = self.zi * self.D1x_log + D1x_inv
 
-        self.D2y_log = mgrad.D2_log(self.Dy, self.D1y_log)
+        self.D2y_log = grad.D2_log(self.Dy, self.D1y_log)
         self.D2y_log_UXU = self.D2y_log * self.UyXUy
         self.D2y_comb    = -self.D2y_log * (self.zi * self.UyXUy + np.eye(self.n))        
 
@@ -509,7 +509,7 @@ class QuantRelEntr(Cone):
         self.D1x_comb_inv = np.reciprocal(self.D1x_comb)
         
         # Get [-1/z Sy + Dy^-1 kron Dy^-1] matrix
-        hess_schur = mgrad.get_S_matrix(self.D2y_comb, np.sqrt(2.0), iscomplex=self.iscomplex)
+        hess_schur = grad.get_S_matrix(self.D2y_comb, np.sqrt(2.0), iscomplex=self.iscomplex)
 
         # Get [1/z^2 log^[1](Dy) (Uy'Ux kron Uy'Ux) [(1/z log + inv)^[1](Dx)]^-1 (Ux'Uy kron Ux'Uy) log^[1](Dy)] matrix
         # Begin with log^[1](Dy)
@@ -573,7 +573,7 @@ class QuantRelEntr(Cone):
         assert self.hess_aux_updated
 
         self.zi3 = self.zi2 * self.zi
-        self.D2x_log = mgrad.D2_log(self.Dx, self.D1x_log)
+        self.D2x_log = grad.D2_log(self.Dx, self.D1x_log)
 
         self.dder3_aux_updated = True
 

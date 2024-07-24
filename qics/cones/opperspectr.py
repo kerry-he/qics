@@ -1,6 +1,6 @@
 import numpy as np
 import qics.utils.linear as lin
-import qics.utils.mtxgrad as mgrad
+import qics.utils.gradient as grad
 from qics.cones.base import Cone, get_perspective_derivatives
 
 class OpPerspecTr(Cone):
@@ -165,8 +165,8 @@ class OpPerspecTr(Cone):
         self.zi =  np.reciprocal(self.z)
 
         # Compute derivatives of tr[Pg(X, Y)]
-        self.D1yxy_h = mgrad.D1_f(self.Dyxy, self.h_Dyxy, self.dh(self.Dyxy))
-        self.D1xyx_g = mgrad.D1_f(self.Dxyx, self.g_Dxyx, self.dg(self.Dxyx))
+        self.D1yxy_h = grad.D1_f(self.Dyxy, self.h_Dyxy, self.dh(self.Dyxy))
+        self.D1xyx_g = grad.D1_f(self.Dxyx, self.g_Dxyx, self.dg(self.Dxyx))
 
         self.DPhiX = self.irt2Y_Uyxy @ (self.D1yxy_h * self.UyxyYUyxy) @ self.irt2Y_Uyxy.conj().T
         self.DPhiX = (self.DPhiX + self.DPhiX.conj().T) * 0.5
@@ -200,17 +200,17 @@ class OpPerspecTr(Cone):
         UxyxXHyXUxyx = self.irt2X_Uxyx.conj().T @ Hy @ self.irt2X_Uxyx
 
         # Hessian product of tr[Pg(X, Y)]
-        D2PhiXXH = mgrad.scnd_frechet(self.D2yxy_h, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
+        D2PhiXXH = grad.scnd_frechet(self.D2yxy_h, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
 
         D2PhiXYH  = self.irt2X_Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
         D2PhiXYH += D2PhiXYH.conj().T
-        D2PhiXYH -= mgrad.scnd_frechet(self.D2xyx_xg, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
+        D2PhiXYH -= grad.scnd_frechet(self.D2xyx_xg, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
 
         D2PhiYXH  = self.irt2Y_Uyxy @ (self.D1yxy_h * UyxyYHxYUyxy) @ self.Uyxy.conj().T @ self.rt2_Y
         D2PhiYXH += D2PhiYXH.conj().T
-        D2PhiYXH -= mgrad.scnd_frechet(self.D2yxy_xh, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
+        D2PhiYXH -= grad.scnd_frechet(self.D2yxy_xh, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
 
-        D2PhiYYH = mgrad.scnd_frechet(self.D2xyx_g, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
+        D2PhiYYH = grad.scnd_frechet(self.D2xyx_g, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
         
         # Hessian product of barrier function
         out[0][:] = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)) * self.zi2
@@ -330,45 +330,45 @@ class OpPerspecTr(Cone):
         UyxyYHyYUyxy = self.Uyxy.conj().T @ self.irt2_Y @ Hy @ self.irt2_Y @ self.Uyxy
 
         # Hessian products of tr[Pg(X, Y)]
-        D2PhiXXH = mgrad.scnd_frechet(self.D2yxy_h, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
+        D2PhiXXH = grad.scnd_frechet(self.D2yxy_h, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
 
         D2PhiXYH  = self.irt2_X @ self.Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
         D2PhiXYH += D2PhiXYH.conj().T
-        D2PhiXYH -= mgrad.scnd_frechet(self.D2xyx_xg, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
+        D2PhiXYH -= grad.scnd_frechet(self.D2xyx_xg, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
 
         D2PhiYXH  = self.irt2_Y @ self.Uyxy @ (self.D1yxy_h * UyxyYHxYUyxy) @ self.Uyxy.conj().T @ self.rt2_Y
         D2PhiYXH += D2PhiYXH.conj().T
-        D2PhiYXH -= mgrad.scnd_frechet(self.D2yxy_xh, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
+        D2PhiYXH -= grad.scnd_frechet(self.D2yxy_xh, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
 
-        D2PhiYYH = mgrad.scnd_frechet(self.D2xyx_g, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
+        D2PhiYYH = grad.scnd_frechet(self.D2xyx_g, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
 
         D2PhiXHH = lin.inp(Hx, D2PhiXXH + D2PhiXYH)
         D2PhiYHH = lin.inp(Hy, D2PhiYXH + D2PhiYYH)
 
         # Operator perspective third order derivatives
         # Second derivatives of DxPhi
-        D3PhiXXX = mgrad.thrd_frechet(self.Dyxy, self.D2yxy_h, self.d3h(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy)
+        D3PhiXXX = grad.thrd_frechet(self.Dyxy, self.D2yxy_h, self.d3h(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy)
 
         work      = self.Uyxy.conj().T @ self.rt2_Y @ Hy @ self.irt2Y_Uyxy
-        D3PhiXXY  = mgrad.scnd_frechet(self.D2yxy_h, work + work.conj().T, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
-        D3PhiXXY -= mgrad.thrd_frechet(self.Dyxy, self.D2yxy_xh, self.d3xh(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy, UyxyYHyYUyxy)
+        D3PhiXXY  = grad.scnd_frechet(self.D2yxy_h, work + work.conj().T, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
+        D3PhiXXY -= grad.thrd_frechet(self.Dyxy, self.D2yxy_xh, self.d3xh(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy, UyxyYHyYUyxy)
         D3PhiXYX  = D3PhiXXY
 
-        D3PhiXYY  = self.irt2_X @ mgrad.scnd_frechet(self.D2xyx_g, UxyxXHyXUxyx, UxyxXHyXUxyx, U=self.Uxyx) @ self.rt2_X
+        D3PhiXYY  = self.irt2_X @ grad.scnd_frechet(self.D2xyx_g, UxyxXHyXUxyx, UxyxXHyXUxyx, U=self.Uxyx) @ self.rt2_X
         D3PhiXYY += D3PhiXYY.conj().T
-        D3PhiXYY -= mgrad.thrd_frechet(self.Dxyx, self.D2xyx_xg, self.d3xg(self.Dxyx), self.irt2X_Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx)
+        D3PhiXYY -= grad.thrd_frechet(self.Dxyx, self.D2xyx_xg, self.d3xg(self.Dxyx), self.irt2X_Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx)
 
         # Second derivatives of DyPhi
-        D3PhiYYY = mgrad.thrd_frechet(self.Dxyx, self.D2xyx_g, self.d3g(self.Dxyx), self.irt2X_Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx)
+        D3PhiYYY = grad.thrd_frechet(self.Dxyx, self.D2xyx_g, self.d3g(self.Dxyx), self.irt2X_Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx)
 
         work      = self.Uxyx.conj().T @ self.rt2_X @ Hx @ self.irt2X_Uxyx
-        D3PhiYYX  = mgrad.scnd_frechet(self.D2xyx_g, work + work.conj().T, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
-        D3PhiYYX -= mgrad.thrd_frechet(self.Dxyx, self.D2xyx_xg, self.d3xg(self.Dxyx), self.irt2X_Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx, UxyxXHxXUxyx)
+        D3PhiYYX  = grad.scnd_frechet(self.D2xyx_g, work + work.conj().T, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
+        D3PhiYYX -= grad.thrd_frechet(self.Dxyx, self.D2xyx_xg, self.d3xg(self.Dxyx), self.irt2X_Uxyx, self.UxyxXUxyx, UxyxXHyXUxyx, UxyxXHxXUxyx)
         D3PhiYXY  = D3PhiYYX
     
-        D3PhiYXX  = self.irt2_Y @ mgrad.scnd_frechet(self.D2yxy_h, UyxyYHxYUyxy, UyxyYHxYUyxy, U=self.Uyxy) @ self.rt2_Y
+        D3PhiYXX  = self.irt2_Y @ grad.scnd_frechet(self.D2yxy_h, UyxyYHxYUyxy, UyxyYHxYUyxy, U=self.Uyxy) @ self.rt2_Y
         D3PhiYXX += D3PhiYXX.conj().T
-        D3PhiYXX -= mgrad.thrd_frechet(self.Dyxy, self.D2yxy_xh, self.d3xh(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy)
+        D3PhiYXX -= grad.thrd_frechet(self.Dyxy, self.D2yxy_xh, self.d3xh(self.Dyxy), self.irt2Y_Uyxy, self.UyxyYUyxy, UyxyYHxYUyxy)
         
         # Third derivatives of barrier
         dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhiXHH + D2PhiYHH)
@@ -416,13 +416,13 @@ class OpPerspecTr(Cone):
         assert not self.hess_aux_updated
         assert self.grad_updated
 
-        self.D1yxy_xh = mgrad.D1_f(self.Dyxy, self.xh(self.Dyxy), self.dxh(self.Dyxy))
-        self.D1xyx_xg = mgrad.D1_f(self.Dxyx, self.xg(self.Dxyx), self.dxg(self.Dxyx))
+        self.D1yxy_xh = grad.D1_f(self.Dyxy, self.xh(self.Dyxy), self.dxh(self.Dyxy))
+        self.D1xyx_xg = grad.D1_f(self.Dxyx, self.xg(self.Dxyx), self.dxg(self.Dxyx))
 
-        self.D2yxy_h  = mgrad.D2_f(self.Dyxy, self.D1yxy_h, self.d2h(self.Dyxy))
-        self.D2xyx_g  = mgrad.D2_f(self.Dxyx, self.D1xyx_g, self.d2g(self.Dxyx))
-        self.D2yxy_xh = mgrad.D2_f(self.Dyxy, self.D1yxy_xh, self.d2xh(self.Dyxy))
-        self.D2xyx_xg = mgrad.D2_f(self.Dxyx, self.D1xyx_xg, self.d2xg(self.Dxyx))
+        self.D2yxy_h  = grad.D2_f(self.Dyxy, self.D1yxy_h, self.d2h(self.Dyxy))
+        self.D2xyx_g  = grad.D2_f(self.Dxyx, self.D1xyx_g, self.d2g(self.Dxyx))
+        self.D2yxy_xh = grad.D2_f(self.Dyxy, self.D1yxy_xh, self.d2xh(self.Dyxy))
+        self.D2xyx_xg = grad.D2_f(self.Dxyx, self.D1xyx_xg, self.d2xg(self.Dxyx))
 
         # Preparing other required variables
         self.zi2 = self.zi * self.zi
@@ -445,9 +445,9 @@ class OpPerspecTr(Cone):
         self.z2 = self.z * self.z
 
         # Make Hxx block
-        # D2PhiXXH  = self.zi * mgrad.scnd_frechet(self.D2yxy_h, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
+        # D2PhiXXH  = self.zi * grad.scnd_frechet(self.D2yxy_h, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
         lin.congr(self.work8, self.irt2Y_Uyxy.conj().T, self.E, work=self.work7)
-        mgrad.scnd_frechet_multi(self.work5, self.D2yxy_h * self.UyxyYUyxy, self.work8, U=self.irt2Y_Uyxy, work1=self.work6, work2=self.work7, work3=self.work4)
+        grad.scnd_frechet_multi(self.work5, self.D2yxy_h * self.UyxyYUyxy, self.work8, U=self.irt2Y_Uyxy, work1=self.work6, work2=self.work7, work3=self.work4)
         self.work5 *= self.zi
 
         # D2PhiXXH += self.inv_X @ Hx @ self.inv_X
@@ -458,9 +458,9 @@ class OpPerspecTr(Cone):
         Hxx *= self.scale
 
         # Make Hyy block
-        # D2PhiYYH  = self.zi * mgrad.scnd_frechet(self.D2xyx_g, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
+        # D2PhiYYH  = self.zi * grad.scnd_frechet(self.D2xyx_g, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
         lin.congr(self.work8, self.irt2X_Uxyx.conj().T, self.E, work=self.work7)
-        mgrad.scnd_frechet_multi(self.work5, self.D2xyx_g * self.UxyxXUxyx, self.work8, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
+        grad.scnd_frechet_multi(self.work5, self.D2xyx_g * self.UxyxXUxyx, self.work8, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
         self.work5 *= self.zi
 
         # D2PhiYYH += self.inv_Y @ Hy @ self.inv_Y
@@ -471,8 +471,8 @@ class OpPerspecTr(Cone):
         Hyy *= self.scale
 
         # Make Hxy block
-        # D2PhiXYH -= self.zi * mgrad.scnd_frechet(self.D2xyx_xg, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
-        mgrad.scnd_frechet_multi(self.work5, self.D2xyx_xg * self.UxyxXUxyx, self.work8, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
+        # D2PhiXYH -= self.zi * grad.scnd_frechet(self.D2xyx_xg, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
+        grad.scnd_frechet_multi(self.work5, self.D2xyx_xg * self.UxyxXUxyx, self.work8, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
 
         # D2PhiXYH  = self.zi * self.irt2_X @ self.Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
         # D2PhiXYH += D2PhiXYH.conj().T
