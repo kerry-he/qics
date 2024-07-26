@@ -98,61 +98,224 @@ class Cone():
 
     # Functions that the child class has to implement
     def get_init_point(self, out):
+        """Returns a central primal-dual point (s0, z0) satisfying
+        
+             z0 = -F'(s0)
+             
+        and stores this point in-place in out.
+
+        Parameters
+        ----------
+        out : ndarray or list of ndarray
+            Preallocated vector to store the central point in place. 
+        """
         pass
     
     def get_feas(self):
+        """Returns whether current primal point s is in the interior of the cone K.
+
+        Returns
+        ----------
+        bool
+            Whether current primal point s is in the interior of the cone K.
+        """        
         pass
     
     def update_grad(self):
+        """Compute the gradient F'(s) of the barrier function and store in self.grad."""        
         pass
 
     def hess_prod_ip(self, out, H):
+        """Compute the Hessian product D2F(s)[H] of the barrier function in the 
+        direction of H, and store this in-place in out.
+
+        Parameters
+        ----------
+        out : ndarray or list of ndarray
+            Preallocated vector to store the Hessian product in place. 
+        H : ndarray or list of ndarray
+            The direction to compute the second derivative in.
+        """        
         pass
 
     def hess_congr(self, A):
+        """Compute the congruence transform AH(s)A' with the Hessian matrix H of the barrier function.
+
+        Parameters
+        ----------
+        A : ndarray
+            Matrix of size (p, n), where n is the dimension of the cone K. 
+            Should correspond to a linear constraint matrix from the conic
+            program definition.
+        
+        Returns
+        ----------
+        ndarray
+            The matrix product AH(s)A'.
+        """        
         pass
 
     def invhess_prod_ip(self, out, H):
+        """Compute the inverse Hessian product D2F(s)^-1[H] of the barrier function in the 
+        direction of H, and store this in-place in out.
+
+        Parameters
+        ----------
+        out : ndarray or list of ndarray
+            Preallocated vector to store the inverse Hessian product in place. 
+        H : ndarray or list of ndarray
+            The direction to compute the inverse second derivative in.   
+        """     
         pass
 
     def invhess_congr(self, A):
+        """Compute the congruence transform A(H(s)^-1)A' with the inverse Hessian 
+        matrix H(s)^-1 of the barrier function.
+
+        Parameters
+        ----------
+        A : ndarray
+            Matrix of size (p, n), where n is the dimension of the cone K. 
+            Should correspond to a linear constraint matrix from the conic
+            program definition.
+        
+        Returns
+        ----------
+        ndarray
+            The matrix product A(H(s)^-1)A'.        
+        """
         pass
 
     def third_dir_deriv_axpy(self, out, H, a=True):
+        """Compute the third directional derivative in direction H and add 
+        it to an existing vector, i.e.,
+        
+            out <-- out + a * D3F(s)[H, H]
+
+        Parameters
+        ----------
+        out : ndarray or list of ndarray
+            Vector to add the third directional derivative to. 
+        H : ndarray or list of ndarray
+            The direction to compute the third directional derivative in.
+        a : float, optional
+            Amount to scale the third directional derivative by. Default is 1.
+        """
         pass
 
 class SymCone(Cone):
-    """Base class for symmetric cones"""    
+    """Base class for symmetric cones. These cones have a NT scaling 
+    point w and scaled variable lambda such that
+    
+        H(w) s = z  <==> lambda := W^-T s = W z
+        
+    where H(w) = W^T W.
+    """    
     def get_issymmetric(self):
         return True
 
     # Functions that the child class has to implement
     def nt_prod_ip(self, out, H):
+        """Compute the Hessian product D2F(w)[H] of the barrier function in the 
+        direction of H, and store this in-place in out.
+
+        Parameters
+        ----------
+        out : ndarray or list of ndarray
+            Preallocated vector to store the Hessian product in place. 
+        H : ndarray or list of ndarray
+            The direction to compute the second derivative in.
+        """               
         pass
 
     def nt_congr(self, A):
+        """Compute the congruence transform AH(w)A' with the Hessian matrix H of the barrier function.
+
+        Parameters
+        ----------
+        A : ndarray
+            Matrix of size (p, n), where n is the dimension of the cone K. 
+            Should correspond to a linear constraint matrix from the conic
+            program definition.
+        
+        Returns
+        ----------
+        ndarray
+            The matrix product AH(w)A'.
+        """        
         pass
     
     def invnt_prod_ip(self, out, H):
+        """Compute the inverse Hessian product D2F(w)^-1[H] of the barrier function in the 
+        direction of H, and store this in-place in out.
+
+        Parameters
+        ----------
+        out : ndarray or list of ndarray
+            Preallocated vector to store the inverse Hessian product in place. 
+        H : ndarray or list of ndarray
+            The direction to compute the inverse second derivative in.   
+        """        
         pass
 
     def invnt_congr(self, A):
+        """Compute the congruence transform A(H(w)^-1)A' with the inverse Hessian 
+        matrix H(w)^-1 of the barrier function.
+
+        Parameters
+        ----------
+        A : ndarray
+            Matrix of size (p, n), where n is the dimension of the cone K. 
+            Should correspond to a linear constraint matrix from the conic
+            program definition.
+        
+        Returns
+        ----------
+        ndarray
+            The matrix product A(H(w)^-1)A'.        
+        """        
         pass
 
     def comb_dir(self, out, ds, dz, sigma_mu):
-        # Compute the residual for rs where rs is given as the lhs of
-        #     Lambda o (W dz + W^-T ds) = -Lambda o Lambda - (W^-T ds_a) o (W dz_a) 
-        #                                 + sigma * mu * I
-        # which is rearranged into the form H ds + dz = rs, i.e.,
-        #     rs := W^-1 [ Lambda \ (-Lambda o Lambda - (W^-T ds_a) o (W dz_a) + sigma*mu I) ]
-        # See: [Section 5.4]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf
+        """Compute the residual rs where rs is given as the lhs of
+        
+            Lambda o (W dz + W^-T ds) = -Lambda o Lambda - (W^-T ds_a) o (W dz_a) 
+                                        + sigma * mu * I
+                                        
+        which is rearranged into the form H ds + dz = rs, i.e.,
+        
+            rs := W^-1 [ Lambda \ (-Lambda o Lambda - (W^-T ds_a) o (W dz_a) + sigma*mu I) ]
+            
+        See: [Section 5.4]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf
+
+        Parameters
+        ----------
+        out : ndarray or list of ndarray
+            Preallocated vector to store the residual in place. 
+        ds : ndarray or list of ndarray
+            Vector representing the primal step direction.
+        dz : ndarray or list of ndarray
+            Vector representing the dual step direction.
+        sigma_mu : float
+            Value of the product simga*mu.
+        """
         pass
 
     def step_to_boundary(self, ds, dz):
-        # Compute the maximum step alpha in [0, 1] we can take such that 
-        #     s + alpha ds >= 0
-        #     z + alpha dz >= 0  
-        # See: [Section 8.3]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf
+        """Compute the maximum step alpha in [0, 1] we can take such that 
+        
+            s + alpha ds >= 0
+            z + alpha dz >= 0  
+            
+        See: [Section 8.3]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf
+
+        Parameters
+        ----------
+        ds : ndarray or list of ndarray
+            Vector representing the primal step direction.
+        dz : ndarray or list of ndarray
+            Vector representing the dual step direction.
+        """        
         pass
 
 def get_central_ray_relentr(x_dim):
