@@ -68,8 +68,8 @@ class QuantKeyDist(Cone):
         return self.iscomplex
 
     def get_init_point(self, out):
-        KK_blk   = [sym.congr_map(np.eye(self.n), K_list)  for K_list  in self.K_list_blk]
-        ZKKZ_blk = [sym.congr_map(np.eye(self.n), ZK_list) for ZK_list in self.ZK_list_blk]
+        KK_blk   = [sym.apply_kraus(np.eye(self.n), K_list)  for K_list  in self.K_list_blk]
+        ZKKZ_blk = [sym.apply_kraus(np.eye(self.n), ZK_list) for ZK_list in self.ZK_list_blk]
 
         entr_KK   = -sum([quant.quantEntropy(KK)   for KK   in KK_blk])
         entr_ZKKZ = -sum([quant.quantEntropy(ZKKZ) for ZKKZ in ZKKZ_blk])
@@ -103,7 +103,7 @@ class QuantKeyDist(Cone):
             return self.feas
 
         # Eigendecomposition of G(X)        
-        self.KX_blk  = [sym.congr_map(self.X, K_list)  for K_list  in self.K_list_blk]
+        self.KX_blk  = [sym.apply_kraus(self.X, K_list)  for K_list  in self.K_list_blk]
 
         DUkx_blk     = [np.linalg.eigh(KX) for KX in self.KX_blk]
         self.Dkx_blk = [DUkx[0] for DUkx in DUkx_blk]
@@ -114,7 +114,7 @@ class QuantKeyDist(Cone):
             return self.feas        
 
         # Eigendecomposition of Z(G(X))
-        self.ZKX_blk = [sym.congr_map(self.X, ZK_list) for ZK_list in self.ZK_list_blk]        
+        self.ZKX_blk = [sym.apply_kraus(self.X, ZK_list) for ZK_list in self.ZK_list_blk]        
 
         DUzkx_blk     = [np.linalg.eigh(ZKX) for ZKX in self.ZKX_blk]
         self.Dzkx_blk = [DUzkx[0] for DUzkx in DUzkx_blk]
@@ -148,8 +148,8 @@ class QuantKeyDist(Cone):
         log_KX  = [(U * log_D) @ U.conj().T for (U, log_D) in zip(self.Ukx_blk,  self.log_Dkx_blk)]
         log_ZKX = [(U * log_D) @ U.conj().T for (U, log_D) in zip(self.Uzkx_blk, self.log_Dzkx_blk)]
 
-        self.K_log_KX   = sum([sym.congr_map(log_X, K_list, adjoint=True) for (log_X, K_list) in zip(log_KX, self.K_list_blk)])
-        self.ZK_log_ZKX = sum([sym.congr_map(log_X, K_list, adjoint=True) for (log_X, K_list) in zip(log_ZKX, self.ZK_list_blk)])
+        self.K_log_KX   = sum([sym.apply_kraus(log_X, K_list, adjoint=True) for (log_X, K_list) in zip(log_KX, self.K_list_blk)])
+        self.ZK_log_ZKX = sum([sym.apply_kraus(log_X, K_list, adjoint=True) for (log_X, K_list) in zip(log_ZKX, self.ZK_list_blk)])
 
         self.inv_Dx = np.reciprocal(self.Dx)
         inv_X_rt2   = self.Ux * np.sqrt(self.inv_Dx)
@@ -188,16 +188,16 @@ class QuantKeyDist(Cone):
 
         (Ht, Hx) = H
 
-        KH_blk  = [sym.congr_map(Hx, K_list)  for K_list  in self.K_list_blk]
-        ZKH_blk = [sym.congr_map(Hx, ZK_list) for ZK_list in self.ZK_list_blk]
+        KH_blk  = [sym.apply_kraus(Hx, K_list)  for K_list  in self.K_list_blk]
+        ZKH_blk = [sym.apply_kraus(Hx, ZK_list) for ZK_list in self.ZK_list_blk]
 
         UkKHUk_blk    = [U.conj().T @ H @ U for (H, U) in zip(KH_blk, self.Ukx_blk)]
         UkzZKHUkz_blk = [U.conj().T @ H @ U for (H, U) in zip(ZKH_blk, self.Uzkx_blk)]
 
         # Hessian product of conditional entropy
-        D2PhiH  = sum([sym.congr_map(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
+        D2PhiH  = sum([sym.apply_kraus(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
                         for (U, D1, UHU, K_list) in zip(self.Ukx_blk, self.D1kx_log_blk, UkKHUk_blk, self.K_list_blk)])
-        D2PhiH -= sum([sym.congr_map(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
+        D2PhiH -= sum([sym.apply_kraus(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
                         for (U, D1, UHU, K_list) in zip(self.Uzkx_blk, self.D1zkx_log_blk, UkzZKHUkz_blk, self.ZK_list_blk)])
         
         # Hessian product of barrier function
@@ -295,21 +295,21 @@ class QuantKeyDist(Cone):
 
         (Ht, Hx) = H
 
-        KH_blk  = [sym.congr_map(Hx, K_list) for K_list in self.K_list_blk]
-        ZKH_blk = [sym.congr_map(Hx, ZK_list) for ZK_list in self.ZK_list_blk]
+        KH_blk  = [sym.apply_kraus(Hx, K_list) for K_list in self.K_list_blk]
+        ZKH_blk = [sym.apply_kraus(Hx, ZK_list) for ZK_list in self.ZK_list_blk]
 
         UkKHUk_blk    = [U.conj().T @ H @ U for (H, U) in zip(KH_blk, self.Ukx_blk)]
         UkzZKHUkz_blk = [U.conj().T @ H @ U for (H, U) in zip(ZKH_blk, self.Uzkx_blk)]
 
         # Quantum conditional entropy oracles
-        D2PhiH  = sum([sym.congr_map(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
+        D2PhiH  = sum([sym.apply_kraus(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
                         for (U, D1, UHU, K_list) in zip(self.Ukx_blk, self.D1kx_log_blk, UkKHUk_blk, self.K_list_blk)])
-        D2PhiH -= sum([sym.congr_map(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
+        D2PhiH -= sum([sym.apply_kraus(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
                         for (U, D1, UHU, K_list) in zip(self.Uzkx_blk, self.D1zkx_log_blk, UkzZKHUkz_blk, self.ZK_list_blk)])
 
-        D3PhiHH  = sum([sym.congr_map(grad.scnd_frechet(D2 * UHU, UHU, U=U), K_list, adjoint=True)
+        D3PhiHH  = sum([sym.apply_kraus(grad.scnd_frechet(D2 * UHU, UHU, U=U), K_list, adjoint=True)
                         for (U, D2, UHU, K_list) in zip(self.Ukx_blk, self.D2kx_log_blk, UkKHUk_blk, self.K_list_blk)])
-        D3PhiHH -= sum([sym.congr_map(grad.scnd_frechet(D2 * UHU, UHU, U=U), K_list, adjoint=True)
+        D3PhiHH -= sum([sym.apply_kraus(grad.scnd_frechet(D2 * UHU, UHU, U=U), K_list, adjoint=True)
                         for (U, D2, UHU, K_list) in zip(self.Uzkx_blk, self.D2zkx_log_blk, UkzZKHUkz_blk, self.ZK_list_blk)])
 
         # Third derivative of barrier
@@ -462,3 +462,10 @@ def facial_reduction(K_list):
     K_list_fr = [Qkk.conj().T @ K for K in K_list]
 
     return K_list_fr
+
+def apply_kraus(x, Klist, adjoint=False):
+    # Compute congruence map
+    if adjoint:
+        return sum([K.conj().T @ x @ K for K in Klist])   
+    else:
+        return sum([K @ x @ K.conj().T for K in Klist])

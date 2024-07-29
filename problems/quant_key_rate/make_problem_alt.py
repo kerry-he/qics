@@ -64,11 +64,11 @@ def make_problem(file_name, description=["", ""], optval=0.0):
     Klist_new  = [Q.conj().T @ K for K in Klist]
     ZKlist_new = [Q.conj().T @ Z @ K for Z in Zlist for K in Klist]
 
-    K_op     = sym.lin_to_mat(lambda x : sym.congr_map(x, Klist_new), ni, nk_fr, iscomplex=iscomplex)
-    ZK_op    = sym.lin_to_mat(lambda x : sym.congr_map(x, ZKlist_new), ni, nk_fr, iscomplex=iscomplex)
+    K_op     = sym.lin_to_mat(lambda x : sym.apply_kraus(x, Klist_new), ni, nk_fr, iscomplex=iscomplex)
+    ZK_op    = sym.lin_to_mat(lambda x : sym.apply_kraus(x, ZKlist_new), ni, nk_fr, iscomplex=iscomplex)
 
-    K_op_alt     = lin_to_mat_alt(lambda x : sym.congr_map(x, Klist_new), ni, nk_fr, iscomplex=iscomplex)
-    ZK_op_alt    = lin_to_mat_alt(lambda x : sym.congr_map(x, ZKlist_new), ni, nk_fr, iscomplex=iscomplex)
+    K_op_alt     = lin_to_mat_alt(lambda x : sym.apply_kraus(x, Klist_new), ni, nk_fr, iscomplex=iscomplex)
+    ZK_op_alt    = lin_to_mat_alt(lambda x : sym.apply_kraus(x, ZKlist_new), ni, nk_fr, iscomplex=iscomplex)
     eye_alt      = lin_to_mat_alt(lambda x : x, ni, ni, iscomplex=iscomplex)
     vnz_fr_alt   = sym.vec_dim(2*nk_fr, iscomplex=False)
     vni_alt      = sym.vec_dim(2*ni, iscomplex=False)

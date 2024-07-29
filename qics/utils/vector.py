@@ -90,9 +90,12 @@ class VecProduct(Vector):
         self[i]  : View of the i-th component in the Certesian product
     
     Also note that a complex matrix 
+    
         [ 0.+1.j   2.+3.j ]
         [ 4.+5.j   6.+7.j ]
+        
     is vectorized as the real 1D vector
+    
         [0., 1., 2., 3., 4., 5., 6., 7.]
     """
     def __init__(self, cones, vec=None):

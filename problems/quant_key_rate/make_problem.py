@@ -38,8 +38,8 @@ def make_problem(file_name, description=["", ""], optval=0.0):
     vni = sym.vec_dim(ni, iscomplex=iscomplex)
     vno = sym.vec_dim(no, iscomplex=iscomplex)
 
-    K_op = sym.lin_to_mat(lambda x : sym.congr_map(x, Klist), ni, no, iscomplex=iscomplex)
-    ZK_op = sym.lin_to_mat(lambda x : sym.congr_map(sym.congr_map(x, Klist), Zlist), ni, no, iscomplex=iscomplex)
+    K_op = sym.lin_to_mat(lambda x : sym.apply_kraus(x, Klist), ni, no, iscomplex=iscomplex)
+    ZK_op = sym.lin_to_mat(lambda x : sym.apply_kraus(sym.apply_kraus(x, Klist), Zlist), ni, no, iscomplex=iscomplex)
     Gamma_op = np.array([sym.mat_to_vec(G, iscomplex=iscomplex).T[0] for G in Gamma])
 
     # Build problem model

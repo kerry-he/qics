@@ -1,44 +1,37 @@
 import numpy as np
 import scipy as sp
+import qics
 
-import cProfile
+# SDP relaxation of max-cut
+#   min  ⟨C,X⟩
+#   s.t. X_ii = 1    for    i = 1,...,n.
+#        X >= 0
 
-from cones import *
-from utils import symmetric as sym, linear as lin
-from solver import model, solver
+n = 20
+iscomplex = True
 
-np.random.seed(1)
-
-n = 2000
-
+# Build linear constraints
+step = 2 if iscomplex else 1
 A_is = [i for i in range(n)]
-A_js = [i + i*n for i in range(n)]
+A_js = [i*step + i*n*step for i in range(n)]
 A_vs = [1. for i in range(n)]
-A = sp.sparse.csr_array((A_vs, (A_is, A_js)), shape=(n, n*n))
+A = sp.sparse.csr_array((A_vs, (A_is, A_js)), shape=(n, n*n*step))
 
 b = np.ones((n, 1))
+
+# Generate random linear objective function
 C = np.random.randn(n, n)
-C = C + C.T
-c = C.reshape((-1, 1))
+if iscomplex:
+    C = C + np.random.randn(n, n)*1j
+C = C + C.conj().T
+c = C.view(dtype=np.float64).reshape(-1, 1)
 
-cones = [possemidefinite.Cone(n)]
-model = model.Model(c=c,  A=A,   b=b, cones=cones)
-# model = model.Model(c=-b, G=A.T, h=c, cones=cones)
-solver = solver.Solver(model, ir=True)
+# Define cones to optimize over
+cones = [qics.cones.PosSemidefinite(n, iscomplex=iscomplex)]
 
-profiler = cProfile.Profile()
-profiler.enable()
+# Initialize model and solver objects
+model  = qics.Model(c=c, A=A, b=b, cones=cones)
+solver = qics.Solver(model)
 
-solver.solve()
-
-profiler.disable()
-profiler.dump_stats("example.stats")
-
-# Solve using CVXOPT and MOSEK
-from utils.other_solvers import cvxopt_solve_sdp, mosek_solve_sdp
-
-sol = cvxopt_solve_sdp([-C], b, A, [n])
-print("optval: ", sol['gap']) 
-print("time:   ", sol['time'])   
-
-sol = mosek_solve_sdp([-C], b, A, [n])
+# Solve problem
+out = solver.solve()

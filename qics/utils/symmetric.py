@@ -2,211 +2,260 @@ import math
 import numpy as np
 import numba as nb
 
-def vec_dim(side, iscomplex=False):
-    if iscomplex:
-        return side * side
-    else:
-        return side * (side + 1) // 2
+def vec_dim(side, iscomplex=False, compact=True):
+    """Computes the size of a vectorized matrix.
 
-def mat_dim(len, iscomplex=False):
-    if iscomplex:
-        side = math.isqrt(len)
-        assert side * side == len
-        return side
-    else:
-        side = math.isqrt(1 + 8 * len) // 2
-        assert side * (side + 1) == 2 * len
-        return side
-
-def mat_to_vec(mat, rt2=None, iscomplex=False):
-    if iscomplex:
-        if mat.shape[0] <= 450:
-            return mat_to_vec_complex_single(mat, rt2)
-        else:
-            return mat_to_vec_complex_parallel(mat, rt2)
-    else:
-        if mat.shape[0] <= 450:
-            return mat_to_vec_single(mat, rt2)
-        else:
-            return mat_to_vec_parallel(mat, rt2)
-
-@nb.njit
-def mat_to_vec_single(mat, rt2):
-    rt2 = np.sqrt(2.0) if (rt2 is None) else rt2
-
-    n = mat.shape[0]
-    vn = n*(n + 1) // 2
-    vec = np.empty((vn, 1))
-
-    k = 0
-    for j in range(n):
-        for i in range(j):
-            vec[k] = mat[i, j] * rt2
-            k += 1
+    Parameters
+    ----------
+    side : int
+        The dimension of the matrix.
+    iscomplex : bool, optional
+        Whether the matrix is Hermitian (True) or symmetric (False). Default is False.
+    compact : bool, optional
+        Whether to assume a compact vector representation or not. Default is False.
         
-        vec[k] = mat[j, j]
-        k += 1
+    Returns
+    -------
+    ndarray
+        The dimension of the vector.
+    """
+    if compact:
+        if iscomplex:
+            return side * side
+        else:
+            return side * (side + 1) // 2
+    else:
+        if iscomplex:
+            return 2 * side * side
+        else:
+            return side * side
+
+def mat_dim(len, iscomplex=False, compact=True):
+    """Computes the dimension of the matrix correpsonding to a vector.
+
+    Parameters
+    ----------
+    len : int
+        The dimension of the vector.
+    iscomplex : bool, optional
+        Whether the matrix is Hermitian (True) or symmetric (False). Default is False.
+    compact : bool, optional
+        Whether to assume a compact vector representation or not. Default is False.
+
+    Returns
+    -------
+    ndarray
+        The dimension of the matrix.
+    """    
+    if compact:
+        if iscomplex:
+            return math.isqrt(len)
+        else:
+            return math.isqrt(1 + 8 * len) // 2
+    else:
+        if iscomplex:
+            return math.isqrt(len) // 2
+        else:
+            return math.isqrt(len)
+
+def mat_to_vec(mat, iscomplex=False, compact=True):
+    """Reshapes a square matrix into a 1D vector, e.g., the symmetric matrix 
     
-    return vec
-
-@nb.njit(parallel=True)
-def mat_to_vec_parallel(mat, rt2, iscomplex=False):
-    rt2 = np.sqrt(2.0) if (rt2 is None) else rt2
-
-    n = mat.shape[0]
-    vn = n*(n + 1) // 2
-    vec = np.empty((vn, 1))
-
-    for j in nb.prange(n):
-        for i in range(j):
-            k = i + (j * (j + 1)) // 2
-            vec[k] = mat[i, j] * rt2
-
-        k = j + (j * (j + 1)) // 2
-        vec[k] = mat[j, j]
+        [ a  b  d ]
+        [ b  c  e ]
+        [ d  e  f ]
+        
+    is vectorized as the real 1D vector
     
-    return vec
+        [a, rt2*b, c, rt2*d, rt2*e, f]    if    compact = False
+        [a, b, d, b, c, e, d, e, f]       if    compact = True        
+    
+    and the Hermitian matrix
+    
+        [ a     b+cj  e+fj ]
+        [ b-cj  d     g+hj ]
+        [ e-fj  g-hj  i    ]
+        
+    is vectorized as the real 1D vector
+    
+        [a, rt2*b, rt2*c, d, rt2*e, rt2*f, rt2*g, rt2*h, i]          if    compact = False
+        [a, 0, b, c, e, f, b, -c, d, 0, g, h, e, -f, g, -h, i, 0]    if    compact = True
 
-@nb.njit
-def mat_to_vec_complex_single(mat, rt2):
-    rt2 = np.sqrt(2.0) if (rt2 is None) else rt2
+    Parameters
+    ----------
+    mat : ndarray
+        Input matrix to vectorize.
+    iscomplex : bool, optional
+        Whether the matrix to vectorize is Hermitian (True) or symmetric (False). Default is False.
+    compact : bool, optional
+        Whether to convert to a compact vector representation or not. Default is True.
+        
+    Returns
+    -------
+    ndarray
+        The resulting vectorized matrix.
+    """
+    if compact:
+        rt2 = np.sqrt(2.0)
+        n   = mat.shape[0]
+        vn  = vec_dim(n, iscomplex=iscomplex)
+        vec = np.empty((vn, 1))
 
-    n = mat.shape[0]
-    vn = n*n
-    vec = np.empty((vn, 1))
-
-    k = 0
-    for j in range(n):
-        for i in range(j):
-            vec[k] = mat[i, j].real * rt2
+        k = 0
+        for j in range(n):
+            for i in range(j):
+                vec[k] = mat[i, j].real * rt2
+                k += 1
+                if iscomplex:
+                    vec[k] = mat[i, j].imag * rt2
+                    k += 1
+            vec[k] = mat[j, j].real
             k += 1
-            vec[k] = mat[i, j].imag * rt2
-            k += 1
+
+        return vec
+    else:
+        return mat.view(dtype=np.float64).reshape(-1, 1).copy()
+
+def vec_to_mat(vec, iscomplex=False, compact=False):
+    """Reshapes a 1D vector into a symmetric or Hermitian matrix, e.g., the vectors 
+    
+        [a, rt2*b, c, rt2*d, rt2*e, f]    if    compact = False
+        [a, b, d, b, c, e, d, e, f]       if    compact = True   
+        
+    are reshaped into the real symmetric matrix     
+    
+        [ a  b  d ]
+        [ b  c  e ]
+        [ d  e  f ]
+        
+    and the vectors
+    
+        [a, rt2*b, rt2*c, d, rt2*e, rt2*f, rt2*g, rt2*h, i]          if    compact = False
+        [a, 0, b, c, e, f, b, -c, d, 0, g, h, e, -f, g, -h, i, 0]    if    compact = True
+    
+    are reshaped into the complex Hermitian matrix
+    
+        [ a     b+cj  e+fj ]
+        [ b-cj  d     g+hj ]
+        [ e-fj  g-hj  i    ]
+
+    Parameters
+    ----------
+    mat : ndarray
+        Input vector to reshape into a matrix.
+    iscomplex : bool, optional
+        Whether the resulting matrix is Hermitian (True) or symmetric (False). Default is False.
+    compact : bool, optional
+        Whether to convert from a compact vector representation or not. Default is False.
+        
+    Returns
+    -------
+    ndarray
+        The resulting matrix.
+    """
+    vn = vec.size
+    
+    if compact:
+        irt2 = np.sqrt(0.5)
+        n    = mat_dim(vn, iscomplex=iscomplex)
+        mat  = np.empty((n, n))
+
+        k = 0
+        for j in range(n):
+            for i in range(j):
+                if iscomplex:
+                    mat[i, j] = (vec[k, 0] + vec[k + 1, 0] * 1j) * irt2
+                    k += 2
+                else:
+                    mat[i, j] = vec[k, 0] * irt2
+                    k += 1
+                mat[j, i] = mat[i, j].conjugate()
             
-        vec[k] = mat[j, j].real
-        k += 1
-
-    return vec
-
-
-@nb.njit(parallel=True)
-def mat_to_vec_complex_parallel(mat, rt2):
-    rt2 = np.sqrt(2.0) if (rt2 is None) else rt2
-
-    n = mat.shape[0]
-    vn = n*n
-    vec = np.empty((vn, 1))
-
-    for j in nb.prange(n):
-        for i in range(j):
-            k = 2*i + j * j
-            vec[k]     = mat[i, j].real * rt2
-            vec[k + 1] = mat[i, j].imag * rt2
-        
-        k = 2*j + j * j
-        vec[k] = mat[j, j].real
-    
-    return vec
-
-def vec_to_mat(vec, irt2=None, iscomplex=False):
-    if iscomplex:
-        if vec.size <= 1000000:
-            return vec_to_mat_complex_single(vec, irt2)
-        else:
-            return vec_to_mat_complex_parallel(vec, irt2)
-    else:        
-        if vec.size <= 1280800:
-            return vec_to_mat_single(vec, irt2)
-        else:
-            return vec_to_mat_parallel(vec, irt2)
-
-@nb.njit
-def vec_to_mat_single(vec, irt2):
-    irt2 = np.sqrt(0.5) if (irt2 is None) else irt2
-
-    vn = vec.size
-    n = int(math.sqrt(1 + 8 * vn) // 2)
-    mat = np.empty((n, n))
-
-    k = 0
-    for j in range(n):
-        for i in range(j):
-            mat[i, j] = vec[k, 0] * irt2
-            mat[j, i] = mat[i, j]
+            mat[j, j] = vec[k, 0]
             k += 1
         
-        mat[j, j] = vec[k, 0]
-        k += 1
+        return mat
+    else:
+        if iscomplex:
+            n = math.isqrt(vn) // 2
+            mat = vec.reshape((-1, 2)).view(dtype=np.complex128).reshape(n, n)
+            return (mat + mat.conj().T) * 0.5
+        else:
+            n = math.isqrt(vn)
+            mat = vec.reshape((n, n))
+            return (mat + mat.T) * 0.5
 
-    return mat
+def p_tr(mat, sys, dims):
+    """Performs the partial trace on a bipartite matrix, i.e., the 
+    unique linear map satisfying
+    
+        X ⊗ Y --> tr[X] Y    if    sys = 0
+        X ⊗ Y --> tr[Y] X    if    sys = 1
 
-@nb.njit(parallel=True)
-def vec_to_mat_parallel(vec, irt2):
-    irt2 = np.sqrt(0.5) if (irt2 is None) else irt2
-
-    vn = vec.size
-    n = int(math.sqrt(1 + 8 * vn) // 2)
-    mat = np.empty((n, n))
-
-    for j in nb.prange(n):
-        for i in range(j):
-            k = i + (j * (j + 1)) // 2
-            mat[i, j] = vec[k, 0] * irt2
-            mat[j, i] = mat[i, j]
+    Parameters
+    ----------
+    mat : ndarray
+        Input (n0*n1, n0*n1) matrix to perform the partial trace on.
+    sys : int
+        Which system to trace out (either 0 or 1).
+    dims : tuple[int, int]
+        The dimensions (n0, n1) of the first and second subsystems.
         
-        k = i + (j * (j + 1)) // 2
-        mat[j, j] = vec[k, 0]
-
-    return mat
-
-@nb.njit
-def vec_to_mat_complex_single(vec, irt2):
-    irt2 = np.sqrt(0.5) if (irt2 is None) else irt2
-
-    vn = vec.size
-    n = int(np.sqrt(vn))
-    mat = np.zeros((n, n), dtype='complex128')
-
-    for j in range(n):
-        for i in range(j):
-            k = 2*i + j * j
-            mat[i, j] = (vec[k, 0] + vec[k + 1, 0] * 1j) * irt2
-            mat[j, i] = mat[i, j].conjugate()
-
-        k = 2*j + j * j
-        mat[j, j] = vec[k, 0]
-
-    return mat    
-
-@nb.njit(parallel=True)
-def vec_to_mat_complex_parallel(vec, irt2):
-    irt2 = np.sqrt(0.5) if (irt2 is None) else irt2
-
-    vn = vec.size
-    n = int(np.sqrt(vn))
-    mat = np.empty((n, n), dtype='complex128')
-
-    for j in nb.prange(n):
-        for i in range(j):
-            k = 2*i + j * j
-            mat[i, j] = (vec[k, 0] + vec[k + 1, 0] * 1j) * irt2
-            mat[j, i] = mat[i, j].conjugate()
-
-        k = 2*j + j * j
-        mat[j, j] = vec[k, 0]
-
-    return mat    
-
-def p_tr(mat, sys, dim):
-    (n0, n1) = dim
+    Returns
+    -------
+    ndarray
+        The resulting matrix after taking the partial trace. Has 
+        dimension (n1, n1) if sys=0, or dimension (n0, n0) if sys=1.
+    """
+    (n0, n1) = dims
     return np.trace(mat.reshape(n0, n1, n0, n1), axis1=sys, axis2=2+sys)
 
-def p_tr_multi(out, mat, sys, dim):
-    (n0, n1) = dim
+def p_tr_multi(out, mat, sys, dims):
+    """Performs the partial trace on a list of bipartite matrix, i.e., the 
+    unique linear map satisfying
+    
+        X ⊗ Y --> tr[X] Y    if    sys = 0
+        X ⊗ Y --> tr[Y] X    if    sys = 1
+
+    Parameters
+    ----------
+    out : ndarray
+        Preallocated list of matrices to store the output. Has 
+        dimension (k, n1, n1) if sys=0, or dimension (k, n0, n0) if sys=1.
+    mat : ndarray
+        Input (k, n0*n1, n0*n1) list of matrices to perform the partial trace on.
+    sys : int
+        Which system to trace out (either 0 or 1).
+    dims : tuple[int, int]
+        The dimensions (n0, n1) of the first and second subsystems.
+    """    
+    (n0, n1) = dims
     np.trace(mat.reshape(-1, n0, n1, n0, n1), axis1=1+sys, axis2=3+sys, out=out)
     return out
 
 def i_kr(mat, sys, dim):
+    """Performs Kronecker product between the indentity matrix and 
+    a given matrix, i.e.,
+    
+        X --> I ⊗ X    if    sys = 0
+        X --> X ⊗ I    if    sys = 1
+
+    Parameters
+    ----------
+    mat : ndarray
+        Input matrix to perform the partial trace on. Has 
+        dimension (n1, n1) if sys=0, or dimension (n0, n0) if sys=1.
+    sys : int
+        Which system to trace out (either 0 or 1).
+    dim : tuple[int, int]
+        The dimensions (n0, n1) of the first and second subsystems.
+        
+    Returns
+    -------
+    ndarray
+        The resulting (n0*n1, n0*n1) matrix after performing the 
+        Kronecker product.
+    """    
     (n0, n1) = dim
     out = np.zeros((n0*n1, n0*n1), dtype=mat.dtype)
     if sys == 1:
@@ -220,6 +269,28 @@ def i_kr(mat, sys, dim):
     return out
 
 def i_kr_multi(out, mat, sys, dim):
+    """Performs Kronecker product between the indentity matrix and 
+    a given list of matrices, i.e.,
+    
+        X --> I ⊗ X    if    sys = 0
+        X --> X ⊗ I    if    sys = 1
+
+    Parameters
+    ----------
+    mat : ndarray
+        Input matrix to perform the partial trace on. Has 
+        dimension (k, n1, n1) if sys=0, or dimension (k, n0, n0) if sys=1.
+    sys : int
+        Which system to trace out (either 0 or 1).
+    dim : tuple[int, int]
+        The dimensions (n0, n1) of the first and second subsystems.
+        
+    Returns
+    -------
+    ndarray
+        The resulting (k, n0*n1, n0*n1) matrix after performing the 
+        Kronecker product.
+    """
     (n0, n1) = dim
     out.fill(0.)
     if sys == 1:
@@ -233,8 +304,26 @@ def i_kr_multi(out, mat, sys, dim):
     return out
 
 def p_transpose(mat, sys, dim):
-    # Partial transpose operation: M_ij,kl -> M_kj,il if sys == 0, or
-    #                              M_ij,kl -> M_il,kj if sys == 1
+    """Performs the partial transpose on a bipartite matrix, i.e., 
+    the unique linear map satisfying
+    
+        M_ij,kl --> M_kj,il    if    sys == 0
+        M_ij,kl --> M_il,kj    if    sys == 1
+
+    Parameters
+    ----------
+    mat : ndarray
+        Input (n0*n1, n0*n1) matrix to perform the partial transpose on.
+    sys : int
+        Which system to transpose (either 0 or 1).
+    dim : tuple[int, int]
+        The dimensions (n0, n1) of the first and second subsystems.
+        
+    Returns
+    -------
+    ndarray
+        The resulting (n0*n1, n0*n1) matrix after performing the partial transpose.
+    """    
     (n0, n1) = dim
     assert sys == 0 or sys == 1
 
@@ -248,29 +337,39 @@ def p_transpose(mat, sys, dim):
     return temp.reshape(n0*n1, n0*n1)
 
 
-def lin_to_mat(lin, ni, no, iscomplex=False):
-    # Returns the matrix representation of a linear operator from (ni x ni) symmetric
-    # matrices to (no x no) symmetric matrices given as a function handle
-    vni = vec_dim(ni, iscomplex=iscomplex)
-    vno = vec_dim(no, iscomplex=iscomplex)
-    mat = np.zeros((vno, vni))
+def lin_to_mat(lin, dims, iscomplex=False, compact=(False, True)):
+    """Computes the matrix corresponding to a linear map from
+    vectorized symmetric matrices to symmetric matrices.
 
-    rt2  = np.sqrt(2.0)
-    irt2 = np.sqrt(0.5)
+    Parameters
+    ----------
+    lin : callable
+        Linear operator sending symmetric matrices to symmetric matrices.
+    dims : tuple[int, int]
+        The dimensions (ni, no) of the input and output matrices of the 
+        linear operator.
+    iscomplex : bool, optional
+        Whether the matrix to vectorize is Hermitian (True) or symmetric 
+        (False). Default is False.
+    compact : tuple[bool, bool], optional
+        Whether to use a compact vector representation or not for the input 
+        and output matrices. Default is (False, True).
+        
+    Returns
+    -------
+    ndarray
+        The matrix representation of lin.
+    """
+    vni = vec_dim(dims[0], iscomplex=iscomplex, compact=compact[0])
+    vno = vec_dim(dims[1], iscomplex=iscomplex, compact=compact[1])
+    mat = np.zeros((vno, vni))
 
     for k in range(vni):
         H = np.zeros((vni, 1))
         H[k] = 1.0
-        H_mat = vec_to_mat(H, irt2, iscomplex=iscomplex)
+        H_mat = vec_to_mat(H, iscomplex=iscomplex, compact=compact[0])
         lin_H = lin(H_mat)
-        vec_out = mat_to_vec(lin_H, rt2, iscomplex=iscomplex)
+        vec_out = mat_to_vec(lin_H, iscomplex=iscomplex, compact=compact[1])
         mat[:, [k]] = vec_out
 
     return mat
-
-def congr_map(x, Klist, adjoint=False):
-    # Compute congruence map
-    if adjoint:
-        return sum([K.conj().T @ x @ K for K in Klist])   
-    else:
-        return sum([K @ x @ K.conj().T for K in Klist])
