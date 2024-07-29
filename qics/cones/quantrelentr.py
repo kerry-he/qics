@@ -1,5 +1,5 @@
 import numpy as np
-import qics.utils.linear as lin
+import qics.utils.linalg as lin
 import qics.utils.gradient as grad
 from qics.cones.base import Cone, get_central_ray_relentr
 
@@ -190,19 +190,19 @@ class QuantRelEntr(Cone):
         # D2_YX Phi(X, Y) [Hx] = -Uy [log^[1](Dy) .* (Uy' Hx Uy)] Uy'
         # D2_XY Phi(X, Y) [Hy] = -Uy [log^[1](Dy) .* (Uy' Hy Uy)] Uy'
         # D2_YY Phi(X, Y) [Hy] = -Uy [SUM_k log_k^[2](Dy) .* ([Uy' X Uy]_k [Uk' Hy Uy]_k' + [Uy' Hy Uy]_k [Uk' X Uy]_k') ] Uy'
-        lin.congr(self.work1, self.Ux.conj().T, self.Ax, self.work2)
+        lin.congr_multi(self.work1, self.Ux.conj().T, self.Ax, self.work2)
         self.work1 *= self.D1x_comb
-        lin.congr(self.D2PhiXXH, self.Ux, self.work1, self.work2)
+        lin.congr_multi(self.D2PhiXXH, self.Ux, self.work1, self.work2)
 
-        lin.congr(self.work1, self.Uy.conj().T, self.Ax, self.work2)
+        lin.congr_multi(self.work1, self.Uy.conj().T, self.Ax, self.work2)
         self.work1 *= -self.zi * self.D1y_log
-        lin.congr(self.D2PhiYXH, self.Uy, self.work1, self.work2)
+        lin.congr_multi(self.D2PhiYXH, self.Uy, self.work1, self.work2)
 
-        lin.congr(self.work1, self.Uy.conj().T, self.Ay, self.work2)
+        lin.congr_multi(self.work1, self.Uy.conj().T, self.Ay, self.work2)
         grad.scnd_frechet_multi(self.D2PhiYYH, self.D2y_comb, self.work1, U=self.Uy, work1=self.work2, work2=self.work3, work3=self.work5)
 
         self.work1 *= self.D1y_log * self.zi
-        lin.congr(self.D2PhiXYH, self.Uy, self.work1, self.work2)
+        lin.congr_multi(self.D2PhiXYH, self.Uy, self.work1, self.work2)
 
         # ====================================================================
         # Hessian products with respect to t
@@ -327,17 +327,17 @@ class QuantRelEntr(Cone):
         # Compute Ux' Wx Ux
         np.outer(self.At, self.DPhiX, out=self.work2.reshape((p, -1)))
         np.add(self.Ax, self.work2, out=self.work0)
-        lin.congr(self.work2, self.Ux.conj().T, self.work0, self.work3)
+        lin.congr_multi(self.work2, self.Ux.conj().T, self.work0, self.work3)
         # Apply (1/z log^[1](Dx) + Dx^-1 kron Dx^-1)^-1
         self.work2 *= self.D1x_comb_inv
         # Apply (Uy'Ux kron Uy'Ux)
-        lin.congr(self.work1, self.UyUx, self.work2, self.work3)
+        lin.congr_multi(self.work1, self.UyUx, self.work2, self.work3)
         # Apply -1/z log^[1](Dy)
         self.work1 *= (-self.zi * self.D1y_log)
         # Compute Uy' Wy Uy and subtract previous expression
         np.outer(self.At, self.DPhiY, out=self.work2.reshape((p, -1)))
         np.add(self.Ay, self.work2, out=self.work3)
-        lin.congr(self.work2, self.Uy.conj().T, self.work3, self.work4)
+        lin.congr_multi(self.work2, self.Uy.conj().T, self.work3, self.work4)
         self.work2 -= self.work1
 
         # Solve the linear system S \ ( ... ) to obtain Uy' Y Uy
@@ -354,7 +354,7 @@ class QuantRelEntr(Cone):
         self.work1 += self.work1.conj().transpose((0, 2, 1))
 
         # Recover Y
-        lin.congr(self.work4, self.Uy, self.work1, self.work2)
+        lin.congr_multi(self.work4, self.Uy, self.work1, self.work2)
         lhs[:, self.idx_Y] = self.work4.reshape((p, -1)).view(dtype=np.float64)
 
         # ====================================================================
@@ -363,16 +363,16 @@ class QuantRelEntr(Cone):
         # Apply -1/z log^[1](Dy)
         self.work1 *= (-self.zi * self.D1y_log)
         # Apply (Uy kron Uy)
-        lin.congr(self.work2, self.Uy, self.work1, self.work3)
+        lin.congr_multi(self.work2, self.Uy, self.work1, self.work3)
         # Subtract Wx from previous expression
         self.work0 -= self.work2
         # Apply (Ux kron Ux)
-        lin.congr(self.work1, self.Ux.conj().T, self.work0, self.work3)
+        lin.congr_multi(self.work1, self.Ux.conj().T, self.work0, self.work3)
         # Apply (1/z log^[1](Dx) + Dx^-1 kron Dx^-1)^-1 to obtian Ux' X Ux
         self.work1 *= self.D1x_comb_inv
 
         # Recover X
-        lin.congr(self.work2, self.Ux, self.work1, self.work3)
+        lin.congr_multi(self.work2, self.Ux, self.work1, self.work3)
         lhs[:, self.idx_X] = self.work2.reshape((p, -1)).view(dtype=np.float64)
 
         # ====================================================================
@@ -528,11 +528,11 @@ class QuantRelEntr(Cone):
             self.E.reshape(self.vn, -1)[range(self.vn), self.triu_idxs] = work
             self.E.reshape(self.vn, -1)[range(self.vn), self.tril_idxs] = work
         # Apply (Ux'Uy kron Ux'Uy)
-        lin.congr(self.work8, self.UyUx.conj().T, self.E, work=self.work7)
+        lin.congr_multi(self.work8, self.UyUx.conj().T, self.E, work=self.work7)
         # Apply [(1/z log + inv)^[1](Dx)]^-1
         self.work8 *= self.D1x_comb_inv
         # Apply (Uy'Ux kron Uy'Ux)
-        lin.congr(self.work6, self.UyUx, self.work8, work=self.work7)
+        lin.congr_multi(self.work6, self.UyUx, self.work8, work=self.work7)
         # Apply (1/z^2 log^[1](Dy))
         self.work6 *= self.D1y_log
         work  = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_idxs]

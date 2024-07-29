@@ -1,6 +1,6 @@
 import numpy as np
 import scipy as sp
-import qics.utils.linear as lin
+import qics.utils.linalg as lin
 import qics.utils.vector as vec
 
 class KKTSolver():

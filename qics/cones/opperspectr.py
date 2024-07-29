@@ -1,5 +1,5 @@
 import numpy as np
-import qics.utils.linear as lin
+import qics.utils.linalg as lin
 import qics.utils.gradient as grad
 from qics.cones.base import Cone, get_perspective_derivatives
 
@@ -446,12 +446,12 @@ class OpPerspecTr(Cone):
 
         # Make Hxx block
         # D2PhiXXH  = self.zi * grad.scnd_frechet(self.D2yxy_h, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy)
-        lin.congr(self.work8, self.irt2Y_Uyxy.conj().T, self.E, work=self.work7)
+        lin.congr_multi(self.work8, self.irt2Y_Uyxy.conj().T, self.E, work=self.work7)
         grad.scnd_frechet_multi(self.work5, self.D2yxy_h * self.UyxyYUyxy, self.work8, U=self.irt2Y_Uyxy, work1=self.work6, work2=self.work7, work3=self.work4)
         self.work5 *= self.zi
 
         # D2PhiXXH += self.inv_X @ Hx @ self.inv_X
-        lin.congr(self.work8, self.inv_X, self.E, work=self.work7)
+        lin.congr_multi(self.work8, self.inv_X, self.E, work=self.work7)
         self.work8 += self.work5
 
         Hxx  = self.work8.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_idxs]
@@ -459,12 +459,12 @@ class OpPerspecTr(Cone):
 
         # Make Hyy block
         # D2PhiYYH  = self.zi * grad.scnd_frechet(self.D2xyx_g, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
-        lin.congr(self.work8, self.irt2X_Uxyx.conj().T, self.E, work=self.work7)
+        lin.congr_multi(self.work8, self.irt2X_Uxyx.conj().T, self.E, work=self.work7)
         grad.scnd_frechet_multi(self.work5, self.D2xyx_g * self.UxyxXUxyx, self.work8, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
         self.work5 *= self.zi
 
         # D2PhiYYH += self.inv_Y @ Hy @ self.inv_Y
-        lin.congr(self.work6, self.inv_Y, self.E, work=self.work7)
+        lin.congr_multi(self.work6, self.inv_Y, self.E, work=self.work7)
         self.work6 += self.work5
 
         Hyy  = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_idxs]
@@ -477,7 +477,7 @@ class OpPerspecTr(Cone):
         # D2PhiXYH  = self.zi * self.irt2_X @ self.Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X
         # D2PhiXYH += D2PhiXYH.conj().T
         self.work8 *= self.D1xyx_g
-        lin.congr(self.work6, self.irt2X_Uxyx, self.work8, work=self.work7, B=self.rt2_X @ self.Uxyx)
+        lin.congr_multi(self.work6, self.irt2X_Uxyx, self.work8, work=self.work7, B=self.rt2_X @ self.Uxyx)
         np.add(self.work6, self.work6.conj().transpose(0, 2, 1), out=self.work7)
         
         self.work7 -= self.work5

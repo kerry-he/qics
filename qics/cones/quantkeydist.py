@@ -1,5 +1,5 @@
 import numpy as np
-import qics.utils.linear as lin
+import qics.utils.linalg as lin
 import qics.utils.gradient as grad
 import qics.utils.symmetric as sym
 import qics.utils.quantum as quant
@@ -389,20 +389,20 @@ class QuantKeyDist(Cone):
         self.DPhi_vec = self.DPhi.view(dtype=np.float64).reshape(-1, 1)[self.triu_idxs] * self.scale.reshape(-1, 1)
 
         # Get X^-1 kron X^-1 
-        lin.congr(self.work8, self.inv_X, self.E, work=self.work7)
+        lin.congr_multi(self.work8, self.inv_X, self.E, work=self.work7)
 
         # Get S(G(X)) Hessians
         for (U, D1, K_list, work0, work1, work2, work3) in zip(self.Ukx_blk, self.D1kx_log_blk, self.K_list_blk, self.work2, self.work2b, self.work3, self.work3b):
             KU_list = [K.conj().T @ U for K in K_list]      
             work2 *= 0
             for KU in KU_list:
-                lin.congr(work3, KU.conj().T, self.E, work=work1)
+                lin.congr_multi(work3, KU.conj().T, self.E, work=work1)
                 work2 += work3
 
             work2 *= D1 * self.zi
 
             for KU in KU_list:
-                lin.congr(self.work7, KU, work2, work=work0)
+                lin.congr_multi(self.work7, KU, work2, work=work0)
                 self.work8 += self.work7
 
         # Get S(Z(G(X))) Hessians
@@ -410,13 +410,13 @@ class QuantKeyDist(Cone):
             KU_list = [K.conj().T @ U for K in K_list]      
             work2 *= 0
             for KU in KU_list:
-                lin.congr(work3, KU.conj().T, self.E, work=work1)
+                lin.congr_multi(work3, KU.conj().T, self.E, work=work1)
                 work2 += work3
 
             work2 *= D1 * self.zi
 
             for KU in KU_list:
-                lin.congr(self.work7, KU, work2, work=work0)
+                lin.congr_multi(self.work7, KU, work2, work=work0)
                 self.work8 -= self.work7             
 
         # Get Hessian and factorize

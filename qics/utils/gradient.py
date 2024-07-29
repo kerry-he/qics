@@ -1,7 +1,7 @@
 import numpy as np
 import numba as nb
 
-from qics.utils.linear import congr
+from qics.utils.linalg import congr
 
 @nb.njit
 def D1_f(D, f_D, df_D):

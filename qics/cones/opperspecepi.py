@@ -1,6 +1,6 @@
 import numpy as np
 import scipy as sp
-import qics.utils.linear as lin
+import qics.utils.linalg as lin
 import qics.utils.gradient as grad
 from qics.cones.base import Cone, get_perspective_derivatives
 
@@ -272,18 +272,18 @@ class OpPerspecEpi(Cone):
         out = self.A_compact @ self.hess @ self.A_compact.T
 
         # Compute L^-T At L^-1
-        lin.congr(self.work3, self.Z_chol_inv, self.At, work=self.work1)
+        lin.congr_multi(self.work3, self.Z_chol_inv, self.At, work=self.work1)
 
         # Compute L^-T DxPhi[Ax] L^-1
-        lin.congr(self.work1, self.irt2Y_Uyxy.conj().T, self.Ax, work=self.work2)
+        lin.congr_multi(self.work1, self.irt2Y_Uyxy.conj().T, self.Ax, work=self.work2)
         self.work1 *= self.D1yxy_h
-        lin.congr(self.work0, self.Z_chol_inv @ self.rt2Y_Uyxy, self.work1, work=self.work2)
+        lin.congr_multi(self.work0, self.Z_chol_inv @ self.rt2Y_Uyxy, self.work1, work=self.work2)
         self.work3 -= self.work0
 
         # Compute L^-T DyPhi[Ay] L^-1
-        lin.congr(self.work1, self.irt2X_Uxyx.conj().T, self.Ay, work=self.work2)
+        lin.congr_multi(self.work1, self.irt2X_Uxyx.conj().T, self.Ay, work=self.work2)
         self.work1 *= self.D1xyx_g
-        lin.congr(self.work0, self.Z_chol_inv @ self.rt2X_Uxyx, self.work1, work=self.work2)
+        lin.congr_multi(self.work0, self.Z_chol_inv @ self.rt2X_Uxyx, self.work1, work=self.work2)
         self.work3 -= self.work0
 
         out += self.work3.view(dtype=np.float64).reshape(p, -1) @ self.work3.view(dtype=np.float64).reshape(p, -1).T
@@ -367,15 +367,15 @@ class OpPerspecEpi(Cone):
         # Inverse Hessian products with respect to (X, Y)
         # ====================================================================
         # Compute Wx   
-        lin.congr(self.work0, self.rt2Y_Uyxy.conj().T, self.At, work=self.work2)
+        lin.congr_multi(self.work0, self.rt2Y_Uyxy.conj().T, self.At, work=self.work2)
         self.work0 *= self.D1yxy_h
-        lin.congr(self.work1, self.irt2Y_Uyxy, self.work0, work=self.work2)
+        lin.congr_multi(self.work1, self.irt2Y_Uyxy, self.work0, work=self.work2)
         self.work1 += self.Ax
 
         # Compute Wy
-        lin.congr(self.work3, self.rt2X_Uxyx.conj().T, self.At, work=self.work2)
+        lin.congr_multi(self.work3, self.rt2X_Uxyx.conj().T, self.At, work=self.work2)
         self.work3 *= self.D1xyx_g
-        lin.congr(self.work0, self.irt2X_Uxyx, self.work3, work=self.work2)
+        lin.congr_multi(self.work0, self.irt2X_Uxyx, self.work3, work=self.work2)
         self.work0 += self.Ay
 
         # Solve linear system (X, Y) = M \ (Wx, Wy)
@@ -392,7 +392,7 @@ class OpPerspecEpi(Cone):
         # Inverse Hessian products with respect to Z
         # ====================================================================
         # Compute Z Ht Z
-        lin.congr(self.work0, self.Z, self.At, work=self.work3)
+        lin.congr_multi(self.work0, self.Z, self.At, work=self.work3)
        
         # Compute DxPhi[X]
         # Recover X as matrices from compact vectors
@@ -403,9 +403,9 @@ class OpPerspecEpi(Cone):
         self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs] = sol[:self.vn].T
         self.work1 += self.work1.conj().transpose((0, 2, 1))
 
-        lin.congr(self.work2, self.irt2Y_Uyxy.conj().T, self.work1, work=self.work3)
+        lin.congr_multi(self.work2, self.irt2Y_Uyxy.conj().T, self.work1, work=self.work3)
         self.work2 *= self.D1yxy_h
-        lin.congr(self.work1, self.rt2Y_Uyxy, self.work2, work=self.work3)
+        lin.congr_multi(self.work1, self.rt2Y_Uyxy, self.work2, work=self.work3)
         
         self.work0 += self.work1
 
@@ -415,9 +415,9 @@ class OpPerspecEpi(Cone):
         self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs] = sol[self.vn:].T
         self.work1 += self.work1.conj().transpose((0, 2, 1))
 
-        lin.congr(self.work2, self.irt2X_Uxyx.conj().T, self.work1, work=self.work3)
+        lin.congr_multi(self.work2, self.irt2X_Uxyx.conj().T, self.work1, work=self.work3)
         self.work2 *= self.D1xyx_g
-        lin.congr(self.work1, self.rt2X_Uxyx, self.work2, work=self.work3)
+        lin.congr_multi(self.work1, self.rt2X_Uxyx, self.work2, work=self.work3)
 
         self.work0 += self.work1
         
@@ -582,10 +582,10 @@ class OpPerspecEpi(Cone):
 
         # Make Hxx = (D2xxPhi'[Z^-1] + X^1 kron X^-1) block
         # D2xxPhi'[Z^-1]
-        lin.congr(self.work8, self.irt2Y_Uyxy.conj().T, self.E, work=self.work6)
+        lin.congr_multi(self.work8, self.irt2Y_Uyxy.conj().T, self.E, work=self.work6)
         grad.scnd_frechet_multi(self.work5, self.D2yxy_h, self.work8, self.UyxyYZYUyxy, U=self.irt2Y_Uyxy, work1=self.work6, work2=self.work7, work3=self.work4)
         # X^1 kron X^-1
-        lin.congr(self.work8, self.inv_X, self.E, work=self.work7)
+        lin.congr_multi(self.work8, self.inv_X, self.E, work=self.work7)
         self.work8 += self.work5
         # Vectorize matrices as compact vectors
         Hxx  = self.work8.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_idxs]
@@ -593,10 +593,10 @@ class OpPerspecEpi(Cone):
 
         # Make Hyy = (D2yyPhi'[Z^-1] + Y^1 kron Y^-1) block
         # D2yyPhi'[Z^-1]
-        lin.congr(self.work8, self.irt2X_Uxyx.conj().T, self.E, work=self.work7)
+        lin.congr_multi(self.work8, self.irt2X_Uxyx.conj().T, self.E, work=self.work7)
         grad.scnd_frechet_multi(self.work5, self.D2xyx_g, self.work8, self.UxyxXZXUxyx, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
         # Y^1 kron Y^-1
-        lin.congr(self.work6, self.inv_Y, self.E, work=self.work7)
+        lin.congr_multi(self.work6, self.inv_Y, self.E, work=self.work7)
         self.work6 += self.work5
         # Vectorize matrices as compact vectors
         Hyy  = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_idxs]
@@ -607,7 +607,7 @@ class OpPerspecEpi(Cone):
         grad.scnd_frechet_multi(self.work5, self.D2xyx_xg, self.work8, self.UxyxXZXUxyx, U=self.irt2X_Uxyx, work1=self.work6, work2=self.work7, work3=self.work4)
         # Make Dg + Dg' component
         self.work8 *= self.D1xyx_g
-        lin.congr(self.work6, self.irt2X_Uxyx, self.work8, work=self.work7, B=self.inv_Z @ self.rt2X_Uxyx)
+        lin.congr_multi(self.work6, self.irt2X_Uxyx, self.work8, work=self.work7, B=self.inv_Z @ self.rt2X_Uxyx)
         np.add(self.work6, self.work6.conj().transpose(0, 2, 1), out=self.work7)
         self.work7 -= self.work5
         # Vectorize matrices as compact vectors

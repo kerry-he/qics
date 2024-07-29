@@ -1,5 +1,5 @@
 import numpy as np
-import qics.utils.linear as lin
+import qics.utils.linalg as lin
 import qics.utils.gradient as grad
 from qics.cones.base import Cone, get_central_ray_entr
 
@@ -171,9 +171,9 @@ class QuantEntr(Cone):
         D2PhiuuH = (self.trX * self.ui2) * self.Au
         D2PhiuXH = np.trace(self.Ax, axis1=1, axis2=2).real * self.ui
         # D2PhiXXH
-        lin.congr(self.work1, self.Ux.conj().T, self.Ax, self.work2)
+        lin.congr_multi(self.work1, self.Ux.conj().T, self.Ax, self.work2)
         self.work1 *= self.D1x_comb
-        lin.congr(self.work3, self.Ux, self.work1, self.work2)
+        lin.congr_multi(self.work3, self.Ux, self.work1, self.work2)
         # D2PhiXuH
         self.work3[:, range(self.n), range(self.n)] -= (self.zi * self.ui[0, 0]) * self.Au.reshape(-1, 1)
 
@@ -276,9 +276,9 @@ class QuantEntr(Cone):
         np.add(self.Ax, self.work2, out=self.work1)
 
         # Compute N \ Wx
-        lin.congr(self.work2, self.Ux.conj().T, self.work1, self.work3)
+        lin.congr_multi(self.work2, self.Ux.conj().T, self.work1, self.work3)
         self.work2 *= self.D1x_comb_inv
-        lin.congr(self.work1, self.Ux, self.work2, self.work3)
+        lin.congr_multi(self.work1, self.Ux, self.work2, self.work3)
 
         # ====================================================================
         # Inverse Hessian products with respect to u

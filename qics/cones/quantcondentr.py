@@ -1,5 +1,5 @@
 import numpy as np
-import qics.utils.linear as lin
+import qics.utils.linalg as lin
 import qics.utils.gradient as grad
 import qics.utils.symmetric as sym
 from qics.cones.base import Cone
@@ -179,14 +179,14 @@ class QuantCondEntr(Cone):
         # D2Phi(X)[Hx] =  Ux [log^[1](Dx) .* (Ux'     Hx  Ux)] Ux' 
         #              - [Uy [log^[1](Dy) .* (Uy' PTr(Hx) Uy)] Uy'] kron I
         sym.p_tr_multi(self.work1, self.Ax, self.sys, (self.n0, self.n1))
-        lin.congr(self.work2, self.Uy.conj().T, self.work1, self.work3)
+        lin.congr_multi(self.work2, self.Uy.conj().T, self.work1, self.work3)
         self.work2 *= self.D1y_log * self.zi
-        lin.congr(self.work1, self.Uy, self.work2, self.work3)
+        lin.congr_multi(self.work1, self.Uy, self.work2, self.work3)
         sym.i_kr_multi(self.Work0, self.work1, self.sys, (self.n0, self.n1))
 
-        lin.congr(self.Work2, self.Ux.conj().T, self.Ax, self.Work3)
+        lin.congr_multi(self.Work2, self.Ux.conj().T, self.Ax, self.Work3)
         self.Work2 *= self.D1x_comb
-        lin.congr(self.Work1, self.Ux, self.Work2, self.Work3)
+        lin.congr_multi(self.Work1, self.Ux, self.Work2, self.Work3)
 
         self.Work1 -= self.Work0
 
@@ -290,9 +290,9 @@ class QuantCondEntr(Cone):
         np.add(self.Ax, self.Work2, out=self.Work0)
 
         # Apply D2S(X)^-1 = (Ux kron Ux) log^[1](Dx) (Ux' kron Ux')
-        lin.congr(self.Work2, self.Ux.conj().T, self.Work0, self.Work3)
+        lin.congr_multi(self.Work2, self.Ux.conj().T, self.Work0, self.Work3)
         self.Work2 *= self.D1x_comb_inv
-        lin.congr(self.Work0, self.Ux, self.Work2, self.Work3)
+        lin.congr_multi(self.Work0, self.Ux, self.Work2, self.Work3)
         # Apply PTr
         sym.p_tr_multi(self.work1, self.Work0, self.sys, (self.n0, self.n1))
         self.work1 *= -1
@@ -313,9 +313,9 @@ class QuantCondEntr(Cone):
         # Apply PTr' = IKr
         sym.i_kr_multi(self.Work1, self.work1, self.sys, (self.n0, self.n1))
         # Apply D2S(X)^-1 = (Ux kron Ux) log^[1](Dx) (Ux' kron Ux')
-        lin.congr(self.Work2, self.Ux.conj().T, self.Work1, self.Work3)
+        lin.congr_multi(self.Work2, self.Ux.conj().T, self.Work1, self.Work3)
         self.Work2 *= self.D1x_comb_inv
-        lin.congr(self.Work1, self.Ux, self.Work2, self.Work3)
+        lin.congr_multi(self.Work1, self.Ux, self.Work2, self.Work3)
 
         # Subtract previous expression from D2S(X)^-1 Wx to get X
         self.Work0 -= self.Work1
@@ -441,11 +441,11 @@ class QuantCondEntr(Cone):
 
         # Get [1/z (Uy kron Uy) [log^[1](Dy)]^-1 (Uy' kron Uy')] matrix
         # Begin with (Uy' kron Uy')
-        lin.congr(self.work8, self.Uy.conj().T, self.E, work=self.work7)
+        lin.congr_multi(self.work8, self.Uy.conj().T, self.E, work=self.work7)
         # Apply z [log^[1](Dy)]^-1
         self.work8 *= (self.z * np.reciprocal(self.D1y_log))
         # Apply (Uy kron Uy)
-        lin.congr(self.work6, self.Uy, self.work8, work=self.work7)
+        lin.congr_multi(self.work6, self.Uy, self.work8, work=self.work7)
 
         # Get [PTr (Ux kron Ux) [(1/z log + inv)^[1](Dx)]^-1  (Ux' kron Ux') PTr'] matrix
         # Begin with [(Ux' kron Ux') PTr']
@@ -475,7 +475,7 @@ class QuantCondEntr(Cone):
         # Apply [(1/z log + inv)^[1](Dx)]^-1/2
         self.Work8 *= self.D1x_comb_inv
         # Apply PTr (Ux kron Ux)
-        lin.congr(self.Work6, self.Ux, self.Work8, work=self.Work7)
+        lin.congr_multi(self.Work6, self.Ux, self.Work8, work=self.Work7)
         sym.p_tr_multi(self.work7, self.Work6, self.sys, (self.n0, self.n1))
 
         # Subtract to obtain N then Cholesky factor

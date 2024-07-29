@@ -3,7 +3,7 @@ import scipy as sp
 import numba as nb
 import itertools
 
-import qics.utils.linear as lin
+import qics.utils.linalg as lin
 import qics.utils.sparse as sparse
 from qics.cones.base import SymCone
 
@@ -154,9 +154,9 @@ class PosSemidefinite(SymCone):
             if len(self.A_ds_idxs) > 0:
                 lhs = np.zeros((len(self.A_ds_idxs), self.dim))
                 if self.iscomplex:
-                    lin.congr(lhs.reshape((len(self.A_ds_idxs), self.n, 2*self.n)).view(dtype=np.complex128), X, self.Ai_ds, work=self.work)
+                    lin.congr_multi(lhs.reshape((len(self.A_ds_idxs), self.n, 2*self.n)).view(dtype=np.complex128), X, self.Ai_ds, work=self.work)
                 else:
-                    lin.congr(lhs.reshape((len(self.A_ds_idxs), self.n, self.n)), X, self.Ai_ds, work=self.work)
+                    lin.congr_multi(lhs.reshape((len(self.A_ds_idxs), self.n, self.n)), X, self.Ai_ds, work=self.work)
 
                 # Compute inner products between all <Ai, X Aj X>
                 out[:, self.A_ds_idxs] = self.A_triu @ lhs[:, self.triu_idxs].T
@@ -165,9 +165,9 @@ class PosSemidefinite(SymCone):
             # Compute symmetric matrix multiplication [A (L kr L)] [A (L kr L)]'
             lhs = np.zeros((len(self.A_ds_idxs), self.dim))
             if self.iscomplex:
-                lin.congr(lhs.reshape((len(self.A_ds_idxs), self.n, 2*self.n)).view(dtype=np.complex128), X_rt2.conj().T, self.Ai_ds, work=self.work)
+                lin.congr_multi(lhs.reshape((len(self.A_ds_idxs), self.n, 2*self.n)).view(dtype=np.complex128), X_rt2.conj().T, self.Ai_ds, work=self.work)
             else:
-                lin.congr(lhs.reshape((len(self.A_ds_idxs), self.n, self.n)), X_rt2.conj().T, self.Ai_ds, work=self.work)
+                lin.congr_multi(lhs.reshape((len(self.A_ds_idxs), self.n, self.n)), X_rt2.conj().T, self.Ai_ds, work=self.work)
             out[self.A_ds_ds_idxs] = lhs @ lhs.conj().T                        
 
         return out

@@ -4,7 +4,7 @@ import math
 import time
 import itertools, sys
 
-import qics.utils.linear as lin
+import qics.utils.linalg as lin
 import qics.utils.vector as vec
 from qics.stepper import NonSymStepper, SymStepper, KKTSolver
 
@@ -117,10 +117,10 @@ class Solver():
         """
         # Print header
         if self.verbose:
-            print("========================================================================")
-            print("       QiCOS v0.0 - Quantum Information Conic Optimization Solver       ")
-            print("                by K. He, J. Saunderson, H. Fawzi (2024)                ")
-            print("========================================================================")
+            print("====================================================================")
+            print("            QICS v0.0 - Quantum Information Conic Solver            ")
+            print("              by K. He, J. Saunderson, H. Fawzi (2024)              ")
+            print("====================================================================")
             print("Problem summary:")                
             print(f"        no. cones:  {len(self.model.cones):<10}",    f"              no. vars:    {self.model.n:<10}")
             print(f"        barr. par:  {self.model.nu:<10}",            f"              no. constr:  {self.model.p:<10}")
