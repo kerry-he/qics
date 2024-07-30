@@ -11,7 +11,38 @@ from qics.stepper import NonSymStepper, SymStepper, KKTSolver
 spinner = itertools.cycle(['-', '/', '|', '\\'])
 
 class Solver():
-    """A class representing an instance of a solver"""    
+    """A class representing an instance of a solver.
+    
+    Parameters
+    ----------
+    model : qics.Model
+        Model class which specifies an instance of a conic program.
+    max_iter : int, optional
+        Maximum number of solver iterations before terminating. Default is ``100``. 
+    max_time : float, optional
+        Maximum time elapsed, in seconds, before terminating. Default is ``inf``.
+    tol_gap : float, optional
+        Stopping tolerance for (relative) optimality gap. Default is ``1e-8``.
+    tol_feas : float, optional
+        Stopping tolerance for (relative) primal and dual feasibility. Default is ``1e-8``.
+    tol_infeas : float, optional
+        Tolerance for detecting infeasible problem. Default is ``1e-12``.
+    tol_ip : float, optional
+        Tolerance for detecting ill-posed problem. Default is ``1e-13``.
+    tol_near : float, optional
+        Allowable margin for certifying near optimality when solver is stopped early. Default is ``1e3``.
+    verbose : int, optional
+        Verbosity level of the solver, where
+
+        - ``0`` : No output.
+        - ``1`` : Only print problem and solution summary.
+        - ``2`` : Also print summary of the solver at each iteration.
+        - ``3`` : Also print summary of the stepper at each iteration.
+
+        Default is ``2``.
+    ir : bool, optional
+        Whether to use iterative refinement when solving the KKT system. Default is ``True``.
+    """    
     def __init__(
         self, 
         model, 
@@ -24,37 +55,7 @@ class Solver():
         tol_near = 1e3,
         verbose  = 2,
         ir = True
-    ):
-        """Initialize a Solver instance
-
-        Parameters
-        ----------
-        model : Model
-            Model class which specifies an instance of a conic program.
-        max_iter : int, optional
-            Maximum number of solver iterations before terminating. Default is 100. 
-        max_time : float, optional
-            Maximum time elapsed, in seconds, before terminating. Default is inf.
-        tol_gap : float, optional
-            Stopping tolerance for (relative) optimality gap. Default is 1e-8.
-        tol_feas : float, optional
-            Stopping tolerance for (relative) primal and dual feasibility. Default is 1e-8.
-        tol_infeas : float, optional
-            Tolerance for detecting infeasible problem. Default is 1e-12.
-        tol_ip : float, optional
-            Tolerance for detecting ill-posed problem. Default is 1e-13.
-        tol_near : float, optional
-            Allowable margin for certifying near optimality when solver is stopped early. Default is 1e3.
-        verbose : int, optional
-            Verbosity level of the solver, where
-            0 : No output.
-            1 : Only print problem and solution summary.
-            2 : Print problem and solution summary, as well as solver summary at each iteration.
-            3 : Print problem and solution summary, solver summary at each iteration.
-            Default is 2.
-        ir : bool, optional
-            Whether to use iterative refinement when solving the KKT system. Default is True.
-        """        
+    ):  
         self.max_iter = max_iter
         self.max_time = max_time        
         self.verbose = verbose
@@ -82,38 +83,42 @@ class Solver():
         return
     
     def solve(self):
-        """Run the primal-dual interior point solver
+        """Run the primal-dual interior point solver for a given problem model.
         
         Returns
         -------
         dict
-            Dictionary containing solver output, with the following fields
-            x_opt : Optimal primal variable x
-            y_opt : Optimal dual variable y
-            z_opt : Optimal dual variable z
-            s_opt : Optimal primal variable s
+            Dictionary containing solver output, with the following keys
+
+            - ``x_opt`` : Optimal primal variable x.
+            - ``y_opt`` : Optimal dual variable y.
+            - ``z_opt`` : Optimal dual variable z.
+            - ``s_opt`` : Optimal primal variable s.
+
+            - ``sol_status`` : Solution status. Can either be:
+
+                - ``optimal``       : Primal-dual optimal solution reached
+                - ``p_infeas``      : Detected primal infeasibility
+                - ``d_infeas``      : Detected dual infeasibility
+                - ``near_optimal``  : Near primal-dual optimal solution
+                - ``near_pinfeas``  : Near primal infeasibility
+                - ``near_dinfeas``  : Near dual infeasibiltiy
+                - ``unknown``       : Unknown solution status
+
+            - ``exit_status`` : Solver exit status. Can either be:
+
+                - ``solved``        : Terminated at desired tolerance
+                - ``step_failure``  : Unable to take another step
+                - ``slow_progress`` : Residuals are decreasing too slowly
+
+            - ``num_iter`` : Number of solver iterations.
+            - ``solve_time`` : Total time elapsed (in seconds).
             
-            sol_status : Solution status. Can either be
-                optimal       : Primal-dual optimal solution reached
-                p_infeas      : Detected primal infeasibility
-                d_infeas      : Detected dual infeasibility
-                near_optimal  : Near primal-dual optimal solution
-                near_pinfeas  : Near primal infeasibility
-                near_dinfeas  : Near dual infeasibiltiy
-                unknown       : Unknown solution status
-            exit_status : Solver exit status. Can either be
-                solved        : Terminated at desired tolerance
-                step_failure  : Unable to take another step
-                slow_progress : Residuals are decreasing too slowly
-            
-            num_iter : Number of solver iterations
-            solve_time : Total time elapsed (in seconds)
-            
-            p_obj : Optimal primal objective
-            d_obj : Optimal dual objective
-            opt_gap : Relative optimality gap
-            p_feas : Primal feasibility
-            d_feas : Dual feasibiltiy
+            - ``p_obj`` : Optimal primal objective.
+            - ``d_obj`` : Optimal dual objective.
+            - ``opt_gap`` : Relative optimality gap.
+            - ``p_feas`` : Primal feasibility.
+            - ``d_feas`` : Dual feasibiltiy.
         """
         # Print header
         if self.verbose:

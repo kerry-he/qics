@@ -7,33 +7,39 @@ from qics.cones.base import Cone, get_perspective_derivatives
 class OpPerspecEpi(Cone):
     """A class representing a operator perspective epigraph cone
     
-        K = { (T, X, Y) ∈ H^n x H^n x H^n : T ⪰ Pg(X, Y), X,Y ⪰ 0 },
-        
-    with barrier function
+    .. math::
     
-        F(T, X, Y) = -logdet(T - Pg(X, Y)) - logdet(X) - logdet(Y),
+        \\{ (T, X, Y) \\in \\mathbb{H}^n \\times \\mathbb{H}^n_+ \\times \\mathbb{H}^n_+ : T \\succeq P_g(X, Y) \\},
+        
+    for an operator concave function :math:`g:[0, \\infty)\\rightarrow\\mathbb{R}`, with barrier function
+    
+    .. math::
+
+        (T, X, Y) = -\\log\\det(T - Pg(X, Y)) - \\log\\det(X) - \\log\\det(Y),
         
     where
 
-        Pg(X, Y) = X^0.5 g(X^-0.5 Y X^-0.5) X^0.5,
+    .. math::
+
+        P_g(X, Y) = X^{1/2} g(X^{-1/2} Y X^{-1/2}) X^{1/2},
         
-    is the operator perspective of operator convex function g.
+    is the operator perspective of :math:`g`.
+
+    Parameters
+    ----------
+    n : int
+        Dimension of the (n, n) matrices :math:`T`, :math:`X` and :math:`Y`.
+    func : string or float
+        Choice for the function g. Can either be
+
+        - ``"log"``             : :math:`g(x) = -\\log(x)`
+        - ``(0, 1)``            : :math:`g(x) = -x^p`
+        - ``(-1, 0) or (1, 2)`` : :math:`g(x) = x^p`
+
+    iscomplex : bool
+        Whether the matrices are symmetric :math:`T,X,Y \\in \\mathbb{S}^n` (False) or Hermitian :math:`T,X,Y \\in \\mathbb{H}^n` (True). Default is False.
     """         
     def __init__(self, n, func, iscomplex=False):
-        """Initialize a OpPerspecEpi instance
-
-        Parameters
-        ----------
-        n : int
-            Dimension of the (n, n) matrices T, X, and Y.
-        func : string or float
-            Choice for the function g. Can either be
-            "log"            : g(x) = -log(x)
-            (0, 1)           : g(x) = -x^p
-            (-1, 0) ∪ (1, 2) : g(x) =  x^p
-        iscomplex : bool
-            Whether the matrices T, X, Y are symmetric (False) or Hermitian (True). Default is False.
-        """               
         # Dimension properties
         self.n  = n           # Side dimension of system
         self.nu = 3 * self.n  # Barrier parameter

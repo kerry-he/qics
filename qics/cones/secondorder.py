@@ -4,20 +4,22 @@ from qics.cones.base import Cone
 class SecondOrder(Cone):
     """A class representing a second order cone
     
-        K = { (t, x) ∈ R x R^n : t >= ||x||_2 },
+    .. math::
+
+        \\{ (t, x) \\in \\mathbb{R} \\times \\mathbb{R}^n : t \\geq \\| x \\|_2 \\},
         
     with barrier function
+
+    .. math::
     
-        F(t, x) = -log(t^2 - x'x).
+        (t, x) \\mapsto -\\log(t^2 - x^\\top x).
+
+    Parameters
+    ----------
+    n : int
+        Dimension of the vector :math:`x`, i.e., how many terms are in the Euclidean norm.
     """    
     def __init__(self, n):
-        """Initialize a SecondOrder instance
-
-        Parameters
-        ----------
-        n : int
-            Dimension of the vector x, i.e., how many terms are in the Euclidean norm.
-        """
         # Dimension properties
         self.n  = n
         self.nu = 1

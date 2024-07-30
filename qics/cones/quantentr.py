@@ -5,29 +5,34 @@ from qics.cones.base import Cone, get_central_ray_entr
 
 class QuantEntr(Cone):
     """A class representing a (homogenized) quantum entropy cone
+
+    .. math::
     
-        K = { (t, u, X) ∈ R x R x H^n : t >= -u S(X / u), u >= 0, X ⪰ 0 },
+        \\{ (t, u, X) \\in \\mathbb{R} \\times \\mathbb{R}_+ \\times \\mathbb{H}^n_+ : t \\geq -u S(X / u) \\},
         
     with barrier function
+
+    .. math::
     
-        F(t, u, X) = -log(t + u S(X / u)) - logdet(X),
+        (t, u, X) \\mapsto -\\log(t + u S(X / u)) - \\log \\det(X),
         
     where
 
-        S(X) = -tr[X log(X)],
-        
-    is the quantum (von Neumann) entropy function.
-    """    
-    def __init__(self, n, iscomplex=False):
-        """Initialize a QuantEntr instance
+    .. math::
 
-        Parameters
-        ----------
-        n : int
-            Dimension of the (n, n) matrix X.
-        iscomplex : bool
-            Whether the matrix X is symmetric (False) or Hermitian (True). Default is False.
-        """              
+        S(X) = -\\text{tr}[X \\log(X)],
+        
+    is the quantum (von Neumann) entropy function. The quantum entropy epigraph can be recovered
+    by enforcing the linear constraint :math:`u=1`.
+
+    Parameters
+    ----------
+    n : int
+        Dimension of the (n, n) matrix :math:`X`.
+    iscomplex : bool
+        Whether the matrix is symmetric :math:`X \\in \\mathbb{S}^n` (False) or Hermitian :math:`X \\in \\mathbb{H}^n` (True). Default is False.        
+    """    
+    def __init__(self, n, iscomplex=False):         
         # Dimension properties
         self.n  = n                 # Side dimension of system
         self.nu = 2 + self.n        # Barrier parameter

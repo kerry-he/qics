@@ -5,29 +5,33 @@ from qics.cones.base import Cone, get_central_ray_relentr
 
 class QuantRelEntr(Cone):
     """A class representing a classical relative entropy cone
+
+    .. math::
     
-        K = { (t, X, Y) ∈ R x H^n x H^n : t >= S(X||Y), X,Y ⪰ 0 },
+        \\{ (t, X, Y) \\in \\mathbb{R} \\times \\mathbb{H}^n_+ \\times \\mathbb{H}^n_+ : t \\geq S(X \\| Y) \\},
         
     with barrier function
     
-        F(t, X, Y) = -log(t - S(x||y)) - logdet(X) - logdet(Y),
+    .. math::
+
+        (t, X, Y) \\mapsto -\\log(t - S(x \\| y)) - \\log \\det(X) - \\log \\det(Y),
         
     where
 
-        S(X||Y) = tr[X log(X)] - tr[X log(Y)],
+    .. math::
+
+        S(X \\| Y) = \\text{tr}[X \\log(X)] - \\text{tr}[X \\log(Y)],
         
     is the quantum (Umegaki) relative entropy function.
-    """    
-    def __init__(self, n, iscomplex=False):
-        """Initialize a QuantRelEntr instance
 
-        Parameters
-        ----------
-        n : int
-            Dimension of the (n, n) matrices X and Y.
-        iscomplex : bool
-            Whether the matrices X, Y are symmetric (False) or Hermitian (True). Default is False.
-        """             
+    Parameters
+    ----------
+    n : int
+        Dimension of the (n, n) matrices :math:`X` and :math:`Y`.
+    iscomplex : bool
+        Whether the matrices symmetric :math:`X,Y \\in \\mathbb{S}^n` (False) or Hermitian :math:`X,Y \\in \\mathbb{H}^n` (True). Default is False.
+    """    
+    def __init__(self, n, iscomplex=False):      
         # Dimension properties
         self.n  = n               # Side dimension of system
         self.nu = 1 + 2 * self.n  # Barrier parameter

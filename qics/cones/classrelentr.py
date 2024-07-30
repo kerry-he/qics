@@ -3,27 +3,31 @@ from qics.cones.base import Cone, get_central_ray_relentr
 
 class ClassRelEntr(Cone):
     """A class representing a classical relative entropy cone
+
+    .. math::
     
-        K = { (t, x, y) ∈ R x R^n x R^n : t >= H(x||y), x,y >= 0 },
+        \\{ (t, x, y) \\in \\mathbb{R} \\times \\mathbb{R}^n_+ \\times \\mathbb{R}^n_+ : t \\geq H(x \\| y) \\},
         
     with barrier function
     
-        F(t, x, y) = -log(t - H(x||y)) - Σ_i log(xi) - Σ_i log(yi),
+    .. math::
+
+        (t, x, y) \\mapsto -\\log(t - H(x \\| y)) - \\sum_{i=1}^n \\log(x_i) - \\sum_{i=1}^n \\log(y_i),
         
     where
 
-        H(x||y) = Σ_i xi log(xi / yi),
+    .. math::
+
+        H(x \\| y) = \\sum_{i=1}^n x_i \\log(x_i / y_i),
         
     is the classical relative entropy function (Kullback-Leibler divergence).
-    """
-    def __init__(self, n):
-        """Initialize a ClassRelEntr instance
 
-        Parameters
-        ----------
-        n : int
-            Dimension of the vectors x and y, i.e., how many terms are in the classical relative entropy function.
-        """          
+    Parameters
+    ----------
+    n : int
+        Dimension of the vectors :math:`x` and :math:`y`, i.e., how many terms are in the classical relative entropy function.
+    """
+    def __init__(self, n):     
         # Dimension properties
         self.n  = n # Dimension of system
         self.nu = 1 + 2 * self.n # Barrier parameter

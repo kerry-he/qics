@@ -7,32 +7,54 @@ from qics.cones.base import Cone
 
 class QuantKeyDist(Cone):
     """A class representing a quantum key distribution cone
+
+    .. math::
     
-        K = { (t, X) ∈ R x H^n : t >= -S(G(X)) + S(Z(G(X))), X ⪰ 0 },
+        \\{ (t, X) \\in \\mathbb{R} \\times \\mathbb{H}^n_+ : t \\geq -S(\\mathcal{G}(X)) + S(\\mathcal{Z}(\\mathcal{G}(X))) \\},
         
     with barrier function
+
+    .. math::
     
-        F(t, u, X) = -log(t + S(G(X)) - S(Z(G(X))) - logdet(X),
+        (t, X) \\mapsto -\\log( t + S(\\mathcal{G}(X)) - S(\\mathcal{Z}(\\mathcal{G}(X))) ) - \\log \\det(X),
         
     where
 
-        S(X) = -tr[X log(X)],
+    .. math::
+
+        S(X) = -\\text{tr}[X \\log(X)],
         
-    is the quantum (von Neumann) entropy function, G is a positive linear map, 
-    and Z is a pinching map that maps off-diagonal blocks to zero.
+    is the quantum (von Neumann) entropy function, :math:`\\mathcal{G}:\\mathbb{H}^n\\rightarrow\\mathbb{H}^{mr}` is a positive linear map, 
+    and :math:`\\mathcal{Z}:\\mathbb{H}^{mr}\\rightarrow\\mathbb{H}^{mr}` is a pinching map that maps off-diagonal blocks to zero.
+
+    Parameters
+    ----------
+    K_list : list of ndarray
+        List of Kraus operators :math:`\\{ K_i \\in \\mathbb{C}^{mr \\times n } \\}_{i=1}^l` corresponding to :math:`\\mathcal{G}` such that 
+        
+        .. math::
+
+            \\mathcal{G}(X) = \\sum_{i=1}^l K_i X K_i^\\dagger.
+        
+    Z_list : list of ndarray
+        List of Kraus operators :math:`\\{ Z_i \\in \\mathbb{C}^{mr \\times mr } \\}_{i=1}^r` corresponding to :math:`\\mathcal{Z}` such that
+
+        .. math::
+
+            \\mathcal{Z}(Y) = \\sum_{i=1}^r Z_i Y Z_i^\\dagger.
+
+        Note that these pinching map Kraus operators should be of the form
+
+        .. math::
+
+            Z_i = | i \\rangle \\langle i | \\otimes \\mathbb{I}_m,
+
+        for all :math:`i=1,\\ldots,r`.
+        
+    iscomplex : bool
+        Whether the matrix is symmetric :math:`X \\in \\mathbb{S}^n` (False) or Hermitian :math:`X \\in \\mathbb{H}^n` (True). Default is False.
     """    
     def __init__(self, K_list, Z_list, iscomplex=False):
-        """Initialize a QuantKeyDist instance
-
-        Parameters
-        ----------
-        K_list : list of ndarray
-            List of (k, n) Kraus operators corresponding to G such that G(X) = Σ_i Ki X Ki'.
-        Z_list : list of ndarray
-            List of (k, k) Kraus operators corresponding to Z such that Z(Y) = Σ_i Zi Y Zi'.
-        iscomplex : bool
-            Whether the matrix X is symmetric (False) or Hermitian (True). Default is False.
-        """        
         # Dimension properties
         self.n = K_list[0].shape[1]    # Get input dimension
         self.nu = 1 + self.n           # Barrier parameter

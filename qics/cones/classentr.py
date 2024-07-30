@@ -4,26 +4,31 @@ from qics.cones.base import Cone, get_central_ray_entr
 class ClassEntr(Cone):
     """A class representing a (homogenized) classical entropy cone
     
-        K = { (t, u, x) ∈ R x R x R^n : t >= -u H(x / u), u,x >= 0 },
+    .. math::
+
+        \\{ (t, u, x) \\in \\mathbb{R} \\times \\mathbb{R}_+ \\times \\mathbb{R}^n_+ : t \\geq -u H(x / u) \\},
         
     with barrier function
+
+    .. math::
     
-        F(t, u, x) = -log(t + u H(x / u)) - Σ_i log(xi),
+        (t, u, x) \\mapsto -\\log(t + u H(x / u)) - \\sum_{i=1}^n \\log(x_i),
         
     where
 
-        H(x) = -Σ_i xi log(xi),
-        
-    is the classical (Shannon) entropy function.
-    """    
-    def __init__(self, n):
-        """Initialize a ClassEntr instance
+    .. math::
 
-        Parameters
-        ----------
-        n : int
-            Dimension of the vector x, i.e., how many terms are in the classical entropy function.
-        """        
+        H(x) = -\\sum_{i=1}^n x_i \\log(x_i),
+        
+    is the classical (Shannon) entropy function. The classical entropy epigraph can be recovered
+    by enforcing the linear constraint :math:`u=1`.
+
+    Parameters
+    ----------
+    n : int
+        Dimension of the vector :math:`x`, i.e., how many terms are in the classical entropy function.
+    """    
+    def __init__(self, n):    
         # Dimension properties
         self.n  = n # Dimension of system
         self.nu = 2 + self.n # Barrier parameter

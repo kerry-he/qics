@@ -3,34 +3,50 @@ import scipy as sp
 
 from qics.utils import sparse
 import qics.cones
-
 class Model():
-    """A class representing an instance of the primal-dual conic program
-    
-        (P)    min  c'x                (D)    max  -b'y - h'z
-               s.t. b - Ax = 0                s.t. c + A'y + G'z = 0
-                    h - Gx ∈ K                     z ∈ K*
+    """A class representing an instance of the primal
+
+    .. math::
+
+        \\min_{x \\in \\mathbb{R}^n} &&& c^\\top x
+
+        \\text{s.t.} &&& b - Ax = 0
+
+         &&& h - Gx \\in \\mathcal{K}
+
+    and dual
+
+    .. math::
+
+        \\max_{y \\in \\mathbb{R}^p, z \\in \\mathbb{R}^q} &&& -b^\\top y - h^\\top z
+
+        \\text{s.t.} &&& c + A^\\top y + G^\\top z = 0
+
+         &&& z \\in \\mathcal{K}_*
+
+    standard form conic programs, where :math:`c \\in \\mathbb{R}^n`, :math:`b \\in \\mathbb{R}^p`, 
+    :math:`h \\in \\mathbb{R}^q`, :math:`A \\in \\mathbb{R}^{p \\times n}`, :math:`G \\in \\mathbb{R}^{q \\times n}`, 
+    and :math:`\\mathcal{K} \\subset \\mathbb{R}^{q}` is a convex, proper cone with dual cone :math:`\\mathcal{K}_* \\subset \\mathbb{R}^{q}`.
+
+         
+    Parameters
+    ----------
+    c : (n, 1) ndarray
+        Float array representing linear objective
+    A : (p, n) ndarray, optional
+        Float array representing linear equality constraints. Default is empty matrix.
+    b : (p, 1) ndarray, optional
+        Float array representing linear equality constraints. Default is ``0``.
+    G : (q, n) ndarray, optional
+        Float array representing linear cone constraints. Default is ``-I``.
+    h : (q, 1) ndarray, optional
+        Float array representing linear cone constraints. Default is ``0``.
+    cones : list, optional
+        List of cone classes representing the Cartesian product of cones :math:`\\mathcal{K}`. Default is empty set.
+    offset : float, optional
+        Constant offset term to add to the objective function. Default is ``0``.
     """
     def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0):
-        """Initialize a Model instance
-
-        Parameters
-        ----------
-        c : (n, 1) ndarray
-            Float array representing linear objective
-        A : (p, n) ndarray, optional
-            Float array representing linear equality constraints. Default is empty matrix.
-        b : (p, 1) ndarray, optional
-            Float array representing linear equality constraints. Default is 0.
-        G : (q, n) ndarray, optional
-            Float array representing linear cone constraints. Default is -Id.
-        h : (q, 1) ndarray, optional
-            Float array representing linear cone constraints. Default is 0.
-        cones : list, optional
-            List of cone classes representing the Cartesian product of cones K. Default is empty set.
-        offset : float, optional
-            Constant offset term to add to the objective function. Default is 0.
-        """
         # Intiialize model parameters and default values for missing data
         self.n = np.size(c)
         self.p = np.size(b) if (b is not None) else 0

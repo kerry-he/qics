@@ -1,7 +1,7 @@
 import numpy as np
 import numba as nb
 
-from qics.utils.linalg import congr
+from qics.utils.linalg import congr_multi
 
 @nb.njit
 def D1_f(D, f_D, df_D):
@@ -193,7 +193,7 @@ def scnd_frechet_multi(out, D2, UHU, UXU=None, U=None, work1=None, work2=None, w
 
     if U is not None:
         np.add(work3.transpose(2, 1, 0), work3.conj().transpose(2, 0, 1), out=work1)
-        congr(out, U, work1, work2)
+        congr_multi(out, U, work1, work2)
     else:
         np.add(work3.transpose(2, 1, 0), work3.conj().transpose(2, 0, 1), out=out)
 

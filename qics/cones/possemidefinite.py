@@ -8,24 +8,32 @@ import qics.utils.sparse as sparse
 from qics.cones.base import SymCone
 
 class PosSemidefinite(SymCone):
-    """A class representing a positive semidefinite cone
+    """A class representing either a real symmetric 
+
+    .. math::
     
-        K = { X ∈ H^n : X ⪰ 0 },
-        
-    with log determinant barrier function
+        \\mathbb{S}^n_+ = \\{ X \\in \mathbb{S}^n : X \\succeq 0 \\},
+
+    or complex Hermitian
+
+    .. math::
     
-        F(X) = -logdet(X).
+        \\mathbb{H}^n_+ = \\{ X \\in \mathbb{H}^n : X \\succeq 0 \\},    
+
+    positive semidefinite cone with log determinant barrier function
+
+    .. math::
+
+        X \\mapsto -\\log \\det(X).
+
+    Parameters
+    ----------
+    n : int
+        Dimension of the (n, n) matrix :math:`X`.
+    iscomplex : bool
+        Whether the matrix is symmetric :math:`X \\in \\mathbb{S}^n` (False) or Hermitian :math:`X \\in \\mathbb{H}^n` (True). Default is False.        
     """       
     def __init__(self, n, iscomplex=False):
-        """Initialize a PosSemidefinite instance
-
-        Parameters
-        ----------
-        n : int
-            Dimension of the (n, n) matrix X.
-        iscomplex : bool
-            Whether the matrix X is symmetric (False) or Hermitian (True). Default is False.
-        """             
         # Dimension properties
         self.n  = n                 # Side length of matrix
         self.nu = n                 # Barrier parameter
