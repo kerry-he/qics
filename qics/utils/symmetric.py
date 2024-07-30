@@ -186,8 +186,8 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
             return (mat + mat.T) * 0.5
 
 def p_tr(mat, sys, dims):
-    """Performs the partial trace on a bipartite matrix, i.e., the 
-    unique linear map satisfying
+    """Performs the partial trace on a bipartite matrix, e.g., for  
+    a bipartite state, this is the unique linear map satisfying
     
         X ⊗ Y --> tr[X] Y    if    sys = 0
         X ⊗ Y --> tr[Y] X    if    sys = 1
@@ -195,24 +195,26 @@ def p_tr(mat, sys, dims):
     Parameters
     ----------
     mat : ndarray
-        Input (n0*n1, n0*n1) matrix to perform the partial trace on.
+        Input (n0*n1*...*nk-1, n0*n1*...*nk-1) matrix to perform the partial trace on.
     sys : int
-        Which system to trace out (either 0 or 1).
-    dims : tuple[int, int]
-        The dimensions (n0, n1) of the first and second subsystems.
+        Which system to trace out.
+    dims : tuple[int]
+        The dimensions (n0, n1, ..., nk-1) of the k subsystems.
         
     Returns
     -------
     ndarray
         The resulting matrix after taking the partial trace. Has 
-        dimension (n1, n1) if sys=0, or dimension (n0, n0) if sys=1.
+        dimension (n0*n1*...*nk-1 / ni, n0*n1*...*nk-1 / ni) where 
+        i is the system being traced out.
     """
-    (n0, n1) = dims
-    return np.trace(mat.reshape(n0, n1, n0, n1), axis1=sys, axis2=2+sys)
+
+    N = np.prod(dims) // dims[sys]
+    return np.trace(mat.reshape(*dims, *dims), axis1=sys, axis2=len(dims)+sys).reshape(N, N)
 
 def p_tr_multi(out, mat, sys, dims):
-    """Performs the partial trace on a list of bipartite matrix, i.e., the 
-    unique linear map satisfying
+    """Performs the partial trace on a list of bipartite matrix, e.g., for  
+    a bipartite state, this is the unique linear map satisfying
     
         X ⊗ Y --> tr[X] Y    if    sys = 0
         X ⊗ Y --> tr[Y] X    if    sys = 1
@@ -221,21 +223,24 @@ def p_tr_multi(out, mat, sys, dims):
     ----------
     out : ndarray
         Preallocated list of matrices to store the output. Has 
-        dimension (k, n1, n1) if sys=0, or dimension (k, n0, n0) if sys=1.
+        dimension (p, n0*n1*...*nk-1 / ni, n0*n1*...*nk-1 / ni) where 
+        i is the system being traced out.
     mat : ndarray
-        Input (k, n0*n1, n0*n1) list of matrices to perform the partial trace on.
+        Input (p, n0*n1*...*nk-1, n0*n1*...*nk-1) list of matrices 
+        to perform the partial trace on.
     sys : int
-        Which system to trace out (either 0 or 1).
-    dims : tuple[int, int]
-        The dimensions (n0, n1) of the first and second subsystems.
-    """    
-    (n0, n1) = dims
-    np.trace(mat.reshape(-1, n0, n1, n0, n1), axis1=1+sys, axis2=3+sys, out=out)
+        Which system to trace out.
+    dims : tuple[int]
+        The dimensions (n0, n1, ..., nk) of the p subsystems.
+    """
+    new_dims = [dim for (i, dim) in enumerate(dims) if i != sys]
+    np.trace(mat.reshape(-1, *dims, *dims), axis1=1+sys, axis2=1+len(dims)+sys, out=out.reshape(-1, *new_dims, *new_dims))
+
     return out
 
-def i_kr(mat, sys, dim):
+def i_kr(mat, sys, dims):
     """Performs Kronecker product between the indentity matrix and 
-    a given matrix, i.e.,
+    a given matrix, e.g., for a bipartite system
     
         X --> I ⊗ X    if    sys = 0
         X --> X ⊗ I    if    sys = 1
@@ -244,31 +249,36 @@ def i_kr(mat, sys, dim):
     ----------
     mat : ndarray
         Input matrix to perform the partial trace on. Has 
-        dimension (n1, n1) if sys=0, or dimension (n0, n0) if sys=1.
+        dimension (n0*n1*...*nk-1 / ni, n0*n1*...*nk-1 / ni) where 
+        i is the system being traced out.
     sys : int
-        Which system to trace out (either 0 or 1).
-    dim : tuple[int, int]
-        The dimensions (n0, n1) of the first and second subsystems.
+        Which system to Kroneker product should act on.
+    dim : tuple[int]
+        The dimensions (n0, n1, ..., nk) of the subsystems.
         
     Returns
     -------
     ndarray
-        The resulting (n0*n1, n0*n1) matrix after performing the 
+        The resulting (n0*n1*...*nk-1, n0*n1*...*nk-1) matrix after performing the 
         Kronecker product.
-    """    
-    (n0, n1) = dim
-    out = np.zeros((n0*n1, n0*n1), dtype=mat.dtype)
-    if sys == 1:
-        # Perform (mat kron I)
-        r = np.arange(n1)
-        out.reshape(n0, n1, n0, n1)[:, r, :, r] = mat
-    else:
-        # Perform (I kron mat)
-        r = np.arange(n0)
-        out.reshape(n0, n1, n0, n1)[r, :, r, :] = mat
+    """
+    N = np.prod(dims)
+    new_dims = [dim for (i, dim) in enumerate(dims) if i != sys]
+
+    # To reorder systems to shift sys to the front
+    swap_idxs = list(range(2 * len(dims)))      
+    swap_idxs.insert(0, swap_idxs.pop(sys))
+    swap_idxs.insert(1, swap_idxs.pop(len(dims) + sys))
+
+    out = np.zeros((N, N), dtype=mat.dtype)
+    out_view = out.reshape(*dims, *dims)
+    out_view = np.transpose(out_view, swap_idxs)
+
+    r = np.arange(dims[sys])
+    out_view[r, r, ...] = mat.reshape(*new_dims, *new_dims)  
     return out
 
-def i_kr_multi(out, mat, sys, dim):
+def i_kr_multi(out, mat, sys, dims):
     """Performs Kronecker product between the indentity matrix and 
     a given list of matrices, i.e.,
     
@@ -279,28 +289,33 @@ def i_kr_multi(out, mat, sys, dim):
     ----------
     mat : ndarray
         Input matrix to perform the partial trace on. Has 
-        dimension (k, n1, n1) if sys=0, or dimension (k, n0, n0) if sys=1.
+        dimension (p, n0*n1*...*nk-1 / ni, n0*n1*...*nk-1 / ni) where 
+        i is the system being traced out.
     sys : int
-        Which system to trace out (either 0 or 1).
-    dim : tuple[int, int]
-        The dimensions (n0, n1) of the first and second subsystems.
+        Which system to Kroneker product should act on.
+    dim : tuple[int]
+        The dimensions (n0, n1, ..., nk) of the subsystems.
         
     Returns
     -------
     ndarray
-        The resulting (k, n0*n1, n0*n1) matrix after performing the 
+        The resulting (p, n0*n1*...*nk-1, n0*n1*...*nk-1) matrix after performing the 
         Kronecker product.
     """
-    (n0, n1) = dim
+    new_dims = [dim for (i, dim) in enumerate(dims) if i != sys]
+
+    # To reorder systems to shift sys to the front
+    swap_idxs = list(range(1 + 2 * len(dims)))      
+    swap_idxs.insert(1, swap_idxs.pop(1 + sys))
+    swap_idxs.insert(2, swap_idxs.pop(1 + len(dims) + sys))
+
     out.fill(0.)
-    if sys == 1:
-        # Perform (mat kron I)
-        r = np.arange(n1)
-        out.reshape(-1, n0, n1, n0, n1)[:, :, r, :, r] = mat
-    else:
-        # Perform (I kron mat)
-        r = np.arange(n0)
-        out.reshape(-1, n0, n1, n0, n1)[:, r, :, r, :] = mat
+    out_view = out.reshape(-1, *dims, *dims)
+    out_view = np.transpose(out_view, swap_idxs)
+
+    r = np.arange(dims[sys])
+    out_view[:, r, r, ...] = mat.reshape(-1, 1, *new_dims, *new_dims)
+
     return out
 
 def p_transpose(mat, sys, dim):

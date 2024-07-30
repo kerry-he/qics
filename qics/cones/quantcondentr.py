@@ -5,44 +5,47 @@ import qics.utils.symmetric as sym
 from qics.cones.base import Cone
 
 class QuantCondEntr(Cone):
-    """A class representing a quantum conditional entropy cone
+    """A class representing a quantum conditional entropy cone with :math:`k` subsystems, 
+    where the :math:`i`-th subsystem has dimension :math:`n_i`  
     
-        K = { (t, X) ∈ R x H^n0n1 : t >= S(X) - S(pTr(X)), X ⪰ 0 },
+    .. math::
+
+        \\{ (t, X) \\in \\mathbb{R} \\times \\mathbb{H}^{n_0n_1 \\ldots n_{k-1}} : t \\geq -S(X) + S(\\text{tr}_i(X)) \\},
         
     with barrier function
     
-        F(t, X) = -log(t - S(X) + S(pTr(X))) - logdet(X),
+    .. math::
+
+        (t, X) \\mapsto -\\log(t + S(X) - S(\\text{tr}_i(X))) - \\log \\det(X),
         
     where
 
-        S(X) = -tr[X log(X)],
-        
-    is the quantum (von Neumann) entropy, and pTr is the partial trace.
-    """    
-    def __init__(self, n0, n1, sys, iscomplex=False):
-        """Initialize a QuantCondEntr instance
+    .. math::
 
-        Parameters
-        ----------
-        n0 : int
-            Dimension of the first system.
-        n1 : int
-            Dimension of the second system.
-        sys : int
-            Which system is being traced out by the partial trace (either 0 or 1).
-        iscomplex : bool
-            Whether the matrix X is symmetric (False) or Hermitian (True). Default is False.
-        """              
+        S(X) = -\\text{tr}[X \\log(X)],
+        
+    is the quantum (von Neumann) entropy, and :math:`\\text{tr}_i` is the partial trace on the :math:`i`-th subsystem.
+
+    Parameters
+    ----------
+    dims : tuple[int]
+        List of dimensions :math:`(n_0, n_1, \\ldots, n_{k-1})` of the :math:`k` subsystems.
+    sys : int
+        Which system is being traced out by the partial trace.
+    iscomplex : bool
+        Whether the matrix is symmetric :math:`X \\in \\mathbb{S}^{n_0n_1 \\ldots n_{k-1}}` 
+        (False) or Hermitian :math:`X \\in \\mathbb{H}^{n_0n_1 \\ldots n_{k-1}}` (True). Default is False.
+    """
+    def __init__(self, dims, sys, iscomplex=False):           
         # Dimension properties
-        self.n0 = n0          # Dimension of system 0
-        self.n1 = n1          # Dimension of system 1
-        self.N  = n0 * n1     # Total dimension of bipartite system
-        self.nu = 1 + self.N  # Barrier parameter
+        self.dims = dims              # Dimensions of subsystems
+        self.N    = np.prod(dims)     # Total dimension of bipartite system
+        self.nu   = 1 + self.N        # Barrier parameter
         self.iscomplex = iscomplex
 
-        self.sys   = sys                       # System being traced out
-        self.n = n0 if (sys == 1) else n1      # Dimension of system not traced out
-        self.m = n1 if (sys == 1) else n0      # Dimension of system traced out
+        self.sys = sys                  # System being traced out
+        self.n = self.N // dims[sys]    # Dimension of system after partial trace
+        self.m = dims[sys]              # Dimension of system traced out
 
         self.vn = self.n*self.n if iscomplex else self.n*(self.n+1)//2      # Compact dimension of vectorized system being traced out
 
@@ -93,7 +96,7 @@ class QuantCondEntr(Cone):
         self.feas_updated = True
 
         (self.t, self.X) = self.primal
-        self.Y = sym.p_tr(self.X, self.sys, (self.n0, self.n1))
+        self.Y = sym.p_tr(self.X, self.sys, self.dims)
 
         self.Dx, self.Ux = np.linalg.eigh(self.X)
         self.Dy, self.Uy = np.linalg.eigh(self.Y)
@@ -110,7 +113,7 @@ class QuantCondEntr(Cone):
         self.log_Y = (self.Uy * self.log_Dy) @ self.Uy.conj().T
         self.log_Y = (self.log_Y + self.log_Y.conj().T) * 0.5
         
-        self.log_XY = self.log_X - sym.i_kr(self.log_Y, self.sys, (self.n0, self.n1))
+        self.log_XY = self.log_X - sym.i_kr(self.log_Y, self.sys, self.dims)
         self.z = self.t[0, 0] - lin.inp(self.X, self.log_XY)
 
         self.feas = (self.z > 0)
@@ -146,14 +149,14 @@ class QuantCondEntr(Cone):
         # See hess_congr() for additional comments
 
         (Ht, Hx) = H
-        Hy = sym.p_tr(Hx, self.sys, (self.n0, self.n1))
+        Hy = sym.p_tr(Hx, self.sys, self.dims)
 
         UxHxUx = self.Ux.conj().T @ Hx @ self.Ux
         UyHyUy = self.Uy.conj().T @ Hy @ self.Uy
 
         # Hessian product of conditional entropy
         D2PhiH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
-        D2PhiH -= sym.i_kr(self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T, self.sys, (self.n0, self.n1))
+        D2PhiH -= sym.i_kr(self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T, self.sys, self.dims)
 
         # Hessian product of barrier function
         out[0][:] = (Ht - lin.inp(self.DPhi, Hx)) * self.zi2
@@ -178,11 +181,11 @@ class QuantCondEntr(Cone):
         # Precompute Hessian products for quantum conditional entropy
         # D2Phi(X)[Hx] =  Ux [log^[1](Dx) .* (Ux'     Hx  Ux)] Ux' 
         #              - [Uy [log^[1](Dy) .* (Uy' PTr(Hx) Uy)] Uy'] kron I
-        sym.p_tr_multi(self.work1, self.Ax, self.sys, (self.n0, self.n1))
+        sym.p_tr_multi(self.work1, self.Ax, self.sys, self.dims)
         lin.congr_multi(self.work2, self.Uy.conj().T, self.work1, self.work3)
         self.work2 *= self.D1y_log * self.zi
         lin.congr_multi(self.work1, self.Uy, self.work2, self.work3)
-        sym.i_kr_multi(self.Work0, self.work1, self.sys, (self.n0, self.n1))
+        sym.i_kr_multi(self.Work0, self.work1, self.sys, self.dims)
 
         lin.congr_multi(self.Work2, self.Ux.conj().T, self.Ax, self.Work3)
         self.Work2 *= self.D1x_comb
@@ -229,7 +232,7 @@ class QuantCondEntr(Cone):
         # Apply D2S(X)^-1 = (Ux kron Ux) log^[1](Dx) (Ux' kron Ux')
         UxWxUx = self.Ux.conj().T @ Wx @ self.Ux
         Hxx_inv_x = self.Ux @ (self.D1x_comb_inv * UxWxUx) @ self.Ux.conj().T
-        work = -sym.p_tr(Hxx_inv_x, self.sys, (self.n0, self.n1))
+        work = -sym.p_tr(Hxx_inv_x, self.sys, self.dims)
 
         # Solve linear system N \ ( ... )
         temp = work.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs]
@@ -244,7 +247,7 @@ class QuantCondEntr(Cone):
         work += work.conj().T
 
         # Apply PTr' = IKr
-        temp = sym.i_kr(work, self.sys, (self.n0, self.n1))
+        temp = sym.i_kr(work, self.sys, self.dims)
         # Apply D2S(X)^-1 = (Ux kron Ux) log^[1](Dx) (Ux' kron Ux')
         temp = self.Ux.conj().T @ temp @ self.Ux
         H_inv_w_x = Hxx_inv_x - self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.conj().T
@@ -294,7 +297,7 @@ class QuantCondEntr(Cone):
         self.Work2 *= self.D1x_comb_inv
         lin.congr_multi(self.Work0, self.Ux, self.Work2, self.Work3)
         # Apply PTr
-        sym.p_tr_multi(self.work1, self.Work0, self.sys, (self.n0, self.n1))
+        sym.p_tr_multi(self.work1, self.Work0, self.sys, self.dims)
         self.work1 *= -1
 
         # Solve linear system N \ ( ... )
@@ -311,7 +314,7 @@ class QuantCondEntr(Cone):
         self.work1 += self.work1.conj().transpose((0, 2, 1))
 
         # Apply PTr' = IKr
-        sym.i_kr_multi(self.Work1, self.work1, self.sys, (self.n0, self.n1))
+        sym.i_kr_multi(self.Work1, self.work1, self.sys, self.dims)
         # Apply D2S(X)^-1 = (Ux kron Ux) log^[1](Dx) (Ux' kron Ux')
         lin.congr_multi(self.Work2, self.Ux.conj().T, self.Work1, self.Work3)
         self.Work2 *= self.D1x_comb_inv
@@ -339,17 +342,17 @@ class QuantCondEntr(Cone):
             self.update_dder3_aux()
 
         (Ht, Hx) = H
-        Hy = sym.p_tr(Hx, self.sys, (self.n0, self.n1))
+        Hy = sym.p_tr(Hx, self.sys, self.dims)
 
         UxHxUx = self.Ux.conj().T @ Hx @ self.Ux
         UyHyUy = self.Uy.conj().T @ Hy @ self.Uy
 
         # Quantum conditional entropy oracles
         D2PhiH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
-        D2PhiH -= sym.i_kr(self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T, self.sys, (self.n0, self.n1))
+        D2PhiH -= sym.i_kr(self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T, self.sys, self.dims)
 
         D3PhiHH = grad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
-        D3PhiHH -= sym.i_kr(grad.scnd_frechet(self.D2y_log, UyHyUy, UyHyUy, self.Uy), self.sys, (self.n0, self.n1))
+        D3PhiHH -= sym.i_kr(grad.scnd_frechet(self.D2y_log, UyHyUy, UyHyUy, self.Uy), self.sys, self.dims)
 
         # Third derivative of barrier
         DPhiH = lin.inp(self.DPhi, Hx)
@@ -449,14 +452,16 @@ class QuantCondEntr(Cone):
 
         # Get [PTr (Ux kron Ux) [(1/z log + inv)^[1](Dx)]^-1  (Ux' kron Ux') PTr'] matrix
         # Begin with [(Ux' kron Ux') PTr']
-        temp = self.Ux.T.reshape(self.N, self.n0, self.n1)
-        if self.sys == 1:
-            lhs = np.copy(temp.conj().transpose(1, 0, 2))  # self.n0, self.N, self.n1
-            rhs = np.copy(temp.transpose(1, 2, 0))         # self.n0, self.n1, self.N
-        else:
-            lhs = np.copy(temp.conj().transpose(2, 0, 1))  # self.n1, self.N, self.n0
-            rhs = np.copy(temp.transpose(2, 1, 0))         # self.n1, self.n0, self.N
+        swap_idxs = list(range(1 + len(self.dims)))      # To reorder systems to shift sys to the front
+        swap_idxs.insert(1, swap_idxs.pop(1 + self.sys))
 
+        temp = self.Ux.T.reshape(self.N, *self.dims)
+        temp = np.transpose(temp, swap_idxs)
+        temp = temp.reshape(self.N, self.m, self.n)
+
+        lhs = np.copy(temp.conj().transpose(2, 0, 1))  # self.n1, self.N, self.n0
+        rhs = np.copy(temp.transpose(2, 1, 0))         # self.n1, self.n0, self.N
+        
         np.matmul(lhs, rhs, out=self.Work9)
         self.Work8[self.diag_idxs] = self.Work9
         rhs *= np.sqrt(0.5)
@@ -476,7 +481,7 @@ class QuantCondEntr(Cone):
         self.Work8 *= self.D1x_comb_inv
         # Apply PTr (Ux kron Ux)
         lin.congr_multi(self.Work6, self.Ux, self.Work8, work=self.Work7)
-        sym.p_tr_multi(self.work7, self.Work6, self.sys, (self.n0, self.n1))
+        sym.p_tr_multi(self.work7, self.Work6, self.sys, self.dims)
 
         # Subtract to obtain N then Cholesky factor
         self.work6 -= self.work7
