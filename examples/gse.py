@@ -8,16 +8,17 @@ import qics.utils.symmetric as sym
 #        tr[X] = 1
 #        (t, X) ∈ K_qce
 
-L = 2
-N = 2**L
+L    = 4
+dims = [2] * L
 
+N = 2**L
 m = 2**(L-1)
 vm = sym.vec_dim(m)
 
 # Build linear constraint matrices
 # Tr_1[X] == Tr_L[X]
-tr1 = sym.lin_to_mat(lambda x : sym.p_tr(x, 0, (2, m)), (N, m), compact=(False, True))
-trL = sym.lin_to_mat(lambda x : sym.p_tr(x, 1, (m, 2)), (N, m), compact=(False, True))
+tr1 = sym.lin_to_mat(lambda x : sym.p_tr(x,   0, dims), (N, m), compact=(False, True))
+trL = sym.lin_to_mat(lambda x : sym.p_tr(x, L-1, dims), (N, m), compact=(False, True))
 A1 = np.hstack((np.zeros((vm, 1)), tr1 - trL))
 b1 = np.zeros((vm, 1))
 # tr[X] == 1
@@ -43,7 +44,7 @@ H = heisenberg(-1, L)
 c = np.vstack((np.zeros((1, 1)), H.reshape((-1, 1))))
 
 # Define cones to optimize over
-cones = [qics.cones.QuantCondEntr(m, 2, 1)]
+cones = [qics.cones.QuantCondEntr(dims, 0)]
 
 # Initialize model and solver objects
 model  = qics.Model(c=c, A=A, b=b, cones=cones)
