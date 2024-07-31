@@ -8,8 +8,6 @@ import qics.utils.quantum as qu
 #   s.t. tr[Y] = 1
 #        T2(Y) >= 0
 
-np.random.seed(1)
-
 n0 = 2
 n1 = 3
 iscomplex = False
@@ -31,22 +29,22 @@ b = np.ones((1, 1))
 
 # Build linear cone constraints
 # t = t
-G0 = np.hstack((-np.ones((1, 1)), np.zeros((1, sN))))
-h0 = np.zeros((1, 1))
+G1 = np.hstack((-np.ones((1, 1)), np.zeros((1, sN))))
+h1 = np.zeros((1, 1))
 # X = X (const)
-G1 = np.hstack((np.zeros((vN, 1)), np.zeros((vN, sN))))
-h1 = sym.mat_to_vec(X, iscomplex=iscomplex, compact=False)
+G2 = np.hstack((np.zeros((vN, 1)), np.zeros((vN, sN))))
+h2 = sym.mat_to_vec(X, iscomplex=iscomplex, compact=False)
 # Y = Y
 eye = sym.lin_to_mat(lambda X : X, (N, N), iscomplex=iscomplex, compact=(True, False))
-G2 = np.hstack((np.zeros((vN, 1)), -eye))
-h2 = np.zeros((vN, 1))
+G3 = np.hstack((np.zeros((vN, 1)), -eye))
+h3 = np.zeros((vN, 1))
 # T2(Y) >= 0
 p_transpose = sym.lin_to_mat(lambda X : sym.p_transpose(X, 1, (n0, n1)), (N, N), iscomplex=iscomplex, compact=(True, False))
-G3 = np.hstack((np.zeros((vN, 1)), -p_transpose))
-h3 = np.zeros((vN, 1))
+G4 = np.hstack((np.zeros((vN, 1)), -p_transpose))
+h4 = np.zeros((vN, 1))
 
-G = np.vstack((G0, G1, G2, G3))
-h = np.vstack((h0, h1, h2, h3))
+G = np.vstack((G1, G2, G3, G4))
+h = np.vstack((h1, h2, h3, h4))
 
 # Input into model and solve
 cones = [qics.cones.QuantRelEntr(N, iscomplex=iscomplex), qics.cones.PosSemidefinite(N, iscomplex=iscomplex)]

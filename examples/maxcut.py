@@ -8,7 +8,7 @@ import qics
 #        X >= 0
 
 n = 200
-iscomplex = True
+iscomplex = False
 
 # Generate random linear objective function
 C = np.random.randn(n, n)

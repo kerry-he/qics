@@ -9,8 +9,8 @@ import qics.utils.quantum as qu
 #        (t, X) ∈ K_qce
 #        <Δ, X> <= D
 
-n = 4                   # Dimension of rho
-D = 0.5                 # Maximum allowable distortion
+n = 4
+D = 0.5
 iscomplex = False
 
 rho      = qu.rand_density_matrix(n, iscomplex=iscomplex)
