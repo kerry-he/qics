@@ -1,46 +1,54 @@
 import numpy as np
-import scipy as sp
-import math
+import qics
+import qics.utils.symmetric as sym
+import qics.utils.quantum as qu
 
-import cProfile
+## Nearest correlation matrix
+#   min  S(X||Y)
+#   s.t. Y_ii = 1
 
-from cones import *
-from utils import symmetric as sym
-from solver import model, solver
-from utils import quantum as quant
+n = 25
+iscomplex = False
 
-np.random.seed(1)
-np.set_printoptions(threshold=np.inf)
+X = qu.rand_density_matrix(n, iscomplex=iscomplex)
 
-# Problem data
-n = 100
-vn = sym.vec_dim(n)
-# M = 2 * np.eye(n)
-# M = quant.randDensityMatrix(n)
-M = np.random.rand(n, n)
-M = (M @ M.T)
-M = M / np.max(np.diag(M))
+sn = sym.vec_dim(n, iscomplex=iscomplex)
+vn = sym.vec_dim(n, iscomplex=iscomplex, compact=False)
 
-# Build problem model
-A = np.zeros((n, 1 + vn))
-for i in range(n):
-    H = np.zeros((n, n))
-    H[i, i] = 1.0
-    A[[i], 1:] = sym.mat_to_vec(H).T
+# Define objective function, where x = (t, triu[Y]) and c = (1, 0)
+c1 = np.array(([[1.]]))
+c2 = np.zeros((sn, 1))
+c  = np.vstack((c1, c2))
+
+# Build linear constraint Y_ii = 1
+diag_idxs = np.arange(3, 2*n, 2) if iscomplex else np.arange(2, 1+n)
+diag_idxs = np.insert(np.cumsum(diag_idxs), 0, 0)
+A = np.zeros((n, 1 + sn))
+A[np.arange(n), 1 + diag_idxs] = 1.
+
 b = np.ones((n, 1))
 
-c = np.zeros((1 + vn, 1))
-c[0] = 1.0 / n
+# Build linear cone constraints
+# t = t
+G1 = np.hstack((-np.ones((1, 1)), np.zeros((1, sn))))
+h1 = np.zeros((1, 1))
+# X = X (const)
+G2 = np.hstack((np.zeros((vn, 1)), np.zeros((vn, sn))))
+h2 = sym.mat_to_vec(X, iscomplex=iscomplex, compact=False)
+# Y = Y
+eye = sym.lin_to_mat(lambda X : X, (n, n), iscomplex=iscomplex, compact=(True, False))
+G3 = np.hstack((np.zeros((vn, 1)), -eye))
+h3 = np.zeros((vn, 1))
+
+G = np.vstack((G1, G2, G3))
+h = np.vstack((h1, h2, h3))
 
 # Input into model and solve
-cones = [quantrelentr_Y.Cone(n, M)]
-model = model.Model(c, A, b, cones=cones, offset=-np.trace(M) * np.log(n))
-solver = solver.Solver(model)
+cones = [qics.cones.QuantRelEntr(n, iscomplex=iscomplex)]
 
-profiler = cProfile.Profile()
-profiler.enable()
+# Initialize model and solver objects
+model  = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
+solver = qics.Solver(model)
 
+# Solve problem
 solver.solve()
-
-profiler.disable()
-profiler.dump_stats("example.stats")

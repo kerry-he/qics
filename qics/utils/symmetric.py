@@ -54,7 +54,7 @@ def mat_dim(len, iscomplex=False, compact=True):
             return math.isqrt(1 + 8 * len) // 2
     else:
         if iscomplex:
-            return math.isqrt(len) // 2
+            return math.isqrt(len // 2)
         else:
             return math.isqrt(len)
 
@@ -154,11 +154,12 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
         The resulting matrix.
     """
     vn = vec.size
+    dtype = np.complex128 if iscomplex else np.float64
     
     if compact:
         irt2 = np.sqrt(0.5)
         n    = mat_dim(vn, iscomplex=iscomplex)
-        mat  = np.empty((n, n))
+        mat  = np.empty((n, n), dtype=dtype)
 
         k = 0
         for j in range(n):
@@ -177,7 +178,7 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
         return mat
     else:
         if iscomplex:
-            n = math.isqrt(vn) // 2
+            n = math.isqrt(vn // 2)
             mat = vec.reshape((-1, 2)).view(dtype=np.complex128).reshape(n, n)
             return (mat + mat.conj().T) * 0.5
         else:

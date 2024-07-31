@@ -1,40 +1,52 @@
 import numpy as np
-import scipy as sp
-import math
+import qics
+import qics.utils.symmetric as sym
+import qics.utils.quantum as qu
 
-import cProfile
+## Classical-quantum channel capacity
+#   max  S(Σ_i pi N(Xi)) - Σ_i pi S(N(Xi))
+#   s.t. Σ_i pi = 1
+#        p >= 0
 
-from cones import *
-from utils import symmetric as sym
-from utils import quantum
-from solver import model, solver
+n = 64
+iscomplex = False
 
-np.random.seed(1)
-np.set_printoptions(threshold=np.inf)
+alphabet = [qu.rand_density_matrix(n, iscomplex=iscomplex) for i in range(n)]
+vn       = sym.vec_dim(n, iscomplex=iscomplex, compact=False)
 
-# Define dimensions
-n = 128
-sn = sym.vec_dim(n)
+# Define objective function, where x = ({pi}, t) and c = ({-S(N(Xi))}, 1)
+c1 = np.array([[-qu.quant_entropy(rho)] for rho in alphabet])
+c2 = np.array([[1.]])
+c  = np.vstack((c1, c2))
 
-# cq channel capacity problem data
-alphabet = np.array([quantum.randDensityMatrix(n) for i in range(n)])
-
-# Build problem model
-A = np.hstack((np.zeros((1, 1)), np.ones((1, n))))
+# Build linear constraint Σ_i pi = 1
+A = np.hstack((np.ones((1, n)), np.zeros((1, 1))))
 b = np.ones((1, 1))
 
-c = np.zeros((n + 1, 1))
-c[0] = 1.
+# Build linear cone constraints
+# p >= 0
+G1 = np.hstack((-np.eye(n), np.zeros((n, 1))))
+h1 = np.zeros((n, 1))
+# t = t
+G2 = np.hstack((np.zeros((1, n)), -np.ones((1, 1))))
+h2 = np.zeros((1, 1))
+# u = 1
+G3 = np.hstack((np.zeros((1, n)), np.zeros((1, 1))))
+h3 = np.ones((1, 1))
+# X = Σ_i pi N(Xi)
+alphabet_vec = np.hstack(([sym.mat_to_vec(rho, iscomplex=iscomplex, compact=False) for rho in alphabet]))
+G4 = np.hstack((-alphabet_vec, np.zeros((vn, 1))))
+h4 = np.zeros((vn, 1))
+
+G = np.vstack((G1, G2, G3, G4))
+h = np.vstack((h1, h2, h3, h4))
 
 # Input into model and solve
-cones = [holevoinf.HolevoInf(alphabet)]
-model = model.Model(c, A, b, cones=cones)
-solver = solver.Solver(model)
+cones = [qics.cones.NonNegOrthant(n), qics.cones.QuantEntr(n, iscomplex=iscomplex)]
 
-profiler = cProfile.Profile()
-profiler.enable()
+# Initialize model and solver objects
+model  = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
+solver = qics.Solver(model)
 
+# Solve problem
 solver.solve()
-
-profiler.disable()
-profiler.dump_stats("example.stats")

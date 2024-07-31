@@ -1,28 +1,22 @@
 import numpy as np
-import scipy as sp
-import math
-
-import cProfile
-
-from cones import *
-from utils import symmetric as sym
-from utils import quantum
-from solver import model, solver
+import qics
+import qics.utils.symmetric as sym
+import qics.utils.quantum as qu
 
 np.random.seed(1)
-np.set_printoptions(threshold=np.inf)
 
 # Define dimensions
 nin  = 16
 nout = 16
 nenv = 16
+iscomplex = False
 
 sin = sym.vec_dim(nin)
 sout = sym.vec_dim(nout)
 sout_env = sym.vec_dim(nout * nenv)
 
 # ea channel capacity problem data
-V = quantum.randStinespringOperator(nin, nout, nenv)
+V = qu.rand_stinespring_operator(nin, nout, nenv)
 
 tr = sym.mat_to_vec(np.eye(nin)).T
 VV = np.zeros((sout_env, sin))
@@ -61,14 +55,15 @@ G = -np.vstack((G1, G2, G3, G4, G5))
 h = np.zeros((1 + sout_env + 1 + sout + sin, 1))
 
 # Input into model and solve
-cones = [quantcondentr.Cone(nout, nenv, 0), quantentr.Cone(nout), possemidefinite.Cone(nin)]
-model = model.Model(c, A, b, G, h, cones=cones)
-solver = solver.Solver(model)
+cones = [
+    qics.cones.QuantCondEntr((nout, nenv), 0, iscomplex=iscomplex), 
+    qics.cones.QuantEntr(nout, iscomplex=iscomplex), 
+    qics.cones.PosSemiDefinite(nin, iscomplex=iscomplex)
+]
 
-profiler = cProfile.Profile()
-profiler.enable()
+# Initialize model and solver objects
+model  = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
+solver = qics.Solver(model)
 
+# Solve problem
 solver.solve()
-
-profiler.disable()
-profiler.dump_stats("example.stats")

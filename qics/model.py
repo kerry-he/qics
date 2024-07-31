@@ -55,7 +55,7 @@ class Model():
         self.c = c.copy()
         self.A = A.copy() if (A is not None) else  np.empty((0, self.n))
         self.b = b.copy() if (b is not None) else  np.empty((0, 1))
-        self.G = G.copy() if (G is not None) else -sp.sparse.identity(self.n).tocsr()
+        self.G = G.copy() if (G is not None) else -sp.sparse.eye(self.n).tocsr()
         self.h = h.copy() if (h is not None) else  np.zeros((self.n, 1))
         self.cones = cones
 
