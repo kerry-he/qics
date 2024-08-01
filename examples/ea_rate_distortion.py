@@ -38,7 +38,10 @@ A = np.vstack((A1, A2))
 b = np.vstack((b1, b2))
 
 # Define cones to optimize over
-cones = [qics.cones.QuantCondEntr((n, n), 0, iscomplex=iscomplex), qics.cones.NonNegOrthant(1)]
+cones = [
+    qics.cones.QuantCondEntr((n, n), 0, iscomplex=iscomplex), 
+    qics.cones.NonNegOrthant(1)
+]
 
 # Initialize model and solver objects
 model  = qics.Model(c=c, A=A, b=b, cones=cones, offset=entr_rho)

@@ -3,20 +3,18 @@ import qics
 import qics.utils.symmetric as sym
 import qics.utils.quantum as qu
 
-## Classical-quantum channel capacity
+## Entanglement-assisted channel capacity
 #   min  t1 + t2
 #   s.t. tr[X] = 1
 #        (t1, VXV') ∈ K_qce
 #        (t2, 1, Tr_2[VXV']) ∈ K_qe
 #        X >= 0
 
-# Define dimensions
 ni = 4
 no = 4
 ne = 4
 iscomplex = False
 
-# ea channel capacity problem data
 V = qu.rand_stinespring_operator(ni, no, ne, iscomplex=iscomplex)
 
 noe  = no * ne
@@ -71,4 +69,4 @@ model  = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
 solver = qics.Solver(model)
 
 # Solve problem
-solver.solve()
+out = solver.solve()

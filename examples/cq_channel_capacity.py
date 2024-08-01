@@ -42,11 +42,14 @@ G = np.vstack((G1, G2, G3, G4))
 h = np.vstack((h1, h2, h3, h4))
 
 # Input into model and solve
-cones = [qics.cones.NonNegOrthant(n), qics.cones.QuantEntr(n, iscomplex=iscomplex)]
+cones = [
+    qics.cones.NonNegOrthant(n), 
+    qics.cones.QuantEntr(n, iscomplex=iscomplex)
+]
 
 # Initialize model and solver objects
 model  = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
 solver = qics.Solver(model)
 
 # Solve problem
-solver.solve()
+out = solver.solve()
