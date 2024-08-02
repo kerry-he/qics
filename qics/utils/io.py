@@ -41,13 +41,15 @@ def read_sdpa(filename):
     # Determine if this is a complex or real SDP file
     file_extension = os.path.splitext(filename)[1]
     assert file_extension == ".dat-s" or file_extension == ".dat-c"
-    iscomplex = (file_extension == 'c')
+    iscomplex = (file_extension[-1] == 'c')
     dtype     = np.complex128 if iscomplex else np.float64
 
     fp = open(filename, "r")
     line = fp.readline()
 
+    ##############################################################
     # Skip comments
+    ##############################################################
     # From user manual: 
     #   On top of the input data file, we can write a single or 
     #   multiple lines of Title and Comment. Each line of Title 
@@ -56,19 +58,27 @@ def read_sdpa(filename):
     while line[0] == '*' or line[0] == '"':
         line = fp.readline()
         
+    ##############################################################
     # Read mDim (number of linear constraints b)
+    ##############################################################
     mDim = int(line.strip().split(' ')[0])
 
+    ##############################################################
     # Read nBlock (number of blocks in X and Z)
+    ##############################################################
     line = fp.readline()
     nBlock = int(line.strip().split(' ')[0])
     
+    ##############################################################
     # Read blockStruct (structure of blocks in X and Z; negative 
     # integer represents a diagonal block)
+    ##############################################################
     line = fp.readline()
     blockStruct = [int(i) for i in line.strip().split(' ')]
     
+    ##############################################################
     # Read b
+    ##############################################################
     line = fp.readline()
     line = line.strip()
     line = line.strip('{}()')
@@ -79,8 +89,10 @@ def read_sdpa(filename):
     while b_str.count('') > 0:
         b_str.remove('')
     b = np.array([[float(bi)] for bi in b_str])
-    
+
+    ##############################################################
     # Read c and A
+    ##############################################################
     # Some useful dimension information
     step   = 2 if iscomplex else 1
     dims   = [step*n*n if n >= 0 else -n for n in blockStruct]
@@ -132,43 +144,41 @@ def read_sdpa(filename):
         else:
             # All other rows correspond to data for A
             if ni >= 0:
-                if iscomplex:
-                    if val.real != 0.:
-                        Acols.append(idxs[block] + (colI + colJ*ni)*2)
+                # Symmetric or Hermitian matrix
+                if val.real != 0.:
+                    Acols.append(idxs[block] + (colI + colJ*ni)*step)
+                    Arows.append(row)
+                    Avals.append(val.real)
+
+                    if colJ != colI:
+                        Acols.append(idxs[block] + (colJ + colI*ni)*step)
                         Arows.append(row)
                         Avals.append(val.real)
 
-                        if colJ != colI:
-                            Acols.append(idxs[block] + (colJ + colI*ni)*2)
-                            Arows.append(row)
-                            Avals.append(val.real)
-
-                    if val.imag != 0.:
-                        Acols.append(idxs[block] + (colI + colJ*ni)*2 + 1)
-                        Arows.append(row)
-                        Avals.append(val.imag)
-
-                        Acols.append(idxs[block] + (colJ + colI*ni)*2 + 1)
-                        Arows.append(row)
-                        Avals.append(-val.imag)
-                else:
-                    Acols.append(idxs[block] + colI + colJ*ni)
+                if val.imag != 0.:
+                    # Hermitian matrices should have real diagonal entries
+                    assert colI != colJ
+                    assert iscomplex
+                    Acols.append(idxs[block] + (colI + colJ*ni)*step + 1)
                     Arows.append(row)
-                    Avals.append(val)
+                    Avals.append(-val.imag)
 
-                    if colJ != colI:
-                        Acols.append(idxs[block] + colJ + colI*ni)
-                        Arows.append(row)
-                        Avals.append(val)
+                    Acols.append(idxs[block] + (colJ + colI*ni)*step + 1)
+                    Arows.append(row)
+                    Avals.append(val.imag)
             else:
+                # Real vector
                 assert colI == colJ
                 Acols.append(idxs[block] + colI)
                 Arows.append(row)
                 Avals.append(val)
 
+    c *= -1     # SDPA format maximizes c
     A = sp.sparse.csr_matrix((Avals, (Arows, Acols)), shape=(mDim, totDim))
 
+    ##############################################################
     # Get cones
+    ##############################################################
     cones = []
     for bi in blockStruct:
         if bi >= 0:
