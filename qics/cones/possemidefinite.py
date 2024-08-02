@@ -397,10 +397,7 @@ class PosSemidefinite(SymCone):
 
                 # Turn rows of A into matrices Ai
                 if self.iscomplex:
-                    A_ds_real = A_ds[:, ::2]
-                    A_ds_imag = A_ds[:, 1::2]
-                    A_ds = A_ds_real + A_ds_imag*1j
-                    
+                    A_ds = A_ds[:, ::2] + A_ds[:, 1::2]*1j
                 A_ds = A_ds.toarray()
 
                 if self.iscomplex:
