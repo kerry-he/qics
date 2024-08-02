@@ -10,8 +10,6 @@ import qics.utils.symmetric as sym
 #        0 <= Y <= I
 #        (t, Y, Adiag(z)A' + eY) ∈ K_Plog
 
-np.random.seed(1)
-
 n     = 10
 m     = 20
 A_dat = 1 / (n**0.25) * np.random.randn(n, m)

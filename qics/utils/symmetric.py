@@ -114,6 +114,7 @@ def mat_to_vec(mat, iscomplex=False, compact=True):
 
         return vec
     else:
+        mat = np.ascontiguousarray(mat)
         return mat.view(dtype=np.float64).reshape(-1, 1).copy()
 
 def vec_to_mat(vec, iscomplex=False, compact=False):

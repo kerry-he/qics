@@ -8,7 +8,7 @@ import qics.utils.symmetric as sym
 #        tr[X] = 1
 #        (t, X) ∈ K_qce
 
-L    = 4
+L = 4
 dims = [2] * L
 
 N = 2**L

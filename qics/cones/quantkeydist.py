@@ -1,8 +1,7 @@
 import numpy as np
 import qics.utils.linalg as lin
 import qics.utils.gradient as grad
-import qics.utils.symmetric as sym
-import qics.utils.quantum as quant
+import qics.utils.quantum as qu
 from qics.cones.base import Cone
 
 class QuantKeyDist(Cone):
@@ -36,8 +35,8 @@ class QuantKeyDist(Cone):
 
             \\mathcal{G}(X) = \\sum_{i=1}^l K_i X K_i^\\dagger.
         
-    Z_list : list of ndarray
-        List of Kraus operators :math:`\\{ Z_i \\in \\mathbb{C}^{mr \\times mr } \\}_{i=1}^r` corresponding to :math:`\\mathcal{Z}` such that
+    Z_info : int or list of ndarray
+        Specify the Kraus operators :math:`\\{ Z_i \\in \\mathbb{C}^{mr \\times mr } \\}_{i=1}^r` corresponding to :math:`\\mathcal{Z}` such that
 
         .. math::
 
@@ -49,12 +48,13 @@ class QuantKeyDist(Cone):
 
             Z_i = | i \\rangle \\langle i | \\otimes \\mathbb{I}_m,
 
-        for all :math:`i=1,\\ldots,r`.
+        for all :math:`i=1,\\ldots,r`. Can either specify the dimension :math:`r` if ``Z_info`` is type ``int``, or directly specify the 
+        Kraus operators :math:`\\{ Z_i \\}_{i=1}^r` if ``Z_info`` is type ``list``.
         
     iscomplex : bool
         Whether the matrix is symmetric :math:`X \\in \\mathbb{S}^n` (False) or Hermitian :math:`X \\in \\mathbb{H}^n` (True). Default is False.
     """    
-    def __init__(self, K_list, Z_list, iscomplex=False):
+    def __init__(self, K_list, Z_info, iscomplex=False):
         # Dimension properties
         self.n = K_list[0].shape[1]    # Get input dimension
         self.nu = 1 + self.n           # Barrier parameter
@@ -68,7 +68,12 @@ class QuantKeyDist(Cone):
 
         # Always block the ZK operator as Z maps to block matrices
         self.K_list_blk  = [facial_reduction(K_list)]
-        self.ZK_list_blk = [facial_reduction([K[np.where(Z)[0], :] for K in K_list]) for Z in Z_list]
+        if isinstance(Z_info, int):
+            m = K_list[0].shape[0] // Z_info
+            assert m * Z_info == K_list[0].shape[0]
+            self.ZK_list_blk = [facial_reduction([K[i*m : (i+1)*m, :] for K in K_list]) for i in range(Z_info)]
+        else:
+            self.ZK_list_blk = [facial_reduction([K[np.where(Z)[0], :] for K in K_list]) for Z in Z_info]
 
         self.nk  = [K_list[0].shape[0] for K_list in self.K_list_blk]
         self.nzk = [K_list[0].shape[0] for K_list in self.ZK_list_blk]
@@ -90,13 +95,13 @@ class QuantKeyDist(Cone):
         return self.iscomplex
 
     def get_init_point(self, out):
-        KK_blk   = [sym.apply_kraus(np.eye(self.n), K_list)  for K_list  in self.K_list_blk]
-        ZKKZ_blk = [sym.apply_kraus(np.eye(self.n), ZK_list) for ZK_list in self.ZK_list_blk]
+        KK_blk   = [apply_kraus(np.eye(self.n), K_list)  for K_list  in self.K_list_blk]
+        ZKKZ_blk = [apply_kraus(np.eye(self.n), ZK_list) for ZK_list in self.ZK_list_blk]
 
-        entr_KK   = -sum([quant.quantEntropy(KK)   for KK   in KK_blk])
-        entr_ZKKZ = -sum([quant.quantEntropy(ZKKZ) for ZKKZ in ZKKZ_blk])
+        entr_KK   = sum([qu.quant_entropy(KK)   for KK   in KK_blk])
+        entr_ZKKZ = sum([qu.quant_entropy(ZKKZ) for ZKKZ in ZKKZ_blk])
 
-        t0 = 1. + (entr_KK - entr_ZKKZ)
+        t0 = 1. + (-entr_KK + entr_ZKKZ)
 
         point = [
             np.array([[t0]]), 
@@ -125,7 +130,7 @@ class QuantKeyDist(Cone):
             return self.feas
 
         # Eigendecomposition of G(X)        
-        self.KX_blk  = [sym.apply_kraus(self.X, K_list)  for K_list  in self.K_list_blk]
+        self.KX_blk  = [apply_kraus(self.X, K_list)  for K_list  in self.K_list_blk]
 
         DUkx_blk     = [np.linalg.eigh(KX) for KX in self.KX_blk]
         self.Dkx_blk = [DUkx[0] for DUkx in DUkx_blk]
@@ -136,7 +141,7 @@ class QuantKeyDist(Cone):
             return self.feas        
 
         # Eigendecomposition of Z(G(X))
-        self.ZKX_blk = [sym.apply_kraus(self.X, ZK_list) for ZK_list in self.ZK_list_blk]        
+        self.ZKX_blk = [apply_kraus(self.X, ZK_list) for ZK_list in self.ZK_list_blk]        
 
         DUzkx_blk     = [np.linalg.eigh(ZKX) for ZKX in self.ZKX_blk]
         self.Dzkx_blk = [DUzkx[0] for DUzkx in DUzkx_blk]
@@ -170,8 +175,8 @@ class QuantKeyDist(Cone):
         log_KX  = [(U * log_D) @ U.conj().T for (U, log_D) in zip(self.Ukx_blk,  self.log_Dkx_blk)]
         log_ZKX = [(U * log_D) @ U.conj().T for (U, log_D) in zip(self.Uzkx_blk, self.log_Dzkx_blk)]
 
-        self.K_log_KX   = sum([sym.apply_kraus(log_X, K_list, adjoint=True) for (log_X, K_list) in zip(log_KX, self.K_list_blk)])
-        self.ZK_log_ZKX = sum([sym.apply_kraus(log_X, K_list, adjoint=True) for (log_X, K_list) in zip(log_ZKX, self.ZK_list_blk)])
+        self.K_log_KX   = sum([apply_kraus(log_X, K_list, adjoint=True) for (log_X, K_list) in zip(log_KX, self.K_list_blk)])
+        self.ZK_log_ZKX = sum([apply_kraus(log_X, K_list, adjoint=True) for (log_X, K_list) in zip(log_ZKX, self.ZK_list_blk)])
 
         self.inv_Dx = np.reciprocal(self.Dx)
         inv_X_rt2   = self.Ux * np.sqrt(self.inv_Dx)
@@ -210,16 +215,16 @@ class QuantKeyDist(Cone):
 
         (Ht, Hx) = H
 
-        KH_blk  = [sym.apply_kraus(Hx, K_list)  for K_list  in self.K_list_blk]
-        ZKH_blk = [sym.apply_kraus(Hx, ZK_list) for ZK_list in self.ZK_list_blk]
+        KH_blk  = [apply_kraus(Hx, K_list)  for K_list  in self.K_list_blk]
+        ZKH_blk = [apply_kraus(Hx, ZK_list) for ZK_list in self.ZK_list_blk]
 
         UkKHUk_blk    = [U.conj().T @ H @ U for (H, U) in zip(KH_blk, self.Ukx_blk)]
         UkzZKHUkz_blk = [U.conj().T @ H @ U for (H, U) in zip(ZKH_blk, self.Uzkx_blk)]
 
         # Hessian product of conditional entropy
-        D2PhiH  = sum([sym.apply_kraus(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
+        D2PhiH  = sum([apply_kraus(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
                         for (U, D1, UHU, K_list) in zip(self.Ukx_blk, self.D1kx_log_blk, UkKHUk_blk, self.K_list_blk)])
-        D2PhiH -= sum([sym.apply_kraus(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
+        D2PhiH -= sum([apply_kraus(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
                         for (U, D1, UHU, K_list) in zip(self.Uzkx_blk, self.D1zkx_log_blk, UkzZKHUkz_blk, self.ZK_list_blk)])
         
         # Hessian product of barrier function
@@ -317,21 +322,21 @@ class QuantKeyDist(Cone):
 
         (Ht, Hx) = H
 
-        KH_blk  = [sym.apply_kraus(Hx, K_list) for K_list in self.K_list_blk]
-        ZKH_blk = [sym.apply_kraus(Hx, ZK_list) for ZK_list in self.ZK_list_blk]
+        KH_blk  = [apply_kraus(Hx, K_list) for K_list in self.K_list_blk]
+        ZKH_blk = [apply_kraus(Hx, ZK_list) for ZK_list in self.ZK_list_blk]
 
         UkKHUk_blk    = [U.conj().T @ H @ U for (H, U) in zip(KH_blk, self.Ukx_blk)]
         UkzZKHUkz_blk = [U.conj().T @ H @ U for (H, U) in zip(ZKH_blk, self.Uzkx_blk)]
 
         # Quantum conditional entropy oracles
-        D2PhiH  = sum([sym.apply_kraus(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
+        D2PhiH  = sum([apply_kraus(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
                         for (U, D1, UHU, K_list) in zip(self.Ukx_blk, self.D1kx_log_blk, UkKHUk_blk, self.K_list_blk)])
-        D2PhiH -= sum([sym.apply_kraus(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
+        D2PhiH -= sum([apply_kraus(U @ (D1 * UHU) @ U.conj().T, K_list, adjoint=True) 
                         for (U, D1, UHU, K_list) in zip(self.Uzkx_blk, self.D1zkx_log_blk, UkzZKHUkz_blk, self.ZK_list_blk)])
 
-        D3PhiHH  = sum([sym.apply_kraus(grad.scnd_frechet(D2 * UHU, UHU, U=U), K_list, adjoint=True)
+        D3PhiHH  = sum([apply_kraus(grad.scnd_frechet(D2 * UHU, UHU, U=U), K_list, adjoint=True)
                         for (U, D2, UHU, K_list) in zip(self.Ukx_blk, self.D2kx_log_blk, UkKHUk_blk, self.K_list_blk)])
-        D3PhiHH -= sum([sym.apply_kraus(grad.scnd_frechet(D2 * UHU, UHU, U=U), K_list, adjoint=True)
+        D3PhiHH -= sum([apply_kraus(grad.scnd_frechet(D2 * UHU, UHU, U=U), K_list, adjoint=True)
                         for (U, D2, UHU, K_list) in zip(self.Uzkx_blk, self.D2zkx_log_blk, UkzZKHUkz_blk, self.ZK_list_blk)])
 
         # Third derivative of barrier

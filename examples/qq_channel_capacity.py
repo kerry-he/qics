@@ -9,9 +9,6 @@ import qics.utils.quantum as qu
 #        (t, WN(X)W') ∈ K_qce
 #        X ⪰ 0
 
-np.random.seed(1)
-np.set_printoptions(threshold=np.inf)
-
 ni = 8
 no = 8
 ne = 8
