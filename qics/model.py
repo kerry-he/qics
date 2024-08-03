@@ -52,6 +52,12 @@ class Model():
         self.p = np.size(b) if (b is not None) else 0
         self.q = np.size(h) if (h is not None) else self.n
     
+        self.c_raw = c
+        self.A_raw = A
+        self.b_raw = b
+        self.G_raw = G
+        self.h_raw = h
+    
         self.c = c.copy()
         self.A = A.copy() if (A is not None) else  np.empty((0, self.n))
         self.b = b.copy() if (b is not None) else  np.empty((0, 1))

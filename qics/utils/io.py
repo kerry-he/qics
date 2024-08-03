@@ -211,13 +211,15 @@ def write_sdpa(model, filename):
     """
 
     # Get SDP data from model
-    c         = model.c
-    A         = model.A
-    b         = model.b
+    assert (model.use_A) != (model.use_G)
+    c         = model.c_raw if model.use_A else  model.h_raw
+    A         = model.A_raw if model.use_A else  model.G_raw.T
+    b         = model.b_raw if model.use_A else -model.c_raw
     cones     = model.cones
     iscomplex = model.iscomplex
     assert sp.sparse.issparse(A)
     assert iscomplex == (filename[-1] == "c")
+    
 
     f = open(filename, "w")
         
@@ -248,8 +250,8 @@ def write_sdpa(model, filename):
     
 
     # Some useful dimension information
-    dims   = [cone_k.dim for cone_k in cones]
-    idxs   = np.insert(np.cumsum(dims), 0, 0)
+    dims = [cone_k.dim for cone_k in cones]
+    idxs = np.insert(np.cumsum(dims), 0, 0)
 
     # Write C
     # Write in format (k, l, i, j, v), where k=0, l=block, (i, j)=index, v=value
