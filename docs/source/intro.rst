@@ -33,6 +33,14 @@ Features
 
 Features of **QICS** include:
 
+- **Cones for quantum information**
+
+  Efficient implementations of epigraphs of important functions arising in
+  quantum information theory, including the quantum relative entropy, 
+  quantum conditional entropy, and operator perspective. **QICS** also
+  supports an efficient implementation of a slice of the quantum relative 
+  entropy cone used to solve for quantum key rates.
+
 - **Efficient SDP solver**
 
   NT scaling algorithm is used whenever :math:`\mathcal{K}`
@@ -47,11 +55,3 @@ Features of **QICS** include:
   or complex-valued (i.e., Hermitian). Support for Hermitian matrices is embedded directly in
   the definition of the cone, which is more computationally efficient than `lifting into the real-valued 
   symmetric cone <https://docs.mosek.com/modeling-cookbook/sdo.html#hermitian-matrices>`_.
-
-- **Cones for quantum information**
-
-  Efficient implementations of epigraphs of important functions arising in
-  quantum information theory, including the quantum relative entropy, 
-  quantum conditional entropy, and operator perspective. **QICS** also
-  supports an efficient implementation of a slice of the quantum relative 
-  entropy cone used to solve for quantum key rates.
