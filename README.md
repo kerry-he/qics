@@ -36,4 +36,4 @@ Features of **QICS** include:
 
 - **Complex-valued matrices**
 
-  Users can specify whether cones involving symmetric matrices, such as the positive semidefinite cone or quantum relative entropy cone, are real-valuedor complex-valued (i.e., Hermitian). Support for Hermitian matrices is embedded directly in the definition of the cone, which is more computationally efficient than [lifting into the real-valued symmetric cone] (https://docs.mosek.com/modeling-cookbook/sdo.html#hermitian-matrices).
+  Users can specify whether cones involving symmetric matrices, such as the positive semidefinite cone or quantum relative entropy cone, are real-valuedor complex-valued (i.e., Hermitian). Support for Hermitian matrices is embedded directly in the definition of the cone, which is more computationally efficient than [lifting into the real-valued symmetric cone](https://docs.mosek.com/modeling-cookbook/sdo.html#hermitian-matrices).
