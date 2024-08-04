@@ -1,6 +1,5 @@
 import numpy as np
 import qics
-import qics.utils.symmetric as sym
 
 ## Quantum key rate
 #   min  S( G(X) || Z(G(X)) )

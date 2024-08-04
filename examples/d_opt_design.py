@@ -16,12 +16,12 @@ A_dat = 1 / (n**0.25) * np.random.randn(n, m)
 k     = 5
 eps   = 1e-6
 
-vn = sym.vec_dim(n)
+vn = sym.vec_dim(n, compact=True)
 
 # Define objective function, with x = (t, z, Y) and c=(1, 0, I*log(e))
 c1 = np.ones((1, 1))
 c2 = np.zeros((m, 1))
-c3 = sym.mat_to_vec(np.eye(n)) * np.log(eps)
+c3 = sym.mat_to_vec(np.eye(n), compact=True) * np.log(eps)
 c  = np.vstack((c1, c2, c3))
 
 # Build linear constraint Σ_i zi = k
@@ -30,7 +30,7 @@ b = np.ones((1, 1)) * k
 
 # Build linear cone constraints
 # tr[Y] <= k
-G1 = np.hstack((np.zeros((1, 1)), np.zeros((1, m)), sym.mat_to_vec(np.eye(n)).T))
+G1 = np.hstack((np.zeros((1, 1)), np.zeros((1, m)), sym.mat_to_vec(np.eye(n), compact=True).T))
 h1 = np.array(([k]))
 # 0 <= z
 G2 = np.hstack((np.zeros((m, 1)), -np.eye(m), np.zeros((m, vn))))

@@ -12,8 +12,8 @@ iscomplex = False
 
 X = qu.rand_density_matrix(n, iscomplex=iscomplex)
 
-sn = sym.vec_dim(n, iscomplex=iscomplex)
-vn = sym.vec_dim(n, iscomplex=iscomplex, compact=False)
+sn = sym.vec_dim(n, iscomplex=iscomplex, compact=True)
+vn = sym.vec_dim(n, iscomplex=iscomplex)
 
 # Define objective function, where x = (t, triu[Y]) and c = (1, 0)
 c1 = np.array(([[1.]]))

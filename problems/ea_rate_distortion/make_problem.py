@@ -15,8 +15,8 @@ def make_problem(ni, no, rho, Delta, D, description=["", ""], optval=0.0):
     entr_A = quant.quantEntropy(rho)
 
     # Build problem model
-    tr2 = sym.lin_to_mat(lambda x : sym.p_tr(x, 0, (no, ni)), no*ni, ni)
-    ikr_tr1 = sym.lin_to_mat(lambda x : sym.i_kr(sym.p_tr(x, 1, (no, ni)), 1, (no, ni)), no*ni, no*ni)
+    tr2 = sym.lin_to_mat(lambda x : sym.p_tr(x, (no, ni), 0), no*ni, ni)
+    ikr_tr1 = sym.lin_to_mat(lambda x : sym.i_kr(sym.p_tr(x, (no, ni), 1), (no, ni), 1), no*ni, no*ni)
 
     A = np.hstack((np.zeros((vni, 1)), tr2))
     b = sym.mat_to_vec(rho)

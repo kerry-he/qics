@@ -1,5 +1,7 @@
-Examples
-=============
+.. _Mat to vec:
+
+Vectorization
+===============
 
 To supply a conic program model to **QICS**, users are reqired
 to express the linear constraints :math:`A` and :math:`G` in 
@@ -29,19 +31,24 @@ the matrix side-by-side, i.e.,
                                                         \end{bmatrix},
 
 so that :math:`\text{vec}(X) \in \mathbb{R}^{n^2}`. In
-Python, this vectorization operation can easily be performed using NumPy
+Python, this vectorization operation can easily be performed using NumPy's
+reshaping functionality.
 
-.. code-block:: python
-
-   X.reshape(-1, 1)
+>>> import numpy as np
+>>> X = np.array([[0., 1., 2.], [1., 3., 4.], [2., 4., 5.]])
+>>> X
+array([[0., 1., 2.],
+       [1., 3., 4.],
+       [2., 4., 5.]])
+>>> X.reshape(-1, 1).T
+array([[0., 1., 2., 1., 3., 4., 2., 4., 5.]])
 
 Alternatively, **QICS** supplies the following function to convert matrices 
-to vectors
+to vectors.
 
-.. code-block:: python
-
-   qics.utils.symmetric.mat_to_vec(X, compact=False)
-
+>>> from qics.utils.symmetric import mat_to_vec
+>>> mat_to_vec(X).T
+array([[0., 1., 2., 1., 3., 4., 2., 4., 5.]])
 
 Hermitian matrices
 --------------------
@@ -87,19 +94,25 @@ Using this, Hermitian matrices are vectorized as follows
 
 so that :math:`\text{vec}(X) \in \mathbb{R}^{2n^2}`. 
 Like for the real symmetric case, this vectorization operation can easily 
-be performed using NumPy. For a matrix ``X`` of type ``np.complex128``, we can use
+be performed using NumPy.
 
-.. code-block:: python
+>>> X = np.array([[0., 1.+.1j, 2.+.2j], [1.-.1j, 3., 4.+.4j], [2.-.2j, 4.-.4j, 5.]])
+>>> X
+array([[0.+0.j, 1.+1.j, 2.+2.j],
+       [1.-1.j, 3.+0.j, 4.+4.j],
+       [2.-2.j, 4.-4.j, 5.+0.j]])
+>>> X.view(np.float64).reshape(-1, 1).T
+array([[0.,  0.,  1.,  1.,  2.,  2.,  1., -1.,  3.,  0.,  4.,  4.,
+        2., -2.,  4., -4.,  5.,  0.]])
 
-   X.view(np.float64).reshape(-1, 1)
 
-Additionally, **QICS** supplies the following function to convert matrices 
-to vectors
+Note that we assume the matrix ``X`` is of type ``np.complex128``.
+Alternatively, we can use the ``mat_to_vec`` function again to convert Hermitian  
+matrices to vectors by setting ``iscomplex=True``.
 
-.. code-block:: python
-
-   qics.utils.symmetric.mat_to_vec(X, iscomplex=True, compact=False)
-
+>>> mat_to_vec(X, iscomplex=True).T
+array([[0.,  0.,  1.,  1.,  2.,  2.,  1., -1.,  3.,  0.,  4.,  4.,
+        2., -2.,  4., -4.,  5.,  0.]])
 
 
 Modelling constraints

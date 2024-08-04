@@ -17,8 +17,8 @@ rho      = qu.rand_density_matrix(n, iscomplex=iscomplex)
 entr_rho = qu.quant_entropy(rho)
 
 N = n * n
-sn = sym.vec_dim(n, iscomplex=iscomplex)
-vN = sym.vec_dim(N, iscomplex=iscomplex, compact=False)
+sn = sym.vec_dim(n, iscomplex=iscomplex, compact=True)
+vN = sym.vec_dim(N, iscomplex=iscomplex)
 
 # Define objective function
 c = np.zeros((vN + 2, 1))
@@ -26,9 +26,9 @@ c[0] = 1.
 
 # Build linear constraint matrices
 # Tr_2[X] = rho
-tr2 = sym.lin_to_mat(lambda X : sym.p_tr(X, 1, (n, n)), (N, n), iscomplex=iscomplex)
+tr2 = sym.lin_to_mat(lambda X : sym.p_tr(X, (n, n), 1), (N, n), iscomplex=iscomplex)
 A1  = np.hstack((np.zeros((sn, 1)), tr2, np.zeros((sn, 1))))
-b1  = sym.mat_to_vec(rho, iscomplex=iscomplex)
+b1  = sym.mat_to_vec(rho, iscomplex=iscomplex, compact=True)
 # <Δ, X> <= D
 Delta = sym.mat_to_vec(np.eye(N) - qu.purify(rho), iscomplex=iscomplex, compact=False)
 A2    = np.hstack((np.zeros((1, 1)), Delta.T, np.ones((1, 1))))

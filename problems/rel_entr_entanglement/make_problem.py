@@ -17,7 +17,7 @@ def make_problem(n, m, X, description=["", ""], offset=0.0, optval=0.0):
     A = np.hstack((np.zeros((1, 1)), sym.mat_to_vec(np.eye(N)).T))
     b = np.ones((1, 1))
 
-    p_transpose = sym.lin_to_mat(lambda x : sym.p_transpose(x, 1, (n, m)), n*m, n*m)
+    p_transpose = sym.lin_to_mat(lambda x : sym.p_transpose(x, (n, m), 1), n*m, n*m)
 
     G0 = np.hstack((np.ones((1, 1)), np.zeros((1, vN))))
     G1 = np.hstack((np.zeros((vN, 1)), np.zeros((vN, vN))))

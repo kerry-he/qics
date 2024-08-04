@@ -15,8 +15,8 @@ iscomplex = False
 N = n0 * n1
 X = qu.rand_density_matrix(N, iscomplex=iscomplex)
 
-sN = sym.vec_dim(N, iscomplex=iscomplex)
-vN = sym.vec_dim(N, iscomplex=iscomplex, compact=False)
+sN = sym.vec_dim(N, iscomplex=iscomplex, compact=True)
+vN = sym.vec_dim(N, iscomplex=iscomplex)
 
 # Define objective function, where x = (t, triu[Y]) and c = (1, 0)
 c1 = np.array(([[1.]]))
@@ -24,7 +24,7 @@ c2 = np.zeros((sN, 1))
 c  = np.vstack((c1, c2))
 
 # Build linear constraint tr[Y] = 1
-A = np.hstack((np.zeros((1, 1)), sym.mat_to_vec(np.eye(N), iscomplex=iscomplex).T))
+A = np.hstack((np.zeros((1, 1)), sym.mat_to_vec(np.eye(N), iscomplex=iscomplex, compact=True).T))
 b = np.ones((1, 1))
 
 # Build linear cone constraints
@@ -39,7 +39,7 @@ eye = sym.lin_to_mat(lambda X : X, (N, N), iscomplex=iscomplex, compact=(True, F
 G3 = np.hstack((np.zeros((vN, 1)), -eye))
 h3 = np.zeros((vN, 1))
 # T2(Y) >= 0
-p_transpose = sym.lin_to_mat(lambda X : sym.p_transpose(X, 1, (n0, n1)), (N, N), iscomplex=iscomplex, compact=(True, False))
+p_transpose = sym.lin_to_mat(lambda X : sym.p_transpose(X, (n0, n1), 1), (N, N), iscomplex=iscomplex, compact=(True, False))
 G4 = np.hstack((np.zeros((vN, 1)), -p_transpose))
 h4 = np.zeros((vN, 1))
 

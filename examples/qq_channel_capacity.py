@@ -17,16 +17,16 @@ iscomplex = False
 V, W = qu.rand_degradable_channel(ni, no, ne, iscomplex=iscomplex)
 
 nei  = ne * ni
-sni  = sym.vec_dim(ni, iscomplex=iscomplex)
-vni  = sym.vec_dim(ni, iscomplex=iscomplex, compact=False)
-vnei = sym.vec_dim(nei, iscomplex=iscomplex, compact=False)
+sni  = sym.vec_dim(ni, iscomplex=iscomplex, compact=True)
+vni  = sym.vec_dim(ni, iscomplex=iscomplex)
+vnei = sym.vec_dim(nei, iscomplex=iscomplex)
 
 # Define objective function
 c = np.zeros((1 + sni, 1))
 c[0] = 1.
 
 # Build linear constraint tr[X] = 1
-A = np.hstack((np.zeros((1, 1)), sym.mat_to_vec(np.eye(ni), iscomplex=iscomplex).T))
+A = np.hstack((np.zeros((1, 1)), sym.mat_to_vec(np.eye(ni), iscomplex=iscomplex, compact=True).T))
 b = np.ones((1, 1))
 
 # Build linear cone constraints
@@ -35,7 +35,7 @@ G1 = np.hstack((-np.ones((1, 1)), np.zeros((1, sni))))
 h1 = np.zeros((1, 1))
 # X_qce = WN(X)W'
 WNW = sym.lin_to_mat(
-    lambda X : W @ sym.p_tr(V @ X @ V.conj().T, 1, (no, ne)) @ W.conj().T, 
+    lambda X : W @ sym.p_tr(V @ X @ V.conj().T, (no, ne), 1) @ W.conj().T, 
     (ni, nei), iscomplex=iscomplex, compact=(True, False)
 )
 G2 = np.hstack((np.zeros((vnei, 1)), -WNW))

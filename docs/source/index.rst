@@ -19,3 +19,4 @@ documentation for details.
    examples.rst
    reference.rst
    cones.rst
+   maxcut.rst

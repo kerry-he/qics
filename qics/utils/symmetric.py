@@ -2,7 +2,7 @@ import math
 import numpy as np
 import numba as nb
 
-def vec_dim(side, iscomplex=False, compact=True):
+def vec_dim(side, iscomplex=False, compact=False):
     """Computes the size of a vectorized matrix.
 
     Parameters
@@ -30,7 +30,7 @@ def vec_dim(side, iscomplex=False, compact=True):
         else:
             return side * side
 
-def mat_dim(len, iscomplex=False, compact=True):
+def mat_dim(len, iscomplex=False, compact=False):
     """Computes the dimension of the matrix correpsonding to a vector.
 
     Parameters
@@ -58,7 +58,7 @@ def mat_dim(len, iscomplex=False, compact=True):
         else:
             return math.isqrt(len)
 
-def mat_to_vec(mat, iscomplex=False, compact=True):
+def mat_to_vec(mat, iscomplex=False, compact=False):
     """Reshapes a square matrix into a 1D vector, e.g., the symmetric matrix 
     
         [ a  b  d ]
@@ -88,17 +88,18 @@ def mat_to_vec(mat, iscomplex=False, compact=True):
     iscomplex : bool, optional
         Whether the matrix to vectorize is Hermitian (True) or symmetric (False). Default is False.
     compact : bool, optional
-        Whether to convert to a compact vector representation or not. Default is True.
+        Whether to convert to a compact vector representation or not. Default is False.
         
     Returns
     -------
     ndarray
         The resulting vectorized matrix.
     """
+    n   = mat.shape[0]
+    vn  = vec_dim(n, iscomplex=iscomplex, compact=compact)
+
     if compact:
         rt2 = np.sqrt(2.0)
-        n   = mat.shape[0]
-        vn  = vec_dim(n, iscomplex=iscomplex)
         vec = np.empty((vn, 1))
 
         k = 0
@@ -154,12 +155,12 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
     ndarray
         The resulting matrix.
     """
-    vn = vec.size
+    vn    = vec.size
+    n     = mat_dim(vn, iscomplex=iscomplex, compact=compact)
     dtype = np.complex128 if iscomplex else np.float64
     
     if compact:
         irt2 = np.sqrt(0.5)
-        n    = mat_dim(vn, iscomplex=iscomplex)
         mat  = np.empty((n, n), dtype=dtype)
 
         k = 0
@@ -187,7 +188,7 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
             mat = vec.reshape((n, n))
             return (mat + mat.T) * 0.5
 
-def p_tr(mat, sys, dims):
+def p_tr(mat, dims, sys):
     """Performs the partial trace on a bipartite matrix, e.g., for  
     a bipartite state, this is the unique linear map satisfying
     
@@ -198,10 +199,10 @@ def p_tr(mat, sys, dims):
     ----------
     mat : ndarray
         Input (n0*n1*...*nk-1, n0*n1*...*nk-1) matrix to perform the partial trace on.
-    sys : int
-        Which system to trace out.
     dims : tuple[int]
         The dimensions (n0, n1, ..., nk-1) of the k subsystems.
+    sys : int
+        Which system to trace out.
         
     Returns
     -------
@@ -214,7 +215,7 @@ def p_tr(mat, sys, dims):
     N = np.prod(dims) // dims[sys]
     return np.trace(mat.reshape(*dims, *dims), axis1=sys, axis2=len(dims)+sys).reshape(N, N)
 
-def p_tr_multi(out, mat, sys, dims):
+def p_tr_multi(out, mat, dims, sys):
     """Performs the partial trace on a list of bipartite matrix, e.g., for  
     a bipartite state, this is the unique linear map satisfying
     
@@ -230,17 +231,17 @@ def p_tr_multi(out, mat, sys, dims):
     mat : ndarray
         Input (p, n0*n1*...*nk-1, n0*n1*...*nk-1) list of matrices 
         to perform the partial trace on.
-    sys : int
-        Which system to trace out.
     dims : tuple[int]
         The dimensions (n0, n1, ..., nk) of the p subsystems.
+    sys : int
+        Which system to trace out.
     """
     new_dims = [dim for (i, dim) in enumerate(dims) if i != sys]
     np.trace(mat.reshape(-1, *dims, *dims), axis1=1+sys, axis2=1+len(dims)+sys, out=out.reshape(-1, *new_dims, *new_dims))
 
     return out
 
-def i_kr(mat, sys, dims):
+def i_kr(mat, dims, sys):
     """Performs Kronecker product between the indentity matrix and 
     a given matrix, e.g., for a bipartite system
     
@@ -253,10 +254,10 @@ def i_kr(mat, sys, dims):
         Input matrix to perform the partial trace on. Has 
         dimension (n0*n1*...*nk-1 / ni, n0*n1*...*nk-1 / ni) where 
         i is the system being traced out.
-    sys : int
-        Which system to Kroneker product should act on.
     dim : tuple[int]
         The dimensions (n0, n1, ..., nk) of the subsystems.
+    sys : int
+        Which system to Kroneker product should act on.
         
     Returns
     -------
@@ -280,7 +281,7 @@ def i_kr(mat, sys, dims):
     out_view[r, r, ...] = mat.reshape(*new_dims, *new_dims)  
     return out
 
-def i_kr_multi(out, mat, sys, dims):
+def i_kr_multi(out, mat, dims, sys):
     """Performs Kronecker product between the indentity matrix and 
     a given list of matrices, i.e.,
     
@@ -289,20 +290,17 @@ def i_kr_multi(out, mat, sys, dims):
 
     Parameters
     ----------
+    out : ndarray
+        Preallocated (p, n0*n1*...*nk-1, n0*n1*...*nk-1) list of matrices 
+        to store the output.    
     mat : ndarray
         Input matrix to perform the partial trace on. Has 
         dimension (p, n0*n1*...*nk-1 / ni, n0*n1*...*nk-1 / ni) where 
         i is the system being traced out.
-    sys : int
-        Which system to Kroneker product should act on.
     dim : tuple[int]
         The dimensions (n0, n1, ..., nk) of the subsystems.
-        
-    Returns
-    -------
-    ndarray
-        The resulting (p, n0*n1*...*nk-1, n0*n1*...*nk-1) matrix after performing the 
-        Kronecker product.
+    sys : int
+        Which system to Kroneker product should act on.
     """
     new_dims = [dim for (i, dim) in enumerate(dims) if i != sys]
 
@@ -320,7 +318,7 @@ def i_kr_multi(out, mat, sys, dims):
 
     return out
 
-def p_transpose(mat, sys, dim):
+def p_transpose(mat, dims, sys):
     """Performs the partial transpose on a bipartite matrix, i.e., 
     the unique linear map satisfying
     
@@ -331,17 +329,17 @@ def p_transpose(mat, sys, dim):
     ----------
     mat : ndarray
         Input (n0*n1, n0*n1) matrix to perform the partial transpose on.
-    sys : int
-        Which system to transpose (either 0 or 1).
     dim : tuple[int, int]
         The dimensions (n0, n1) of the first and second subsystems.
+    sys : int
+        Which system to transpose (either 0 or 1).
         
     Returns
     -------
     ndarray
         The resulting (n0*n1, n0*n1) matrix after performing the partial transpose.
     """    
-    (n0, n1) = dim
+    (n0, n1) = dims
     assert sys == 0 or sys == 1
 
     temp = mat.reshape(n0, n1, n0, n1)

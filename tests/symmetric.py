@@ -18,8 +18,8 @@ def test_ptr_ikr():
         Y = Y + Y.conj().T
 
         assert np.allclose(
-            np.trace(p_tr(X, sys, dims) @ Y), 
-            np.trace(X @ i_kr(Y, sys, dims))
+            np.trace(p_tr(X, dims, sys) @ Y), 
+            np.trace(X @ i_kr(Y, dims, sys))
         ), "qics.utils.symmetric.p_tr and qics.utils.symmetric.i_kr are not adjoint linear operators"
         
 def test_ptr_ikr_multi():
@@ -42,6 +42,6 @@ def test_ptr_ikr_multi():
         Ys = Ys + Ys.conj().transpose(0, 2, 1)
 
         assert np.allclose(
-            np.trace(p_tr_multi(np.zeros_like(Ys), Xs, sys, dims) @ Ys, axis1=1, axis2=2), 
-            np.trace(Xs @ i_kr_multi(np.zeros_like(Xs), Ys, sys, dims), axis1=1, axis2=2)
+            np.trace(p_tr_multi(np.zeros_like(Ys), Xs, dims, sys) @ Ys, axis1=1, axis2=2), 
+            np.trace(Xs @ i_kr_multi(np.zeros_like(Xs), Ys, dims, sys), axis1=1, axis2=2)
         ), "qics.utils.symmetric.p_tr_multi and qics.utils.symmetric.i_kr_multi are not adjoint linear operators"

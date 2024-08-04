@@ -18,17 +18,17 @@ iscomplex = False
 V = qu.rand_stinespring_operator(ni, no, ne, iscomplex=iscomplex)
 
 noe  = no * ne
-sni  = sym.vec_dim(ni, iscomplex=iscomplex)
-vni  = sym.vec_dim(ni, iscomplex=iscomplex, compact=False)
-vno  = sym.vec_dim(no, iscomplex=iscomplex, compact=False)
-vnoe = sym.vec_dim(noe, iscomplex=iscomplex, compact=False)
+sni  = sym.vec_dim(ni, iscomplex=iscomplex, compact=True)
+vni  = sym.vec_dim(ni, iscomplex=iscomplex)
+vno  = sym.vec_dim(no, iscomplex=iscomplex)
+vnoe = sym.vec_dim(noe, iscomplex=iscomplex)
 
 # Define objective function
 c = np.zeros((2 + sni, 1))
 c[0:2] = 1.
 
 # Build linear constraint tr[X] = 1
-A = np.hstack((np.zeros((1, 2)), sym.mat_to_vec(np.eye(ni), iscomplex=iscomplex).T))
+A = np.hstack((np.zeros((1, 2)), sym.mat_to_vec(np.eye(ni), iscomplex=iscomplex, compact=True).T))
 b = np.ones((1, 1))
 
 # Build linear cone constraints
@@ -46,7 +46,7 @@ h3 = np.zeros((1, 1))
 G4 = np.hstack((np.zeros((1, 1)), np.zeros((1, 1)), np.zeros((1, sni))))
 h4 = np.ones((1, 1))
 # X_qe = tr_E[VXV']
-trE = sym.lin_to_mat(lambda X : sym.p_tr(X, 1, (no, ne)), (noe, no), iscomplex=iscomplex, compact=(False, False))
+trE = sym.lin_to_mat(lambda X : sym.p_tr(X, (no, ne), 1), (noe, no), iscomplex=iscomplex, compact=(False, False))
 G5 = np.hstack((np.zeros((vno, 2)), -trE @ VV))
 h5 = np.zeros((vno, 1))
 # X_psd = X

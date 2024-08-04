@@ -13,7 +13,7 @@ dims = [2] * L
 
 N = 2**L
 m = 2**(L-1)
-vm = sym.vec_dim(m)
+vm = sym.vec_dim(m, compact=True)
 
 # Define objective function
 def heisenberg(delta, L):
@@ -29,8 +29,8 @@ c = np.vstack((np.zeros((1, 1)), H.reshape((-1, 1))))
 
 # Build linear constraint matrices
 # Tr_1[X] = Tr_L[X]
-tr1 = sym.lin_to_mat(lambda X : sym.p_tr(X,   0, dims), (N, m))
-trL = sym.lin_to_mat(lambda X : sym.p_tr(X, L-1, dims), (N, m))
+tr1 = sym.lin_to_mat(lambda X : sym.p_tr(X, dims,   0), (N, m))
+trL = sym.lin_to_mat(lambda X : sym.p_tr(X, dims, L-1), (N, m))
 A1 = np.hstack((np.zeros((vm, 1)), tr1 - trL))
 b1 = np.zeros((vm, 1))
 # tr[X] = 1
