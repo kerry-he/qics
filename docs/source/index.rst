@@ -16,5 +16,6 @@ documentation for details.
    :caption: Contents:
 
    intro.rst
+   examples.rst
    reference.rst
    cones.rst
