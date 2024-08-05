@@ -1,54 +1,42 @@
 import numpy as np
 import qics
 import qics.utils.symmetric as sym
-import qics.utils.quantum as qu
 
 ## Nearest correlation matrix
 #   min  S(X||Y)
 #   s.t. Y_ii = 1
 
-n = 25
-iscomplex = False
+n = 5
 
-X = qu.rand_density_matrix(n, iscomplex=iscomplex)
+# Generate random matrix C
+C = np.random.randn(n, n)
+C = C @ C.T
 
-sn = sym.vec_dim(n, iscomplex=iscomplex, compact=True)
-vn = sym.vec_dim(n, iscomplex=iscomplex)
+# Define objective function
+ct = np.array(([[1.]]))
+cX = np.zeros((n*n, 1))
+cY = np.zeros((n*n, 1))
+c  = np.vstack((ct, cX, cY))
 
-# Define objective function, where x = (t, triu[Y]) and c = (1, 0)
-c1 = np.array(([[1.]]))
-c2 = np.zeros((sn, 1))
-c  = np.vstack((c1, c2))
+# Build linear constraints
+# X = C
+sn = sym.vec_dim(n, compact=True)
+A1 = np.hstack((np.zeros((sn, 1)), sym.eye(n), np.zeros((sn, n*n))))
+b1 = sym.mat_to_vec(C, compact=True)
+# Yii = 1
+A2 = np.zeros((n, 1 + 2*n*n))
+A2[range(n), range(1 + n*n, 1 + 2*n*n, n+1)] = 1.
+b2 = np.ones((n, 1))
 
-# Build linear constraint Y_ii = 1
-diag_idxs = np.arange(3, 2*n, 2) if iscomplex else np.arange(2, 1+n)
-diag_idxs = np.insert(np.cumsum(diag_idxs), 0, 0)
-A = np.zeros((n, 1 + sn))
-A[np.arange(n), 1 + diag_idxs] = 1.
+A = np.vstack((A1, A2))
+b = np.vstack((b1, b2))
 
-b = np.ones((n, 1))
-
-# Build linear cone constraints
-# t = t
-G1 = np.hstack((-np.ones((1, 1)), np.zeros((1, sn))))
-h1 = np.zeros((1, 1))
-# X = X (const)
-G2 = np.hstack((np.zeros((vn, 1)), np.zeros((vn, sn))))
-h2 = sym.mat_to_vec(X, iscomplex=iscomplex, compact=False)
-# Y = Y
-eye = sym.lin_to_mat(lambda X : X, (n, n), iscomplex=iscomplex, compact=(True, False))
-G3 = np.hstack((np.zeros((vn, 1)), -eye))
-h3 = np.zeros((vn, 1))
-
-G = np.vstack((G1, G2, G3))
-h = np.vstack((h1, h2, h3))
-
-# Input into model and solve
-cones = [qics.cones.QuantRelEntr(n, iscomplex=iscomplex)]
+# Define cones to optimize over
+cones = [qics.cones.QuantRelEntr(n)]
 
 # Initialize model and solver objects
-model  = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
+model  = qics.Model(c=c, A=A, b=b, cones=cones)
 solver = qics.Solver(model)
 
 # Solve problem
-out = solver.solve()
+info = solver.solve()

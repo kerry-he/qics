@@ -58,7 +58,7 @@ def mat_dim(len, iscomplex=False, compact=False):
         else:
             return math.isqrt(len)
 
-def mat_to_vec(mat, iscomplex=False, compact=False):
+def mat_to_vec(mat, compact=False):
     """Reshapes a square matrix into a 1D vector, e.g., the symmetric matrix 
     
         [ a  b  d ]
@@ -85,8 +85,6 @@ def mat_to_vec(mat, iscomplex=False, compact=False):
     ----------
     mat : ndarray
         Input matrix to vectorize.
-    iscomplex : bool, optional
-        Whether the matrix to vectorize is Hermitian (True) or symmetric (False). Default is False.
     compact : bool, optional
         Whether to convert to a compact vector representation or not. Default is False.
         
@@ -95,8 +93,11 @@ def mat_to_vec(mat, iscomplex=False, compact=False):
     ndarray
         The resulting vectorized matrix.
     """
-    n   = mat.shape[0]
-    vn  = vec_dim(n, iscomplex=iscomplex, compact=compact)
+    assert mat.dtype == np.float64 or mat.dtype == np.complex128
+    iscomplex = mat.dtype == np.complex128
+
+    n  = mat.shape[0]
+    vn = vec_dim(n, iscomplex=iscomplex, compact=compact)
 
     if compact:
         rt2 = np.sqrt(2.0)
@@ -351,7 +352,6 @@ def p_transpose(mat, dims, sys):
 
     return temp.reshape(n0*n1, n0*n1)
 
-
 def lin_to_mat(lin, dims, iscomplex=False, compact=(False, True)):
     """Computes the matrix corresponding to a linear map from
     vectorized symmetric matrices to symmetric matrices.
@@ -384,7 +384,29 @@ def lin_to_mat(lin, dims, iscomplex=False, compact=(False, True)):
         H[k] = 1.0
         H_mat = vec_to_mat(H, iscomplex=iscomplex, compact=compact[0])
         lin_H = lin(H_mat)
-        vec_out = mat_to_vec(lin_H, iscomplex=iscomplex, compact=compact[1])
+        vec_out = mat_to_vec(lin_H, compact=compact[1])
         mat[:, [k]] = vec_out
 
     return mat
+
+def eye(n, iscomplex=False, compact=(False, True)):
+    """Computes the matrix representation of the identity map for 
+    (vectorized) symmetric or Hermitian matrices.
+
+    Parameters
+    ----------
+    n : int
+        The dimensions of the (n, n) matrix the identity is acting on.
+    iscomplex : bool, optional
+        Whether the matrix to vectorize is Hermitian (True) or symmetric 
+        (False). Default is False.
+    compact : tuple[bool, bool], optional
+        Whether to use a compact vector representation or not for the input 
+        and output matrices. Default is (False, True).
+        
+    Returns
+    -------
+    ndarray
+        The matrix representation of the identity map.
+    """
+    return lin_to_mat(lambda X : X, (n, n), iscomplex=iscomplex, compact=compact)

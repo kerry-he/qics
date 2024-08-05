@@ -68,4 +68,4 @@ model  = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones, offset=-n*np.log(eps))
 solver = qics.Solver(model, verbose=3)
 
 # Solve problem
-out = solver.solve()
+info = solver.solve()

@@ -8,7 +8,7 @@ class QuantRelEntr(Cone):
 
     .. math::
     
-        \\{ (t, X, Y) \\in \\mathbb{R} \\times \\mathbb{H}^n_+ \\times \\mathbb{H}^n_+ : t \\geq S(X \\| Y) \\},
+        \\mathcal{K}_{\\text{qre}} = \\text{cl}\\{ (t, X, Y) \\in \\mathbb{R} \\times \\mathbb{H}^n_{++} \\times \\mathbb{H}^n_{++} : t \\geq S(X \\| Y) \\},
         
     with barrier function
     

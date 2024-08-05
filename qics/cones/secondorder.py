@@ -6,7 +6,7 @@ class SecondOrder(Cone):
     
     .. math::
 
-        \\{ (t, x) \\in \\mathbb{R} \\times \\mathbb{R}^n : t \\geq \\| x \\|_2 \\},
+        \\mathcal{C}_{n+1} = \\{ (t, x) \\in \\mathbb{R} \\times \\mathbb{R}^{n} : t \\geq \\| x \\|_2 \\},
         
     with barrier function
 

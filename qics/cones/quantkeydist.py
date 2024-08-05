@@ -9,7 +9,7 @@ class QuantKeyDist(Cone):
 
     .. math::
     
-        \\{ (t, X) \\in \\mathbb{R} \\times \\mathbb{H}^n_+ : t \\geq -S(\\mathcal{G}(X)) + S(\\mathcal{Z}(\\mathcal{G}(X))) \\},
+        \\mathcal{K}_{\\text{qkd}} = \\text{cl}\\{ (t, X) \\in \\mathbb{R} \\times \\mathbb{H}^n_{++} : t \\geq -S(\\mathcal{G}(X)) + S(\\mathcal{Z}(\\mathcal{G}(X))) \\},
         
     with barrier function
 

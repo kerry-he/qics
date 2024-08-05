@@ -59,4 +59,4 @@ model  = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
 solver = qics.Solver(model)
 
 # Solve problem
-out = solver.solve()
+info = solver.solve()

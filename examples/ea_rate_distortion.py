@@ -48,4 +48,4 @@ model  = qics.Model(c=c, A=A, b=b, cones=cones, offset=entr_rho)
 solver = qics.Solver(model)
 
 # Solve problem
-out = solver.solve()
+info = solver.solve()

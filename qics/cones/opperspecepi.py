@@ -9,7 +9,7 @@ class OpPerspecEpi(Cone):
     
     .. math::
     
-        \\{ (T, X, Y) \\in \\mathbb{H}^n \\times \\mathbb{H}^n_+ \\times \\mathbb{H}^n_+ : T \\succeq P_g(X, Y) \\},
+        \\mathcal{K}_{\\text{op}}^g = \\text{cl}\\{ (T, X, Y) \\in \\mathbb{H}^n \\times \\mathbb{H}^n_{++} \\times \\mathbb{H}^n_{++} : T \\succeq P_g(X, Y) \\},
         
     for an operator concave function :math:`g:[0, \\infty)\\rightarrow\\mathbb{R}`, with barrier function
     

@@ -14,4 +14,4 @@ for fname in fnames:
     solver = qics.Solver(model)
 
     # Solve problem
-    out = solver.solve()
+    info = solver.solve()

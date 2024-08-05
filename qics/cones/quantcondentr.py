@@ -10,7 +10,7 @@ class QuantCondEntr(Cone):
     
     .. math::
 
-        \\{ (t, X) \\in \\mathbb{R} \\times \\mathbb{H}^{n_0n_1 \\ldots n_{k-1}} : t \\geq -S(X) + S(\\text{tr}_i(X)) \\},
+        \\mathcal{K}_{\\text{qce}} = \\text{cl}\\{ (t, X) \\in \\mathbb{R} \\times \\mathbb{H}^{n_0n_1 \\ldots n_{k-1}}_{++} : t \\geq -S(X) + S(\\text{tr}_i(X)) \\},
         
     with barrier function
     

@@ -19,11 +19,11 @@ where :math:`c \in \mathbb{R}^n`, :math:`b \in \mathbb{R}^p`,
 is a Cartesian product of convex cones. Some notable cones that **QICS**
 supports include:
 
-- Complex-valued (i.e., Hermitian) positive semidefinite cone
-- Quantum relative entropy
-- Quantum conditional entropy
-- Quantum key distribution
-- Operator perspective
+- Complex-valued (i.e., Hermitian) positive semidefinite cone (:class:`~qics.cones.PosSemidefinite`)
+- Quantum relative entropy (:class:`~qics.cones.QuantRelEntr`)
+- Quantum conditional entropy (:class:`~qics.cones.QuantCondEntr`)
+- Quantum key distribution (:class:`~qics.QuantKeyDist`)
+- Operator perspective (:class:`~qics.OpPerspecEpi`)
 
 The full list of supported cones can be found :doc:`here</api/cones>`.
 

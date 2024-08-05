@@ -8,7 +8,7 @@ class QuantEntr(Cone):
 
     .. math::
     
-        \\{ (t, u, X) \\in \\mathbb{R} \\times \\mathbb{R}_+ \\times \\mathbb{H}^n_+ : t \\geq -u S(X / u) \\},
+        \\mathcal{K}_{\\text{qe}} = \\text{cl}\\{ (t, u, X) \\in \\mathbb{R} \\times \\mathbb{R}_{++} \\times \\mathbb{H}^n_{++} : t \\geq -u S(X / u) \\},
         
     with barrier function
 

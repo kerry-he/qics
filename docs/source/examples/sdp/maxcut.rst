@@ -96,10 +96,10 @@ semidefinite program, and a :class:`~qics.Solver` to solve this problem.
     solver = qics.Solver(model)
 
     # Solve problem
-    out = solver.solve()
+    info = solver.solve()
 
     print("Optimal matrix variable X is: ")
-    print(out["s_opt"][0])
+    print(info["s_opt"][0])
 
 .. code-block:: none
 
@@ -203,11 +203,11 @@ We supply full example code for the complex max cut below.
     solver = qics.Solver(model)
 
     # Solve problem
-    out = solver.solve()
+    info = solver.solve()
 
     np.set_printoptions(precision=2)
     print("Optimal matrix variable X is: ")
-    print(out["s_opt"][0])
+    print(info["s_opt"][0])
 
 .. code-block:: none
 

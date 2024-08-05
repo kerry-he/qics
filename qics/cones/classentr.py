@@ -6,7 +6,7 @@ class ClassEntr(Cone):
     
     .. math::
 
-        \\{ (t, u, x) \\in \\mathbb{R} \\times \\mathbb{R}_+ \\times \\mathbb{R}^n_+ : t \\geq -u H(x / u) \\},
+        \\mathcal{K}_{\\text{ce}} = \\text{cl}\\{ (t, u, x) \\in \\mathbb{R} \\times \\mathbb{R}_{++} \\times \\mathbb{R}^n_{++} : t \\geq -u H(x / u) \\},
         
     with barrier function
 

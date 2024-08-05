@@ -108,9 +108,9 @@ array([[0.,  0.,  1.,  1.,  2.,  2.,  1., -1.,  3.,  0.,  4.,  4.,
 
 Note that we assume the matrix ``X`` is of type ``np.complex128``.
 Alternatively, we can use the ``mat_to_vec`` function again to convert Hermitian  
-matrices to vectors by setting ``iscomplex=True``.
+matrices to vectors (the function automatically detects if the matrix is complex).
 
->>> mat_to_vec(X, iscomplex=True).T
+>>> mat_to_vec(X).T
 array([[0.,  0.,  1.,  1.,  2.,  2.,  1., -1.,  3.,  0.,  4.,  4.,
         2., -2.,  4., -4.,  5.,  0.]])
 

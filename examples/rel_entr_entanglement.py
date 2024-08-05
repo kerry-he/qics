@@ -8,53 +8,65 @@ import qics.utils.quantum as qu
 #   s.t. tr[Y] = 1
 #        T2(Y) >= 0
 
-n0 = 2
-n1 = 3
-iscomplex = False
+np.random.seed(1)
 
-N = n0 * n1
-X = qu.rand_density_matrix(N, iscomplex=iscomplex)
+n1 = 2
+n2 = 3
+N  = n1 * n2
 
-sN = sym.vec_dim(N, iscomplex=iscomplex, compact=True)
-vN = sym.vec_dim(N, iscomplex=iscomplex)
+# Generate random (complex) quantum state
+C = qu.rand_density_matrix(N, iscomplex=True)
 
-# Define objective function, where x = (t, triu[Y]) and c = (1, 0)
-c1 = np.array(([[1.]]))
-c2 = np.zeros((sN, 1))
-c  = np.vstack((c1, c2))
+# Define objective function
+ct = np.array(([[1.]]))
+cX = np.zeros((2*N*N, 1))
+cY = np.zeros((2*N*N, 1))
+cZ = np.zeros((2*N*N, 1))
+c  = np.vstack((ct, cX, cY, cZ))
 
-# Build linear constraint tr[Y] = 1
-A = np.hstack((np.zeros((1, 1)), sym.mat_to_vec(np.eye(N), iscomplex=iscomplex, compact=True).T))
-b = np.ones((1, 1))
+# Build linear constraints
+# X = C
+sN = sym.vec_dim(N, iscomplex=True, compact=True)
+A1 = np.hstack((
+    np.zeros((sN, 1)),
+    sym.eye(N, iscomplex=True), 
+    np.zeros((sN, 2*N*N)),
+    np.zeros((sN, 2*N*N)),
+))
+b1 = sym.mat_to_vec(C, compact=True)
+# tr[Y] = 1
+A2 = np.hstack((
+    np.zeros((1, 1)), 
+    np.zeros((1, 2*N*N)), 
+    sym.mat_to_vec(np.eye(N, dtype=np.complex128)).T, 
+    np.zeros((1, 2*N*N))
+))
+b2 = np.array([[1.]])
+# T2(Y) = Z
+p_transpose = sym.lin_to_mat(
+    lambda X : sym.p_transpose(X, (n1, n2), 1), 
+    (N, N), iscomplex=True
+)
+A3 = np.hstack((
+    np.zeros((1, 1)), 
+    np.zeros((1, 2*N*N)),
+    p_transpose, 
+    -sym.eye(N, iscomplex=True)
+))
+b3 = np.zeros((sN, 1))
 
-# Build linear cone constraints
-# t = t
-G1 = np.hstack((-np.ones((1, 1)), np.zeros((1, sN))))
-h1 = np.zeros((1, 1))
-# X = X (const)
-G2 = np.hstack((np.zeros((vN, 1)), np.zeros((vN, sN))))
-h2 = sym.mat_to_vec(X, iscomplex=iscomplex, compact=False)
-# Y = Y
-eye = sym.lin_to_mat(lambda X : X, (N, N), iscomplex=iscomplex, compact=(True, False))
-G3 = np.hstack((np.zeros((vN, 1)), -eye))
-h3 = np.zeros((vN, 1))
-# T2(Y) >= 0
-p_transpose = sym.lin_to_mat(lambda X : sym.p_transpose(X, (n0, n1), 1), (N, N), iscomplex=iscomplex, compact=(True, False))
-G4 = np.hstack((np.zeros((vN, 1)), -p_transpose))
-h4 = np.zeros((vN, 1))
-
-G = np.vstack((G1, G2, G3, G4))
-h = np.vstack((h1, h2, h3, h4))
+A = np.vstack((A1, A2, A3))
+b = np.vstack((b1, b2, b3))
 
 # Input into model and solve
 cones = [
-    qics.cones.QuantRelEntr(N, iscomplex=iscomplex), 
-    qics.cones.PosSemidefinite(N, iscomplex=iscomplex)
+    qics.cones.QuantRelEntr(N, iscomplex=True), 
+    qics.cones.PosSemidefinite(N, iscomplex=True)
 ]
 
 # Initialize model and solver objects
-model  = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
+model  = qics.Model(c=c, A=A, b=b, cones=cones)
 solver = qics.Solver(model)
 
 # Solve problem
-out = solver.solve()
+info = solver.solve()

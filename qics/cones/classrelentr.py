@@ -6,7 +6,7 @@ class ClassRelEntr(Cone):
 
     .. math::
     
-        \\{ (t, x, y) \\in \\mathbb{R} \\times \\mathbb{R}^n_+ \\times \\mathbb{R}^n_+ : t \\geq H(x \\| y) \\},
+        \\mathcal{K}_{\\text{cre}} = \\text{cl}\\{ (t, x, y) \\in \\mathbb{R} \\times \\mathbb{R}^n_{++} \\times \\mathbb{R}^n_{++} : t \\geq H(x \\| y) \\},
         
     with barrier function
     

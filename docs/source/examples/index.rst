@@ -9,3 +9,4 @@ We have examples!
    :caption: Contents:
 
    sdp/index.rst
+   qrep/index.rst

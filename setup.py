@@ -17,6 +17,6 @@ setuptools.setup(
     
     packages=setuptools.find_packages(include=['qics','qics.*']),
     python_requires='>=3',
-    install_requires=["numpy","scipy", "numba"],
+    install_requires=["numpy", "scipy", "numba"],
     package_data={"": ["README.md","LICENSE"]}
 )

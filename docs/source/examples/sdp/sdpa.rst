@@ -23,7 +23,7 @@ the example semidefinite programs as follows.
     >>> c, b, A, cones = qics.io.read_sdpa("SDPLIB/data/arch0.dat-s")
     >>> model = qics.Model(c=c, A=A, b=b, cones=cones)
     >>> solver = qics.Solver(model)
-    >>> out = solver.solve()
+    >>> info = solver.solve()
     ====================================================================
                 QICS v0.0 - Quantum Information Conic Solver
                 by K. He, J. Saunderson, H. Fawzi (2024)
@@ -45,7 +45,7 @@ the example semidefinite programs as follows.
             opt. gap:     5.31e-09
 
 We can also write a semidefinite program represented by a :class:`~qics.Model`
-by calling
+to a file by calling
 
 .. code-block:: pycon
 

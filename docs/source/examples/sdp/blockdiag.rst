@@ -144,10 +144,10 @@ defining ``cones`` as a list of cones.
     solver = qics.Solver(model)
 
     # Solve problem
-    out = solver.solve()
+    info = solver.solve()
 
     print("Optimal variable x is: ")
-    print(out["x_opt"].ravel())
+    print(info["x_opt"].ravel())
 
 .. code-block:: none
 
