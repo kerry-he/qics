@@ -4,21 +4,36 @@ import os
 import qics
 
 def read_sdpa(filename):
-    """Reads a file in the SDPA sparse format representing the SDP
+    """Reads a file in the SDPA sparse format, and returns the data
+    matrices :math:`C\\in\\mathbb{S}^n`, :math:`A_i\\in\\mathbb{S}^n`, 
+    and :math:`b\\in\\mathbb{R}^p` representing the primal
 
-        (P)    min_X    <C, X>
-               s.t.     <Ai, X> = bi    for i = 1,...,m
-                        X >= 0
-    
-        (D)    max_y    <b, y>
-               s.t.     Z = y1 A1 + y2 A2 + ... + ym Am - C
-                        Z >= 0         
-    
-    Accepts either file extensions
-    
-        - ``.dat-s``: Standard sparse SDPA file
-        - ``.dat-c``: Complex-valued sparse SDPA file
+    .. math::
 
+        \\max_{X\\in\\mathbb{S}^n} &&& \\langle C, X \\rangle
+
+        \\text{s.t.} &&& \\langle A_i, X \\rangle = b_i, \\quad i=1,\\ldots,p
+
+         &&& X \\succeq 0
+
+    and dual
+
+    .. math::
+
+        \\min_{y \\in \\mathbb{R}^p} &&& -b^\\top y
+
+        \\text{s.t.} &&& \\sum_{i=1}^p A_i y_i - C \succeq 0 
+
+    pair of semidefinite programs. Accepts either file extensions
+    
+        - ``.dat-s``: Standard SDPA sparse file.
+        - ``.dat-c``: Complex-valued SDPA sparse file, in which case the
+          data matrices :math:`C\\in\\mathbb{H}^n`, :math:`A_i\\in\\mathbb{H}^n`
+          are assumed to all be Hermitian.
+
+    Data is returned in a form that can directly be used to initialize
+    a :class:`~qics.Model`.
+    
     Code adapted from: https://sdpa-python.github.io/
 
     Parameters
@@ -29,13 +44,17 @@ def read_sdpa(filename):
     Returns
     -------
     ndarray (n, 1)
-        Float array representing linear objective c.
+        Float array representing the linear objective ``c`` as 
+        the vectorized matrix :math:`-C`.
     ndarray (p, n)
-        Float array representing linear equality constraints A.
+        Float array representing the matrix representation ``A`` 
+        for the linear equality constraint data :math:`A_i`.
     ndarray (p, 1)
-        Float array representing linear equality constraints b.
+        Float array representing linear equality constraints ``b``
+        for the data :math:`b`.
     list
-        List of cone classes representing the Cartesian product of cones :math:`\\mathcal{K}`.
+        List of cone classes representing the Cartesian product of 
+        cones :math:`\\mathcal{K}`.
     """
 
     # Determine if this is a complex or real SDP file
@@ -189,18 +208,27 @@ def read_sdpa(filename):
     return c, b, A, cones
 
 def write_sdpa(model, filename):
-    """Writes an SDP of the form 
+    """Writes a semidefinite program 
 
-        (P)    min_X    <C, X>
-               s.t.     <Ai, X> = bi    for i = 1,...,m
-                        X >= 0
+    .. math::
+
+        \\max_{X\\in\\mathbb{S}^n} &&& \\langle C, X \\rangle
+
+        \\text{s.t.} &&& \\langle A_i, X \\rangle = b_i, \\quad i=1,\\ldots,p
+
+         &&& X \\succeq 0
+
+    with dual
+
+    .. math::
+
+        \\min_{y \\in \\mathbb{R}^p} &&& -b^\\top y
+
+        \\text{s.t.} &&& \\sum_{i=1}^p A_i y_i - C \succeq 0   
     
-        (D)    max_y    <b, y>
-               s.t.     Z = y1 A1 + y2 A2 + ... + ym Am - C
-                        Z >= 0         
-    
-    to a .dat-s (or .dat-c for complex-valued SDPs) file in the 
-    sparse SDPA file format.
+    represented by a :class:`~qics.Model` to a ``.dat-s`` (or 
+    ``.dat-c`` for complex-valued SDPs) file using the sparse SDPA 
+    file format.
 
     Parameters
     ----------

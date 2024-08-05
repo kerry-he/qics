@@ -6,17 +6,11 @@
 QICS documentation
 ==================
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
-
-
 .. toctree::
    :maxdepth: 3
    :caption: Contents:
 
    intro.rst
-   examples.rst
-   reference.rst
-   cones.rst
-   maxcut.rst
+   examples/index.rst
+   api/index.rst
+   vectorization.rst

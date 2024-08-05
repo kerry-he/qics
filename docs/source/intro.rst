@@ -25,7 +25,7 @@ supports include:
 - Quantum key distribution
 - Operator perspective
 
-The full list of supported cones can be found :doc:`here</cones>`.
+The full list of supported cones can be found :doc:`here</api/cones>`.
 
 
 Features

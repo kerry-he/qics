@@ -1,4 +1,6 @@
-Cones reference
+.. py:module:: qics.cones
+
+qics.cones
 ===============
 
 Symmetric cones
