@@ -6,46 +6,30 @@ import qics
 #   s.t. <Ai, X> = bi
 #        X >= 0
 
-n = 4
-
-# Data for ebBB84 obtained from: 
-# https://www.math.uwaterloo.ca/~hwolkowi/henry/reports/ZGNQKDmainsolverUSEDforPUBLCNJuly31/
-K_list = [
-    np.array([
-        [.1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, .1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .1, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .1, 0]
-    ]).T,
-
-    np.array([
-        [0, .45, 0, 0, 0, .45, 0, 0, 0, .45, 0, 0, 0, -.45, 0, 0],
-        [0, 0, 0, .45, 0, 0, 0, .45, 0, 0, 0, .45, 0, 0, 0, -.45],
-        [0, .45, 0, 0, 0, .45, 0, 0, 0, -.45, 0, 0, 0, .45, 0, 0],
-        [0, 0, 0, .45, 0, 0, 0, .45, 0, 0, 0, -.45, 0, 0, 0, .45]
-    ]).T
-]
-
-Gamma_list = [
-    np.array([[0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [ 0, 0, 0, 0]]),
-    np.array([[1, 0, 0,-1], [0, 1,-1, 0], [0,-1, 1, 0], [-1, 0, 0, 1]]) / 2,
-    np.array([[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0,-1], [ 0, 0,-1, 0]]),
-    np.array([[0, 0, 1, 0], [0, 0, 0,-1], [1, 0, 0, 0], [ 0,-1, 0, 0]]),
-    np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [ 0, 0, 0, 1]])
-]
-
-gamma = np.array([[0.03, 0.03, 0, 0, 1]]).T
+qx = qz = 0.5
 
 # Define objective function
-c = np.zeros((1 + n*n, 1))
-c[0] = 1.
+c = np.vstack((np.array([[1.]]), np.zeros((16, 1))))
 
 # Build linear constraints
-A = np.hstack((np.zeros((5, 1)), np.array(Gamma_list).reshape(-1, n*n)))
-b = gamma
+X0 = np.array([[.5,  .5], [ .5, .5]])
+X1 = np.array([[.5, -.5], [-.5, .5]])
+Z0 = np.array([[1.,  0.], [ 0., 0.]])
+Z1 = np.array([[0.,  0.], [ 0., 1.]])
+
+Ax = np.kron(X0, X1) + np.kron(X1, X0)
+Az = np.kron(Z0, Z1) + np.kron(Z1, Z0)
+
+A = np.vstack((
+    np.hstack((np.array([[0.]]), np.eye(4).reshape(1, -1))),
+    np.hstack((np.array([[0.]]), Ax.reshape(1, -1))),
+    np.hstack((np.array([[0.]]), Az.reshape(1, -1)))
+))
+
+b = np.array([[1., qx, qz]]).T
 
 # Input into model and solve
-cones = [qics.cones.QuantKeyDist(K_list, 2)]
+cones = [qics.cones.QuantKeyDist([np.eye(4)], 2)]
 
 # Initialize model and solver objects
 model  = qics.Model(c=c, A=A, b=b, cones=cones)

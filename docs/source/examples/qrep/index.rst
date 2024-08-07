@@ -8,4 +8,6 @@ We have examples!
    :maxdepth: 1
    :caption: Contents:
 
+   qkd.rst
+   channel.rst
    nearest.rst

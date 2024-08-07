@@ -6,6 +6,9 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import sys, os
+sys.path.insert(0, os.path.abspath('../..'))
+
 project = 'QICS'
 copyright = '2024, Kerry He, James Saunderson, and Hamza Fawzi'
 author = 'Kerry He, James Saunderson, and Hamza Fawzi'
