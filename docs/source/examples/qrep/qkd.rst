@@ -59,10 +59,11 @@ and :math:`b = (1, q_x, q_z)`. We can solve this in **QICS** using the
     import numpy as np
     import qics
 
-    qx = qz = 0.5
+    qx = 0.25
+    qz = 0.75
 
     # Define objective function
-    c = np.vstack((np.array([[1.]]), np.zeros((16, 1))))
+    c = np.vstack((np.array([[1/np.log(2.)]]), np.zeros((16, 1))))
 
     # Build linear constraints
     X0 = np.array([[.5,  .5], [ .5, .5]])
@@ -91,6 +92,38 @@ and :math:`b = (1, q_x, q_z)`. We can solve this in **QICS** using the
     # Solve problem
     info = solver.solve()
 
+.. code-block:: none
+
+    ====================================================================
+                QICS v0.0 - Quantum Information Conic Solver
+                by K. He, J. Saunderson, H. Fawzi (2024)
+    ====================================================================
+    Problem summary:
+            no. cones:  1                        no. vars:    17
+            barr. par:  6                        no. constr:  3
+            symmetric:  False                    cone dim:    17
+            complex:    False
+
+    ...
+
+    Solution summary
+            sol. status:  optimal                num. iter:    8
+            exit status:  solved                 solve time:   1.352
+
+            primal obj:   1.887218747943e-01     primal feas:  5.13e-10
+            dual obj:     1.887218743509e-01     dual feas:    2.33e-10
+            opt. gap:     4.43e-10
+
+The closed form solution for this quantum key rate is
+
+.. math::
+
+    1 + q_x \log_2(q_x) + (1 - q_x) \log_2(1 - q_x)
+
+which we use to confirm that **QICS** gives the correct solution.
+
+>>> 1 + ( qx*np.log(qx) + (1-qx)*np.log(1-qx) ) / np.log(2)
+0.18872187554086717
 
 
 Reading protocols from files
