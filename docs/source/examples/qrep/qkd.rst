@@ -63,7 +63,7 @@ and :math:`b = (1, q_x, q_z)`. We can solve this in **QICS** using the
     qz = 0.75
 
     # Define objective function
-    c = np.vstack((np.array([[1/np.log(2.)]]), np.zeros((16, 1))))
+    c = np.vstack((np.array([[1.]]), np.zeros((16, 1))))
 
     # Build linear constraints
     X0 = np.array([[.5,  .5], [ .5, .5]])
@@ -108,22 +108,22 @@ and :math:`b = (1, q_x, q_z)`. We can solve this in **QICS** using the
 
     Solution summary
             sol. status:  optimal                num. iter:    8
-            exit status:  solved                 solve time:   1.352
+            exit status:  solved                 solve time:   1.068
 
-            primal obj:   1.887218747943e-01     primal feas:  5.13e-10
-            dual obj:     1.887218743509e-01     dual feas:    2.33e-10
-            opt. gap:     4.43e-10
+            primal obj:   1.308120352816e-01     primal feas:  1.21e-09
+            dual obj:     1.308120344834e-01     dual feas:    6.04e-10
+            opt. gap:     7.98e-10
 
 The closed form solution for this quantum key rate is
 
 .. math::
 
-    1 + q_x \log_2(q_x) + (1 - q_x) \log_2(1 - q_x)
+    \log(2) + q_x \log(q_x) + (1 - q_x) \log(1 - q_x)
 
 which we use to confirm that **QICS** gives the correct solution.
 
->>> 1 + ( qx*np.log(qx) + (1-qx)*np.log(1-qx) ) / np.log(2)
-0.18872187554086717
+>>> np.log(2) + ( qx*np.log(qx) + (1-qx)*np.log(1-qx) )
+0.130812035941137
 
 
 Reading protocols from files

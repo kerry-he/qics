@@ -8,15 +8,16 @@ import qics.utils.quantum as qu
 #   s.t. Σ_i pi = 1
 #        p >= 0
 
-n = 64
-iscomplex = False
+np.random.seed(1)
 
-alphabet = [qu.rand_density_matrix(n, iscomplex=iscomplex) for i in range(n)]
-vn       = sym.vec_dim(n, iscomplex=iscomplex, compact=False)
+n = m = 16
 
-# Define objective function, where x = ({pi}, t) and c = ({-S(N(Xi))}, 1)
-c1 = np.array([[-qu.quant_entropy(rho)] for rho in alphabet])
-c2 = np.array([[1.]])
+rhos = [qu.rand_density_matrix(n, iscomplex=True) for i in range(n)]
+
+# Define objective function
+# where x = ({pi}, t) and c = ({-S(N(Xi))}, 1)
+c1 = np.array([[-qu.quant_entropy(rho)] for rho in rhos])
+c2 = np.array([[1.0]])
 c  = np.vstack((c1, c2))
 
 # Build linear constraint Σ_i pi = 1
@@ -24,19 +25,19 @@ A = np.hstack((np.ones((1, n)), np.zeros((1, 1))))
 b = np.ones((1, 1))
 
 # Build linear cone constraints
-# p >= 0
+# x_nn = p
 G1 = np.hstack((-np.eye(n), np.zeros((n, 1))))
 h1 = np.zeros((n, 1))
-# t = t
+# t_qe = t
 G2 = np.hstack((np.zeros((1, n)), -np.ones((1, 1))))
 h2 = np.zeros((1, 1))
-# u = 1
+# u_qe = 1
 G3 = np.hstack((np.zeros((1, n)), np.zeros((1, 1))))
 h3 = np.ones((1, 1))
-# X = Σ_i pi N(Xi)
-alphabet_vec = np.hstack(([sym.mat_to_vec(rho, iscomplex=iscomplex, compact=False) for rho in alphabet]))
-G4 = np.hstack((-alphabet_vec, np.zeros((vn, 1))))
-h4 = np.zeros((vn, 1))
+# X_qe = Σ_i pi N(Xi)
+rhos_vec = np.hstack(([sym.mat_to_vec(rho) for rho in rhos]))
+G4 = np.hstack((-rhos_vec, np.zeros((2*n*n, 1))))
+h4 = np.zeros((2*n*n, 1))
 
 G = np.vstack((G1, G2, G3, G4))
 h = np.vstack((h1, h2, h3, h4))
@@ -44,7 +45,7 @@ h = np.vstack((h1, h2, h3, h4))
 # Input into model and solve
 cones = [
     qics.cones.NonNegOrthant(n), 
-    qics.cones.QuantEntr(n, iscomplex=iscomplex)
+    qics.cones.QuantEntr(n, iscomplex=True)
 ]
 
 # Initialize model and solver objects
