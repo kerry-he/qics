@@ -117,18 +117,18 @@ semidefinite program, and a :class:`~qics.Solver` to solve this problem.
 
     Solution summary
             sol. status:  optimal                num. iter:    7
-            exit status:  solved                 solve time:   x.xxx
+            exit status:  solved                 solve time:   1.086
 
-            primal obj:  -8.741944078919e+00     primal feas:  7.95e-09
-            dual obj:    -8.741944049469e+00     dual feas:    3.97e-09
-            opt. gap:     3.37e-09
+            primal obj:  -2.074194398354e+01     primal feas:  7.95e-09
+            dual obj:    -2.074194395409e+01     dual feas:    6.72e-09
+            opt. gap:     1.42e-09
 
     Optimal matrix variable X is:
-    [[ 0.99999999 -0.3668415  -0.3668415   0.12486877  0.12486877]
-     [-0.3668415   0.99999999 -0.73085463 -0.96880942  0.87719533]
-     [-0.3668415  -0.73085463  0.99999999  0.87719533 -0.96880942]
-     [ 0.12486877 -0.96880942  0.87719533  0.99999999 -0.96881558]
-     [ 0.12486877  0.87719533 -0.96880942 -0.96881558  0.99999999]]
+    [[ 1.         -0.3668415  -0.3668415   0.12486877  0.12486877]
+     [-0.3668415   1.         -0.73085463 -0.96880942  0.87719533]
+     [-0.3668415  -0.73085463  1.          0.87719533 -0.96880942]
+     [ 0.12486877 -0.96880942  0.87719533  1.         -0.96881558]
+     [ 0.12486877  0.87719533 -0.96880942 -0.96881558  1.        ]]
 
 .. note::
     When ``G`` and ``h`` are not specified when initializing a :class:`~qics.Model`,
