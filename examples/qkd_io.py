@@ -19,7 +19,7 @@ Gamma  = list(data['Gamma'].ravel())
 K_list = list(data['Klist'].ravel())
 Z_list = list(data['Zlist'].ravel())
 
-iscomplex = np.iscomplexobj(Gamma) or np.iscomplexobj(K_list) or np.iscomplexobj(Z_list)
+iscomplex = np.iscomplexobj(Gamma) or np.iscomplexobj(K_list)
 dtype = np.complex128 if iscomplex else np.float64
 
 no, ni = np.shape(K_list[0])
@@ -33,7 +33,7 @@ c[0] = 1.
 # Build linear constraints
 A = np.zeros((nc, 1 + vni))
 for i in range(nc):
-    A[i, 1:] = sym.mat_to_vec(Gamma[i].astype(dtype), iscomplex=iscomplex, compact=False).ravel()
+    A[i, 1:] = sym.mat_to_vec(Gamma[i].astype(dtype), compact=False).ravel()
 b = gamma
 
 # Input into model and solve

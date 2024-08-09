@@ -1,5 +1,5 @@
-Block diagonal 
-================
+Cartesian product of cones
+============================
 
 Consider the semidefinite program from Example 2 of :ref:`[1] <blockdiag_refs>`
 

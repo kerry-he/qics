@@ -9,5 +9,5 @@ We have examples!
    :caption: Contents:
 
    maxcut.rst
-   blockdiag.rst
+   product.rst
    sdpa.rst
