@@ -9,5 +9,6 @@ We have examples!
    :caption: Contents:
 
    qkd.rst
-   channel.rst
    nearest.rst
+   channel.rst
+   opper.rst

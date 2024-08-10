@@ -37,7 +37,7 @@ capacity is given by the Holevo-Schumacher–Westmoreland theorem :ref:`[2,3] <c
 
     &&& p \geq 0.
 
-We can solve for this channel capacity using the :class:`~qics.QuantEntr` cone
+We can solve for this channel capacity using the :class:`~qics.cones.QuantEntr` cone
 as follows
 
 .. code-block:: python

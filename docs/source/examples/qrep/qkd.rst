@@ -52,7 +52,7 @@ and we have the three linear constraints defined by
     + \begin{bmatrix} 0 & 0 \\ 0 & 1 \end{bmatrix} \otimes \begin{bmatrix} 1 & 0 \\ 0 & 0 \end{bmatrix}  ,
 
 and :math:`b = (1, q_x, q_z)`. We can solve this in **QICS** using the
-:class:`~qics.QuantKeyDist` cone.
+:class:`~qics.cones.QuantKeyDist` cone.
 
 .. code-block:: python
 

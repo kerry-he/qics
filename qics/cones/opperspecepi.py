@@ -313,13 +313,13 @@ class OpPerspecEpi(Cone):
         # ====================================================================
         work    = self.rt2Y_Uyxy.conj().T @ Ht @ self.rt2Y_Uyxy
         Wx      = Hx + self.irt2Y_Uyxy @ (self.D1yxy_h * work) @ self.irt2Y_Uyxy.conj().T
-        Wx_vec  = Wx.view(dtype=np.float64).reshape(-1)[self.triu_idxs]
-        Wx_vec *= self.scale        
+        Wx_vec  = Wx.view(dtype=np.float64).reshape(-1, 1)[self.triu_idxs]
+        Wx_vec *= self.scale.reshape(-1, 1)
 
         work    = self.rt2X_Uxyx.conj().T @ Ht @ self.rt2X_Uxyx
         Wy      = Hy + self.irt2X_Uxyx @ (self.D1xyx_g * work) @ self.irt2X_Uxyx.conj().T
-        Wy_vec  = Wy.view(dtype=np.float64).reshape(-1)[self.triu_idxs]
-        Wy_vec *= self.scale        
+        Wy_vec  = Wy.view(dtype=np.float64).reshape(-1, 1)[self.triu_idxs]
+        Wy_vec *= self.scale.reshape(-1, 1)
 
         Wxy_vec = np.vstack((Wx_vec, Wy_vec))
         outxy   = lin.cho_solve(self.hess_fact, Wxy_vec)
@@ -555,7 +555,7 @@ class OpPerspecEpi(Cone):
         self.work2  = np.empty_like(self.At)
         self.work3  = np.empty_like(self.At)
 
-        self.work9  = np.empty((2*self.vn, p), dtype=self.dtype)
+        self.work9  = np.empty((2*self.vn, p))
 
         self.congr_aux_updated = True
 
