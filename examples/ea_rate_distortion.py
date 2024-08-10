@@ -9,37 +9,38 @@ import qics.utils.quantum as qu
 #        (t, X) ∈ K_qce
 #        <Δ, X> <= D
 
-n = 4
-D = 0.5
-iscomplex = False
+np.random.seed(1)
 
-rho      = qu.rand_density_matrix(n, iscomplex=iscomplex)
+n = 4
+D = 0.25
+
+rho      = qu.rand_density_matrix(n)
 entr_rho = qu.quant_entropy(rho)
 
 N = n * n
-sn = sym.vec_dim(n, iscomplex=iscomplex, compact=True)
-vN = sym.vec_dim(N, iscomplex=iscomplex)
+sn = sym.vec_dim(n, compact=True)
+vN = sym.vec_dim(N)
 
 # Define objective function
 c = np.zeros((vN + 2, 1))
 c[0] = 1.
 
 # Build linear constraint matrices
+tr2 = sym.lin_to_mat(lambda X : sym.p_tr(X, (n, n), 1), (N, n))
+Delta = sym.mat_to_vec(np.eye(N) - qu.purify(rho))
 # Tr_2[X] = rho
-tr2 = sym.lin_to_mat(lambda X : sym.p_tr(X, (n, n), 1), (N, n), iscomplex=iscomplex)
-A1  = np.hstack((np.zeros((sn, 1)), tr2, np.zeros((sn, 1))))
-b1  = sym.mat_to_vec(rho, iscomplex=iscomplex, compact=True)
+A1 = np.hstack((np.zeros((sn, 1)), tr2, np.zeros((sn, 1))))
+b1 = sym.mat_to_vec(rho, compact=True)
 # <Δ, X> <= D
-Delta = sym.mat_to_vec(np.eye(N) - qu.purify(rho), iscomplex=iscomplex, compact=False)
-A2    = np.hstack((np.zeros((1, 1)), Delta.T, np.ones((1, 1))))
-b2    = np.array([[D]])
+A2 = np.hstack((np.zeros((1, 1)), Delta.T, np.ones((1, 1))))
+b2 = np.array([[D]])
 
 A = np.vstack((A1, A2))
 b = np.vstack((b1, b2))
 
 # Define cones to optimize over
 cones = [
-    qics.cones.QuantCondEntr((n, n), 0, iscomplex=iscomplex), 
+    qics.cones.QuantCondEntr((n, n), 0), 
     qics.cones.NonNegOrthant(1)
 ]
 

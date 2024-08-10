@@ -10,4 +10,5 @@ We have examples!
 
    maxcut.rst
    product.rst
+   quantum.rst
    sdpa.rst

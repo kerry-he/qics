@@ -142,7 +142,7 @@ We supply some sample code for how to do this below.
     import qics.utils.symmetric as sym
 
     # Read file
-    data   = sp.io.loadmat('problems/quant_key_rate/instance_ebBB84.mat')
+    data   = sp.io.loadmat('filename.mat')
     gamma  = data['gamma']
     Gamma  = list(data['Gamma'].ravel())
     K_list = list(data['Klist'].ravel())
