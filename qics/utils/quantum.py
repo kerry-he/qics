@@ -1,4 +1,6 @@
 import numpy as np
+import scipy as sp
+import qics.utils.symmetric as sym
 
 def rand_density_matrix(n, iscomplex=False):
     """Generate random density matrix on Haar measure,
@@ -220,3 +222,44 @@ def purify(X):
         vec += np.sqrt(D[i]) * np.kron(U[:, [i]], U[:, [i]])
 
     return vec @ vec.conj().T
+
+def rand_choi_operator(nin, nout=None, M=None, iscomplex=False):
+    """Random Choi operator uniformly distributed on Hilbert-Schmidt measure
+
+    See: https://arxiv.org/abs/2011.02994
+    
+    Parameters
+    ----------
+    nin : int
+        Dimension of input system.
+    nout : int, optional
+        Dimension of output system. Default is nin.
+    M : int, optional
+        Dimension used to generate random Choi operator. Default is nout*nin.
+    iscomplex : bool, optional
+        Whether the Stinespring is real (False) or complex (True). Default is False.
+        
+    Returns
+    -------
+    ndarray
+        Random Choi operator.
+    """    
+
+    nout = nout if (nout is not None) else nin
+    M = M if (M is not None) else nout * nin
+
+    # Sample random Wishart ensemble
+    if iscomplex:
+        G = np.random.normal(size=(nin*nout, M)) + np.random.normal(size=(nin*nout, M)) * 1j
+        G *= np.sqrt(2.)
+    else:
+        G = np.random.normal(size=(nin*nout, M))
+    W = G @ G.conj().T
+
+    # Obtain normalization required for trace preserving property
+    H = sym.p_tr(W, (nout, nin), 0)
+    I_H_irt2 = sym.i_kr(sp.linalg.sqrtm(np.linalg.inv(H)), (nout, nin), 0)
+    
+    # Return normalized Choi matrix
+    J = I_H_irt2 @ W @ I_H_irt2
+    return 0.5 * (J + J.conj().T)

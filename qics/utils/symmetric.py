@@ -352,6 +352,15 @@ def p_transpose(mat, dims, sys):
 
     return temp.reshape(n0*n1, n0*n1)
 
+def swap_sys(mat, dims, sys1, sys2):
+    N = np.prod(dims)
+    mat_view = mat.reshape(*dims, *dims)
+
+    temp = np.swapaxes(mat_view, sys1, sys2)
+    temp = np.swapaxes(temp, len(dims) + sys1, len(dims) + sys2)
+
+    return temp.reshape(N, N)
+
 def lin_to_mat(lin, dims, iscomplex=False, compact=(False, True)):
     """Computes the matrix corresponding to a linear map from
     vectorized symmetric matrices to symmetric matrices.
