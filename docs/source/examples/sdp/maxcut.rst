@@ -105,7 +105,7 @@ semidefinite program, and a :class:`~qics.Solver` to solve this problem.
 
     ====================================================================
                 QICS v0.0 - Quantum Information Conic Solver
-                by K. He, J. Saunderson, H. Fawzi (2024)
+                  by K. He, J. Saunderson, H. Fawzi (2024)
     ====================================================================
     Problem summary:
             no. cones:  1                        no. vars:    25

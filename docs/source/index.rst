@@ -11,6 +11,6 @@ QICS documentation
    :caption: Contents:
 
    intro.rst
+   guide/index.rst
    examples/index.rst
    api/index.rst
-   vectorization.rst
