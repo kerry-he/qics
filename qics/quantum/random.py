@@ -4,19 +4,19 @@ import qics.quantum
 
 def density_matrix(n, iscomplex=False):
     """Generate random density matrix on Haar measure,
-    i.e., positive semifedinite matrix X satisfying tr[X] = 1.
+    i.e., positive semifedinite matrix :math:`X` satisfying :math:`\\text{tr}[X] = 1`.
 
     Parameters
     ----------
     n : int
-        Dimension of random (n, n) matrix
+        Dimension of random ``(n, n)`` matrix.
     iscomplex : bool, optional
-        Whether the matrix is symmetric (False) or Hermitian (True). Default is False.
+        Whether the matrix is symmetric (``False``) or Hermitian (``True``). Default is ``False``.
         
     Returns
     -------
     ndarray
-        Random density matrix of dimension (n, n)        
+        Random density matrix of dimension ``(n, n)``.       
     """
     if iscomplex:
         X = np.random.normal(size=(n, n)) + np.random.normal(size=(n, n)) * 1j
@@ -27,20 +27,21 @@ def density_matrix(n, iscomplex=False):
 
 def pure_density_matrix(n, iscomplex=False):
     """Generate random pure density matrix
-    i.e., rank 1 positive semifedinite matrix X satisfying tr[X] = 1.
-    See: https://sumeetkhatri.com/wp-content/uploads/2020/05/random_pure_states.pdf
+    i.e., rank 1 positive semifedinite matrix :math:`X` satisfying :math:`\\text{tr}[X] = 1`.
+    See `here <https://sumeetkhatri.com/wp-content/uploads/2020/05/random_pure_states.pdf>`_
+    for additional details.
 
     Parameters
     ----------
     n : int
-        Dimension of random (n, n) matrix
+        Dimension of random ``(n, n)`` matrix.
     iscomplex : bool, optional
-        Whether the matrix is symmetric (False) or Hermitian (True). Default is False.
+        Whether the matrix is symmetric (``False``) or Hermitian (``True``). Default is ``False``.
         
     Returns
     -------
     ndarray
-        Random density matrix of dimension (n, n)        
+        Random density matrix of dimension ``(n, n)``.
     """    
     if iscomplex:
         psi = np.random.normal(size=(n)) + np.random.normal(size=(n)) * 1j
@@ -52,21 +53,22 @@ def pure_density_matrix(n, iscomplex=False):
     return rho
 
 def unitary(n, iscomplex=False):
-    """Generate random unitary uniformly distributed on Haar measure
-    i.e., matrix U satisfying U'U = UU' = I.
-    See: https://case.edu/artsci/math/esmeckes/Meckes_SAMSI_Lecture2.pdf
+    """Generate random unitary uniformly distributed on Haar measure,
+    i.e., matrix :math:`U` satisfying :math:`U^\\dagger U = UU^\\dagger = \\mathbb{I}`.
+    See `here <https://case.edu/artsci/math/esmeckes/Meckes_SAMSI_Lecture2.pdf>`_
+    for additional details.
 
     Parameters
     ----------
     n : int
-        Dimension of random (n, n) unitary
+        Dimension of random ``(n, n)`` unitary.
     iscomplex : bool, optional
-        Whether the unitary is real (False) or complex (True). Default is False.
+        Whether the unitary is real (``False``) or complex (``True``). Default is ``False``.
         
     Returns
     -------
     ndarray
-        Random unitary of dimension (n, n)        
+        Random unitary of dimension ``(n, n)``.
     """       
     if iscomplex:
         X = np.random.normal(size=(n, n)) + np.random.normal(size=(n, n)) * 1j
@@ -76,25 +78,25 @@ def unitary(n, iscomplex=False):
     return U
 
 def stinespring_operator(nin, nout=None, nenv=None, iscomplex=False):
-    """Generate random Stinespring operator uniformly distributed on Hilbert-Schmidt measure
-    i.e., isometry V corresponding to quantum channel N(X) = tr_E[V X V'].
-    See: https://arxiv.org/abs/2011.02994
+    """Generate random Stinespring operator uniformly distributed on Hilbert-Schmidt measure,
+    i.e., isometry :math:`V` corresponding to quantum channel :math:`\\mathcal{N}(X) = \\text{tr}_E[V X V^\\dagger]`.
+    See `here <https://arxiv.org/abs/2011.02994>`_ for additional details.
 
     Parameters
     ----------
     nin : int
         Dimension of input system.
     nout : int, optional
-        Dimension of output system. Default is nin.
+        Dimension of output system. Default is ``nin``.
     nenv : int, optional
-        Dimension of environment system. Default is nout.         
+        Dimension of environment system. Default is ``nout``.         
     iscomplex : bool, optional
-        Whether the Stinespring is real (False) or complex (True). Default is False.
+        Whether the Stinespring is real (``False``) or complex (``True``). Default is ``False``.
         
     Returns
     -------
     ndarray
-        Random Stinespring operator of dimension (nout*nenv, nin)
+        Random Stinespring operator of dimension ``(nout*nenv, nin)``
     """
     nout = nout if (nout is not None) else nin
     nenv = nenv if (nenv is not None) else nout
@@ -102,34 +104,39 @@ def stinespring_operator(nin, nout=None, nenv=None, iscomplex=False):
     return U[:, :nin]
 
 def degradable_channel(nin, nout, nenv, iscomplex=False):
-    """Generate random degradable channel, represented as a Stinespring isometry V such that
+    """Generate random degradable channel, represented as a Stinespring isometry :math:`V` such that
     
-        N(X)  = Tr_2[V X V']
-        Nc(X) = Tr_1[V X V']
+    .. math::
+
+        \\mathcal{N}(X)           &= \\text{tr}_2[V X V^\\dagger]
+
+        \\mathcal{N}_\\text{c}(X) &= \\text{tr}_1[V X V^\\dagger]
         
     Also returns Stinespring isometry W such that
     
-        Nc(X) = Tr_2[W N(X) W']
+    .. math::
+
+        \\mathcal{N}_\\text{c}(X) = \\text{tr}_2[W \\mathcal{N}(X) W^\\dagger].
         
-    See https://arxiv.org/abs/0802.1360
+    See `here <https://arxiv.org/abs/0802.1360>`_ for additional details.
 
     Parameters
     ----------
     nin : int
         Dimension of input system.
     nout : int, optional
-        Dimension of output system. Default is nin.
+        Dimension of output system. Default is ``nin``.
     nenv : int, optional
-        Dimension of environment system. Default is nout.
+        Dimension of environment system. Default is ``nout``.
     iscomplex : bool, optional
-        Whether the Stinespring is real (False) or complex (True). Default is False.
+        Whether the Stinespring is real (``False``) or complex (``True``). Default is ``False``.
         
     Returns
     -------
     ndarray
-        Stinespring operator V of dimension (nout*nenv, nin) corresponding to N(X) = Tr_2[V X V'].
+        Stinespring operator :math:`V` of dimension ``(nout*nenv, nin)`` corresponding to :math:`\\mathcal{N}(X) = \\text{tr}_2[V X V^\\dagger]`.
     ndarray
-        Stinespring operator W of dimension (nin*nenv, nout) corresponding to Nc(X) = Tr_2[W N(X) W'].
+        Stinespring operator :math:`W` of dimension ``(nin*nenv, nout)`` corresponding to :math:`\\mathcal{N}_\\text{c}(X) = \\text{tr}_2[W \\mathcal{N}(X) W^\\dagger]`.
     """
     assert nenv <= nin
     dtype = np.complex128 if iscomplex else np.float64
@@ -156,25 +163,24 @@ def degradable_channel(nin, nout, nenv, iscomplex=False):
     return V, W
 
 def choi_operator(nin, nout=None, M=None, iscomplex=False):
-    """Random Choi operator uniformly distributed on Hilbert-Schmidt measure
-
-    See: https://arxiv.org/abs/2011.02994
+    """Random Choi operator uniformly distributed on Hilbert-Schmidt measure.
+    See `here <https://arxiv.org/abs/2011.02994>`_ for additional details
     
     Parameters
     ----------
     nin : int
         Dimension of input system.
     nout : int, optional
-        Dimension of output system. Default is nin.
+        Dimension of output system. Default is ``nin``.
     M : int, optional
-        Dimension used to generate random Choi operator. Default is nout*nin.
+        Dimension used to generate random Choi operator. Default is ``nout*nin``.
     iscomplex : bool, optional
-        Whether the Stinespring is real (False) or complex (True). Default is False.
+        Whether the Stinespring is real (``False``) or complex (``True``). Default is ``False``.
         
     Returns
     -------
     ndarray
-        Random Choi operator.
+        Random Choi operator corresponding to matrix of size ``(nout*nin, nout*nin)``.
     """    
 
     nout = nout if (nout is not None) else nin

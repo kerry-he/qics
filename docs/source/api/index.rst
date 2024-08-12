@@ -7,4 +7,6 @@ API reference
 
    qics.rst
    cones.rst
+   vectorize.rst
+   quantum.rst
    io.rst

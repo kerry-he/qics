@@ -22,8 +22,8 @@ supports include:
 - Complex-valued (i.e., Hermitian) positive semidefinite cone (:class:`~qics.cones.PosSemidefinite`)
 - Quantum relative entropy (:class:`~qics.cones.QuantRelEntr`)
 - Quantum conditional entropy (:class:`~qics.cones.QuantCondEntr`)
-- Quantum key distribution (:class:`~qics.QuantKeyDist`)
-- Operator perspective (:class:`~qics.OpPerspecEpi`)
+- Quantum key distribution (:class:`~qics.cones.QuantKeyDist`)
+- Operator perspective (:class:`~qics.cones.OpPerspecEpi`)
 
 The full list of supported cones can be found :doc:`here</api/cones>`.
 
