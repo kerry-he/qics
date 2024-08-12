@@ -154,12 +154,13 @@ and some parameter :math:`\gamma\in[0, 1]`. We can solve this in **QICS** as fol
     import numpy as np
     import qics
     import qics.vectorize as vec
+    import qics.quantum as qu
 
     n = 2
     N = n*n
     gamma = 0.5
 
-    V = np.array([[1, 0], [0, np.sqrt(gamma)], [0, np.sqrt{1-gamma}], [0, 0]])
+    V = np.array([[1, 0], [0, np.sqrt(gamma)], [0, np.sqrt(1-gamma)], [0, 0]])
 
     # Define objective functions
     # with variables (X, (t, Y), (s, u, Z))
@@ -195,7 +196,7 @@ and some parameter :math:`\gamma\in[0, 1]`. We can solve this in **QICS** as fol
     # Input into model and solve
     cones = [
         qics.cones.PosSemidefinite(n),
-        qics.cones.QuantCondEntr((n, n), 0), 
+        qics.cones.QuantCondEntr((n, n), 0),
         qics.cones.QuantEntr(n)
     ]
 
@@ -210,7 +211,7 @@ and some parameter :math:`\gamma\in[0, 1]`. We can solve this in **QICS** as fol
 
     ====================================================================
                 QICS v0.0 - Quantum Information Conic Solver
-                by K. He, J. Saunderson, H. Fawzi (2024)
+                  by K. He, J. Saunderson, H. Fawzi (2024)
     ====================================================================
     Problem summary:
             no. cones:  3                        no. vars:    27
@@ -268,6 +269,7 @@ where :math:`\delta=(1-2\gamma) / (1-\gamma)`.
     import numpy as np
     import qics
     import qics.vectorize as vec
+    import qics.quantum as qu
 
     n = 2
     N = n*n

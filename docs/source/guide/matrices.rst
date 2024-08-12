@@ -289,14 +289,37 @@ array([[1.        , 0.        , 0.        , 0.        ],
        [0.        , 0.70710678, 0.70710678, 0.        ],
        [0.        , 0.        , 0.        , 1.        ]])
 
-**QICS** also offers some functions to make linear operators
-of common linear operators arising in quanutm information theory,
-including
+Alternatively, **QICS** provides a direct function to perform
+generate this matrix
 
-    - Identity operator
-    - Partial trace
-    - Kronecker product with identity
-    - Trace
+>>> from qics.vectorize import eye
+>>> eye(2)
+array([[1.        , 0.        , 0.        , 0.        ],
+       [0.        , 0.70710678, 0.70710678, 0.        ],
+       [0.        , 0.        , 0.        , 1.        ]])
+
+As another example, we show below how to generate the (transposed)
+matrix corresponding to the partial trace.
+
+>>> from qics.quantum import p_tr
+>>> np.set_printoptions(precision=2)
+>>> lin_to_mat(lambda X : p_tr(X, (2, 2), 0), (4, 2)).T
+array([[1.  , 0.  , 0.  ],
+       [0.  , 0.71, 0.  ],
+       [0.  , 0.  , 0.  ],
+       [0.  , 0.  , 0.  ],
+       [0.  , 0.71, 0.  ],
+       [0.  , 0.  , 1.  ],
+       [0.  , 0.  , 0.  ],
+       [0.  , 0.  , 0.  ],
+       [0.  , 0.  , 0.  ],
+       [0.  , 0.  , 0.  ],
+       [1.  , 0.  , 0.  ],
+       [0.  , 0.71, 0.  ],
+       [0.  , 0.  , 0.  ],
+       [0.  , 0.  , 0.  ],
+       [0.  , 0.71, 0.  ],
+       [0.  , 0.  , 1.  ]]
 
 Note that these functions are not optimized, and can be slow 
 for large matrices. Users working with medium to large scale 

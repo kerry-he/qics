@@ -302,28 +302,28 @@ We can model this in the standard form accepted by **QICS** as
     sN = vec.vec_dim(N, iscomplex=True, compact=True)
     A1 = np.hstack((
         np.zeros((sN, 1)),
-        vec.eye(N, iscomplex=True), 
+        vec.eye(N, iscomplex=True),
         np.zeros((sN, 2*N*N)),
         np.zeros((sN, 2*N*N)),
     ))
     b1 = vec.mat_to_vec(C, compact=True)
     # tr[Y] = 1
     A2 = np.hstack((
-        np.zeros((1, 1)), 
-        np.zeros((1, 2*N*N)), 
-        vec.mat_to_vec(np.eye(N, dtype=np.complex128)).T, 
+        np.zeros((1, 1)),
+        np.zeros((1, 2*N*N)),
+        vec.mat_to_vec(np.eye(N, dtype=np.complex128)).T,
         np.zeros((1, 2*N*N))
     ))
     b2 = np.array([[1.]])
     # T2(Y) = Z
     p_transpose = vec.lin_to_mat(
-        lambda X : qu.p_transpose(X, (n1, n2), 1), 
+        lambda X : qu.partial_transpose(X, (n1, n2), 1),
         (N, N), iscomplex=True
     )
     A3 = np.hstack((
-        np.zeros((1, 1)), 
-        np.zeros((1, 2*N*N)),
-        p_transpose, 
+        np.zeros((sN, 1)),
+        np.zeros((sN, 2*N*N)),
+        p_transpose,
         -vec.eye(N, iscomplex=True)
     ))
     b3 = np.zeros((sN, 1))
@@ -333,7 +333,7 @@ We can model this in the standard form accepted by **QICS** as
 
     # Input into model and solve
     cones = [
-        qics.cones.QuantRelEntr(N, iscomplex=True), 
+        qics.cones.QuantRelEntr(N, iscomplex=True),
         qics.cones.PosSemidefinite(N, iscomplex=True)
     ]
 
