@@ -60,7 +60,7 @@ using just the quantum entropy cone.
     import scipy as sp
     import qics
 
-    from qics.utils.symmetric import mat_to_vec
+    from qics.vectorize import mat_to_vec
 
     np.random.seed(1)
 
@@ -158,7 +158,7 @@ the problem in standard form
 
     import numpy as np
     import qics
-    import qics.utils.symmetric as sym
+    import qics.vectorize as vec
 
     np.random.seed(1)
 
@@ -176,9 +176,9 @@ the problem in standard form
 
     # Build linear constraints
     # X = C
-    sn = sym.vec_dim(n, compact=True)
-    A1 = np.hstack((np.zeros((sn, 1)), sym.eye(n), np.zeros((sn, n*n))))
-    b1 = sym.mat_to_vec(C, compact=True)
+    sn = vec.vec_dim(n, compact=True)
+    A1 = np.hstack((np.zeros((sn, 1)), vec.eye(n), np.zeros((sn, n*n))))
+    b1 = vec.mat_to_vec(C, compact=True)
     # Yii = 1
     A2 = np.zeros((n, 1 + 2*n*n))
     A2[range(n), range(1 + n*n, 1 + 2*n*n, n+1)] = 1.
@@ -278,8 +278,8 @@ We can model this in the standard form accepted by **QICS** as
 
     import numpy as np
     import qics
-    import qics.utils.symmetric as sym
-    import qics.utils.quantum as qu
+    import qics.vectorize as vec
+    import qics.quantum as qu
 
     np.random.seed(1)
 
@@ -288,7 +288,7 @@ We can model this in the standard form accepted by **QICS** as
     N  = n1 * n2
 
     # Generate random (complex) quantum state
-    C = qu.rand_density_matrix(N, iscomplex=True)
+    C = qu.random.density_matrix(N, iscomplex=True)
 
     # Define objective function
     ct = np.array(([[1.]]))
@@ -299,32 +299,32 @@ We can model this in the standard form accepted by **QICS** as
 
     # Build linear constraints
     # X = C
-    sN = sym.vec_dim(N, iscomplex=True, compact=True)
+    sN = vec.vec_dim(N, iscomplex=True, compact=True)
     A1 = np.hstack((
         np.zeros((sN, 1)),
-        sym.eye(N, iscomplex=True), 
+        vec.eye(N, iscomplex=True), 
         np.zeros((sN, 2*N*N)),
         np.zeros((sN, 2*N*N)),
     ))
-    b1 = sym.mat_to_vec(C, compact=True)
+    b1 = vec.mat_to_vec(C, compact=True)
     # tr[Y] = 1
     A2 = np.hstack((
         np.zeros((1, 1)), 
         np.zeros((1, 2*N*N)), 
-        sym.mat_to_vec(np.eye(N, dtype=np.complex128)).T, 
+        vec.mat_to_vec(np.eye(N, dtype=np.complex128)).T, 
         np.zeros((1, 2*N*N))
     ))
     b2 = np.array([[1.]])
     # T2(Y) = Z
-    p_transpose = sym.lin_to_mat(
-        lambda X : sym.p_transpose(X, (n1, n2), 1), 
+    p_transpose = vec.lin_to_mat(
+        lambda X : qu.p_transpose(X, (n1, n2), 1), 
         (N, N), iscomplex=True
     )
     A3 = np.hstack((
         np.zeros((1, 1)), 
         np.zeros((1, 2*N*N)),
         p_transpose, 
-        -sym.eye(N, iscomplex=True)
+        -vec.eye(N, iscomplex=True)
     ))
     b3 = np.zeros((sN, 1))
 

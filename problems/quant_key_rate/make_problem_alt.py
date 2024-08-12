@@ -3,7 +3,7 @@ import scipy as sp
 import math
 import h5py
 
-from utils import symmetric as sym, quantum as quant
+from utils import symmetric as vec, quantum as quant
 
 def clean_cell(cell):
     out = np.empty((len(cell[0, 0][0]),), dtype=object)
@@ -43,8 +43,8 @@ def make_problem(file_name, description=["", ""], optval=0.0):
     no, ni = Klist[0].shape
     nc     = np.size(gamma_fr)
 
-    vni = sym.vec_dim(ni, iscomplex=iscomplex)
-    vno = sym.vec_dim(no, iscomplex=iscomplex)
+    vni = vec.vec_dim(ni, iscomplex=iscomplex)
+    vno = vec.vec_dim(no, iscomplex=iscomplex)
 
     # Do our own symmetry reduction (NOTE: Assumes that input has not been symmetry reduced)
     nk = Zlist[0].shape[0]
@@ -54,7 +54,7 @@ def make_problem(file_name, description=["", ""], optval=0.0):
     Dzkkz, Uzkkz = np.linalg.eigh(ZKKZ)
     ZKKZnzidx = np.where(Dzkkz > 1e-12)[0]
     nk_fr = np.size(ZKKZnzidx)
-    vnz_fr = sym.vec_dim(nk_fr, iscomplex=iscomplex)
+    vnz_fr = vec.vec_dim(nk_fr, iscomplex=iscomplex)
 
     if nk == nk_fr:
         Q = np.eye(nk)
@@ -64,16 +64,16 @@ def make_problem(file_name, description=["", ""], optval=0.0):
     Klist_new  = [Q.conj().T @ K for K in Klist]
     ZKlist_new = [Q.conj().T @ Z @ K for Z in Zlist for K in Klist]
 
-    K_op     = sym.lin_to_mat(lambda x : sym.apply_kraus(x, Klist_new), ni, nk_fr, iscomplex=iscomplex)
-    ZK_op    = sym.lin_to_mat(lambda x : sym.apply_kraus(x, ZKlist_new), ni, nk_fr, iscomplex=iscomplex)
+    K_op     = vec.lin_to_mat(lambda x : vec.apply_kraus(x, Klist_new), ni, nk_fr, iscomplex=iscomplex)
+    ZK_op    = vec.lin_to_mat(lambda x : vec.apply_kraus(x, ZKlist_new), ni, nk_fr, iscomplex=iscomplex)
 
-    K_op_alt     = lin_to_mat_alt(lambda x : sym.apply_kraus(x, Klist_new), ni, nk_fr, iscomplex=iscomplex)
-    ZK_op_alt    = lin_to_mat_alt(lambda x : sym.apply_kraus(x, ZKlist_new), ni, nk_fr, iscomplex=iscomplex)
+    K_op_alt     = lin_to_mat_alt(lambda x : vec.apply_kraus(x, Klist_new), ni, nk_fr, iscomplex=iscomplex)
+    ZK_op_alt    = lin_to_mat_alt(lambda x : vec.apply_kraus(x, ZKlist_new), ni, nk_fr, iscomplex=iscomplex)
     eye_alt      = lin_to_mat_alt(lambda x : x, ni, ni, iscomplex=iscomplex)
-    vnz_fr_alt   = sym.vec_dim(2*nk_fr, iscomplex=False)
-    vni_alt      = sym.vec_dim(2*ni, iscomplex=False)
+    vnz_fr_alt   = vec.vec_dim(2*nk_fr, iscomplex=False)
+    vni_alt      = vec.vec_dim(2*ni, iscomplex=False)
 
-    Gamma_op = np.array([sym.mat_to_vec(G, iscomplex=iscomplex).T[0] for G in Gamma_fr])
+    Gamma_op = np.array([vec.mat_to_vec(G, iscomplex=iscomplex).T[0] for G in Gamma_fr])
 
     # Build problem model
     A = np.hstack((np.zeros((nc, 1)), Gamma_op))
@@ -170,8 +170,8 @@ def make_problem(file_name, description=["", ""], optval=0.0):
 def lin_to_mat_alt(lin, ni, no, iscomplex):
     # Returns the matrix representation of a linear operator from (ni x ni) symmetric
     # matrices to (no x no) symmetric matrices given as a function handle
-    vni = sym.vec_dim(ni, iscomplex=iscomplex)
-    vno = sym.vec_dim(2*no, iscomplex=False) if iscomplex else sym.vec_dim(no, iscomplex=False)
+    vni = vec.vec_dim(ni, iscomplex=iscomplex)
+    vno = vec.vec_dim(2*no, iscomplex=False) if iscomplex else vec.vec_dim(no, iscomplex=False)
     mat = np.zeros((vno, vni))
 
     rt2  = np.sqrt(2.0)
@@ -180,7 +180,7 @@ def lin_to_mat_alt(lin, ni, no, iscomplex):
     for k in range(vni):
         H = np.zeros((vni, 1))
         H[k] = 1.0
-        H_mat = sym.vec_to_mat(H, irt2, iscomplex=iscomplex)
+        H_mat = vec.vec_to_mat(H, irt2, iscomplex=iscomplex)
         lin_H = lin(H_mat)
         if iscomplex:
             lin_H_real = lin_H.real
@@ -189,7 +189,7 @@ def lin_to_mat_alt(lin, ni, no, iscomplex):
                 np.hstack((lin_H_real, -lin_H_imag)),
                 np.hstack((lin_H_imag,  lin_H_real)),
             ))
-        vec_out = sym.mat_to_vec(lin_H, rt2, iscomplex=False)
+        vec_out = vec.mat_to_vec(lin_H, rt2, iscomplex=False)
         mat[:, [k]] = vec_out
 
     return mat

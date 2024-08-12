@@ -1,7 +1,6 @@
 import numpy as np
-import qics.utils.linalg as lin
-import qics.utils.gradient as grad
-import qics.utils.quantum as qu
+import qics._utils.linalg as lin
+import qics._utils.gradient as grad
 from qics.cones.base import Cone
 
 class QuantKeyDist(Cone):
@@ -98,8 +97,9 @@ class QuantKeyDist(Cone):
         KK_blk   = [apply_kraus(np.eye(self.n), K_list)  for K_list  in self.K_list_blk]
         ZKKZ_blk = [apply_kraus(np.eye(self.n), ZK_list) for ZK_list in self.ZK_list_blk]
 
-        entr_KK   = sum([qu.quant_entropy(KK)   for KK   in KK_blk])
-        entr_ZKKZ = sum([qu.quant_entropy(ZKKZ) for ZKKZ in ZKKZ_blk])
+        from qics.quantum import quant_entropy
+        entr_KK   = sum([quant_entropy(KK)   for KK   in KK_blk])
+        entr_ZKKZ = sum([quant_entropy(ZKKZ) for ZKKZ in ZKKZ_blk])
 
         t0 = 1. + (-entr_KK + entr_ZKKZ)
 

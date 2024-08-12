@@ -2,12 +2,12 @@ import numpy as np
 import scipy as sp
 import h5py
 
-from utils import symmetric as sym
+from utils import symmetric as vec
 
 np.random.seed(1)
 
 def make_problem(n, X, description=["", ""], offset=0.0, optval=0.0):
-    vn = sym.vec_dim(n)
+    vn = vec.vec_dim(n)
 
     # Objective function
     c = np.zeros((n, 1))
@@ -24,12 +24,12 @@ def make_problem(n, X, description=["", ""], offset=0.0, optval=0.0):
         H = np.zeros((n, n))
         H[i, i + 1] = np.sqrt(0.5)
         H[i + 1, i] = np.sqrt(0.5)
-        G3[:, [1 + i]] = sym.mat_to_vec(H)
+        G3[:, [1 + i]] = vec.mat_to_vec(H)
     G = -np.vstack((G1, G2, G3))
 
     h = np.zeros((1 + 2 * vn, 1))
-    h[1:vn+1] = sym.mat_to_vec(X)
-    h[vn+1:]  = sym.mat_to_vec(np.eye(n))
+    h[1:vn+1] = vec.mat_to_vec(X)
+    h[vn+1:]  = vec.mat_to_vec(np.eye(n))
 
 
     # Make A and G sparse

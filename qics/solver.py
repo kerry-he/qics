@@ -4,9 +4,9 @@ import math
 import time
 import itertools, sys
 
-import qics.utils.linalg as lin
-import qics.utils.vector as vec
-from qics.stepper import NonSymStepper, SymStepper, KKTSolver
+import qics._utils.linalg as lin
+import qics._utils.vector as vec
+from qics._stepper import NonSymStepper, SymStepper, KKTSolver
 
 spinner = itertools.cycle(['-', '/', '|', '\\'])
 

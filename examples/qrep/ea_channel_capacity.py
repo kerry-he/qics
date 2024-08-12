@@ -1,6 +1,7 @@
 import numpy as np
 import qics
-import qics.utils.symmetric as sym
+import qics.vectorize as vec
+import qics.quantum as qu
 
 ## Entanglement-assisted channel capacity
 #   min  t + s
@@ -27,21 +28,21 @@ cZ = np.zeros((n*n, 1))
 c = np.vstack((cX, ct, cY, cs, cu, cZ))
 
 # Build linear constraints
-vn = sym.vec_dim(n, compact=True)
-vN = sym.vec_dim(N, compact=True)
-VV = sym.lin_to_mat(lambda X : V @ X @ V.conj().T, (n, n*n))
-trE = sym.lin_to_mat(lambda X : sym.p_tr(X, (n, n), 1), (N, n), compact=(True, True))
+vn = vec.vec_dim(n, compact=True)
+vN = vec.vec_dim(N, compact=True)
+VV = vec.lin_to_mat(lambda X : V @ X @ V.conj().T, (n, n*n))
+trE = vec.lin_to_mat(lambda X : qu.p_tr(X, (n, n), 1), (N, n), compact=(True, True))
 # tr[X] = 1
-A1 = np.hstack((sym.mat_to_vec(np.eye(n)).T, np.zeros((1, 3 + n*n + N*N))))
+A1 = np.hstack((vec.mat_to_vec(np.eye(n)).T, np.zeros((1, 3 + n*n + N*N))))
 b1 = np.array([[1.]])
 # u = 1
 A2 = np.hstack((np.zeros((1, 2 + n*n + N*N)), np.array([[1.]]), np.zeros((1, n*n))))
 b2 = np.array([[1.]])
 # Y = VXV'
-A3 = np.hstack((VV, np.zeros((vN, 1)), -sym.eye(N), np.zeros((vN, 2 + n*n))))
+A3 = np.hstack((VV, np.zeros((vN, 1)), -vec.eye(N), np.zeros((vN, 2 + n*n))))
 b3 = np.zeros((vN, 1))
 # Z = trE[VXV']
-A4 = np.hstack((trE @ VV, np.zeros((vn, 3 + N*N)), -sym.eye(n)))
+A4 = np.hstack((trE @ VV, np.zeros((vn, 3 + N*N)), -vec.eye(n)))
 b4 = np.zeros((vn, 1))
 
 A = np.vstack((A1, A2, A3, A4))

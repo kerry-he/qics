@@ -46,7 +46,7 @@ array([[0., 1., 2., 1., 3., 4., 2., 4., 5.]])
 Alternatively, **QICS** supplies the following function to convert matrices 
 to vectors.
 
->>> from qics.utils.symmetric import mat_to_vec
+>>> from qics.vectorize import mat_to_vec
 >>> mat_to_vec(X).T
 array([[0., 1., 2., 1., 3., 4., 2., 4., 5.]])
 
@@ -283,7 +283,7 @@ Below is an example for showing how a matrix representation
 for the identity superoperator on :math:`2\times2` symmetric 
 matrices can be generated.
 
->>> from qics.utils.symmetric import lin_to_mat
+>>> from qics.vectorize import lin_to_mat
 >>> lin_to_mat(lambda X : X, (2, 2))
 array([[1.        , 0.        , 0.        , 0.        ],
        [0.        , 0.70710678, 0.70710678, 0.        ],

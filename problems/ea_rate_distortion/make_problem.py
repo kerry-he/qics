@@ -3,23 +3,23 @@ import scipy as sp
 import math
 import h5py
 
-from utils import symmetric as sym, quantum as quant
+from utils import symmetric as vec, quantum as quant
 
 def make_problem(ni, no, rho, Delta, D, description=["", ""], optval=0.0):
     # Define dimensions
     N = no * ni
-    vni = sym.vec_dim(ni)
-    vN = sym.vec_dim(N)
+    vni = vec.vec_dim(ni)
+    vN = vec.vec_dim(N)
 
     # Rate-distortion problem data
     entr_A = quant.quantEntropy(rho)
 
     # Build problem model
-    tr2 = sym.lin_to_mat(lambda x : sym.p_tr(x, (no, ni), 0), no*ni, ni)
-    ikr_tr1 = sym.lin_to_mat(lambda x : sym.i_kr(sym.p_tr(x, (no, ni), 1), (no, ni), 1), no*ni, no*ni)
+    tr2 = vec.lin_to_mat(lambda x : qu.p_tr(x, (no, ni), 0), no*ni, ni)
+    ikr_tr1 = vec.lin_to_mat(lambda x : qu.i_kr(qu.p_tr(x, (no, ni), 1), (no, ni), 1), no*ni, no*ni)
 
     A = np.hstack((np.zeros((vni, 1)), tr2))
-    b = sym.mat_to_vec(rho)
+    b = vec.mat_to_vec(rho)
 
     c = np.zeros((vN + 1, 1))
     c[0] = 1.
@@ -27,7 +27,7 @@ def make_problem(ni, no, rho, Delta, D, description=["", ""], optval=0.0):
     G1 = np.hstack((np.ones((1, 1)), np.zeros((1, vN))))            # t_qre
     G2 = np.hstack((np.zeros((vN, 1)), np.eye(vN)))                 # X_qre
     G3 = np.hstack((np.zeros((vN, 1)), ikr_tr1))                    # Y_qre
-    G4 = np.hstack((np.zeros((1, 1)), -sym.mat_to_vec(Delta).T))    # nn
+    G4 = np.hstack((np.zeros((1, 1)), -vec.mat_to_vec(Delta).T))    # nn
     G = -np.vstack((G1, G2, G3, G4))
 
     h = np.zeros((1 + vN*2 + 1, 1))

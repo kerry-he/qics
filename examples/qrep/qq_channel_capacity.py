@@ -1,6 +1,7 @@
 import numpy as np
 import qics
-import qics.utils.symmetric as sym
+import qics.vectorize as vec
+import qics.quantum as qu
 
 ## Quantum channel capacity
 #   min  t + s
@@ -23,16 +24,16 @@ cY = np.zeros((N*N, 1))
 c = np.vstack((cX, ct, cY))
 
 # Build linear constraints
-vn = sym.vec_dim(n, compact=True)
-vN = sym.vec_dim(N, compact=True)
-WNW = sym.lin_to_mat(
-    lambda X : W @ sym.p_tr(V @ X @ V.conj().T, (n, n), 1) @ W.conj().T, (n, N)
+vn = vec.vec_dim(n, compact=True)
+vN = vec.vec_dim(N, compact=True)
+WNW = vec.lin_to_mat(
+    lambda X : W @ qu.p_tr(V @ X @ V.conj().T, (n, n), 1) @ W.conj().T, (n, N)
 )
 # tr[X] = 1
-A1 = np.hstack((sym.mat_to_vec(np.eye(n)).T, np.zeros((1, 1 + N*N))))
+A1 = np.hstack((vec.mat_to_vec(np.eye(n)).T, np.zeros((1, 1 + N*N))))
 b1 = np.array([[1.]])
 # Y = WN(X)W'
-A2 = np.hstack((WNW, np.zeros((vN, 1)), -sym.eye(N)))
+A2 = np.hstack((WNW, np.zeros((vN, 1)), -vec.eye(N)))
 b2 = np.zeros((vN, 1))
 
 A = np.vstack((A1, A2))

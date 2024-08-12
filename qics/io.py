@@ -287,7 +287,7 @@ def write_sdpa(model, filename):
         # Turn vectorised Cl into matrix (make diagonal if corresponds to LP)
         Cl = c[idxs[l] : idxs[l + 1]]
         if isinstance(cones[l], qics.cones.PosSemidefinite):
-            Cl = qics.utils.symmetric.vec_to_mat(Cl, iscomplex=cones[l].get_iscomplex(), compact=False)
+            Cl = qics.vectorize.vec_to_mat(Cl, iscomplex=cones[l].get_iscomplex(), compact=False)
         elif isinstance(cones[l], qics.cones.NonNegOrthant):
             Cl = np.diag(Cl.ravel())
         Cl = sp.sparse.coo_matrix(Cl)

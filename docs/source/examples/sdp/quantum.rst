@@ -127,31 +127,31 @@ fidelity could also be represented using the following semidefinite program
 
     import numpy as np
     import qics
-    import qics.utils.symmetric as sym
-    import qics.utils.quantum as qu
+    import qics.vectorize as vec
+    import qics.quantum as qu
 
     np.random.seed(1)
 
     n = 2
 
-    rho = qu.rand_density_matrix(n, iscomplex=True)
-    sig = qu.rand_density_matrix(n, iscomplex=True)
+    rho = qu.random.density_matrix(n, iscomplex=True)
+    sig = qu.random.density_matrix(n, iscomplex=True)
 
     # Define objective function
-    c = -0.5 * sym.mat_to_vec(np.block([
+    c = -0.5 * vec.mat_to_vec(np.block([
         [np.zeros((n, n)), np.eye(n)],
         [np.eye(n), np.zeros((n, n))]
     ]).astype(np.complex128))
 
     # Build linear constraints
     A = np.vstack((
-        sym.lin_to_mat(lambda X : X[:n, :n], (2*n, n), iscomplex=True),
-        sym.lin_to_mat(lambda X : X[n:, n:], (2*n, n), iscomplex=True)
+        vec.lin_to_mat(lambda X : X[:n, :n], (2*n, n), iscomplex=True),
+        vec.lin_to_mat(lambda X : X[n:, n:], (2*n, n), iscomplex=True)
     ))
 
     b = np.vstack((
-        sym.mat_to_vec(rho, compact=True),
-        sym.mat_to_vec(sig, compact=True)
+        vec.mat_to_vec(rho, compact=True),
+        vec.mat_to_vec(sig, compact=True)
     ))
 
     # Define cones to optimize over
@@ -222,20 +222,20 @@ program
 
     import numpy as np
     import qics
-    import qics.utils.symmetric as sym
-    import qics.utils.quantum as qu
+    import qics.vectorize as vec
+    import qics.quantum as qu
 
     np.random.seed(1)
 
     n = 2
     N = n*n
 
-    J1 = qu.rand_choi_operator(n, iscomplex=True)
-    J2 = qu.rand_choi_operator(n, iscomplex=True)
+    J1 = qu.random.choi_operator(n, iscomplex=True)
+    J2 = qu.random.choi_operator(n, iscomplex=True)
     J = J1 - J2
 
     # Define objective function
-    c1 = -0.5 * sym.mat_to_vec(np.block([
+    c1 = -0.5 * vec.mat_to_vec(np.block([
         [np.zeros((N, N)), J],
         [J.conj().T, np.zeros((N, N))]
     ]))
@@ -244,11 +244,11 @@ program
     c = np.vstack((c1, c2, c3))
 
     # Build linear constraints
-    vN = sym.vec_dim(N, iscomplex=True, compact=True)
-    submtx_11 = sym.lin_to_mat(lambda X : X[:N, :N], (2*N, N), iscomplex=True)
-    submtx_22 = sym.lin_to_mat(lambda X : X[N:, N:], (2*N, N), iscomplex=True)
-    i_kr = sym.lin_to_mat(lambda X : sym.i_kr(X, (n, n), 0), (n, N), iscomplex=True)
-    tr = sym.mat_to_vec(np.eye(n, dtype=np.complex128)).T
+    vN = vec.vec_dim(N, iscomplex=True, compact=True)
+    submtx_11 = vec.lin_to_mat(lambda X : X[:N, :N], (2*N, N), iscomplex=True)
+    submtx_22 = vec.lin_to_mat(lambda X : X[N:, N:], (2*N, N), iscomplex=True)
+    i_kr = vec.lin_to_mat(lambda X : qu.i_kr(X, (n, n), 0), (n, N), iscomplex=True)
+    tr = vec.mat_to_vec(np.eye(n, dtype=np.complex128)).T
     # I ⊗ rho block
     A1 = np.hstack((submtx_11, -i_kr, np.zeros((vN, 2*n*n))))
     b1 = np.zeros((vN, 1))
@@ -322,26 +322,26 @@ can be defined as follows :ref:`[3] <quantum_refs>`
 
     import numpy as np
     import qics
-    import qics.utils.quantum as qu
-    import qics.utils.symmetric as sym
+    import qics.quantum as qu
+    import qics.vectorize as vec
 
     np.random.seed(1)
 
     n = m = 2
 
-    rhoA = qu.rand_density_matrix(n, iscomplex=True)
-    rhoB = qu.rand_density_matrix(m, iscomplex=True)
+    rhoA = qu.random.density_matrix(n, iscomplex=True)
+    rhoB = qu.random.density_matrix(m, iscomplex=True)
 
     # Generate random objective function
     C = np.random.randn(n*m, n*m) + np.random.randn(n*m, n*m)*1j
     C = C + C.conj().T
-    c = sym.mat_to_vec(C)
+    c = vec.mat_to_vec(C)
 
     # Build linear constraints
-    trA = sym.lin_to_mat(lambda X : sym.p_tr(X, (n, m), 0), (n*m, m), iscomplex=True)
-    trB = sym.lin_to_mat(lambda X : sym.p_tr(X, (n, m), 1), (n*m, n), iscomplex=True)
+    trA = vec.lin_to_mat(lambda X : qu.p_tr(X, (n, m), 0), (n*m, m), iscomplex=True)
+    trB = vec.lin_to_mat(lambda X : qu.p_tr(X, (n, m), 1), (n*m, n), iscomplex=True)
     A = np.vstack((trA, trB))
-    b = np.vstack((sym.mat_to_vec(rhoA, compact=True), sym.mat_to_vec(rhoB, compact=True)))
+    b = np.vstack((vec.mat_to_vec(rhoA, compact=True), vec.mat_to_vec(rhoB, compact=True)))
 
     # Define cones to optimize over
     cones = [qics.cones.PosSemidefinite(n*m, iscomplex=True)]
@@ -420,14 +420,14 @@ in **QICS** below.
 
     import numpy as np
     import qics
-    import qics.utils.symmetric as sym
+    import qics.vectorize as vec
 
     n  = 2
     n2 = n * n
     n3 = n * n * n
 
-    vn2 = sym.vec_dim(n2, compact=True)
-    vn3 = sym.vec_dim(n3, compact=True)
+    vn2 = vec.vec_dim(n2, compact=True)
+    vn3 = vec.vec_dim(n3, compact=True)
 
     rho_ab = 0.5 * np.array([
         [1., 0., 0., 1.], 
@@ -441,24 +441,24 @@ in **QICS** below.
 
     # Build linear constraints
     # rho_ab1 = tr_b2(rho_aB)
-    tr_b2 = sym.lin_to_mat(lambda X : sym.p_tr(X, (n, n, n), 2), (n3, n2))
+    tr_b2 = vec.lin_to_mat(lambda X : qu.p_tr(X, (n, n, n), 2), (n3, n2))
     A1 = np.hstack((tr_b2, np.zeros((vn2, 2*n3*n3))))
-    b1 = sym.mat_to_vec(rho_ab, compact=True)
+    b1 = vec.mat_to_vec(rho_ab, compact=True)
     # rho_aB = swap_b1,b2(rho_aB)
-    swap = sym.lin_to_mat(lambda X : sym.swap_sys(X, (n, n, n), 1, 2), (n3, n3))
-    A2 = np.hstack((swap - sym.eye(n3), np.zeros((vn3, 2*n3*n3))))
+    swap = vec.lin_to_mat(lambda X : vec.swap_sys(X, (n, n, n), 1, 2), (n3, n3))
+    A2 = np.hstack((swap - vec.eye(n3), np.zeros((vn3, 2*n3*n3))))
     b2 = np.zeros((vn3, 1))
     # tr[rho_aB] = 1
-    tr = sym.mat_to_vec(np.eye(n3)).T
+    tr = vec.mat_to_vec(np.eye(n3)).T
     A3 = np.hstack((tr, np.zeros((1, 2*n3*n3))))
     b3 = np.array([[1.]])
     # Y = T_b2(rho_aB)
-    T_b2 = sym.lin_to_mat(lambda X : sym.p_transpose(X, (n2, n), 1), (n3, n3))
-    A4 = np.hstack((T_b2, -sym.eye(n3), np.zeros((vn3, n3*n3))))
+    T_b2 = vec.lin_to_mat(lambda X : qu.p_transpose(X, (n2, n), 1), (n3, n3))
+    A4 = np.hstack((T_b2, -vec.eye(n3), np.zeros((vn3, n3*n3))))
     b4 = np.zeros((vn3, 1))
     # Z = T_b1b2(rho_aB)
-    T_b1b2 = sym.lin_to_mat(lambda X : sym.p_transpose(X, (n, n2), 1), (n3, n3))
-    A5 = np.hstack((T_b1b2, np.zeros((vn3, n3*n3)), -sym.eye(n3)))
+    T_b1b2 = vec.lin_to_mat(lambda X : qu.p_transpose(X, (n, n2), 1), (n3, n3))
+    A5 = np.hstack((T_b1b2, np.zeros((vn3, n3*n3)), -vec.eye(n3)))
     b5 = np.zeros((vn3, 1))
 
     A = np.vstack((A1, A2, A3, A4, A5))

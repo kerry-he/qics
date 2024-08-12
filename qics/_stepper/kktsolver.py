@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
-import qics.utils.linalg as lin
-import qics.utils.vector as vec
+import qics._utils.linalg as lin
+import qics._utils.vector as vec
 
 class KKTSolver():
     """A class which is used to solve the KKT system

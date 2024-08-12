@@ -3,8 +3,7 @@ import scipy as sp
 import numba as nb
 import itertools
 
-import qics.utils.linalg as lin
-import qics.utils.sparse as sparse
+import qics._utils.linalg as lin
 from qics.cones.base import SymCone
 
 class PosSemidefinite(SymCone):
@@ -420,7 +419,7 @@ class PosSemidefinite(SymCone):
                         self.triu_idxs = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
                         scale = 2 * np.ones(self.n * self.n)
                         scale[::self.n+1] = 1
-                    self.A_triu = sparse.scale_axis(A, scale_cols=scale)
+                    self.A_triu = lin.scale_axis(A, scale_cols=scale)
                     self.A_triu = self.A_triu[:, self.triu_idxs]
 
         else:

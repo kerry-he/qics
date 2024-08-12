@@ -1,5 +1,5 @@
 import numpy as np
-import qics.utils.linalg as lin
+import qics._utils.linalg as lin
 
 class Cone():
     """Base class for cones"""

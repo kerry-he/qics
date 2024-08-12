@@ -1,7 +1,7 @@
 import numpy as np
 import qics
-import qics.utils.symmetric as sym
-import qics.utils.quantum as qu
+import qics.vectorize as vec
+import qics.quantum as qu
 
 ## Entanglement-assisted rate distortion
 #   min  t
@@ -14,23 +14,23 @@ np.random.seed(1)
 n = 4
 D = 0.25
 
-rho      = qu.rand_density_matrix(n)
+rho      = qu.random.density_matrix(n)
 entr_rho = qu.quant_entropy(rho)
 
 N = n * n
-sn = sym.vec_dim(n, compact=True)
-vN = sym.vec_dim(N)
+sn = vec.vec_dim(n, compact=True)
+vN = vec.vec_dim(N)
 
 # Define objective function
 c = np.zeros((vN + 2, 1))
 c[0] = 1.
 
 # Build linear constraint matrices
-tr2 = sym.lin_to_mat(lambda X : sym.p_tr(X, (n, n), 1), (N, n))
-Delta = sym.mat_to_vec(np.eye(N) - qu.purify(rho))
+tr2 = vec.lin_to_mat(lambda X : qu.p_tr(X, (n, n), 1), (N, n))
+Delta = vec.mat_to_vec(np.eye(N) - qu.purify(rho))
 # Tr_2[X] = rho
 A1 = np.hstack((np.zeros((sn, 1)), tr2, np.zeros((sn, 1))))
-b1 = sym.mat_to_vec(rho, compact=True)
+b1 = vec.mat_to_vec(rho, compact=True)
 # <Δ, X> <= D
 A2 = np.hstack((np.zeros((1, 1)), Delta.T, np.ones((1, 1))))
 b2 = np.array([[D]])

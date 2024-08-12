@@ -1,19 +1,19 @@
 import numpy as np
 import qics
-import qics.utils.symmetric as sym
-import qics.utils.quantum as qu
+import qics.vectorize as vec
+import qics.quantum as qu
 
 np.random.seed(1)
 
 n = 2
 N = n*n
 
-J1 = qu.rand_choi_operator(n, iscomplex=True)
-J2 = qu.rand_choi_operator(n, iscomplex=True)
+J1 = qu.random.choi_operator(n, iscomplex=True)
+J2 = qu.random.choi_operator(n, iscomplex=True)
 J = J1 - J2
 
 # Define objective function
-c1 = -0.5 * sym.mat_to_vec(np.block([
+c1 = -0.5 * vec.mat_to_vec(np.block([
     [np.zeros((N, N)), J],
     [J.conj().T, np.zeros((N, N))]
 ]))
@@ -22,11 +22,11 @@ c3 = np.zeros((2*n*n, 1))
 c = np.vstack((c1, c2, c3))
 
 # Build linear constraints
-vN = sym.vec_dim(N, iscomplex=True, compact=True)
-submtx_11 = sym.lin_to_mat(lambda X : X[:N, :N], (2*N, N), iscomplex=True)
-submtx_22 = sym.lin_to_mat(lambda X : X[N:, N:], (2*N, N), iscomplex=True)
-i_kr = sym.lin_to_mat(lambda X : sym.i_kr(X, (n, n), 0), (n, N), iscomplex=True)
-tr = sym.mat_to_vec(np.eye(n, dtype=np.complex128)).T
+vN = vec.vec_dim(N, iscomplex=True, compact=True)
+submtx_11 = vec.lin_to_mat(lambda X : X[:N, :N], (2*N, N), iscomplex=True)
+submtx_22 = vec.lin_to_mat(lambda X : X[N:, N:], (2*N, N), iscomplex=True)
+i_kr = vec.lin_to_mat(lambda X : qu.i_kr(X, (n, n), 0), (n, N), iscomplex=True)
+tr = vec.mat_to_vec(np.eye(n, dtype=np.complex128)).T
 # I ⊗ rho block
 A1 = np.hstack((submtx_11, -i_kr, np.zeros((vN, 2*n*n))))
 b1 = np.zeros((vN, 1))

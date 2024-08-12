@@ -1,6 +1,6 @@
 import numpy as np
-import qics.utils.linalg as lin
-import qics.utils.gradient as grad
+import qics._utils.linalg as lin
+import qics._utils.gradient as grad
 from qics.cones.base import Cone, get_perspective_derivatives
 
 class OpPerspecTr(Cone):

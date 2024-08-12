@@ -2,10 +2,10 @@ import numpy as np
 import scipy as sp
 import h5py
 
-from utils import symmetric as sym
+from utils import symmetric as vec
 
 def make_problem(n, X, description=["", ""], offset=0.0, optval=0.0):
-    vn = sym.vec_dim(n)
+    vn = vec.vec_dim(n)
 
     # Objective function
     c = np.zeros((1 + vn, 1))
@@ -16,7 +16,7 @@ def make_problem(n, X, description=["", ""], offset=0.0, optval=0.0):
     for i in range(n):
         H = np.zeros((n, n))
         H[i, i] = 1.0
-        A[[i], 1:] = sym.mat_to_vec(H).T
+        A[[i], 1:] = vec.mat_to_vec(H).T
     b = np.ones((n, 1))
 
     # Cone constraints
@@ -26,7 +26,7 @@ def make_problem(n, X, description=["", ""], offset=0.0, optval=0.0):
     G = -np.vstack((G1, G2, G3))
 
     h = np.zeros((1 + 2 * vn, 1))
-    h[1:vn+1] = sym.mat_to_vec(X)
+    h[1:vn+1] = vec.mat_to_vec(X)
 
     # Make A and G sparse
     A_sparse = sp.sparse.coo_array(A)

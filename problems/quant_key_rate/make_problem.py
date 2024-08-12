@@ -3,7 +3,7 @@ import scipy as sp
 import math
 import h5py
 
-from utils import symmetric as sym, quantum as quant
+from utils import symmetric as vec, quantum as quant
 
 def make_problem(file_name, description=["", ""], optval=0.0):
     # Problem is of the type
@@ -35,12 +35,12 @@ def make_problem(file_name, description=["", ""], optval=0.0):
     no, ni = Klist[0].shape
     nc = np.size(gamma)
 
-    vni = sym.vec_dim(ni, iscomplex=iscomplex)
-    vno = sym.vec_dim(no, iscomplex=iscomplex)
+    vni = vec.vec_dim(ni, iscomplex=iscomplex)
+    vno = vec.vec_dim(no, iscomplex=iscomplex)
 
-    K_op = sym.lin_to_mat(lambda x : sym.apply_kraus(x, Klist), ni, no, iscomplex=iscomplex)
-    ZK_op = sym.lin_to_mat(lambda x : sym.apply_kraus(sym.apply_kraus(x, Klist), Zlist), ni, no, iscomplex=iscomplex)
-    Gamma_op = np.array([sym.mat_to_vec(G, iscomplex=iscomplex).T[0] for G in Gamma])
+    K_op = vec.lin_to_mat(lambda x : vec.apply_kraus(x, Klist), ni, no, iscomplex=iscomplex)
+    ZK_op = vec.lin_to_mat(lambda x : vec.apply_kraus(vec.apply_kraus(x, Klist), Zlist), ni, no, iscomplex=iscomplex)
+    Gamma_op = np.array([vec.mat_to_vec(G, iscomplex=iscomplex).T[0] for G in Gamma])
 
     # Build problem model
     A = np.hstack((np.zeros((nc, 1)), Gamma_op))

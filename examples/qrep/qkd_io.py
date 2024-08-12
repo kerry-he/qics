@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 import qics
-import qics.utils.symmetric as sym
+import qics.vectorize as vec
 
 ## Quantum key rate
 #   min  S( G(X) || Z(G(X)) )
@@ -24,7 +24,7 @@ dtype = np.complex128 if iscomplex else np.float64
 
 no, ni = np.shape(K_list[0])
 nc     = np.size(gamma)
-vni    = sym.vec_dim(ni, iscomplex=iscomplex, compact=False)
+vni    = vec.vec_dim(ni, iscomplex=iscomplex, compact=False)
 
 # Define objective function
 c = np.zeros((1 + vni, 1))
@@ -33,7 +33,7 @@ c[0] = 1.
 # Build linear constraints
 A = np.zeros((nc, 1 + vni))
 for i in range(nc):
-    A[i, 1:] = sym.mat_to_vec(Gamma[i].astype(dtype), compact=False).ravel()
+    A[i, 1:] = vec.mat_to_vec(Gamma[i].astype(dtype), compact=False).ravel()
 b = gamma
 
 # Input into model and solve

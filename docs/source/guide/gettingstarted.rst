@@ -177,7 +177,9 @@ on the terminal.
             dual obj:     2.772588722021e+00     dual feas:    7.47e-11
             opt. gap:     8.89e-11
 
-We can also access the optimal variables by using
+The solver returns a dictionary ``info`` containing additional
+information about the solution. For example, we can access the 
+optimal variables by using
 
 .. code-block:: python
 

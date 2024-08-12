@@ -139,7 +139,7 @@ We supply some sample code for how to do this below.
     import numpy as np
     import scipy as sp
     import qics
-    import qics.utils.symmetric as sym
+    import qics.vectorize as vec
 
     # Read file
     data   = sp.io.loadmat('filename.mat')
@@ -153,7 +153,7 @@ We supply some sample code for how to do this below.
 
     no, ni = np.shape(K_list[0])
     nc     = np.size(gamma)
-    vni    = sym.vec_dim(ni, iscomplex=iscomplex)
+    vni    = vec.vec_dim(ni, iscomplex=iscomplex)
 
     # Define objective function
     c = np.vstack((np.array([[1.]]), np.zeros((vni, 1))))
@@ -161,7 +161,7 @@ We supply some sample code for how to do this below.
     # Build linear constraints
     A = np.zeros((nc, 1 + vni))
     for i in range(nc):
-        A[i, 1:] = sym.mat_to_vec(Gamma[i].astype(dtype)).ravel()
+        A[i, 1:] = vec.mat_to_vec(Gamma[i].astype(dtype)).ravel()
     b = gamma
 
     # Input into model and solve

@@ -3,33 +3,33 @@ import scipy as sp
 import h5py
 
 from cones import *
-from utils import symmetric as sym, quantum as quant
+from utils import symmetric as vec, quantum as quant
 
 def make_problem(n, m, X, description=["", ""], offset=0.0, optval=0.0):
     # Problem data
     N = n * m
-    vN = sym.vec_dim(N)
+    vN = vec.vec_dim(N)
 
     # Build problem model
     c = np.zeros((1 + vN, 1))
     c[0] = 1.0
 
-    A = np.hstack((np.zeros((1, 1)), sym.mat_to_vec(np.eye(N)).T))
+    A = np.hstack((np.zeros((1, 1)), vec.mat_to_vec(np.eye(N)).T))
     b = np.ones((1, 1))
 
-    p_transpose = sym.lin_to_mat(lambda x : sym.p_transpose(x, (n, m), 1), n*m, n*m)
+    partial_transpose = vec.lin_to_mat(lambda x : vec.partial_transpose(x, (n, m), 1), n*m, n*m)
 
     G0 = np.hstack((np.ones((1, 1)), np.zeros((1, vN))))
     G1 = np.hstack((np.zeros((vN, 1)), np.zeros((vN, vN))))
     G2 = np.hstack((np.zeros((vN, 1)), np.eye(vN)))
-    G3 = np.hstack((np.zeros((vN, 1)), p_transpose))
+    G3 = np.hstack((np.zeros((vN, 1)), partial_transpose))
     G = -np.vstack((G0, G1, G2, G3))
 
     h = np.zeros((1 + 3*vN, 1))
-    h[1:1+vN] = sym.mat_to_vec(X)
+    h[1:1+vN] = vec.mat_to_vec(X)
 
     h = np.zeros((1 + 3*vN, 1))
-    h[1:1+vN] = sym.mat_to_vec(X)
+    h[1:1+vN] = vec.mat_to_vec(X)
 
     # Make A and G sparse
     A_sparse = sp.sparse.coo_array(A)

@@ -1,6 +1,6 @@
 import numpy as np
 import qics
-import qics.utils.symmetric as sym
+import qics.vectorize as vec
 
 ## Nearest correlation matrix
 #   min  S(X||Y)
@@ -20,9 +20,9 @@ c  = np.vstack((ct, cX, cY))
 
 # Build linear constraints
 # X = C
-sn = sym.vec_dim(n, compact=True)
-A1 = np.hstack((np.zeros((sn, 1)), sym.eye(n), np.zeros((sn, n*n))))
-b1 = sym.mat_to_vec(C, compact=True)
+sn = vec.vec_dim(n, compact=True)
+A1 = np.hstack((np.zeros((sn, 1)), vec.eye(n), np.zeros((sn, n*n))))
+b1 = vec.mat_to_vec(C, compact=True)
 # Yii = 1
 A2 = np.zeros((n, 1 + 2*n*n))
 A2[range(n), range(1 + n*n, 1 + 2*n*n, n+1)] = 1.

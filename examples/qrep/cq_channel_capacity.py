@@ -1,7 +1,7 @@
 import numpy as np
 import qics
-import qics.utils.symmetric as sym
-import qics.utils.quantum as qu
+import qics.vectorize as vec
+import qics.quantum as qu
 
 ## Classical-quantum channel capacity
 #   max  S(Σ_i pi N(Xi)) - Σ_i pi S(N(Xi))
@@ -12,7 +12,7 @@ np.random.seed(1)
 
 n = m = 16
 
-rhos = [qu.rand_density_matrix(n, iscomplex=True) for i in range(n)]
+rhos = [qu.random.density_matrix(n, iscomplex=True) for i in range(n)]
 
 # Define objective function
 # where x = ({pi}, t) and c = ({-S(N(Xi))}, 1)
@@ -35,7 +35,7 @@ h2 = np.zeros((1, 1))
 G3 = np.hstack((np.zeros((1, n)), np.zeros((1, 1))))
 h3 = np.ones((1, 1))
 # X_qe = Σ_i pi N(Xi)
-rhos_vec = np.hstack(([sym.mat_to_vec(rho) for rho in rhos]))
+rhos_vec = np.hstack(([vec.mat_to_vec(rho) for rho in rhos]))
 G4 = np.hstack((-rhos_vec, np.zeros((2*n*n, 1))))
 h4 = np.zeros((2*n*n, 1))
 

@@ -44,14 +44,14 @@ as follows
 
     import numpy as np
     import qics
-    import qics.utils.symmetric as sym
-    import qics.utils.quantum as qu
+    import qics.vectorize as vec
+    import qics.quantum as qu
 
     np.random.seed(1)
 
     n = m = 16
 
-    rhos = [qu.rand_density_matrix(n, iscomplex=True) for i in range(m)]
+    rhos = [qu.random.density_matrix(n, iscomplex=True) for i in range(m)]
 
     # Define objective function
     # where x = ({pi}, t) and c = ({-S(N(Xi))}, 1)
@@ -74,7 +74,7 @@ as follows
     G3 = np.hstack((np.zeros((1, m)), np.zeros((1, 1))))
     h3 = np.ones((1, 1))
     # X_qe = Σ_i pi N(Xi)
-    rhos_vec = np.hstack(([sym.mat_to_vec(rho) for rho in rhos]))
+    rhos_vec = np.hstack(([vec.mat_to_vec(rho) for rho in rhos]))
     G4 = np.hstack((-rhos_vec, np.zeros((2*n*n, 1))))
     h4 = np.zeros((2*n*n, 1))
 
@@ -153,7 +153,7 @@ and some parameter :math:`\gamma\in[0, 1]`. We can solve this in **QICS** as fol
 
     import numpy as np
     import qics
-    import qics.utils.symmetric as sym
+    import qics.vectorize as vec
 
     n = 2
     N = n*n
@@ -172,21 +172,21 @@ and some parameter :math:`\gamma\in[0, 1]`. We can solve this in **QICS** as fol
     c = np.vstack((cX, ct, cY, cs, cu, cZ))
 
     # Build linear constraints
-    vn = sym.vec_dim(n, compact=True)
-    vN = sym.vec_dim(N, compact=True)
-    VV = sym.lin_to_mat(lambda X : V @ X @ V.conj().T, (n, n*n))
-    trE = sym.lin_to_mat(lambda X : sym.p_tr(X, (n, n), 1), (N, n), compact=(True, True))
+    vn = vec.vec_dim(n, compact=True)
+    vN = vec.vec_dim(N, compact=True)
+    VV = vec.lin_to_mat(lambda X : V @ X @ V.conj().T, (n, n*n))
+    trE = vec.lin_to_mat(lambda X : qu.p_tr(X, (n, n), 1), (N, n), compact=(True, True))
     # tr[X] = 1
-    A1 = np.hstack((sym.mat_to_vec(np.eye(n)).T, np.zeros((1, 3 + n*n + N*N))))
+    A1 = np.hstack((vec.mat_to_vec(np.eye(n)).T, np.zeros((1, 3 + n*n + N*N))))
     b1 = np.array([[1.]])
     # u = 1
     A2 = np.hstack((np.zeros((1, 2 + n*n + N*N)), np.array([[1.]]), np.zeros((1, n*n))))
     b2 = np.array([[1.]])
     # Y = VXV'
-    A3 = np.hstack((VV, np.zeros((vN, 1)), -sym.eye(N), np.zeros((vN, 2 + n*n))))
+    A3 = np.hstack((VV, np.zeros((vN, 1)), -vec.eye(N), np.zeros((vN, 2 + n*n))))
     b3 = np.zeros((vN, 1))
     # Z = trE[VXV']
-    A4 = np.hstack((trE @ VV, np.zeros((vn, 3 + N*N)), -sym.eye(n)))
+    A4 = np.hstack((trE @ VV, np.zeros((vn, 3 + N*N)), -vec.eye(n)))
     b4 = np.zeros((vn, 1))
 
     A = np.vstack((A1, A2, A3, A4))
@@ -267,7 +267,7 @@ where :math:`\delta=(1-2\gamma) / (1-\gamma)`.
 
     import numpy as np
     import qics
-    import qics.utils.symmetric as sym
+    import qics.vectorize as vec
 
     n = 2
     N = n*n
@@ -285,17 +285,17 @@ where :math:`\delta=(1-2\gamma) / (1-\gamma)`.
     c = np.vstack((cX, ct, cY))
 
     # Build linear constraints
-    vn = sym.vec_dim(n, compact=True)
-    vN = sym.vec_dim(N, compact=True)
-    WNW = sym.lin_to_mat(
-        lambda X : W @ sym.p_tr(V @ X @ V.conj().T, (n, n), 1) @ W.conj().T, 
+    vn = vec.vec_dim(n, compact=True)
+    vN = vec.vec_dim(N, compact=True)
+    WNW = vec.lin_to_mat(
+        lambda X : W @ qu.p_tr(V @ X @ V.conj().T, (n, n), 1) @ W.conj().T, 
         (n, N)
     )
     # tr[X] = 1
-    A1 = np.hstack((sym.mat_to_vec(np.eye(n)).T, np.zeros((1, 1 + N*N))))
+    A1 = np.hstack((vec.mat_to_vec(np.eye(n)).T, np.zeros((1, 1 + N*N))))
     b1 = np.array([[1.]])
     # Y = WN(X)W'
-    A2 = np.hstack((WNW, np.zeros((vN, 1)), -sym.eye(N)))
+    A2 = np.hstack((WNW, np.zeros((vN, 1)), -vec.eye(N)))
     b2 = np.zeros((vN, 1))
 
     A = np.vstack((A1, A2))
@@ -365,31 +365,31 @@ where :math:`| \psi \rangle` is the purification of :math:`\sigma`.
 
     import numpy as np
     import qics
-    import qics.utils.symmetric as sym
-    import qics.utils.quantum as qu
+    import qics.vectorize as vec
+    import qics.quantum as qu
 
     np.random.seed(1)
 
     n = 4
     D = 0.25
 
-    rho      = qu.rand_density_matrix(n)
+    rho      = qu.random.density_matrix(n)
     entr_rho = qu.quant_entropy(rho)
 
     N = n * n
-    sn = sym.vec_dim(n, compact=True)
-    vN = sym.vec_dim(N)
+    sn = vec.vec_dim(n, compact=True)
+    vN = vec.vec_dim(N)
 
     # Define objective function
     c = np.zeros((vN + 2, 1))
     c[0] = 1.
 
     # Build linear constraint matrices
-    tr2 = sym.lin_to_mat(lambda X : sym.p_tr(X, (n, n), 1), (N, n))
-    purification = sym.mat_to_vec(qu.purify(rho))
+    tr2 = vec.lin_to_mat(lambda X : qu.p_tr(X, (n, n), 1), (N, n))
+    purification = vec.mat_to_vec(qu.purify(rho))
     # Tr_2[X] = rho
     A1 = np.hstack((np.zeros((sn, 1)), tr2, np.zeros((sn, 1))))
-    b1 = sym.mat_to_vec(rho, compact=True)
+    b1 = vec.mat_to_vec(rho, compact=True)
     # 1 - tr[Psi X] <= D
     A2 = np.hstack((np.zeros((1, 1)), -purification.T, np.ones((1, 1))))
     b2 = np.array([[D - 1]])

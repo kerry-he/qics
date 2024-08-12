@@ -2,7 +2,7 @@ import numpy as np
 import scipy as sp
 import qics
 
-from qics.utils.symmetric import mat_to_vec
+from qics.vectorize import mat_to_vec
 
 ## Bregman projection
 #   min  S(X||Y) = -S(X) - tr[X log(Y)]

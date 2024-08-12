@@ -2,7 +2,7 @@ def test_ptr_ikr():
     # Tests that p_tr and i_kr satisfy the adjoint relationship
     #     <p_tr(X), Y> = <X, i_kr(Y)>
     import numpy as np
-    from qics.utils.symmetric import p_tr, i_kr
+    from qics.quantum import p_tr, i_kr
 
     np.random.seed(1)
 
@@ -20,13 +20,13 @@ def test_ptr_ikr():
         assert np.allclose(
             np.trace(p_tr(X, dims, sys) @ Y), 
             np.trace(X @ i_kr(Y, dims, sys))
-        ), "qics.utils.symmetric.p_tr and qics.utils.symmetric.i_kr are not adjoint linear operators"
+        ), "qics.quantum.p_tr and qics.quantum.i_kr are not adjoint linear operators"
         
 def test_ptr_ikr_multi():
     # Tests that p_tr_multi and i_kr_multi satisfy the adjoint relationship
     #     <p_tr_multi(Xs), Ys> = <Xs, i_kr_multi(Ys)>    
     import numpy as np
-    from qics.utils.symmetric import p_tr_multi, i_kr_multi
+    from qics.quantum import p_tr_multi, i_kr_multi
 
     np.random.seed(1)
 
@@ -44,4 +44,4 @@ def test_ptr_ikr_multi():
         assert np.allclose(
             np.trace(p_tr_multi(np.zeros_like(Ys), Xs, dims, sys) @ Ys, axis1=1, axis2=2), 
             np.trace(Xs @ i_kr_multi(np.zeros_like(Xs), Ys, dims, sys), axis1=1, axis2=2)
-        ), "qics.utils.symmetric.p_tr_multi and qics.utils.symmetric.i_kr_multi are not adjoint linear operators"
+        ), "qics.quantum.p_tr_multi and qics.quantum.i_kr_multi are not adjoint linear operators"

@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 
-from qics.utils import sparse
+from qics._utils import linalg
 import qics.cones
 class Model():
     """A class representing an instance of the primal
@@ -85,7 +85,7 @@ class Model():
         elif self.use_A:
             # After rescaling, G is some easily invertible square diagonal matrix
             self.G_inv = -self.c_scale.reshape((-1, 1))
-            self.A_invG = sparse.scale_axis(self.A.copy(), scale_cols=self.G_inv)
+            self.A_invG = linalg.scale_axis(self.A.copy(), scale_cols=self.G_inv)
             self.A_invG_T = self.A_invG.T.tocsr() if sp.sparse.issparse(self.A_invG) else self.A_invG.T
             self.A_invG_views = [self.A_invG[:, idxs_k] for idxs_k in self.cone_idxs]
 
@@ -98,14 +98,14 @@ class Model():
         # Rescale c
         self.c_scale = np.sqrt(np.maximum.reduce([
             np.abs(self.c.reshape(-1)),
-            sparse.abs_max(self.A, axis=0),
-            sparse.abs_max(self.G, axis=0)
+            linalg.abs_max(self.A, axis=0),
+            linalg.abs_max(self.G, axis=0)
         ]))
 
         # Rescale b
         self.b_scale = np.sqrt(np.maximum.reduce([
             np.abs(self.b.reshape(-1)),
-            sparse.abs_max(self.A, axis=1)
+            linalg.abs_max(self.A, axis=1)
         ]))
 
         # Rescale h
@@ -114,7 +114,7 @@ class Model():
         # (except for the nonnegative orthant)
         self.h_scale = np.zeros(self.q)
         h_absmax = np.abs(self.h.reshape(-1))
-        G_absmax_row = sparse.abs_max(self.G, axis=1)
+        G_absmax_row = linalg.abs_max(self.G, axis=1)
         for (k, cone_k) in enumerate(self.cones):
             idxs = self.cone_idxs[k]
             if isinstance(cone_k, qics.cones.NonNegOrthant):
@@ -138,12 +138,12 @@ class Model():
         self.b /= self.b_scale.reshape((-1, 1))
         self.h /= self.h_scale.reshape((-1, 1))
 
-        self.A = sparse.scale_axis(self.A, 
+        self.A = linalg.scale_axis(self.A, 
             scale_rows = np.reciprocal(self.b_scale), 
             scale_cols = np.reciprocal(self.c_scale)
         )
 
-        self.G = sparse.scale_axis(self.G, 
+        self.G = linalg.scale_axis(self.G, 
             scale_rows = np.reciprocal(self.h_scale), 
             scale_cols = np.reciprocal(self.c_scale)
         )

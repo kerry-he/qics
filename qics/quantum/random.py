@@ -1,8 +1,8 @@
 import numpy as np
 import scipy as sp
-import qics.utils.symmetric as sym
+import qics.quantum
 
-def rand_density_matrix(n, iscomplex=False):
+def density_matrix(n, iscomplex=False):
     """Generate random density matrix on Haar measure,
     i.e., positive semifedinite matrix X satisfying tr[X] = 1.
 
@@ -25,7 +25,7 @@ def rand_density_matrix(n, iscomplex=False):
     rho = X @ X.conj().T
     return rho / np.trace(rho)
 
-def rand_pure_density_matrix(n, iscomplex=False):
+def pure_density_matrix(n, iscomplex=False):
     """Generate random pure density matrix
     i.e., rank 1 positive semifedinite matrix X satisfying tr[X] = 1.
     See: https://sumeetkhatri.com/wp-content/uploads/2020/05/random_pure_states.pdf
@@ -51,7 +51,7 @@ def rand_pure_density_matrix(n, iscomplex=False):
     rho = (rho + rho.conj().T) * 0.5
     return rho
 
-def rand_unitary(n, iscomplex=False):
+def unitary(n, iscomplex=False):
     """Generate random unitary uniformly distributed on Haar measure
     i.e., matrix U satisfying U'U = UU' = I.
     See: https://case.edu/artsci/math/esmeckes/Meckes_SAMSI_Lecture2.pdf
@@ -75,7 +75,7 @@ def rand_unitary(n, iscomplex=False):
     U, _ = np.linalg.qr(X)
     return U
 
-def rand_stinespring_operator(nin, nout=None, nenv=None, iscomplex=False):
+def stinespring_operator(nin, nout=None, nenv=None, iscomplex=False):
     """Generate random Stinespring operator uniformly distributed on Hilbert-Schmidt measure
     i.e., isometry V corresponding to quantum channel N(X) = tr_E[V X V'].
     See: https://arxiv.org/abs/2011.02994
@@ -98,10 +98,10 @@ def rand_stinespring_operator(nin, nout=None, nenv=None, iscomplex=False):
     """
     nout = nout if (nout is not None) else nin
     nenv = nenv if (nenv is not None) else nout
-    U = rand_unitary(nout * nenv, iscomplex=iscomplex)
+    U = unitary(nout * nenv, iscomplex=iscomplex)
     return U[:, :nin]
 
-def rand_degradable_channel(nin, nout, nenv, iscomplex=False):
+def degradable_channel(nin, nout, nenv, iscomplex=False):
     """Generate random degradable channel, represented as a Stinespring isometry V such that
     
         N(X)  = Tr_2[V X V']
@@ -137,7 +137,7 @@ def rand_degradable_channel(nin, nout, nenv, iscomplex=False):
     V = np.zeros((nout*nenv, nin), dtype=dtype)    # N Stinespring isometry
     W = np.zeros((nin*nenv, nout), dtype=dtype)    # Ξ Stinespring isometry
 
-    U = rand_unitary(nin, iscomplex=iscomplex)
+    U = unitary(nin, iscomplex=iscomplex)
     for k in range(nout):
         # Generate random vector
         if iscomplex:
@@ -155,75 +155,7 @@ def rand_degradable_channel(nin, nout, nenv, iscomplex=False):
 
     return V, W
 
-def entropy(x):
-    """Computes classical (Shannon) entropy 
-    
-        H(x) = -Σ_i xi log(xi),
-        
-    for nonnegative vector x.
-    
-    Parameters
-    ----------
-    x : ndarray
-        Nonnegative (n, 1) vector to compute classical entropy of.
-        
-    Returns
-    -------
-    float
-        Classical entropy of x.
-    """    
-    x = x[x > 0]
-    return -sum(x * np.log(x))
-
-def quant_entropy(X):
-    """Computes quantum (von Neumann) entropy 
-    
-        S(X) = -tr[X log(X)],
-        
-    for positive semidefinite matrix X.
-    
-    Parameters
-    ----------
-    X : ndarray
-        Positive semidefinite (n, n) matrix to compute quantum entropy of.
-        
-    Returns
-    -------
-    float
-        Quantum entropy of X.
-    """
-    eig = np.linalg.eigvalsh(X)
-    return entropy(eig)
-
-def purify(X):
-    """Returns a purification of a quantum state X. If X has spectral decomposition
-    
-        X = Σ_i xi (vi vi'),
-        
-    then the purification is pp' where
-    
-        p = Σ_i sqrt(xi) (vi ⊗ vi).
-    
-    Parameters
-    ----------
-    X : ndarray
-        Density matrix of size (n, n).
-        
-    Returns
-    -------
-    ndarray
-        Purification matrix of X of size (n^2, n^2).
-    """    
-    n = X.shape[0]
-    D, U = np.linalg.eigh(X)
-
-    vec = np.zeros((n*n, 1), dtype=X.dtype)
-    for i in range(n):
-        vec += np.sqrt(D[i]) * np.kron(U[:, [i]], U[:, [i]])
-
-    return vec @ vec.conj().T
-
-def rand_choi_operator(nin, nout=None, M=None, iscomplex=False):
+def choi_operator(nin, nout=None, M=None, iscomplex=False):
     """Random Choi operator uniformly distributed on Hilbert-Schmidt measure
 
     See: https://arxiv.org/abs/2011.02994
@@ -257,8 +189,8 @@ def rand_choi_operator(nin, nout=None, M=None, iscomplex=False):
     W = G @ G.conj().T
 
     # Obtain normalization required for trace preserving property
-    H = sym.p_tr(W, (nout, nin), 0)
-    I_H_irt2 = sym.i_kr(sp.linalg.sqrtm(np.linalg.inv(H)), (nout, nin), 0)
+    H = qics.quantum.p_tr(W, (nout, nin), 0)
+    I_H_irt2 = qics.quantum.i_kr(sp.linalg.sqrtm(np.linalg.inv(H)), (nout, nin), 0)
     
     # Return normalized Choi matrix
     J = I_H_irt2 @ W @ I_H_irt2
