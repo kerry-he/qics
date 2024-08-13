@@ -148,7 +148,7 @@ class Model():
             scale_cols = np.reciprocal(self.c_scale)
         )
 
-        return    
+        return
 
 def build_cone_idxs(n, cones):
     cone_idxs = []
