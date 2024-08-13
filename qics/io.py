@@ -248,7 +248,6 @@ def write_sdpa(model, filename):
     assert sp.sparse.issparse(A)
     assert iscomplex == (filename[-1] == "c")
     
-
     f = open(filename, "w")
         
     # Write mDim (length of A)
@@ -321,3 +320,149 @@ def write_sdpa(model, filename):
     f.close()
             
     return
+
+def read_cbf(filename):
+    # Determine if this is a complex or real SDP file
+    file_extension = os.path.splitext(filename)[1]
+    assert file_extension == ".cbf"
+
+    fp = open(filename, "r")
+    cones = []
+
+    while True:
+        ########################
+        ## File information
+        ########################
+        keyword = fp.readline().strip()
+        if keyword == "VER":
+            ver = int(fp.readline().strip())
+            if ver != 1 and ver != 2 and ver != 3:
+                print("Warning: Version of .cbf file not supported.")
+        
+        ########################
+        ## Model structure
+        ########################
+        if keyword == "OBJSENSE":
+            line = fp.readline().strip()
+            if line == "MIN":
+                objsense = 1
+            elif line == "MAX":
+                objsense = -1
+            else:
+                raise Exception("Invalid OBJSENSE read from .cbf file (must be MIN or MAX).")
+            
+        if keyword == "VAR":
+            # Number and domain of variables
+            # i.e., variables of the form x \in K
+            line = fp.readline()
+            (nx, ncones) = [int(i) for i in line.strip().split(' ')]
+            for i in range(ncones):
+                line = fp.readline().strip().split(' ')
+                (cone_type, cone_dim) = (line[0], int(line[1]))
+                if cone_type == "F":
+                    pass
+                elif cone_type == "L+":
+                    pass
+                elif cone_type == "L-":
+                    pass
+                elif cone_type == "L=":
+                    pass
+                elif cone_type == "Q":
+                    pass
+                elif cone_type == "EXP":
+                    pass
+                else:
+                    raise Exception("Cone type ", cone_type, " is not supported.") 
+
+        
+        if keyword == "INT":
+            raise Exception("INT keyword not supported.")
+        
+        if keyword == "CON":
+            # Number and domain of affine constrained variables
+            # i.e., variables of the form Ax-b \in K
+            line = fp.readline()
+            (ng, ncones) = [int(i) for i in line.strip().split(' ')]
+            for i in range(ncones):
+                line = fp.readline().strip().split(' ')
+                (cone_type, cone_dim) = (line[0], int(line[1]))
+                if cone_type == "F":
+                    # x is unconstrained
+                    pass
+                elif cone_type == "L+":
+                    # x >= 0
+                    pass
+                elif cone_type == "L-":
+                    # x <= 0
+                    pass
+                elif cone_type == "L=":
+                    # x == 0
+                    pass
+                elif cone_type == "Q":
+                    # Quadratic cone
+                    pass
+                elif cone_type == "EXP":
+                    # Exponential cone
+                    pass
+                else:
+                    raise Exception("Cone type ", cone_type, " is not supported.") 
+
+        ########################
+        ## Problem data
+        ########################
+        if keyword == "OBJACOORD":
+            # Sparse objective 
+            c = np.zeros((nx, 1))
+            nnz = int(fp.readline().strip())
+            for i in range(nnz):
+                line = fp.readline().strip().split(' ')
+                c[int(line[0])] = float(line[1])
+        
+        if keyword == "ACOORD":
+            # Sparse constraint matrix A
+            nnz = int(fp.readline().strip())
+            i_list = np.zeros(nnz, dtype=int)
+            j_list = np.zeros(nnz, dtype=int)
+            v_list = np.zeros(nnz)
+            for k in range(nnz):
+                line = fp.readline().strip().split(' ')
+                i_list[k] = int(line[0])
+                j_list[k] = int(line[1])
+                v_list[k] = float(line[2])
+            A = sp.sparse.csr_matrix((i_list, j_list), v_list)
+        
+        if keyword == "BCOORD":
+            # Sparse constraint vector b
+            b = np.zeros((nx, 1))
+            nnz = int(fp.readline().strip())
+            for i in range(nnz):
+                line = fp.readline().strip().split(' ')
+                b[int(line[0])] = float(line[1])
+
+
+
+def write_cbf(model, filename):
+
+    c         = model.c_raw if model.use_A else  model.h_raw
+    A         = model.A_raw if model.use_A else  model.G_raw.T
+    b         = model.b_raw if model.use_A else -model.c_raw
+    cones     = model.cones
+    iscomplex = model.iscomplex
+    
+    f = open(filename, "w")
+        
+    ########################
+    ## File information
+    ########################
+    # Version number
+    f.write(str(3) + "\n")
+
+    ########################
+    ## Model structure
+    ########################
+    if not model.use_G:
+        f.write("VAR" + "\n")
+        f.write(str(model.n) + " " + str(len(cones)) + "\n")
+        for cone_k in cones:
+            if isinstance(cone_k, qics.cones.NonNegOrthant):
+                f.write("L+" + " " + str(cone_k.dim) + "\n")
