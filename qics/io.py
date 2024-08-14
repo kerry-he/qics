@@ -440,6 +440,8 @@ def read_cbf(filename):
         if not line:
             break
         keyword = line.strip()
+        if keyword == '' or keyword[0] == "#":
+            continue
 
         ########################
         ## File information
@@ -551,8 +553,6 @@ def read_cbf(filename):
         h = None
 
     return qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones, offset=offset)
-
-
 
 def write_cbf(model, filename):
     """Writes a conic program 
