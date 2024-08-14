@@ -20,8 +20,7 @@ the example semidefinite programs as follows.
 .. code-block:: pycon
 
     >>> import qics
-    >>> c, b, A, cones = qics.io.read_sdpa("SDPLIB/data/arch0.dat-s")
-    >>> model = qics.Model(c=c, A=A, b=b, cones=cones)
+    >>> model = qics.io.read_sdpa("SDPLIB/data/arch0.dat-s")
     >>> solver = qics.Solver(model)
     >>> info = solver.solve()
     ====================================================================
