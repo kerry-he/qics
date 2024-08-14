@@ -2,7 +2,7 @@ import numpy as np
 import scipy as sp
 import os
 import qics
-import qics.vectorize
+from qics.vectorize import mat_to_vec, vec_to_mat, vec_dim, mat_dim
 
 def read_file(filename):
     """Reads a file representing a conic program, and 
@@ -323,7 +323,7 @@ def write_sdpa(model, filename):
         # Turn vectorised Cl into matrix (make diagonal if corresponds to LP)
         Cl = c[idxs[l] : idxs[l + 1]]
         if isinstance(cones[l], qics.cones.PosSemidefinite):
-            Cl = qics.vectorize.vec_to_mat(Cl, iscomplex=cones[l].get_iscomplex(), compact=False)
+            Cl = vec_to_mat(Cl, iscomplex=cones[l].get_iscomplex(), compact=False)
         elif isinstance(cones[l], qics.cones.NonNegOrthant):
             Cl = np.diag(Cl.ravel())
         Cl = sp.sparse.coo_matrix(Cl)
@@ -395,10 +395,10 @@ def read_cbf(filename):
             n = 1 - cone_dim
             return qics.cones.SecondOrder(n)
         elif cone_type == "SVECPSD":
-            n = qics.vectorize.mat_dim(cone_dim, compact=True)
+            n = mat_dim(cone_dim, compact=True)
             return qics.cones.PosSemidefinite(n)
         elif cone_type == "HVECPSD":
-            n = qics.vectorize.mat_dim(cone_dim, iscomplex=True, compact=True)
+            n = mat_dim(cone_dim, iscomplex=True, compact=True)
             return qics.cones.PosSemidefinite(n, iscomplex=True)
         elif cone_type == "CE":
             n = cone_dim - 2
@@ -407,16 +407,16 @@ def read_cbf(filename):
             n = (cone_dim - 1) // 2
             return qics.cones.ClassRelEntr(n)
         elif cone_type == "SVECQE":
-            n = qics.vectorize.mat_dim(cone_dim - 2, compact=True)
+            n = mat_dim(cone_dim - 2, compact=True)
             return qics.cones.QuantEntr(n)
         elif cone_type == "HVECQE":
-            n = qics.vectorize.mat_dim(cone_dim - 2, iscomplex=True, compact=True)
+            n = mat_dim(cone_dim - 2, iscomplex=True, compact=True)
             return qics.cones.QuantEntr(n, iscomplex=True)
         elif cone_type == "SVECQRE":
-            n = qics.vectorize.mat_dim((cone_dim - 1) // 2, compact=True)
+            n = mat_dim((cone_dim - 1) // 2, compact=True)
             return qics.cones.QuantRelEntr(n)
         elif cone_type == "HVECQRE":
-            n = qics.vectorize.mat_dim((cone_dim - 1) // 2, iscomplex=True, compact=True)
+            n = mat_dim((cone_dim - 1) // 2, iscomplex=True, compact=True)
             return qics.cones.QuantRelEntr(n, iscomplex=True)
         elif cone_type == "SVECQCE":
             pass
@@ -543,8 +543,8 @@ def read_cbf(filename):
         G_idxs = np.delete(np.arange(A.shape[0]), A_idxs)
         G = _uncompact_matrix(-A[G_idxs], cones)
         h = _uncompact_matrix(-b[G_idxs], cones)
-        A = -A[A_idxs]
-        b = -b[A_idxs]
+        A = A[A_idxs]
+        b = b[A_idxs]
     else:
         # No G, just need to uncompact c and A
         c = _uncompact_matrix(c, cones) * objsense
@@ -710,8 +710,6 @@ def write_cbf(model, filename):
     f.close()
             
     return
-
-from qics.vectorize import mat_to_vec, vec_to_mat, vec_dim, mat_dim
 
 def _compact_matrix(G, model):
     # Loop through columns
