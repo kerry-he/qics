@@ -493,7 +493,6 @@ def read_cbf(filename):
                 if cone_type == "L=":
                     A_idxs = np.arange(total_cone_dim, total_cone_dim+cone_dim)
                 else:
-                    assert not use_G
                     cones += [_read_cones(cone_type, cone_dim)]
                 total_cone_dim += cone_dim
 
@@ -514,16 +513,11 @@ def read_cbf(filename):
         
         if keyword == "ACOORD":
             # Sparse constraint matrix A
+            A = np.zeros((ng, nx))
             nnz = int(f.readline().strip())
-            i_list = np.zeros(nnz, dtype=int)
-            j_list = np.zeros(nnz, dtype=int)
-            v_list = np.zeros(nnz)
             for k in range(nnz):
                 line = f.readline().strip().split(' ')
-                i_list[k] = int(line[0])
-                j_list[k] = int(line[1])
-                v_list[k] = float(line[2])
-            A = sp.sparse.csr_matrix((v_list, (i_list, j_list)), shape=(ng, nx))
+                A[int(line[0]), int(line[1])] = float(line[2])
         
         if keyword == "BCOORD":
             # Sparse constraint vector b
@@ -690,7 +684,7 @@ def write_cbf(model, filename):
         f.write(str(model.offset) + "\n")
 
     if model.use_G:
-        A = sp.sparse.coo_matrix(np.vstack((A, -G)))
+        A = sp.sparse.coo_matrix(np.vstack((-G, A)))
     else:
         A = sp.sparse.coo_matrix(A)
     f.write("\n" + "ACOORD" + "\n")
@@ -699,7 +693,7 @@ def write_cbf(model, filename):
         f.write(str(ik) + " " + str(jk) + " " + str(vk) + "\n")
 
     if model.use_G:
-        b = sp.sparse.csc_matrix(np.vstack((b, -h)))
+        b = sp.sparse.csc_matrix(np.vstack((-h, b)))
     else:
         b = sp.sparse.csc_matrix(b)
     f.write("\n" + "BCOORD" + "\n")
@@ -768,7 +762,7 @@ def _uncompact_matrix(G, cones):
             elif cone_j.type == "h":
                 cone_dims_j = vec_dim(mat_dim(cone_j.dim, iscomplex=True), compact=True, iscomplex=True)
         cone_dims += [cone_dims_j]
-        cone_tot_dims += [np.sum(cone_dims)]
+        cone_tot_dims += [np.sum(cone_dims_j)]
     cone_idxs = np.insert(np.cumsum(cone_tot_dims), 0, 0)
 
     # Loop through columns
