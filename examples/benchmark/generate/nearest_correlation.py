@@ -38,9 +38,4 @@ for n in range(20, 201, 20):
 
     # Initialize model and solver objects
     model  = qics.Model(c=c, A=A, b=b, cones=cones)
-    qics.io.write_
-    solver = qics.Solver(model)
-
-    # Solve problem
-    info = solver.solve()
     qics.io.write_cbf(model, "nc_" + str(n) + ".cbf")
