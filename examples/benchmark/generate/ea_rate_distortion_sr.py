@@ -10,29 +10,28 @@ def purify(eig):
 
     vec = np.zeros((n*n, 1))
     for (i, ii) in enumerate(range(0, n*n, n + 1)):
-        vec[ii] = math.sqrt(eig[i])
+        vec[ii] = math.sqrt(max(0, eig[i]))
 
     return vec @ vec.T
 
 
-for n in range(4, 63, 4):
+for n in [2, 4, 8, 16, 32, 64]:
     np.random.seed(1)
     # Define dimensions
-    n = 6
     N = n * n
     vn = vec.vec_dim(n, compact=True)
     vN = vec.vec_dim(N, compact=True)
 
     # Rate-distortion problem data
-    rho = qu.random.density_matrix(n, iscomplex=True)
+    rho = qu.random.pure_density_matrix(n, iscomplex=True)
     eig_A = np.linalg.eigvalsh(rho)
     rho_A = np.diag(eig_A)
     rho_AR = purify(eig_A)
-    entr_A = -np.sum(eig_A * np.log(eig_A))
+    entr_A = qu.entropy(eig_A)
 
     Delta = np.eye(N) - rho_AR
     Delta_X = vec.mat_to_vec(Delta[::n+1, ::n+1], compact=True)
-    D = 0.5
+    D = 0.0
 
     # Build problem model
     IDX = np.zeros((n, n), 'uint64')
@@ -108,4 +107,4 @@ for n in range(4, 63, 4):
         qics.cones.NonNegOrthant(1)
     ]
     model = qics.Model(c, A, b, G, h, cones=cones, offset=entr_A)
-    qics.io.write_cbf(model, "qrd_sr_" + str(n) + ".cbf")
+    qics.io.write_cbf(model, "qrd_sr_" + str(n) + "_0.cbf")
