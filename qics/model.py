@@ -53,10 +53,10 @@ class Model():
         self.q = np.size(h) if (h is not None) else self.n
     
         self.c_raw = c
-        self.A_raw = A
-        self.b_raw = b
-        self.G_raw = G
-        self.h_raw = h
+        self.A_raw = A if (A is not None) else  np.empty((0, self.n))
+        self.b_raw = b if (b is not None) else  np.empty((0, 1))
+        self.G_raw = G if (G is not None) else -sp.sparse.eye(self.n).tocsr()
+        self.h_raw = h if (h is not None) else  np.zeros((self.n, 1))
     
         self.c = c.copy()
         self.A = A.copy() if (A is not None) else  np.empty((0, self.n))
