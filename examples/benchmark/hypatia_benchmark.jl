@@ -5,6 +5,9 @@ import Hypatia
 import Hypatia.Cones
 import Hypatia.Solvers
 
+import CSV
+import DelimitedFiles
+
 T = Float64
 R = Complex{T}
 
@@ -25,6 +28,33 @@ function _swap_rows(G, cones)
     return G
 end
 
+function save_and_print_stats(solver, problem, csv_name)
+    worst_gap = min(solver.gap / solver.point.tau[], abs(solver.primal_obj_t - solver.dual_obj_t))
+    max_tau_obj = max(solver.point.tau[], min(abs(solver.primal_obj_t), abs(solver.dual_obj_t)))
+    total_time = Solvers.get_solve_time(solver) - solver.time_rescale - solver.time_initx - solver.time_inity
+    opt_val = (Solvers.get_primal_obj(solver) + Solvers.get_dual_obj(solver)) / 2
+
+    CSV.write(csv_name, (
+        problem = [problem],
+        solver  = ["hypatia"],
+        status  = [string(solver.status)],
+        optval  = [opt_val],
+        time    = [total_time],
+        iter    = [Solvers.get_num_iters(solver)],
+        gap     = [worst_gap / max_tau_obj],
+        pfeas   = [solver.x_feas],
+        dfeas   = [max(solver.y_feas, solver.z_feas)]
+    ), writeheader = false, append = true, sep = ',')
+end
+
+function save_and_print_fail(exception, problem, csv_name)
+    CSV.write(csv_name, (
+        problem = [problem],
+        solver  = ["hypatia"],
+        status  = [string(exception)]
+    ), writeheader = false, append = true, sep = ',')
+end
+
 function read_problem(filename)
     # Read data from file
     fd = open(filename, "r")
@@ -34,6 +64,7 @@ function read_problem(filename)
     totalvars = 0
     totalconstr = 0
     objsense = 1
+    A_idxs = 1:1
 
     function _read_cone(cone, sz)
         if cone == "L+"
@@ -100,7 +131,7 @@ function read_problem(filename)
                 sz = parse(Int,strip(sz))
                 if cone == "F"
                     @assert lines == 1
-                    @assert totalvars = sz
+                    @assert totalvars == sz
                     use_G = true
                 else
                     push!(cones, _read_cone(cone, sz))
@@ -116,7 +147,6 @@ function read_problem(filename)
             totalconstr, lines = split(nextline)
             totalconstr = parse(Int,strip(totalconstr))
             lines = parse(Int,strip(lines))
-            A_idxs = 0:0
             total_cone_dim = 0
 
             for k in 1:lines
@@ -124,9 +154,8 @@ function read_problem(filename)
                 cone, sz = split(nextline)
                 sz = parse(Int,strip(sz))
                 if cone == "L="
-                    A_idxs = total_cone_dim:total_cone_dim+sz
+                    A_idxs = total_cone_dim+1:total_cone_dim+sz
                 else
-                    @assert (~use_G)
                     push!(cones, _read_cone(cone, sz))
                 end
                 total_cone_dim += sz
@@ -185,11 +214,11 @@ function read_problem(filename)
         # Need to split A into [-G; -A] and b into [-h; -b]
         # and swap G, h
         c *= objsense
-        G_idxs = np.delete(np.arange(A.shape[0]), A_idxs)
-        G = -_swap_rows(A[G_idxs], cones)
-        h = -_swap_rows(b[G_idxs], cones)
-        A = A[A_idxs]
-        b = b[A_idxs]
+        G_idxs = filter(x -> x ∉ A_idxs, 1:size(A, 1))
+        G = -_swap_rows(A[G_idxs, :], cones)
+        h = -_swap_rows(b[G_idxs, :], cones)
+        A = A[A_idxs, :]
+        b = b[A_idxs, :]
     else
         # No G, just need to swap c and A
         c = _swap_rows(c, cones) * objsense
@@ -206,9 +235,33 @@ function read_problem(filename)
 end
 
 # Input into model and solve
-file_name = "test.cbf"
+folder = "./qreps/"
+fnames = readdir(folder)
 
-model = read_problem(file_name)
-solver = Solvers.Solver{T}(verbose = true)
-Solvers.load(solver, model)
-Solvers.solve(solver)
+csv_name = "data_hypatia.csv"
+
+header = [
+    "problem",
+    "solver",
+    "status",
+    "optval",
+    "time",
+    "iter",
+    "gap",
+    "pfeas",
+    "dfeas"
+]
+header = reshape(header, 1, length(header))
+DelimitedFiles.writedlm(csv_name, header, ',')
+
+for fname in fnames
+    # try
+    model = read_problem(folder * fname)
+    solver = Solvers.Solver{T}(verbose = true)
+    Solvers.load(solver, model)
+    Solvers.solve(solver)
+    save_and_print_stats(solver, fname, csv_name)
+    # catch exception
+    #     save_and_print_fail(exception, fname, csv_name)
+    # end
+end

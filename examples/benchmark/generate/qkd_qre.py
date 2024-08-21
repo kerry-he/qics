@@ -16,6 +16,26 @@ import os
 folder = "./examples/benchmark/qkd/"
 fnames = os.listdir(folder)
 
+def dds_fr(Klist, Zlist):
+    nk = K_list[0].shape[0]
+
+    KK = sum([K @ K.conj().T for K in Klist])
+    ZKKZ = sum([Z @ KK @ Z.conj().T for Z in Zlist])
+    ZKlist = [Z @ K for Z in Zlist for K in Klist]
+
+    D, U = np.linalg.eigh(ZKKZ)
+
+    KKnzidx = np.where(D > 1e-12)[0]
+    nk_fr = np.size(KKnzidx)
+
+    if nk == nk_fr:
+        return Klist, ZKlist, nk_fr
+    
+    Klist = [U[:, KKnzidx].conj().T @ K for K in Klist]
+    ZKlist = [U[:, KKnzidx].conj().T @ ZK for ZK in ZKlist]
+
+    return Klist, ZKlist, nk_fr
+
 for fname in fnames:
     data   = sp.io.loadmat(folder + fname)
     gamma  = data['gamma']
@@ -41,6 +61,9 @@ for fname in fnames:
     for i in range(nc):
         A[i, 1:] = vec.mat_to_vec(Gamma[i].astype(dtype), compact=True).ravel()
     b = gamma
+
+    # K_list, ZK_list, nf = dds_fr(K_list, Z_list)
+    # snf    = vec.vec_dim(nf, iscomplex=iscomplex, compact=False)
 
     K_mtx = vec.lin_to_mat(lambda X : sum([K @ X @ K.conj().T for K in K_list]), (ni, no), iscomplex=iscomplex, compact=(True, False))
     Z_mtx = vec.lin_to_mat(lambda X : sum([Z @ X @ Z.conj().T for Z in Z_list]), (no, no), iscomplex=iscomplex, compact=(False, False))

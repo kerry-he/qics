@@ -18,6 +18,8 @@ for n in range(2, 17):
     vN = vec.vec_dim(N, compact=True, iscomplex=True)
 
     V = qu.random.stinespring_operator(n, n, n, iscomplex=True)
+    # V = np.zeros((n*n, n))
+    # V[range(0, N, n), range(n)] = 1.    
 
     # Define objective functions
     # with variables (X, (t, Y))

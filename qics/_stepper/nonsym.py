@@ -107,8 +107,6 @@ class NonSymStepper():
 
             # Check cheap proximity conditions first
             szs = [s_k.T @ z_k for (s_k, z_k) in zip(next_point.s.vecs, next_point.z.vecs)]
-            if abs(taukap / mu - 1) > eta:
-                continue
             nus = [cone_k.nu for cone_k in model.cones]
             rho = [np.abs(sz_k / mu - nu_k) / np.sqrt(nu_k) for (sz_k, nu_k) in zip(szs, nus)]
             if any(np.array(rho) > eta):
@@ -169,7 +167,7 @@ class NonSymStepper():
         self.rhs.s.vec *= -0.5 / rtmu
 
         self.rhs.tau[:] = 0.
-        self.rhs.kap[:] = (dir_c.tau**2) / (point.tau**3) * mu
+        self.rhs.kap[:] = 0.
 
         return self.rhs
 
@@ -196,6 +194,6 @@ class NonSymStepper():
             cone_k.third_dir_deriv_axpy(self.rhs.s[k], dir_p.s[k], a=-0.5 / rtmu) 
 
         self.rhs.tau[:] = 0.
-        self.rhs.kap[:] = (dir_p.tau**2) / (point.tau**3) * mu
+        self.rhs.kap[:] = -dir_p.tau * dir_p.kap / point.tau
 
         return self.rhs
