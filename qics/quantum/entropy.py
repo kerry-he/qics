@@ -72,6 +72,6 @@ def purify(X):
 
     vec = np.zeros((n*n, 1), dtype=X.dtype)
     for i in range(n):
-        vec += np.sqrt(D[i]) * np.kron(U[:, [i]], U[:, [i]])
+        vec += np.sqrt(max(0.0, D[i])) * np.kron(U[:, [i]], U[:, [i]])
 
     return vec @ vec.conj().T

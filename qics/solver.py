@@ -293,7 +293,7 @@ class Solver():
             return True
         
         # 5) Check if maximum time is exceeded
-        if time.time() - self.elapsed_time >= self.max_time:
+        if self.elapsed_time >= self.max_time:
             self.exit_status = "max_time"
             return True 
         
