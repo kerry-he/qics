@@ -271,12 +271,12 @@ class Solver():
 
         # 2) Check primal and dual infeasibility
         if self.x_infeas <= self.tol_infeas:
-            self.solution_status = "dinfeas"
+            self.solution_status = "pinfeas"
             self.exit_status = "solved"
             return True       
 
         if self.y_infeas <= self.tol_infeas and self.z_infeas <= self.tol_infeas:
-            self.solution_status = "pinfeas"
+            self.solution_status = "dinfeas"
             self.exit_status = "solved"
             return True            
             
