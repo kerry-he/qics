@@ -388,8 +388,8 @@ class Solver():
         self.z_res += s
 
         norm_x_res = lin.norm_inf(self.x_res)
-        norm_y_res = lin.norm_inf(self.x_res)
-        norm_z_res = lin.norm_inf(self.x_res)
+        norm_y_res = lin.norm_inf(self.y_res)
+        norm_z_res = lin.norm_inf(self.z_res)
 
         self.x_infeas =  norm_x_res / d_obj_tau if (d_obj_tau > 0) else np.inf
         self.y_infeas = -norm_y_res / p_obj_tau if (p_obj_tau < 0) else np.inf
