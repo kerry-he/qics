@@ -8,7 +8,7 @@ class OpPerspecTr(Cone):
 
     .. math::
     
-        \\mathcal{K}_{\\text{op,tr}}^g = \\text{cl}\\{ (t, X, Y) \\in \\mathbb{R} \\times \\mathbb{H}^n_+ \\times \\mathbb{H}^n_+ : t \\geq \\text{tr}[P_g(X, Y)] \\},
+        \\mathcal{K}_{\\text{op,tr}}^g = \\text{cl}\\{ (t, X, Y) \\in \\mathbb{R} \\times \\mathbb{H}^n_{++} \\times \\mathbb{H}^n_{++} : t \\geq \\text{tr}[P_g(X, Y)] \\},
         
     for an operator concave function :math:`g:[0, \\infty)\\rightarrow\\mathbb{R}`, with barrier function
 

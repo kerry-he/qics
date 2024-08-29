@@ -31,7 +31,7 @@ end
 function save_and_print_stats(solver, problem, csv_name)
     worst_gap = min(solver.gap / solver.point.tau[], abs(solver.primal_obj_t - solver.dual_obj_t))
     max_tau_obj = max(solver.point.tau[], min(abs(solver.primal_obj_t), abs(solver.dual_obj_t)))
-    total_time = Solvers.get_solve_time(solver) - solver.time_rescale - solver.time_initx - solver.time_inity
+    total_time = Solvers.get_solve_time(solver)
     opt_val = (Solvers.get_primal_obj(solver) + Solvers.get_dual_obj(solver)) / 2
 
     CSV.write(csv_name, (
@@ -64,7 +64,7 @@ function read_problem(filename)
     totalvars = 0
     totalconstr = 0
     objsense = 1
-    A_idxs = 1:1
+    A_idxs = 1:0
 
     function _read_cone(cone, sz)
         if cone == "L+"
@@ -232,11 +232,14 @@ function read_problem(filename)
 
     return Hypatia.Models.Model{T}(c, A, b, G, h, cones, obj_offset=obj_offset)
 
+    close(fd)
+
 end
 
 # Input into model and solve
 folder = "./qreps/"
 fnames = readdir(folder)
+pushfirst!(fnames, fnames[1])
 
 csv_name = "data_hypatia.csv"
 
@@ -251,17 +254,17 @@ header = [
     "pfeas",
     "dfeas"
 ]
-header = reshape(header, 1, length(header))
-DelimitedFiles.writedlm(csv_name, header, ',')
+# header = reshape(header, 1, length(header))
+# DelimitedFiles.writedlm(csv_name, header, ',')
 
 for fname in fnames
-    # try
-    model = read_problem(folder * fname)
-    solver = Solvers.Solver{T}(verbose = true)
-    Solvers.load(solver, model)
-    Solvers.solve(solver)
-    save_and_print_stats(solver, fname, csv_name)
-    # catch exception
-    #     save_and_print_fail(exception, fname, csv_name)
-    # end
+    try
+        model = read_problem(folder * fname)
+        solver = Solvers.Solver{T}(verbose = true, time_limit = 3600, tol_rel_opt=1e-8, tol_feas=1e-8)
+        Solvers.load(solver, model)
+        Solvers.solve(solver)
+        save_and_print_stats(solver, fname, csv_name)
+    catch exception
+        save_and_print_fail(exception, fname, csv_name)
+    end
 end

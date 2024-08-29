@@ -655,7 +655,7 @@ def write_cbf(model, filename):
         f.write("F" + " " + str(model.n) + "\n\n")
 
         f.write("CON" +"\n")
-        f.write(str(q + model.p) + " " + str(len(cones) + 1) + "\n")
+        f.write(str(q + model.p) + " " + str(len(cones) + model.use_A) + "\n")
     else:
         f.write("VAR" + "\n")
         f.write(str(q) + " " + str(len(cones)) + "\n")

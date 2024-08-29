@@ -47,7 +47,7 @@ class Solver():
         self, 
         model, 
         max_iter = 100, 
-        max_time = np.inf,
+        max_time = 3600,
         tol_gap = 1e-8,
         tol_feas = 1e-8,
         tol_infeas = 1e-12,
