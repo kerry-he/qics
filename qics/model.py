@@ -177,11 +177,12 @@ def sparsify(A, threshold, format="coo"):
                     return A.tocoo()
                 elif format == "csr":
                     return A.tocsr()
-        elif np.count_nonzero(A) / A.size < threshold:
-            if format == "coo":
-                return sp.sparse.coo_matrix(A)
-            elif format == "csr":
-                return sp.sparse.csr_matrix(A)
+        elif A.size > 0: 
+            if np.count_nonzero(A) / A.size < threshold:
+                if format == "coo":
+                    return sp.sparse.coo_matrix(A)
+                elif format == "csr":
+                    return sp.sparse.csr_matrix(A)
         return A
 
     if isinstance(A, list):
