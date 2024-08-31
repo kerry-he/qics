@@ -127,10 +127,11 @@ class Solver():
             print("              by K. He, J. Saunderson, H. Fawzi (2024)              ")
             print("====================================================================")
             print("Problem summary:")                
-            print(f"        no. cones:  {len(self.model.cones):<10}",    f"              no. vars:    {self.model.n:<10}")
-            print(f"        barr. par:  {self.model.nu:<10}",            f"              no. constr:  {self.model.p:<10}")
-            print(f"        symmetric:  {self.model.issymmetric!r:<10}", f"              cone dim:    {self.model.q:<10}")
-            print(f"        complex:    {self.model.iscomplex!r:<10}")
+            print(f"        no. vars:   {self.model.n:<10}",          f"              barr. par:  {self.model.nu:<10}")
+            print(f"        no. constr: {self.model.p:<10}",          f"              symmetric:  {self.model.issymmetric!r:<10}")
+            print(f"        cone dim:   {self.model.q:<10}",          f"              complex:    {self.model.iscomplex!r:<10}")
+            print(f"        no. cones:  {len(self.model.cones):<10}", f"              sparse:     {self.model.issparse!r:<10}")
+
 
         # Setup solver
         self.setup_solver()

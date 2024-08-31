@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 import qics._utils.linalg as lin
 import qics._utils.gradient as grad
 from qics.cones.base import Cone, get_central_ray_relentr
@@ -245,7 +246,7 @@ class QuantRelEntr(Cone):
         lhs[:, self.idx_Y] = self.work1.reshape((p, -1)).view(dtype=np.float64)
 
         # Multiply A (H A')
-        return lhs @ A.T        
+        return lin.dense_dot_x(lhs, A.T)      
     
     def invhess_prod_ip(self, out, H):
         assert self.grad_updated
@@ -388,7 +389,7 @@ class QuantRelEntr(Cone):
         lhs[:, 0] = outt
 
         # Multiply A (H A')
-        return lhs @ A.T
+        return lin.dense_dot_x(lhs, A.T)
 
     def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
@@ -449,6 +450,9 @@ class QuantRelEntr(Cone):
     # ========================================================================
     def congr_aux(self, A):
         assert not self.congr_aux_updated
+
+        if sp.sparse.issparse(A):
+            A = A.toarray()
 
         self.At = A[:, 0]
         Ax = np.ascontiguousarray(A[:, self.idx_X])

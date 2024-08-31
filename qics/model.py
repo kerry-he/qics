@@ -46,7 +46,7 @@ class Model():
     offset : float, optional
         Constant offset term to add to the objective function. Default is ``0``.
     """
-    def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0):
+    def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0, sparse_threshold=0.01):
         # Intiialize model parameters and default values for missing data
         self.n = np.size(c)
         self.p = np.size(b) if (b is not None) else 0
@@ -68,26 +68,33 @@ class Model():
         self.use_G = (G is not None)
         self.use_A = (A is not None) and (A.size > 0)
 
+        self.A = sparsify(self.A, sparse_threshold, 'csr')
+        self.G = sparsify(self.G, sparse_threshold, 'csr') if self.use_G else self.G
+
         self.cone_idxs = build_cone_idxs(self.q, cones)
         self.nu = 1 + sum([cone.nu for cone in cones])
 
         self.offset = offset
-        
+
         # Rescale model
         self.rescale_model()
         
         self.A_T = self.A.T.tocsr() if sp.sparse.issparse(self.A) else self.A.T
         self.G_T = self.G.T.tocsr() if sp.sparse.issparse(self.G) else self.G.T
         
-        # Get sclices of A or G matrices correpsonding to each cone
+        # Get slices of A or G matrices correpsonding to each cone
         if self.use_G:
-            self.G_T_views = [self.G_T[:, idxs_k] for idxs_k in self.cone_idxs]
+            self.G_T_views = sparsify([self.G_T[:, idxs_k] for idxs_k in self.cone_idxs], sparse_threshold)
+            self.A_T_dense = self.A_T.toarray() if sp.sparse.issparse(self.A_T) else self.A_T
+            self.A_coo     = self.A.tocoo() if sp.sparse.issparse(self.A) else self.A
+            self.issparse  = any([sp.sparse.issparse(G_T_k) for G_T_k in self.G_T_views])
         elif self.use_A:
             # After rescaling, G is some easily invertible square diagonal matrix
             self.G_inv = -self.c_scale.reshape((-1, 1))
             self.A_invG = linalg.scale_axis(self.A.copy(), scale_cols=self.G_inv)
-            self.A_invG_T = self.A_invG.T.tocsr() if sp.sparse.issparse(self.A_invG) else self.A_invG.T
-            self.A_invG_views = [self.A_invG[:, idxs_k] for idxs_k in self.cone_idxs]
+            self.A_invG = self.A_invG.tocsr() if sp.sparse.issparse(self.A_invG) else self.A_invG
+            self.A_invG_views = sparsify([self.A_invG[:, idxs_k] for idxs_k in self.cone_idxs], sparse_threshold)
+            self.issparse = any([sp.sparse.issparse(A_invG_k) for A_invG_k in self.A_invG_views])
 
         self.issymmetric = all([cone_k.get_issymmetric() for cone_k in cones])
         self.iscomplex   = any([cone_k.get_iscomplex()   for cone_k in cones])
@@ -159,3 +166,25 @@ def build_cone_idxs(n, cones):
         prev_idx += dim_k
     assert prev_idx == n
     return cone_idxs
+
+def sparsify(A, threshold, format="coo"):
+    def sparsify_single(A, threshold, format):
+        if sp.sparse.issparse(A):
+            if A.nnz / np.prod(A.shape) > threshold:
+                return A.toarray()
+            else:
+                if format == "coo":
+                    return A.tocoo()
+                elif format == "csr":
+                    return A.tocsr()
+        elif np.count_nonzero(A) / A.size < threshold:
+            if format == "coo":
+                return sp.sparse.coo_matrix(A)
+            elif format == "csr":
+                return sp.sparse.csr_matrix(A)
+        return A
+
+    if isinstance(A, list):
+        return [sparsify_single(A_k, threshold, format) for A_k in A]
+    else:
+        return sparsify_single(A, threshold, format)

@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 import qics._utils.linalg as lin
 import qics._utils.gradient as grad
 from qics.cones.base import Cone
@@ -307,13 +308,14 @@ class QuantKeyDist(Cone):
             lhs[:, 1:] = self.Work1.reshape((p, -1)).view(dtype=np.float64)
             
             # Multiply A (H A')
-            return lhs @ A.T
+            return lin.dense_dot_x(lhs, A.T)
 
         else:      
-            vec = self.At - self.DPhi_vec.T @ self.Ax_vec.T
+            vec = self.At - lin.dense_dot_x(self.DPhi_vec.T, self.Ax_vec.T)
             vec *= self.zi
             
-            out = self.Ax_vec @ self.hess @ self.Ax_vec.T
+            temp = lin.dense_dot_x(self.hess, self.Ax_vec.T)
+            out  = lin.dense_dot_x(temp.T, self.Ax_vec.T)
             out += np.outer(vec, vec)
             return out
 
@@ -468,7 +470,7 @@ class QuantKeyDist(Cone):
             lhs[:, 0] = outt
 
             # Multiply A (H A')
-            return lhs @ A.T
+            return lin.dense_dot_x(lhs, A.T)
 
         else:
         
@@ -489,7 +491,7 @@ class QuantKeyDist(Cone):
             lhst += (lhsX.T @ self.DPhi_vec).ravel()
             
             # Multiply A (H A')
-            return np.outer(lhst, self.At) + lhsX.T @ self.Ax_vec.T
+            return np.outer(lhst, self.At) + lin.dense_dot_x(lhsX.T, self.Ax_vec.T)
 
     def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
@@ -543,9 +545,12 @@ class QuantKeyDist(Cone):
         assert not self.congr_aux_updated
 
         p = A.shape[0]
-        self.At = A[:, 0]
-        
+
         if self.G_is_Id:
+            if sp.sparse.issparse(A):
+                A = A.toarray()
+
+            self.At = A[:, 0]
             Ax = np.ascontiguousarray(A[:, 1:])
 
             if self.iscomplex:
@@ -562,7 +567,8 @@ class QuantKeyDist(Cone):
             self.work2 = np.empty((p, self.n, self.n), dtype=self.dtype)
             self.work3 = np.empty((p, self.n, self.n), dtype=self.dtype)
         else:
-            self.Ax_vec = A[:, 1 + self.triu_idxs] * self.scale
+            self.At = A[:, 0].toarray().flatten() if sp.sparse.issparse(A) else A[:, 0]
+            self.Ax_vec = lin.scale_axis(A[:, 1 + self.triu_idxs], scale_rows=self.scale)
 
             self.work0 = np.zeros_like(self.Ax_vec)
             self.work1 = np.zeros_like(self.Ax_vec)

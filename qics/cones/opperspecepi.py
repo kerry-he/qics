@@ -275,7 +275,8 @@ class OpPerspecEpi(Cone):
         p = A.shape[0]
 
         # Compute Axy M Axy'
-        out = self.A_compact @ self.hess @ self.A_compact.T
+        temp = lin.dense_dot_x(self.hess, self.A_compact.T)
+        out  = lin.dense_dot_x(temp.T, self.A_compact.T).T
 
         # Compute L^-T At L^-1
         lin.congr_multi(self.work3, self.Z_chol_inv, self.At, work=self.work1)
@@ -392,7 +393,7 @@ class OpPerspecEpi(Cone):
         sol = lin.cho_solve(self.hess_fact, self.work9)
 
         # Multiply Axy (H A')xy
-        out = self.A_compact @ sol
+        out = lin.dense_dot_x(sol.T, self.A_compact.T).T
 
         # ====================================================================
         # Inverse Hessian products with respect to Z
@@ -529,6 +530,16 @@ class OpPerspecEpi(Cone):
 
         p = A.shape[0]
 
+        self.Ax_compact = lin.scale_axis(A[:, self.idx_X][:, self.triu_idxs], scale_cols=self.scale)
+        self.Ay_compact = lin.scale_axis(A[:, self.idx_Y][:, self.triu_idxs], scale_cols=self.scale)
+        if sp.sparse.issparse(A):
+            self.A_compact = sp.sparse.hstack((self.Ax_compact, self.Ay_compact), format='coo')
+        else:
+            self.A_compact = np.hstack((self.Ax_compact, self.Ay_compact))
+
+        if sp.sparse.issparse(A):
+            A = A.toarray()
+
         self.At_vec = np.ascontiguousarray(A[:, self.idx_T])
         self.Ax_vec = np.ascontiguousarray(A[:, self.idx_X])
         self.Ay_vec = np.ascontiguousarray(A[:, self.idx_Y])
@@ -541,14 +552,6 @@ class OpPerspecEpi(Cone):
             self.At = np.array([At_k.reshape((self.n, self.n)) for At_k in self.At_vec])
             self.Ax = np.array([Ax_k.reshape((self.n, self.n)) for Ax_k in self.Ax_vec])
             self.Ay = np.array([Ay_k.reshape((self.n, self.n)) for Ay_k in self.Ay_vec])
-
-        self.Ax_compact = self.Ax_vec[:, self.triu_idxs]
-        self.Ay_compact = self.Ay_vec[:, self.triu_idxs]
-
-        self.Ax_compact *= self.scale
-        self.Ay_compact *= self.scale
-
-        self.A_compact = np.hstack((self.Ax_compact, self.Ay_compact))
 
         self.work0  = np.empty_like(self.At)
         self.work1  = np.empty_like(self.At)

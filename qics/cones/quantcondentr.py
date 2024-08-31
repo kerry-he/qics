@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 import qics._utils.linalg as lin
 import qics._utils.gradient as grad
 from qics.quantum import p_tr, p_tr_multi, i_kr, i_kr_multi
@@ -214,7 +215,7 @@ class QuantCondEntr(Cone):
         lhs[:, 1:] = self.Work1.reshape((p, -1)).view(dtype=np.float64)
         
         # Multiply A (H A')
-        return lhs @ A.T
+        return lin.dense_dot_x(lhs, A.T)
 
     def invhess_prod_ip(self, out, H):
         assert self.grad_updated
@@ -332,7 +333,7 @@ class QuantCondEntr(Cone):
         lhs[:, 0] = outt
 
         # Multiply A (H A')
-        return lhs @ A.T
+        return lin.dense_dot_x(lhs, A.T)
 
     def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
@@ -377,6 +378,9 @@ class QuantCondEntr(Cone):
     # ========================================================================
     def congr_aux(self, A):
         assert not self.congr_aux_updated
+
+        if sp.sparse.issparse(A):
+            A = A.toarray()
 
         p = A.shape[0]
 

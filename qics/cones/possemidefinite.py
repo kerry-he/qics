@@ -340,6 +340,8 @@ class PosSemidefinite(SymCone):
         assert not self.congr_aux_updated
 
         if sp.sparse.issparse(A):
+            A = A.tocsr()
+
             # Split A into sparse and dense groups
             A_nnz = A.getnnz(1)
             self.A_sp_idxs = np.where((A_nnz > 0) & (A_nnz < self.n))[0]
