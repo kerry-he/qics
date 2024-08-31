@@ -387,8 +387,9 @@ def read_cbf(filename):
     f = open(filename, "r")
     cones = []
     offset = 0.0
+    lookup = {"qce" : [], "qkd" : []}
 
-    def _read_cones(cone_type, cone_dim):
+    def _read_cones(cone_type, cone_dim, lookup):
         if cone_type == "L+":
             return qics.cones.NonNegOrthant(cone_dim)
         elif cone_type == "Q":
@@ -418,10 +419,16 @@ def read_cbf(filename):
         elif cone_type == "HVECQRE":
             n = mat_dim((cone_dim - 1) // 2, iscomplex=True, compact=True)
             return qics.cones.QuantRelEntr(n, iscomplex=True)
-        elif cone_type == "SVECQCE":
-            pass
-        elif cone_type == "HVECQCE":
-            pass
+        elif "SVECQCE" in cone_type:
+            lookup_id = int(cone_type[1])
+            dims = lookup["qce"][lookup_id][0]
+            sys  = lookup["qce"][lookup_id][1]
+            return qics.cones.QuantCondEntr(dims, sys)
+        elif "HVECQCE" in cone_type:
+            lookup_id = int(cone_type[1])
+            dims = lookup["qce"][lookup_id][0]
+            sys  = lookup["qce"][lookup_id][1]
+            return qics.cones.QuantCondEntr(dims, sys, iscomplex=True)
         elif cone_type == "SVECQKD":
             pass
         elif cone_type == "HVECQKD":
@@ -462,6 +469,16 @@ def read_cbf(filename):
                 objsense = -1
             else:
                 raise Exception("Invalid OBJSENSE read from .cbf file (must be MIN or MAX).")
+            
+        if keyword == "QCECONES":
+            line = f.readline().strip()
+            (ncones, totalparam) = [int(i) for i in line.strip().split(' ')]
+            for i in range(ncones):
+                nparam = int(f.readline().strip())
+                line = f.readline()
+                dims_k = [int(i) for i in line.strip().split(' ')]
+                sys_k  = int(f.readline().strip())
+                lookup["qce"] += [(dims_k, sys_k)]
         
         if keyword == "VAR":
             # Number and domain of variables
@@ -477,7 +494,7 @@ def read_cbf(filename):
                     assert nx == cone_dim
                     use_G = True
                 else:
-                    cones += [_read_cones(cone_type, cone_dim)]
+                    cones += [_read_cones(cone_type, cone_dim, lookup)]
                     use_G = False
                 
         if keyword == "CON":
@@ -493,7 +510,7 @@ def read_cbf(filename):
                 if cone_type == "L=":
                     A_idxs = np.arange(total_cone_dim, total_cone_dim+cone_dim)
                 else:
-                    cones += [_read_cones(cone_type, cone_dim)]
+                    cones += [_read_cones(cone_type, cone_dim, lookup)]
                 total_cone_dim += cone_dim
 
         ########################
@@ -601,6 +618,7 @@ def write_cbf(model, filename):
     # Constraints
     q = 0
     cones_string = ""
+    lookup = {"qce" : [], "hqkd" : [], "sqkd" : []}
     for cone_k in cones:
         if isinstance(cone_k, qics.cones.NonNegOrthant):
             (cone_name, cone_size) = ("L+", cone_k.n)
@@ -627,14 +645,16 @@ def write_cbf(model, filename):
                 (cone_name, cone_size) = ("SVECQRE", 1+cone_k.n*(cone_k.n+1))
         if isinstance(cone_k, qics.cones.QuantCondEntr):
             if cone_k.get_iscomplex():
-                (cone_name, cone_size) = ("HVECQCE", 1+cone_k.n*cone_k.n)
+                (cone_name, cone_size) = ("@" + str(len(lookup["qce"])) + ":HVECQCE", 1+cone_k.N*cone_k.N)
             else:
-                (cone_name, cone_size) = ("SVECQCE", 1+cone_k.n*(cone_k.n+1)//2)
+                (cone_name, cone_size) = ("@" + str(len(lookup["qce"])) + ":SVECQCE", 1+cone_k.N*(cone_k.N+1)//2)
+            lookup["qce"] += [(cone_k.dims, cone_k.sys)]
         if isinstance(cone_k, qics.cones.QuantKeyDist):
             if cone_k.get_iscomplex():
-                (cone_name, cone_size) = ("HVECQKD", 1+cone_k.n*cone_k.n)
+                lookup["qce"] += [(cone_k.dims, cone_k.sys)]
+                (cone_name, cone_size) = ("@" + str(len(lookup["hqkd"])) + ":HVECQKD", 1+cone_k.n*cone_k.n)
             else:
-                (cone_name, cone_size) = ("SVECQKD", 1+cone_k.n*(cone_k.n+1)//2)
+                (cone_name, cone_size) = ("@" + str(len(lookup["sqkd"])) + ":SVECQKD", 1+cone_k.n*(cone_k.n+1)//2)
         if isinstance(cone_k, qics.cones.OpPerspecTr):
             if cone_k.get_iscomplex():
                 (cone_name, cone_size) = ("HVECOPT", 1+2*cone_k.n*cone_k.n)
@@ -648,6 +668,16 @@ def write_cbf(model, filename):
 
         q += cone_size
         cones_string += cone_name + " " + str(cone_size) + "\n"
+
+    # Lookup table
+    if len(lookup["qce"]) > 0:
+        f.write("QCECONES" + "\n")
+        f.write(str(len(lookup["qce"])) + " " + str(2*len(lookup["qce"])) + "\n")
+        for (k, qce_k) in enumerate(lookup["qce"]):
+            f.write(str(2) + "\n")
+            f.write(" ".join(str(ni) for ni in qce_k[0]) + "\n")
+            f.write(str(qce_k[1]) + "\n")
+    f.write("\n")
 
     if model.use_G:
         f.write("VAR" + "\n")
