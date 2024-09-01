@@ -1,14 +1,12 @@
 clear; close all; clc;
 
-file_name = "test.cbf";
+file_name = "complex_to_real/qkd_dmcv_04_60_00_35_fr.cbf";
 
 % Read data from file
 f = fopen(file_name, 'r');
 k = 1;
 use_G = false;
 offset = 0.0;
-
-seye(2)
 
 tline = fgetl(f);
 while ischar(tline)
@@ -36,6 +34,7 @@ while ischar(tline)
         line = split(fgetl(f), ' ');
         nx = str2double(line{1});
         lines = str2double(line{2});
+        total_dim = 1;
 
         for i = 1:lines
             line = split(fgetl(f), ' ');
@@ -49,22 +48,37 @@ while ischar(tline)
             elseif strcmp(cone, "L+")
                 cons{k, 1}  = 'LP';
                 cons{k, 2}  = [dim];
-                A_DDS{k, 1} = eye(dim);
+                A_DDS{k, 1} = zeros(dim, nx);
+                A_DDS{k, 1}(:, total_dim:total_dim+dim-1) = eye(dim);
                 b_DDS{k, 1} = zeros(dim, 1);
                 k = k + 1;
             elseif strcmp(cone, "SVECPSD")
                 n           = div(sqrt(1 + 8 * dim), 2);        
                 cons{k, 1}  = 'SDP';
                 cons{k, 2}  = [n];
-                A_DDS{k, 1} = seye(n);
+                A_DDS{k, 1} = zeros(n*n, nx);
+                A_DDS{k, 1}(:, total_dim:total_dim+dim-1) = seye(n);
                 b_DDS{k, 1} = zeros(n*n, 1);
+                k = k + 1;
+            elseif strcmp(cone, "SVECQE")
+                vn          = dim - 2;
+                n           = div(sqrt(1 + 8 * vn), 2);        
+                cons{k, 1}  = 'QE';
+                cons{k, 2}  = [n];
+                A_DDS{k, 1} = zeros(1 + n*n, nx);
+                A_DDS{k, 1}(:, total_dim:total_dim+dim-1) = [
+                                1,   zeros(1, vn)
+                    zeros(n*n, 1),        seye(n)
+                ];
+                b_DDS{k, 1} = zeros(1 + 2*n*n, 1);
                 k = k + 1;
             elseif strcmp(cone, "SVECQRE")
                 vn          = (dim - 1) / 2;
                 n           = div(sqrt(1 + 8 * vn), 2);        
                 cons{k, 1}  = 'QRE';
                 cons{k, 2}  = [n];
-                A_DDS{k, 1} = [
+                A_DDS{k, 1} = zeros(1 + 2*n*n, nx);
+                A_DDS{k, 1}(:, total_dim:total_dim+dim-1) = [
                                 1,   zeros(1, vn),   zeros(1, vn);
                     zeros(n*n, 1),        seye(n), zeros(n*n, vn);
                     zeros(n*n, 1), zeros(n*n, vn),        seye(n);
@@ -72,6 +86,7 @@ while ischar(tline)
                 b_DDS{k, 1} = zeros(1 + 2*n*n, 1);
                 k = k + 1;
             end
+            total_dim = total_dim + dim;
         end
     end
 
@@ -96,6 +111,12 @@ while ischar(tline)
             elseif strcmp(cone, "SVECPSD")
                 n           = div(sqrt(1 + 8 * dim), 2);        
                 cons{k, 1}  = 'SDP';
+                cons{k, 2}  = [n];
+                k = k + 1;
+            elseif strcmp(cone, "SVECQE")
+                vn          = dim - 2;
+                n           = div(sqrt(1 + 8 * vn), 2);        
+                cons{k, 1}  = 'QE';
                 cons{k, 2}  = [n];
                 k = k + 1;
             elseif strcmp(cone, "SVECQRE")
@@ -160,25 +181,33 @@ if use_G
     for i = 1:k-1
         if strcmp(cons{i, 1}, "EQ")
             dim = cons{i, 2};
-            A_DDS{i, 1} = -A(total_dim:total_dim+dim-1, :);
+            A_DDS{i, 1} = A(total_dim:total_dim+dim-1, :);
             b_DDS{i, 1} = b(total_dim:total_dim+dim-1, :);
         elseif strcmp(cons{i, 1}, "LP")
             dim = cons{i, 2};
-            A_DDS{i, 1} = -A(total_dim:total_dim+dim-1, :);
-            b_DDS{i, 1} = b(total_dim:total_dim+dim-1, :);
+            A_DDS{i, 1} =  A(total_dim:total_dim+dim-1, :);
+            b_DDS{i, 1} = -b(total_dim:total_dim+dim-1, :);
         elseif strcmp(cons{i, 1}, "SDP")
             n = cons{i, 2};
             dim = n * (n + 1) / 2;
-            A_DDS{i, 1} = -expand_vec(A(total_dim:total_dim+dim-1, :));
-            b_DDS{i, 1} = expand_vec(b(total_dim:total_dim+dim*1, :));
+            A_DDS{i, 1} =  expand_vec(A(total_dim:total_dim+dim-1, :));
+            b_DDS{i, 1} = -expand_vec(b(total_dim:total_dim+dim-1, :));
+        elseif strcmp(cons{i, 1}, "QE")
+            n = cons{i, 2};
+            vn = n * (n + 1) / 2;
+            dim = 2 + vn;
+            A_DDS{i, 1} =  [          A(total_dim, :);
+                           expand_vec(A(total_dim+2 : total_dim+dim-1, :))];
+            b_DDS{i, 1} = -[          b(total_dim);
+                           expand_vec(b(total_dim+2 : total_dim+dim-1))];
         elseif strcmp(cons{i, 1}, "QRE")
             n = cons{i, 2};
             vn = n * (n + 1) / 2;
             dim = 1 + 2*vn;
-            A_DDS{i, 1} = -[          A(total_dim, :);
+            A_DDS{i, 1} =  [          A(total_dim, :);
                            expand_vec(A(total_dim+1    : total_dim+vn, :));
                            expand_vec(A(total_dim+vn+1 : total_dim+dim-1, :))];
-            b_DDS{i, 1} =  [          b(total_dim);
+            b_DDS{i, 1} = -[          b(total_dim);
                            expand_vec(b(total_dim+1    : total_dim+vn));
                            expand_vec(b(total_dim+vn+1 : total_dim+dim-1))];
         end
