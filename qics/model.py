@@ -65,7 +65,7 @@ class Model():
         self.h = h.copy() if (h is not None) else  np.zeros((self.n, 1))
         self.cones = cones
 
-        self.use_G = (G is not None)
+        self.use_G = (G is not None) and (self.n != self.q or (np.linalg.norm(np.eye(self.n) + self.G) < 1e-10))
         self.use_A = (A is not None) and (A.size > 0)
 
         self.A = sparsify(self.A, sparse_threshold, 'csr')
@@ -189,3 +189,83 @@ def sparsify(A, threshold, format="coo"):
         return [sparsify_single(A_k, threshold, format) for A_k in A]
     else:
         return sparsify_single(A, threshold, format)
+    
+def complex_to_real(model):
+
+    if not model.iscomplex:
+        return model
+
+    from qics.vectorize import vec_to_mat, mat_to_vec
+
+    def _c2r_matrix(G, model, factor=1.0):
+        # Loop through columns
+        Gc = []
+        for i in range(G.shape[1]):
+            # Loop through cones
+            Gc_i = []
+            for (j, cone_j) in enumerate(model.cones):
+                G_ij = G[model.cone_idxs[j], [i]]
+                # Loop through subvectors (if necessary)
+                if isinstance(cone_j.dim, list):
+                    Gc_ij = []
+                    idxs = np.insert(np.cumsum(cone_j.dim), 0, 0)
+                    for k in range(len(cone_j.dim)):
+                        Gc_ijk = G_ij[idxs[k]:idxs[k+1]]
+                        if cone_j.type[k] == "h":
+                            Gc_ijk_mtx = vec_to_mat(Gc_ijk, iscomplex=True)
+                            Gc_ijk_mtx_real = np.block([
+                                [Gc_ijk_mtx.real, -Gc_ijk_mtx.imag],
+                                [Gc_ijk_mtx.imag,  Gc_ijk_mtx.real]
+                            ])
+                            Gc_ijk = mat_to_vec(Gc_ijk_mtx_real)
+                        Gc_ij += [Gc_ijk] 
+
+                    Gc_ij = np.vstack(Gc_ij)
+
+                else:
+                    Gc_ij = G_ij
+                    if cone_j.type == "h":
+                        Gc_ij_mtx = vec_to_mat(Gc_ij, iscomplex=True)
+                        Gc_ij_mtx_real = np.block([
+                            [Gc_ij_mtx.real, -Gc_ij_mtx.imag],
+                            [Gc_ij_mtx.imag,  Gc_ij_mtx.real]
+                        ])
+                        Gc_ij = mat_to_vec(Gc_ij_mtx_real)
+                
+                Gc_i += [Gc_ij]
+            Gc += [np.vstack(Gc_i)]
+        Gc = np.hstack(Gc)
+
+        return Gc
+    
+    cones = []
+    for cone_k in model.cones:
+        if isinstance(cone_k, qics.cones.NonNegOrthant):
+            cones += [qics.cones.NonNegOrthant(cone_k.n)]
+        if isinstance(cone_k, qics.cones.PosSemidefinite):
+            if cone_k.get_iscomplex():
+                cones += [qics.cones.PosSemidefinite(2*cone_k.n)]
+            else:
+                cones += [qics.cones.PosSemidefinite(cone_k.n)]
+        if isinstance(cone_k, qics.cones.QuantEntr):
+            if cone_k.get_iscomplex():
+                cones += [qics.cones.QuantEntr(2*cone_k.n)]
+            else:
+                cones += [qics.cones.QuantEntr(cone_k.n)]
+        if isinstance(cone_k, qics.cones.QuantRelEntr):
+            if cone_k.get_iscomplex():
+                cones += [qics.cones.QuantRelEntr(2*cone_k.n)]
+            else:
+                cones += [qics.cones.QuantRelEntr(cone_k.n)]
+
+    if model.use_G:
+        # Need to split A into [-G; -A] and b into [-h; -b]
+        # and uncompact G, h
+        G = _c2r_matrix(model.G_raw, model)
+        h = _c2r_matrix(model.h_raw, model)
+        return Model(c=model.c_raw/2, A=model.A_raw, b=model.b_raw, G=G, h=h, cones=cones, offset=model.offset)
+    else:
+        # No G, just need to uncompact c and A
+        c = _c2r_matrix(model.c_raw, model, factor=0.5)
+        A = _c2r_matrix(model.A_raw.T, model, factor=0.5).T
+        return Model(c=c, A=A, b=model.b_raw, cones=cones, offset=model.offset)

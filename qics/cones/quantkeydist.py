@@ -51,46 +51,52 @@ class QuantKeyDist(Cone):
         Whether the matrix is symmetric :math:`X \\in \\mathbb{S}^n` (False) or Hermitian :math:`X \\in \\mathbb{H}^n` (True). Default is False.
     """    
     def __init__(self, G_info, Z_info, iscomplex=False):
-
+        
+        # Process G_info
         if isinstance(G_info, int):
-            # Corresponds to scenario when G(X)=X
-            # Can use simpler inverse Hessian oracles
-            self.G_is_Id = True
-
-            self.N = G_info
-            self.r = Z_info if isinstance(Z_info, int) else len(Z_info)
-            self.n = self.N // self.r
-            if isinstance(Z_info, int):
-                self.Z_idxs = [np.arange(i*self.n, (i+1)*self.n) for i in range(Z_info)]
-            else:
-                self.Z_idxs = [np.where(Z)[0] for Z in Z_info]
-            
-            self.K_list_blk = [[np.eye(self.N)]]
+            self.n          = G_info                    # Input dimension
+            self.N          = G_info                    # Output dimension
+            self.K_list_raw = [[np.eye(self.N)]]
+            self.G_is_Id    = True
         else:
+            self.n          = G_info[0].shape[1]
+            self.N          = G_info[0].shape[0]
+            self.K_list_raw = G_info
             self.G_is_Id = False
-            self.N = G_info[0].shape[1]
-            self.n = self.N
-
-            self.K_list_blk  = [facial_reduction(G_info)]
+            if G_info[0].shape[0] == G_info[0].shape[1]:
+                if np.linalg.norm(G_info[0] - np.eye(G_info[0].shape[0])) < 1e-10:
+                    self.G_is_Id = True
+        
+        # Process Z_info
+        if isinstance(Z_info, int):
+            self.r = Z_info
+            self.m = self.N // self.r
+            assert self.m * Z_info == self.N
+            self.Z_list_raw = [np.zeros(self.N, self.N) for _ in range(self.r)]
+            for k in range(self.r):
+                range_k = np.arange(k*self.n, (k+1)*self.n)
+                self.Z_list_raw[k][range_k, range_k] = 1.
+            self.Z_idxs = [np.arange(i*self.n, (i+1)*self.n) for i in range(self.r)]
+        else:
+            self.r = len(Z_info)
+            self.m = self.N // self.r
+            self.Z_list_raw = Z_info
+            self.Z_idxs = [np.where(Z)[0] for Z in Z_info]
 
         # Dimension properties
-        self.nu = 1 + self.N            # Barrier parameter
+        self.nu = 1 + self.n            # Barrier parameter
         self.iscomplex = iscomplex      # Is the problem complex-valued 
         
         self.vn = self.n*self.n if iscomplex else self.n*(self.n+1)//2
-        self.vN = self.N*self.N if iscomplex else self.N*(self.N+1)//2      # Compact dimension of system
+        self.vm = self.m*self.m if iscomplex else self.m*(self.m+1)//2      # Compact dimension of system
 
-        self.dim   = [1, self.N*self.N] if (not iscomplex) else [1, 2*self.N*self.N]
+        self.dim   = [1, self.n*self.n] if (not iscomplex) else [1, 2*self.n*self.n]
         self.type  = ['r', 's']         if (not iscomplex) else ['r', 'h']
         self.dtype = np.float64         if (not iscomplex) else np.complex128       
 
-        # Always block the ZK operator as Z maps to block matrices
-        if isinstance(Z_info, int):
-            m = self.K_list_blk[0][0].shape[0] // Z_info
-            assert m * Z_info == self.K_list_blk[0][0].shape[0]
-            self.ZK_list_blk = [facial_reduction([K[i*m : (i+1)*m, :] for K in self.K_list_blk[0]]) for i in range(Z_info)]
-        else:
-            self.ZK_list_blk = [facial_reduction([K[np.where(Z)[0], :] for K in self.K_list_blk[0]]) for Z in Z_info]
+        # Facial reduction
+        self.K_list_blk  = [facial_reduction(self.K_list_raw)]
+        self.ZK_list_blk = [facial_reduction([K[Z_idxs_k, :] for K in self.K_list_raw]) for Z_idxs_k in self.Z_idxs]
 
         self.Nk  = [K_list[0].shape[0] for K_list in self.K_list_blk]
         self.Nzk = [K_list[0].shape[0] for K_list in self.ZK_list_blk]
@@ -104,7 +110,10 @@ class QuantKeyDist(Cone):
         self.congr_aux_updated   = False
         self.invhess_aux_aux_updated = False
 
-        self.precompute_mat_vec()     
+        if self.G_is_Id:
+            self.precompute_mat_vec(self.m)
+        else:
+            self.precompute_mat_vec()
 
         return
 
@@ -112,18 +121,19 @@ class QuantKeyDist(Cone):
         return self.iscomplex
 
     def get_init_point(self, out):
-        KK_blk   = [apply_kraus(np.eye(self.N), K_list)  for K_list  in self.K_list_blk]
-        ZKKZ_blk = [apply_kraus(np.eye(self.N), ZK_list) for ZK_list in self.ZK_list_blk]
+        KK_blk   = [apply_kraus(np.eye(self.n), K_list)  for K_list  in self.K_list_blk]
+        ZKKZ_blk = [apply_kraus(np.eye(self.n), ZK_list) for ZK_list in self.ZK_list_blk]
 
         from qics.quantum import quant_entropy
         entr_KK   = sum([quant_entropy(KK)   for KK   in KK_blk])
         entr_ZKKZ = sum([quant_entropy(ZKKZ) for ZKKZ in ZKKZ_blk])
 
-        t0 = 1. + (-entr_KK + entr_ZKKZ)
+        f0 = -entr_KK + entr_ZKKZ
+        t0 = f0/2 + np.sqrt(1 + f0*f0/4)
 
         point = [
             np.array([[t0]]), 
-            np.eye(self.N, dtype=self.dtype)
+            np.eye(self.n, dtype=self.dtype)
         ]
 
         self.set_point(point, point)
@@ -334,25 +344,25 @@ class QuantKeyDist(Cone):
             (Ht, Hx) = H
             Wx = Hx + Ht * self.DPhi
 
-            work = np.zeros((self.r*self.vn))
+            work = np.zeros((self.r*self.vm))
 
             # Apply D2S(X)^-1 = (Ux kron Ux) log^[1](Dx) (Ux' kron Ux')
             UxWxUx = self.Ux.conj().T @ Wx @ self.Ux
             Hxx_inv_x = self.Ux @ (self.D1x_comb_inv * UxWxUx) @ self.Ux.conj().T
             for (k, Z_idxs_k) in enumerate(self.Z_idxs):
                 temp = Hxx_inv_x[np.ix_(Z_idxs_k, Z_idxs_k)]
-                work[k*self.vn:(k+1)*self.vn] = temp.view(dtype=np.float64).reshape(-1)[self.triu_idxs] * self.scale
+                work[k*self.vm:(k+1)*self.vm] = temp.view(dtype=np.float64).reshape(-1)[self.triu_idxs] * self.scale
             work *= -1
 
             work = lin.cho_solve(self.schur_fact, work)
 
-            Work3 = np.zeros((self.N, self.N), dtype=self.dtype)
+            Work3 = np.zeros((self.n, self.n), dtype=self.dtype)
             for (k, Z_idxs_k) in enumerate(self.Z_idxs):
-                work_k = work[k*self.vn:(k+1)*self.vn]
+                work_k = work[k*self.vm:(k+1)*self.vm]
                 work_k[self.diag_idxs] *= 0.5
                 work_k /= self.scale
 
-                work2_k = np.zeros((self.n, self.n), dtype=self.dtype)
+                work2_k = np.zeros((self.m, self.m), dtype=self.dtype)
                 work2_k.view(dtype=np.float64).reshape(-1)[self.triu_idxs] = work_k
                 Work3[np.ix_(Z_idxs_k, Z_idxs_k)] = work2_k
             Work3 += Work3.conj().T
@@ -420,7 +430,7 @@ class QuantKeyDist(Cone):
             p = A.shape[0]
             lhs = np.zeros((p, sum(self.dim)))
 
-            work = np.zeros((self.r*self.vn, p))
+            work = np.zeros((self.r*self.vm, p))
 
             # ====================================================================
             # Inverse Hessian products with respect to X
@@ -436,7 +446,7 @@ class QuantKeyDist(Cone):
             # Apply PTr
             for (k, Z_idxs_k) in enumerate(self.Z_idxs):
                 temp = self.Work0[np.ix_(np.arange(p), Z_idxs_k, Z_idxs_k)]
-                work[k*self.vn:(k+1)*self.vn] = (temp.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs] * self.scale).T
+                work[k*self.vm:(k+1)*self.vm] = (temp.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs] * self.scale).T
             work *= -1
 
             # Solve linear system N \ ( ... )
@@ -444,11 +454,11 @@ class QuantKeyDist(Cone):
             # Expand truncated real vectors back into matrices
             self.Work1.fill(0.)
             for (k, Z_idxs_k) in enumerate(self.Z_idxs):
-                work_k = work[k*self.vn:(k+1)*self.vn]
+                work_k = work[k*self.vm:(k+1)*self.vm]
                 work_k[self.diag_idxs, :] *= 0.5
                 work_k /= self.scale.reshape((-1, 1))
 
-                work2_k = np.zeros((p, self.n, self.n), dtype=self.dtype)
+                work2_k = np.zeros((p, self.m, self.m), dtype=self.dtype)
                 work2_k.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs] = work_k.T
                 self.Work1[np.ix_(np.arange(p), Z_idxs_k, Z_idxs_k)] = work2_k
             self.Work1 += self.Work1.conj().transpose((0, 2, 1))
@@ -479,7 +489,10 @@ class QuantKeyDist(Cone):
             # ====================================================================
             # Compute Wx
             np.outer(self.At, self.DPhi_vec, out=self.work1)
-            np.add(self.Ax_vec, self.work1, out=self.work0)
+            if sp.sparse.issparse(self.Ax_vec):
+                self.work0 = self.work1 + self.Ax_vec
+            else:
+                np.add(self.Ax_vec, self.work1, out=self.work0)
 
             # Solve system
             lhsX = lin.cho_solve(self.hess_fact, self.work0.T)
@@ -554,24 +567,26 @@ class QuantKeyDist(Cone):
             Ax = np.ascontiguousarray(A[:, 1:])
 
             if self.iscomplex:
-                self.Ax = np.array([Ax_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.N, self.N)) for Ax_k in Ax])
+                self.Ax = np.array([Ax_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ax_k in Ax])
             else:
-                self.Ax = np.array([Ax_k.reshape((self.N, self.N)) for Ax_k in Ax])
+                self.Ax = np.array([Ax_k.reshape((self.n, self.n)) for Ax_k in Ax])
 
             self.Work0 = np.zeros_like(self.Ax, dtype=self.dtype)
             self.Work1 = np.zeros_like(self.Ax, dtype=self.dtype)
             self.Work2 = np.zeros_like(self.Ax, dtype=self.dtype)
             self.Work3 = np.zeros_like(self.Ax, dtype=self.dtype)
 
-            self.work1 = np.empty((p, self.n, self.n), dtype=self.dtype)
-            self.work2 = np.empty((p, self.n, self.n), dtype=self.dtype)
-            self.work3 = np.empty((p, self.n, self.n), dtype=self.dtype)
+            self.work1 = np.empty((p, self.m, self.m), dtype=self.dtype)
+            self.work2 = np.empty((p, self.m, self.m), dtype=self.dtype)
+            self.work3 = np.empty((p, self.m, self.m), dtype=self.dtype)
         else:
+            if sp.sparse.issparse(A):
+                A = A.tocsr()
             self.At = A[:, 0].toarray().flatten() if sp.sparse.issparse(A) else A[:, 0]
-            self.Ax_vec = lin.scale_axis(A[:, 1 + self.triu_idxs], scale_rows=self.scale)
+            self.Ax_vec = lin.scale_axis(A[:, 1 + self.triu_idxs], scale_cols=self.scale)
 
-            self.work0 = np.zeros_like(self.Ax_vec)
-            self.work1 = np.zeros_like(self.Ax_vec)
+            self.work0 = np.zeros(self.Ax_vec.shape)
+            self.work1 = np.zeros(self.Ax_vec.shape)
 
         self.congr_aux_updated = True
 
@@ -579,16 +594,16 @@ class QuantKeyDist(Cone):
         assert not self.invhess_aux_aux_updated
 
         if self.G_is_Id:
-            self.work6 = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
-            self.work7 = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
-            self.work8 = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
+            self.work6 = np.zeros((self.vm, self.m, self.m), dtype=self.dtype)
+            self.work7 = np.zeros((self.vm, self.m, self.m), dtype=self.dtype)
+            self.work8 = np.zeros((self.vm, self.m, self.m), dtype=self.dtype)
 
             # Computational basis for symmetric/Hermitian matrices
             rt2 = np.sqrt(0.5)
-            self.E_blk = np.zeros((self.r, self.vn, self.N, self.N), dtype=self.dtype)
+            self.E_blk = np.zeros((self.r, self.vm, self.n, self.n), dtype=self.dtype)
             for (b, Z_idxs_k) in enumerate(self.Z_idxs):
                 k = 0
-                for J in range(self.n):
+                for J in range(self.m):
                     j = Z_idxs_k[J]
                     for I in range(J):
                         i = Z_idxs_k[I]
@@ -601,23 +616,23 @@ class QuantKeyDist(Cone):
                             k += 1
                     self.E_blk[b, k, j, j] = 1.
                     k += 1
-            self.E_blk = self.E_blk.reshape((-1, self.N, self.N))
+            self.E_blk = self.E_blk.reshape((-1, self.n, self.n))
 
-            self.Work6 = np.zeros((self.r*self.vn, self.N, self.N), dtype=self.dtype)
-            self.Work7 = np.zeros((self.r*self.vn, self.N, self.N), dtype=self.dtype)
-            self.Work8 = np.zeros((self.r*self.vn, self.N, self.N), dtype=self.dtype)
+            self.Work6 = np.zeros((self.r*self.vm, self.n, self.n), dtype=self.dtype)
+            self.Work7 = np.zeros((self.r*self.vm, self.n, self.n), dtype=self.dtype)
+            self.Work8 = np.zeros((self.r*self.vm, self.n, self.n), dtype=self.dtype)
         else:
-            self.work2  = [np.zeros((self.vN, self.N, nk), dtype=self.dtype) for nk in self.Nk]
-            self.work2b  = [np.zeros((self.vN, nk, self.N), dtype=self.dtype) for nk in self.Nk]
-            self.work3  = [np.zeros((self.vN, nk, nk), dtype=self.dtype) for nk in self.Nk]
-            self.work3b  = [np.zeros((self.vN, nk, nk), dtype=self.dtype) for nk in self.Nk]
-            self.work4  = [np.zeros((self.vN, self.N, nzk), dtype=self.dtype) for nzk in self.Nzk]
-            self.work4b  = [np.zeros((self.vN, nzk, self.N), dtype=self.dtype) for nzk in self.Nzk]
-            self.work5  = [np.zeros((self.vN, nzk, nzk), dtype=self.dtype) for nzk in self.Nzk]
-            self.work5b  = [np.zeros((self.vN, nzk, nzk), dtype=self.dtype) for nzk in self.Nzk]
-            self.work6  = np.zeros((self.vN, self.N, self.N), dtype=self.dtype)
-            self.work7  = np.zeros((self.vN, self.N, self.N), dtype=self.dtype)
-            self.work8  = np.zeros((self.vN, self.N, self.N), dtype=self.dtype)
+            self.work2  = [np.zeros((self.vn, self.n, nk), dtype=self.dtype) for nk in self.Nk]
+            self.work2b  = [np.zeros((self.vn, nk, self.n), dtype=self.dtype) for nk in self.Nk]
+            self.work3  = [np.zeros((self.vn, nk, nk), dtype=self.dtype) for nk in self.Nk]
+            self.work3b  = [np.zeros((self.vn, nk, nk), dtype=self.dtype) for nk in self.Nk]
+            self.work4  = [np.zeros((self.vn, self.n, nzk), dtype=self.dtype) for nzk in self.Nzk]
+            self.work4b  = [np.zeros((self.vn, nzk, self.n), dtype=self.dtype) for nzk in self.Nzk]
+            self.work5  = [np.zeros((self.vn, nzk, nzk), dtype=self.dtype) for nzk in self.Nzk]
+            self.work5b  = [np.zeros((self.vn, nzk, nzk), dtype=self.dtype) for nzk in self.Nzk]
+            self.work6  = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
+            self.work7  = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
+            self.work8  = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
 
         self.invhess_aux_aux_updated = True
 
@@ -641,7 +656,7 @@ class QuantKeyDist(Cone):
             self.D1x_comb = self.zi * self.D1kx_log_blk[0] + D1x_inv
             self.D1x_comb_inv = np.reciprocal(self.D1x_comb)
 
-            self.schur = np.zeros((self.r*self.vn, self.r*self.vn))
+            self.schur = np.zeros((self.r*self.vm, self.r*self.vm))
 
             # Get [1/z (Uy kron Uy) [log^[1](Dy)]^-1 (Uy' kron Uy')] matrix
             for (k, (U, D1_log)) in enumerate(zip(self.Uzkx_blk, self.D1zkx_log_blk)):
@@ -652,7 +667,7 @@ class QuantKeyDist(Cone):
                 # Apply (Uy kron Uy)
                 lin.congr_multi(self.work6, U, self.work8, work=self.work7)
 
-                self.schur[k*self.vn:(k+1)*self.vn, k*self.vn:(k+1)*self.vn] = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_idxs] * self.scale
+                self.schur[k*self.vm:(k+1)*self.vm, k*self.vm:(k+1)*self.vm] = self.work6.view(dtype=np.float64).reshape((self.vm, -1))[:, self.triu_idxs] * self.scale
 
             # Get [PTr (Ux kron Ux) [(1/z log + inv)^[1](Dx)]^-1  (Ux' kron Ux') PTr'] matrix
             # Begin with [(Ux' kron Ux') PTr']
@@ -661,8 +676,8 @@ class QuantKeyDist(Cone):
             lin.congr_multi(self.Work6, self.Ux, self.Work8, work=self.Work7)
             
             for (k, Z_idxs_k) in enumerate(self.Z_idxs):
-                temp = self.Work6[np.ix_(np.arange(self.r*self.vn), Z_idxs_k, Z_idxs_k)]
-                self.schur[:, k*self.vn:(k+1)*self.vn] -= temp.view(dtype=np.float64).reshape((self.r*self.vn, -1))[:, self.triu_idxs] * self.scale
+                temp = self.Work6[np.ix_(np.arange(self.r*self.vm), Z_idxs_k, Z_idxs_k)]
+                self.schur[:, k*self.vm:(k+1)*self.vm] -= temp.view(dtype=np.float64).reshape((self.r*self.vm, -1))[:, self.triu_idxs] * self.scale
 
             # Subtract to obtain N then Cholesky factor
             self.schur_fact = lin.cho_fact(self.schur)
@@ -703,7 +718,7 @@ class QuantKeyDist(Cone):
                     self.work8 -= self.work7             
 
             # Get Hessian and factorize
-            self.hess  = self.work8.view(dtype=np.float64).reshape((self.vN, -1))[:, self.triu_idxs]
+            self.hess  = self.work8.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_idxs]
             self.hess *= self.scale
             self.hess_fact = lin.cho_fact(self.hess.copy())
 

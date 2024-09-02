@@ -59,32 +59,34 @@ class Cone():
         
         return out
     
-    def precompute_mat_vec(self):
+    def precompute_mat_vec(self, n=None):
+        n  = self.n if (n is None) else n
+        vn = n*n if self.iscomplex else n*(n+1)//2
         # Indices to convert to and from compact vectors and matrices
         if self.iscomplex:
-            self.diag_idxs = np.append(0, np.cumsum([i for i in range(3, 2*self.n+1, 2)]))
-            self.triu_idxs = np.empty(self.n*self.n, dtype=int)
-            self.scale        = np.empty(self.n*self.n)
+            self.diag_idxs = np.append(0, np.cumsum([i for i in range(3, 2*n+1, 2)]))
+            self.triu_idxs = np.empty(n*n, dtype=int)
+            self.scale     = np.empty(n*n)
             k = 0
-            for j in range(self.n):
+            for j in range(n):
                 for i in range(j):
-                    self.triu_idxs[k]     = 2 * (j + i*self.n)
-                    self.triu_idxs[k + 1] = 2 * (j + i*self.n) + 1
+                    self.triu_idxs[k]     = 2 * (j + i*n)
+                    self.triu_idxs[k + 1] = 2 * (j + i*n) + 1
                     self.scale[k:k+2]        = np.sqrt(2.)
                     k += 2
-                self.triu_idxs[k] = 2 * (j + j*self.n)
+                self.triu_idxs[k] = 2 * (j + j*n)
                 self.scale[k]        = 1.
                 k += 1
         else:
-            self.diag_idxs = np.append(0, np.cumsum([i for i in range(2, self.n+1, 1)]))
-            self.triu_idxs = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
-            self.scale = np.array([1 if i==j else np.sqrt(2.) for j in range(self.n) for i in range(j + 1)])
+            self.diag_idxs = np.append(0, np.cumsum([i for i in range(2, n+1, 1)]))
+            self.triu_idxs = np.array([j + i*n for j in range(n) for i in range(j + 1)])
+            self.scale = np.array([1 if i==j else np.sqrt(2.) for j in range(n) for i in range(j + 1)])
 
         # Computational basis for symmetric/Hermitian matrices
         rt2 = np.sqrt(0.5)
-        self.E = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
+        self.E = np.zeros((vn, n, n), dtype=self.dtype)
         k = 0
-        for j in range(self.n):
+        for j in range(n):
             for i in range(j):
                 self.E[k, i, j] = rt2
                 self.E[k, j, i] = rt2

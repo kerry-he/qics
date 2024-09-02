@@ -387,8 +387,9 @@ def read_cbf(filename):
     f = open(filename, "r")
     cones = []
     offset = 0.0
+    lookup = {"qce" : [], "qkd" : []}
 
-    def _read_cones(cone_type, cone_dim):
+    def _read_cones(cone_type, cone_dim, lookup):
         if cone_type == "L+":
             return qics.cones.NonNegOrthant(cone_dim)
         elif cone_type == "Q":
@@ -418,14 +419,26 @@ def read_cbf(filename):
         elif cone_type == "HVECQRE":
             n = mat_dim((cone_dim - 1) // 2, iscomplex=True, compact=True)
             return qics.cones.QuantRelEntr(n, iscomplex=True)
-        elif cone_type == "SVECQCE":
-            pass
-        elif cone_type == "HVECQCE":
-            pass
-        elif cone_type == "SVECQKD":
-            pass
-        elif cone_type == "HVECQKD":
-            pass
+        elif "SVECQCE" in cone_type:
+            lookup_id = int(cone_type[1])
+            dims = lookup["qce"][lookup_id][0]
+            sys  = lookup["qce"][lookup_id][1]
+            return qics.cones.QuantCondEntr(dims, sys)
+        elif "HVECQCE" in cone_type:
+            lookup_id = int(cone_type[1])
+            dims = lookup["qce"][lookup_id][0]
+            sys  = lookup["qce"][lookup_id][1]
+            return qics.cones.QuantCondEntr(dims, sys, iscomplex=True)
+        elif "SVECQKD" in cone_type:
+            lookup_id = int(cone_type[1])
+            G_info = lookup["qkd"][lookup_id][0]
+            Z_info = lookup["qkd"][lookup_id][1]
+            return qics.cones.QuantKeyDist(G_info, Z_info)
+        elif "HVECQKD" in cone_type:
+            lookup_id = int(cone_type[1])
+            G_info = lookup["qkd"][lookup_id][0]
+            Z_info = lookup["qkd"][lookup_id][1]
+            return qics.cones.QuantKeyDist(G_info, Z_info, iscomplex=True)
         elif cone_type == "SVECOPT":
             pass
         elif cone_type == "HVECOPT":
@@ -462,7 +475,41 @@ def read_cbf(filename):
                 objsense = -1
             else:
                 raise Exception("Invalid OBJSENSE read from .cbf file (must be MIN or MAX).")
+            
+        if keyword == "QCECONES":
+            line = f.readline().strip()
+            (ncones, totalparam) = [int(i) for i in line.strip().split(' ')]
+            for i in range(ncones):
+                nparam = int(f.readline().strip())
+                line = f.readline()
+                dims_k = [int(i) for i in line.strip().split(' ')]
+                sys_k  = int(f.readline().strip())
+                lookup["qce"] += [(dims_k, sys_k)]
         
+        if keyword == "QKDCONES":
+            line = f.readline().strip()
+            (ncones, totalparam) = [int(i) for i in line.strip().split(' ')]
+            for k in range(ncones):
+                line = f.readline().strip()
+                (nnz_k, Klen_k, Kdim0_k, Kdim1_k, iscomplex_k) = [int(i) for i in line.strip().split(' ')]
+                dtype = np.complex128 if iscomplex_k else np.float64
+                K_list = [np.zeros((Kdim0_k, Kdim1_k), dtype=dtype) for _ in range(Klen_k)]
+                for _ in range(nnz_k):
+                    line = f.readline().strip().split(' ')
+                    if iscomplex_k:
+                        K_list[int(line[0])][int(line[1]), int(line[2])] = complex(float(line[3]), float(line[4]))
+                    else:
+                        K_list[int(line[0])][int(line[1]), int(line[2])] = float(line[3])
+
+                line = f.readline().strip()
+                (nnz_k, Zlen_k, Zdim0_k, Zdim1_k, _) = [int(i) for i in line.strip().split(' ')]
+                Z_list = [np.zeros((Zdim0_k, Zdim1_k)) for _ in range(Zlen_k)]
+                for _ in range(nnz_k):
+                    line = f.readline().strip().split(' ')
+                    Z_list[int(line[0])][int(line[1]), int(line[2])] = float(line[3])
+
+                lookup["qkd"] += [(K_list, Z_list)]
+
         if keyword == "VAR":
             # Number and domain of variables
             # i.e., variables of the form x \in K
@@ -477,7 +524,7 @@ def read_cbf(filename):
                     assert nx == cone_dim
                     use_G = True
                 else:
-                    cones += [_read_cones(cone_type, cone_dim)]
+                    cones += [_read_cones(cone_type, cone_dim, lookup)]
                     use_G = False
                 
         if keyword == "CON":
@@ -493,7 +540,7 @@ def read_cbf(filename):
                 if cone_type == "L=":
                     A_idxs = np.arange(total_cone_dim, total_cone_dim+cone_dim)
                 else:
-                    cones += [_read_cones(cone_type, cone_dim)]
+                    cones += [_read_cones(cone_type, cone_dim, lookup)]
                 total_cone_dim += cone_dim
 
         ########################
@@ -601,6 +648,7 @@ def write_cbf(model, filename):
     # Constraints
     q = 0
     cones_string = ""
+    lookup = {"qce" : [], "qkd" : []}
     for cone_k in cones:
         if isinstance(cone_k, qics.cones.NonNegOrthant):
             (cone_name, cone_size) = ("L+", cone_k.n)
@@ -627,14 +675,16 @@ def write_cbf(model, filename):
                 (cone_name, cone_size) = ("SVECQRE", 1+cone_k.n*(cone_k.n+1))
         if isinstance(cone_k, qics.cones.QuantCondEntr):
             if cone_k.get_iscomplex():
-                (cone_name, cone_size) = ("HVECQCE", 1+cone_k.n*cone_k.n)
+                (cone_name, cone_size) = ("@" + str(len(lookup["qce"])) + ":HVECQCE", 1+cone_k.N*cone_k.N)
             else:
-                (cone_name, cone_size) = ("SVECQCE", 1+cone_k.n*(cone_k.n+1)//2)
+                (cone_name, cone_size) = ("@" + str(len(lookup["qce"])) + ":SVECQCE", 1+cone_k.N*(cone_k.N+1)//2)
+            lookup["qce"] += [(cone_k.dims, cone_k.sys)]
         if isinstance(cone_k, qics.cones.QuantKeyDist):
             if cone_k.get_iscomplex():
-                (cone_name, cone_size) = ("HVECQKD", 1+cone_k.n*cone_k.n)
+                (cone_name, cone_size) = ("@" + str(len(lookup["qkd"])) + ":HVECQKD", 1+cone_k.n*cone_k.n)
             else:
-                (cone_name, cone_size) = ("SVECQKD", 1+cone_k.n*(cone_k.n+1)//2)
+                (cone_name, cone_size) = ("@" + str(len(lookup["qkd"])) + ":SVECQKD", 1+cone_k.n*(cone_k.n+1)//2)
+            lookup["qkd"] += [(cone_k.K_list_raw, cone_k.Z_list_raw)]
         if isinstance(cone_k, qics.cones.OpPerspecTr):
             if cone_k.get_iscomplex():
                 (cone_name, cone_size) = ("HVECOPT", 1+2*cone_k.n*cone_k.n)
@@ -648,6 +698,45 @@ def write_cbf(model, filename):
 
         q += cone_size
         cones_string += cone_name + " " + str(cone_size) + "\n"
+
+    # Lookup table
+    if len(lookup["qce"]) > 0:
+        f.write("QCECONES" + "\n")
+        f.write(str(len(lookup["qce"])) + " " + str(2*len(lookup["qce"])) + "\n")
+        for (k, qce_k) in enumerate(lookup["qce"]):
+            f.write(str(2) + "\n")
+            f.write(" ".join(str(ni) for ni in qce_k[0]) + "\n")
+            f.write(str(qce_k[1]) + "\n")
+    f.write("\n")
+
+    if len(lookup["qkd"]) > 0:
+        f.write("QKDCONES" + "\n")
+        total_nnz = sum([sum([np.count_nonzero(Ki) for Ki in qkd_k[0]]) + sum([np.count_nonzero(Zi) for Zi in qkd_k[1]]) for qkd_k in lookup["qkd"]])
+        f.write(str(len(lookup["qkd"])) + " " + str(total_nnz) + "\n")
+        for (k, qkd_k) in enumerate(lookup["qkd"]):
+            # Total nnz, how many Klist, and size of Klist, and if complex or not
+            totalnnz_k  = sum([np.count_nonzero(Ki) for Ki in qkd_k[0]])
+            iscomplex_k = any([np.iscomplexobj(Ki) for Ki in qkd_k[0]])
+            dtype = np.complex128 if iscomplex_k else np.float64
+            f.write(str(totalnnz_k) + " " + str(len(qkd_k[0])) + " " + str(qkd_k[0][0].shape[0]) + " " + str(qkd_k[0][0].shape[1]) + " " + str(int(iscomplex_k)) + "\n")
+            for (t, Kt) in enumerate(qkd_k[0]):
+                # Write Ki
+                Kt = sp.sparse.coo_matrix(Kt, dtype=dtype)
+                for (it, jt, vt) in zip(Kt.row, Kt.col, Kt.data):
+                    if iscomplex_k:
+                        f.write(str(t) + " " + str(it) + " " + str(jt) + " " + str(vt.real) + " " + str(vt.imag) + "\n")
+                    else:
+                        f.write(str(t) + " " + str(it) + " " + str(jt) + " " + str(vt) + "\n")
+            
+            # How many Zlist, and size of Zlist, and if complex or not
+            totalnnz_k = sum([np.count_nonzero(Zi) for Zi in qkd_k[1]])
+            f.write(str(totalnnz_k) + " " + str(len(qkd_k[1])) + " " + str(qkd_k[1][0].shape[0]) + " " + str(qkd_k[1][0].shape[1]) + " 0\n")
+            for (t, Zt) in enumerate(qkd_k[1]):
+                # Write Zi
+                Zt = sp.sparse.coo_matrix(Zt, dtype=np.float64)
+                for (it, jt, vt) in zip(Zt.row, Zt.col, Zt.data):
+                    f.write(str(t) + " " + str(it) + " " + str(jt) + " " + str(vt) + "\n")
+    f.write("\n")
 
     if model.use_G:
         f.write("VAR" + "\n")
