@@ -645,7 +645,7 @@ if __name__ == "__main__":
         #     A, b, c, K, J = sdpap.fromsdpa(folder + fname)
         #     sdpap_options = {}
         #     sdpap_options['epsilonStar'] = 1e-8
-        #     x, y, timeinfo, sdpainfo = solve_sdpap(-A,-b,-c,K,J,)
+        #     x, y, timeinfo, sdpainfo = solve_sdpap(-A,-b,-c,K,J,sdpap_options)
 
         #     with open(fout_name, 'a', newline='') as file:
         #         writer = csv.writer(file)

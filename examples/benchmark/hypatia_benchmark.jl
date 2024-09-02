@@ -1,5 +1,6 @@
 import SparseArrays
 using LinearAlgebra
+using JuMP
 
 import Hypatia
 import Hypatia.Cones
@@ -259,11 +260,17 @@ header = [
 
 for fname in fnames
     try
-        model = read_problem(folder * fname)
+        model = read_problem(folder * fname)     # CBF
         solver = Solvers.Solver{T}(verbose = true, time_limit = 3600, tol_rel_opt=1e-8, tol_feas=1e-8)
         Solvers.load(solver, model)
         Solvers.solve(solver)
         save_and_print_stats(solver, fname, csv_name)
+
+        # model = read_from_file(folder * fname)     # SDPA
+        # solver = Hypatia.Optimizer(verbose = true, time_limit = 3600)#, tol_rel_opt=1e-5, tol_feas=1e-5, tol_abs_opt=1e-8)
+        # set_optimizer(model, () -> solver)
+        # optimize!(model)
+        # save_and_print_stats(solver.solver, fname, csv_name)
     catch exception
         save_and_print_fail(exception, fname, csv_name)
     end
