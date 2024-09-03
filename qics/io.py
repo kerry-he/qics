@@ -707,7 +707,7 @@ def write_cbf(model, filename):
             f.write(str(2) + "\n")
             f.write(" ".join(str(ni) for ni in qce_k[0]) + "\n")
             f.write(str(qce_k[1]) + "\n")
-    f.write("\n")
+        f.write("\n")
 
     if len(lookup["qkd"]) > 0:
         f.write("QKDCONES" + "\n")
@@ -736,7 +736,7 @@ def write_cbf(model, filename):
                 Zt = sp.sparse.coo_matrix(Zt, dtype=np.float64)
                 for (it, jt, vt) in zip(Zt.row, Zt.col, Zt.data):
                     f.write(str(t) + " " + str(it) + " " + str(jt) + " " + str(vt) + "\n")
-    f.write("\n")
+        f.write("\n")
 
     if model.use_G:
         f.write("VAR" + "\n")
