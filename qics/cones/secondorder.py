@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 from qics.cones.base import Cone
 
 class SecondOrder(Cone):
@@ -56,7 +57,7 @@ class SecondOrder(Cone):
         assert self.feas_updated
         assert not self.grad_updated
         
-        self.z  = self.t*self.t - self.x.T @ self.x
+        self.z  = (self.t*self.t - self.x.T @ self.x)[0, 0]
         self.zi = 1 / self.z
 
         self.grad = [
@@ -211,6 +212,9 @@ class SecondOrder(Cone):
     # ========================================================================
     def congr_aux(self, A):
         assert not self.congr_aux_updated
+        
+        if sp.sparse.issparse(A):
+            A = A.tocsr()
 
         self.At = A[:, [0]]
         self.Ax = A[:, 1:]

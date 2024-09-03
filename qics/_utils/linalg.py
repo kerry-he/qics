@@ -15,7 +15,7 @@ def norm_inf(x):
     float
         Infinity norm of x.
     """    
-    return max(x.max(initial=0.0), -x.min(initial=0.0))
+    return abs(max(x.max(initial=0.0), -x.min(initial=0.0)))
 
 def inp(x, y):
     """Computes the standard inner product between two vectors.

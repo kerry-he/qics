@@ -65,7 +65,7 @@ class Model():
         self.h = h.copy() if (h is not None) else  np.zeros((self.n, 1))
         self.cones = cones
 
-        self.use_G = (G is not None) and (self.n != self.q or (np.linalg.norm(np.eye(self.n) + self.G) < 1e-10))
+        self.use_G = (G is not None) and (self.n != self.q or (np.linalg.norm(np.eye(self.n) + self.G) > 1e-10))
         self.use_A = (A is not None) and (A.size > 0)
 
         self.A = sparsify(self.A, sparse_threshold, 'csr')
@@ -169,6 +169,11 @@ def build_cone_idxs(n, cones):
 
 def sparsify(A, threshold, format="coo"):
     def sparsify_single(A, threshold, format):
+        if A.size == 0:
+            if sp.sparse.issparse(A):
+                A = A.toarray()
+            return A
+        
         if sp.sparse.issparse(A):
             if A.nnz / np.prod(A.shape) > threshold:
                 return A.toarray()
@@ -177,7 +182,7 @@ def sparsify(A, threshold, format="coo"):
                     return A.tocoo()
                 elif format == "csr":
                     return A.tocsr()
-        elif A.size > 0: 
+        else: 
             if np.count_nonzero(A) / A.size < threshold:
                 if format == "coo":
                     return sp.sparse.coo_matrix(A)
