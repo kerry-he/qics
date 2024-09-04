@@ -23,47 +23,51 @@ for n in range(2, 12):
 
     # Define objective functions
     # with variables (X, (t, Y), (s, u, Z))
-    cX = np.zeros((2*n*n, 1))
     ct = np.array([[1.]])
-    cY = np.zeros((2*N*N, 1))
     cs = np.array([[1.]])
-    cu = np.array([[0.]])
-    cZ = np.zeros((2*n*n, 1))
-    c = np.vstack((cX, ct, cY, cs, cu, cZ))
+    cX = np.zeros((n*n, 1))
+    c = np.vstack((ct, cs, cX))
 
     # Build linear constraints
+    # tr[X] = 1
+    A = np.hstack((np.zeros((1, 2)), vec.mat_to_vec(np.eye(n, dtype=np.complex128), compact=True).T))
+    b = np.array([[1.]])
+
     vn = vec.vec_dim(n, compact=True, iscomplex=True)
     vN = vec.vec_dim(N, compact=True, iscomplex=True)
-    VV = vec.lin_to_mat(lambda X : V @ X @ V.conj().T, (n, n*n), iscomplex=True)
-    trE = vec.lin_to_mat(lambda X : qu.p_tr(X, (n, n), 0), (N, n), compact=(True, True), iscomplex=True)
-    # tr[X] = 1
-    A1 = np.hstack((vec.mat_to_vec(np.eye(n, dtype=np.complex128)).T, np.zeros((1, 3 + 2*n*n + 2*N*N))))
-    b1 = np.array([[1.]])
-    # u = 1
-    A2 = np.hstack((np.zeros((1, 2 + 2*n*n + 2*N*N)), np.array([[1.]]), np.zeros((1, 2*n*n))))
-    b2 = np.array([[1.]])
-    # Y = VXV'
-    A3 = np.hstack((VV, np.zeros((vN, 1)), -vec.eye(N, iscomplex=True), np.zeros((vN, 2 + 2*n*n))))
-    b3 = np.zeros((vN, 1))
-    # Z = trE[VXV']
-    A4 = np.hstack((trE @ VV, np.zeros((vn, 3 + 2*N*N)), -vec.eye(n, iscomplex=True)))
-    b4 = np.zeros((vn, 1))
+    VV = vec.lin_to_mat(lambda X : V @ X @ V.conj().T, (n, n*n), iscomplex=True, compact=(True, False))
+    trE = vec.lin_to_mat(lambda X : qu.p_tr(X, (n, n), 0), (N, n), compact=(False, False), iscomplex=True)
 
-    A = np.vstack((A1, A2, A3, A4))
-    b = np.vstack((b1, b2, b3, b4))
+
+    G1 = np.hstack((np.array([[1., 0.]]), np.zeros((1, vn))))           # t_cond
+    G2 = np.hstack((np.zeros((2*N*N, 2)), VV))                          # X_cond
+    G3 = np.hstack((np.array([[0., 1.]]), np.zeros((1, vn))))           # t_entr
+    G4 = np.hstack((np.array([[0., 0.]]), np.zeros((1, vn))))           # y_entr
+    G5 = np.hstack((np.zeros((2*n*n, 2)), trE @ VV))                    # X_entr
+    G6 = np.hstack((np.zeros((2*n*n, 2)), vec.eye(n, iscomplex=True).T))  # X_psd
+
+    h1 = np.array([[0.]])       # t_cond  
+    h2 = np.zeros((2*N*N, 1))   # X_cond
+    h3 = np.array([[0.]])       # t_entr
+    h4 = np.array([[1.]])       # y_entr
+    h5 = np.zeros((2*n*n, 1))   # X_entr
+    h6 = np.zeros((2*n*n, 1))   # X_psd
+
+    G = -np.vstack((G1, G2, G3, G4, G5, G6))
+    h =  np.vstack((h1, h2, h3, h4, h5, h6))
 
     # Input into model and solve
     cones = [
-        qics.cones.PosSemidefinite(n, iscomplex=True),
         qics.cones.QuantCondEntr((n, n), 1, iscomplex=True), 
-        qics.cones.QuantEntr(n, iscomplex=True)
+        qics.cones.QuantEntr(n, iscomplex=True),
+        qics.cones.PosSemidefinite(n, iscomplex=True)
     ]
 
     # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones)
+    model  = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
     qics.io.write_cbf(model, "ccea_" + str(n) + ".cbf")
 
-    # solver = qics.Solver(model)
+    solver = qics.Solver(model)
 
-    # # Solve problem
-    # info = solver.solve()
+    # Solve problem
+    info = solver.solve()
