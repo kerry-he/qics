@@ -1,5 +1,4 @@
 import numpy as np
-import itertools
 
 def p_tr(mat, dims, sys):
     """Performs the partial trace on a bipartite matrix, e.g., for  
