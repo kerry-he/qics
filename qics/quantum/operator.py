@@ -1,4 +1,5 @@
 import numpy as np
+import itertools
 
 def p_tr(mat, dims, sys):
     """Performs the partial trace on a bipartite matrix, e.g., for  
@@ -20,9 +21,9 @@ def p_tr(mat, dims, sys):
     ----------
     mat : ndarray
         Input ``(n0*n1*...*nk-1, n0*n1*...*nk-1)`` matrix to perform the partial trace on.
-    dims : tuple[int]
+    dims : tuple(int)
         The dimensions ``(n0, n1, ..., nk-1)`` of the ``k`` subsystems.
-    sys : int
+    sys : int or tuple(int)
         Which of the ``k`` subsystems to trace out.
         
     Returns
@@ -33,8 +34,23 @@ def p_tr(mat, dims, sys):
         ``i`` is the system being traced out.
     """
 
-    N = np.prod(dims) // dims[sys]
-    return np.trace(mat.reshape(*dims, *dims), axis1=sys, axis2=len(dims)+sys).reshape(N, N)
+    if isinstance(sys, int):
+        sys = [sys,]
+    if isinstance(sys, tuple):
+        sys = list(sys)
+    not_sys = list(set(range(len(dims))) - set(sys))
+
+    # Sort subsystems so the ones we want to partial trace are at the front
+    reordered_dims = sys + not_sys
+    reordered_dims = reordered_dims + [k + len(dims) for k in reordered_dims]
+    
+    tr_dim = np.prod([dims[k] for k in sys], dtype=int)
+    new_dim = np.prod([dims[k] for k in not_sys], dtype=int)
+
+    temp = np.transpose(mat.reshape(*dims, *dims), reordered_dims)
+    temp = temp.reshape(tr_dim, new_dim, tr_dim, new_dim)
+
+    return np.trace(temp, axis1=0, axis2=2)
 
 def p_tr_multi(out, mat, dims, sys):
     """Performs the partial trace on a list of bipartite matrices.
@@ -50,11 +66,27 @@ def p_tr_multi(out, mat, dims, sys):
         to perform the partial trace on.
     dims : tuple[int]
         The dimensions ``(n0, n1, ..., nk)`` of the ``p`` subsystems.
-    sys : int
-        Which system to trace out.
+    sys : int or tuple(int)
+        Which systems to trace out.
     """
-    new_dims = [dim for (i, dim) in enumerate(dims) if i != sys]
-    np.trace(mat.reshape(-1, *dims, *dims), axis1=1+sys, axis2=1+len(dims)+sys, out=out.reshape(-1, *new_dims, *new_dims))
+
+    if isinstance(sys, int):
+        sys = [sys,]
+    if isinstance(sys, tuple):
+        sys = list(sys)
+    not_sys = list(set(range(len(dims))) - set(sys))
+
+    # Sort subsystems so the ones we want to partial trace are at the front
+    reordered_dims = sys + not_sys
+    reordered_dims = [0] + [k + 1 for k in reordered_dims] + [k + 1 + len(dims) for k in reordered_dims]
+    
+    tr_dim = np.prod([dims[k] for k in sys], dtype=int)
+    new_dim = np.prod([dims[k] for k in not_sys], dtype=int)
+
+    temp = np.transpose(mat.reshape(-1, *dims, *dims), reordered_dims)
+    temp = temp.reshape(-1, tr_dim, new_dim, tr_dim, new_dim)
+
+    np.trace(temp, axis1=1, axis2=3, out=out)
 
     return out
 
@@ -82,7 +114,7 @@ def i_kr(mat, dims, sys):
         ``i`` is the system being traced out.
     dim : tuple[int]
         The dimensions ``(n0, n1, ..., nk)`` of the subsystems.
-    sys : int
+    sys : int or tuple(int)
         Which system to Kroneker product should act on.
         
     Returns
@@ -91,20 +123,26 @@ def i_kr(mat, dims, sys):
         The resulting ``(n0*n1*...*nk-1, n0*n1*...*nk-1)`` matrix after performing the 
         Kronecker product.
     """
-    N = np.prod(dims)
-    new_dims = [dim for (i, dim) in enumerate(dims) if i != sys]
 
-    # To reorder systems to shift sys to the front
-    swap_idxs = list(range(2 * len(dims)))      
-    swap_idxs.insert(0, swap_idxs.pop(sys))
-    swap_idxs.insert(1, swap_idxs.pop(len(dims) + sys))
+    if isinstance(sys, int):
+        sys = [sys,]
+    if isinstance(sys, tuple):
+        sys = list(sys)
+    not_sys = list(set(range(len(dims))) - set(sys))
+
+    # Sort subsystems so the ones we want to partial trace are at the front
+    reordered_dims = sys + [k + len(dims) for k in sys] + not_sys + [k + len(dims) for k in not_sys]
+    
+    N = np.prod(dims)
+    new_dims = [dims[k] for k in not_sys] if len(not_sys) > 0 else [1]
 
     out = np.zeros((N, N), dtype=mat.dtype)
-    out_view = out.reshape(*dims, *dims)
-    out_view = np.transpose(out_view, swap_idxs)
+    out_view = np.transpose(out.reshape(*dims, *dims), reordered_dims)
 
-    r = np.arange(dims[sys])
-    out_view[r, r, ...] = mat.reshape(*new_dims, *new_dims)  
+    r = np.meshgrid(*[range(dims[k]) for k in sys])
+    r = list(np.array(r).reshape(len(sys), -1))
+    out_view[*r, *r, ...] = mat.reshape(*new_dims, *new_dims)
+
     return out
 
 def i_kr_multi(out, mat, dims, sys):
@@ -122,22 +160,32 @@ def i_kr_multi(out, mat, dims, sys):
         i is the system being traced out.
     dim : tuple[int]
         The dimensions ``(n0, n1, ..., nk)`` of the subsystems.
-    sys : int
+    sys : int or tuple(int)
         Which system to Kroneker product should act on.
     """
-    new_dims = [dim for (i, dim) in enumerate(dims) if i != sys]
 
-    # To reorder systems to shift sys to the front
-    swap_idxs = list(range(1 + 2 * len(dims)))      
-    swap_idxs.insert(1, swap_idxs.pop(1 + sys))
-    swap_idxs.insert(2, swap_idxs.pop(1 + len(dims) + sys))
+    if isinstance(sys, int):
+        sys = [sys,]
+    if isinstance(sys, tuple):
+        sys = list(sys)
+    not_sys = list(set(range(len(dims))) - set(sys))
+
+    # Sort subsystems so the ones we want to partial trace are at the front
+    reordered_dims  = [0]
+    reordered_dims += [k + 1 for k in sys]
+    reordered_dims += [k + 1 + len(dims) for k in sys]
+    reordered_dims += [k + 1 for k in not_sys]
+    reordered_dims += [k + 1 + len(dims) for k in not_sys]
+
+    N = np.prod(dims)
+    new_dims = [dims[k] for k in not_sys]
 
     out.fill(0.)
-    out_view = out.reshape(-1, *dims, *dims)
-    out_view = np.transpose(out_view, swap_idxs)
+    out_view = np.transpose(out.reshape(-1, *dims, *dims), reordered_dims)
 
-    r = np.arange(dims[sys])
-    out_view[:, r, r, ...] = mat.reshape(-1, 1, *new_dims, *new_dims)
+    r = np.meshgrid(*[range(dims[k]) for k in sys])
+    r = list(np.array(r).reshape(len(sys), -1))
+    out_view[:, *r, *r, ...] = mat.reshape(-1, 1, *new_dims, *new_dims)
 
     return out
 
