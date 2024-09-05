@@ -65,7 +65,7 @@ cones = [
 
 # Initialize model and solver objects
 model  = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones, offset=-n*np.log(eps))
-solver = qics.Solver(model, verbose=3)
+solver = qics.Solver(model)
 
 # Solve problem
 info = solver.solve()

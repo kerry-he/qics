@@ -4,6 +4,7 @@ import math
 import time
 import itertools, sys
 
+from qics import __version__
 import qics._utils.linalg as lin
 import qics._utils.vector as vec
 from qics._stepper import NonSymStepper, SymStepper, KKTSolver
@@ -47,7 +48,7 @@ class Solver():
         self, 
         model, 
         max_iter = 100, 
-        max_time = np.inf,
+        max_time = 3600,
         tol_gap = 1e-8,
         tol_feas = 1e-8,
         tol_infeas = 1e-12,
@@ -70,7 +71,7 @@ class Solver():
         self.point_best = vec.Point(model)
 
         self.small_step_tol = 0.005
-        self.consecutive_small_step_limit = 1
+        self.consecutive_small_step_limit = 2
         self.consecutive_small_steps = 0
         
         self.solution_status = None
@@ -123,14 +124,15 @@ class Solver():
         # Print header
         if self.verbose:
             print("====================================================================")
-            print("            QICS v0.0 - Quantum Information Conic Solver            ")
+            print(f"           QICS v{__version__} - Quantum Information Conic Solver           ")
             print("              by K. He, J. Saunderson, H. Fawzi (2024)              ")
             print("====================================================================")
             print("Problem summary:")                
-            print(f"        no. cones:  {len(self.model.cones):<10}",    f"              no. vars:    {self.model.n:<10}")
-            print(f"        barr. par:  {self.model.nu:<10}",            f"              no. constr:  {self.model.p:<10}")
-            print(f"        symmetric:  {self.model.issymmetric!r:<10}", f"              cone dim:    {self.model.q:<10}")
-            print(f"        complex:    {self.model.iscomplex!r:<10}")
+            print(f"        no. vars:   {self.model.n:<10}",          f"              barr. par:  {self.model.nu:<10}")
+            print(f"        no. constr: {self.model.p:<10}",          f"              symmetric:  {self.model.issymmetric!r:<10}")
+            print(f"        cone dim:   {self.model.q:<10}",          f"              complex:    {self.model.iscomplex!r:<10}")
+            print(f"        no. cones:  {len(self.model.cones):<10}", f"              sparse:     {self.model.issparse!r:<10}")
+
 
         # Setup solver
         self.setup_solver()
@@ -293,7 +295,7 @@ class Solver():
             return True
         
         # 5) Check if maximum time is exceeded
-        if time.time() - self.elapsed_time >= self.max_time:
+        if self.elapsed_time >= self.max_time:
             self.exit_status = "max_time"
             return True 
         
@@ -388,8 +390,8 @@ class Solver():
         self.z_res += s
 
         norm_x_res = lin.norm_inf(self.x_res)
-        norm_y_res = lin.norm_inf(self.x_res)
-        norm_z_res = lin.norm_inf(self.x_res)
+        norm_y_res = lin.norm_inf(self.y_res)
+        norm_z_res = lin.norm_inf(self.z_res)
 
         self.x_infeas =  norm_x_res / d_obj_tau if (d_obj_tau > 0) else np.inf
         self.y_infeas = -norm_y_res / p_obj_tau if (p_obj_tau < 0) else np.inf

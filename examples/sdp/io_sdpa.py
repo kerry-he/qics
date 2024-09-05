@@ -7,10 +7,10 @@ folder = "./problems/sdplib/"
 fnames = os.listdir(folder)
 
 for fname in fnames:
-    c, b, A, cones = qics.io.read_sdpa(folder + fname)
+    # Read file
+    model = qics.io.read_sdpa(folder + fname)
 
-    # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones)
+    # Initialize solver objects
     solver = qics.Solver(model)
 
     # Solve problem

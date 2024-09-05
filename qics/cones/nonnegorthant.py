@@ -75,7 +75,7 @@ class NonNegOrthant(SymCone):
         if sp.sparse.issparse(A):
             if self.Ax is None:
                 self.Ax = A.copy()
-            self.Ax.data = A.data * np.take(x, A.indices)
+            self.Ax.data = A.data * np.take(x, A.col)
             return self.Ax @ self.Ax.T
         else:
             Ax = x * A.T

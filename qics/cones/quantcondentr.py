@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 import qics._utils.linalg as lin
 import qics._utils.gradient as grad
 from qics.quantum import p_tr, p_tr_multi, i_kr, i_kr_multi
@@ -28,10 +29,10 @@ class QuantCondEntr(Cone):
 
     Parameters
     ----------
-    dims : tuple[int]
+    dims : tuple(int)
         List of dimensions :math:`(n_0, n_1, \\ldots, n_{k-1})` of the :math:`k` subsystems.
-    sys : int
-        Which system is being traced out by the partial trace.
+    sys : int or tuple(int)
+        Which systems are being traced out by the partial trace.
     iscomplex : bool
         Whether the matrix is symmetric :math:`X \\in \\mathbb{S}^{n_0n_1 \\ldots n_{k-1}}` 
         (False) or Hermitian :math:`X \\in \\mathbb{H}^{n_0n_1 \\ldots n_{k-1}}` (True). Default is False.
@@ -43,9 +44,14 @@ class QuantCondEntr(Cone):
         self.nu   = 1 + self.N        # Barrier parameter
         self.iscomplex = iscomplex
 
+        if isinstance(sys, int):
+            sys = [sys,]
+        if isinstance(sys, tuple):
+            sys = list(sys)
+
         self.sys = sys                  # System being traced out
-        self.n = self.N // dims[sys]    # Dimension of system after partial trace
-        self.m = dims[sys]              # Dimension of system traced out
+        self.m = np.prod([dims[k] for k in sys])     # Dimension of system traced out
+        self.n = self.N // self.m    # Dimension of system after partial trace
 
         self.vn = self.n*self.n if iscomplex else self.n*(self.n+1)//2      # Compact dimension of vectorized system being traced out
 
@@ -214,7 +220,7 @@ class QuantCondEntr(Cone):
         lhs[:, 1:] = self.Work1.reshape((p, -1)).view(dtype=np.float64)
         
         # Multiply A (H A')
-        return lhs @ A.T
+        return lin.dense_dot_x(lhs, A.T)
 
     def invhess_prod_ip(self, out, H):
         assert self.grad_updated
@@ -332,7 +338,7 @@ class QuantCondEntr(Cone):
         lhs[:, 0] = outt
 
         # Multiply A (H A')
-        return lhs @ A.T
+        return lin.dense_dot_x(lhs, A.T)
 
     def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
@@ -377,6 +383,9 @@ class QuantCondEntr(Cone):
     # ========================================================================
     def congr_aux(self, A):
         assert not self.congr_aux_updated
+
+        if sp.sparse.issparse(A):
+            A = A.toarray()
 
         p = A.shape[0]
 
@@ -452,11 +461,16 @@ class QuantCondEntr(Cone):
 
         # Get [PTr (Ux kron Ux) [(1/z log + inv)^[1](Dx)]^-1  (Ux' kron Ux') PTr'] matrix
         # Begin with [(Ux' kron Ux') PTr']
-        swap_idxs = list(range(1 + len(self.dims)))      # To reorder systems to shift sys to the front
-        swap_idxs.insert(1, swap_idxs.pop(1 + self.sys))
+
+        not_sys = list(set(range(len(self.dims))) - set(self.sys))
+        reordered_dims = self.sys + not_sys
+        reordered_dims = [0] + [k + 1 for k in reordered_dims]
+
+        # swap_idxs = list(range(1 + len(self.dims)))      # To reorder systems to shift sys to the front
+        # swap_idxs.insert(1, swap_idxs.pop(1 + self.sys))
 
         temp = self.Ux.T.reshape(self.N, *self.dims)
-        temp = np.transpose(temp, swap_idxs)
+        temp = np.transpose(temp, reordered_dims)
         temp = temp.reshape(self.N, self.m, self.n)
 
         lhs = np.copy(temp.conj().transpose(2, 0, 1))  # self.n1, self.N, self.n0

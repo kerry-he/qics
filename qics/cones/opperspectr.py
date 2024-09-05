@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 import qics._utils.linalg as lin
 import qics._utils.gradient as grad
 from qics.cones.base import Cone, get_perspective_derivatives
@@ -8,7 +9,7 @@ class OpPerspecTr(Cone):
 
     .. math::
     
-        \\mathcal{K}_{\\text{op,tr}}^g = \\text{cl}\\{ (t, X, Y) \\in \\mathbb{R} \\times \\mathbb{H}^n_+ \\times \\mathbb{H}^n_+ : t \\geq \\text{tr}[P_g(X, Y)] \\},
+        \\mathcal{K}_{\\text{op,tr}}^g = \\text{cl}\\{ (t, X, Y) \\in \\mathbb{R} \\times \\mathbb{H}^n_{++} \\times \\mathbb{H}^n_{++} : t \\geq \\text{tr}[P_g(X, Y)] \\},
         
     for an operator concave function :math:`g:[0, \\infty)\\rightarrow\\mathbb{R}`, with barrier function
 
@@ -247,7 +248,8 @@ class OpPerspecTr(Cone):
         vec = self.At - self.DPhiX_vec.T @ self.Ax_compact.T - self.DPhiY_vec.T @ self.Ay_compact.T
         vec *= self.zi
         
-        out = self.A_compact @ self.hess @ self.A_compact.T
+        temp = lin.dense_dot_x(self.hess, self.A_compact.T)
+        out  = lin.dense_dot_x(temp.T, self.A_compact.T).T
         out += np.outer(vec, vec)
         return out
     
@@ -316,7 +318,7 @@ class OpPerspecTr(Cone):
         lhst  = self.z2 * self.At.reshape(-1, 1) + lhsxy.T @ self.DPhi_vec
 
         # Multiply A (H A')
-        return self.A_compact @ lhsxy + np.outer(self.At, lhst)
+        return lin.dense_dot_x(lhsxy.T, self.A_compact.T).T + np.outer(self.At, lhst)
 
     def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
@@ -403,16 +405,22 @@ class OpPerspecTr(Cone):
     def congr_aux(self, A):
         assert not self.congr_aux_updated
 
-        self.At = A[:, 0]
-        self.Ax_vec = np.ascontiguousarray(A[:, self.idx_X])
-        self.Ay_vec = np.ascontiguousarray(A[:, self.idx_Y])
+        if sp.sparse.issparse(A):
+            A = A.tocsr()
+
+        self.At = A[:, 0].toarray().flatten() if sp.sparse.issparse(A) else A[:, 0]
+        self.Ax_vec = A[:, self.idx_X]
+        self.Ay_vec = A[:, self.idx_Y]
 
         self.Ax_compact = self.Ax_vec[:, self.triu_idxs]
         self.Ay_compact = self.Ay_vec[:, self.triu_idxs]
 
-        self.Ax_compact *= self.scale
-        self.Ay_compact *= self.scale
-        self.A_compact = np.hstack((self.Ax_compact, self.Ay_compact))
+        self.Ax_compact = lin.scale_axis(self.Ax_compact, scale_cols=self.scale)
+        self.Ay_compact = lin.scale_axis(self.Ay_compact, scale_cols=self.scale)
+        if sp.sparse.issparse(A):
+            self.A_compact = sp.sparse.hstack((self.Ax_compact, self.Ay_compact), format='coo')
+        else:
+            self.A_compact = np.hstack((self.Ax_compact, self.Ay_compact))
 
         self.work = np.empty_like(self.A_compact.T)
 

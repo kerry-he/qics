@@ -8,8 +8,6 @@ import qics.vectorize as vec
 #   s.t. <Ai, X> = bi
 #        X >= 0
 
-n = 4
-
 # To be used with .mat files from either:
 # - https://www.math.uwaterloo.ca/~hwolkowi/henry/reports/ZGNQKDmainsolverUSEDforPUBLCNJuly31/
 # - https://github.com/kerry-he/qrep-structure/tree/main/data

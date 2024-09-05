@@ -1,5 +1,6 @@
 import numpy as np
 import scipy as sp
+import numba as nb
 
 def norm_inf(x):
     """Computes the infinity norm of a vector, i.e., maximum absolute value.
@@ -14,7 +15,7 @@ def norm_inf(x):
     float
         Infinity norm of x.
     """    
-    return max(x.max(initial=0.0), -x.min(initial=0.0))
+    return abs(max(x.max(initial=0.0), -x.min(initial=0.0)))
 
 def inp(x, y):
     """Computes the standard inner product between two vectors.
@@ -113,7 +114,7 @@ def scale_axis(A, scale_rows=None, scale_cols=None):
             A_coo.data *= np.take(scale_rows, A_coo.row)
         if scale_cols is not None:
             A_coo.data *= np.take(scale_cols, A_coo.col)
-        return A_coo.tocsr()
+        return A_coo
     else:
         if scale_rows is not None:
             A *= scale_rows.reshape((-1, 1))
@@ -131,3 +132,18 @@ def abs_max(A, axis):
             A.max(axis=axis, initial=0.0), 
            -A.min(axis=axis, initial=0.0)
         )
+
+def dense_dot_x(A, B):
+    if sp.sparse.issparse(B):
+        return dense_dot_sparse(A, B.col, B.row, B.data, B.shape)
+    else:
+        return A @ B
+        
+@nb.njit(parallel=True)
+def dense_dot_sparse(A, B_col, B_row, B_val, B_shape):
+    A_dot_B = np.zeros((A.shape[0], B_shape[1]))
+    for j in nb.prange(A.shape[0]):
+        A_dot_B[j, :] = 0.0
+        for i in range(B_val.size):
+            A_dot_B[j, B_col[i]] += A[j, B_row[i]] * B_val[i]
+    return A_dot_B

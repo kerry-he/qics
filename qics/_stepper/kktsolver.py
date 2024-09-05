@@ -64,8 +64,8 @@ class KKTSolver():
             self.GHG_fact = lin.cho_fact(GHG)
 
             if model.use_A:
-                GHGA = lin.cho_solve(self.GHG_fact, model.A.T)
-                AGHGA = model.A @ GHGA
+                GHGA = lin.cho_solve(self.GHG_fact, model.A_T_dense)
+                AGHGA = lin.dense_dot_x(GHGA.T, model.A_coo.T).T
                 self.AGHGA_fact = lin.cho_fact(AGHGA)
 
         elif model.use_A:
@@ -130,12 +130,8 @@ class KKTSolver():
 
         # taunum := rtau + rkap + c' vx + b' vy + h' vz
         tau_num = r.tau + r.kap + self.cbh.inp(self.v_xyz)
-        if model.issymmetric:
-            # tauden := kap / tau + c' cx + b' cy + h' cz
-            tau_den = (pnt.kap / pnt.tau + self.cbh.inp(self.c_xyz))
-        else:
-            # tauden := mu / tau^2 + c' cx + b' cy + h' cz
-            tau_den  = ((mu / pnt.tau / pnt.tau) + self.cbh.inp(self.c_xyz))
+        # tauden := kap / tau + c' cx + b' cy + h' cz
+        tau_den = (pnt.kap / pnt.tau + self.cbh.inp(self.c_xyz))
         # dtau := taunum / tauden
         d.tau[:] = tau_num / tau_den
 
@@ -147,12 +143,8 @@ class KKTSolver():
         d.s.vec -= model.G @ d.x
         d.s.vec -= r.z.vec
         
-        if model.issymmetric:
-            # dkap := rkap - (kap/tau) * dtau
-            d.kap[:] = r.kap - (pnt.kap / pnt.tau) * d.tau
-        else:
-            # dkap := rkap - (mu/tau^2) * dtau
-            d.kap[:] = r.kap - (mu / pnt.tau / pnt.tau) * d.tau
+        # dkap := rkap - (kap/tau) * dtau
+        d.kap[:] = r.kap - (pnt.kap / pnt.tau) * d.tau
 
         return d
 
@@ -307,12 +299,8 @@ class KKTSolver():
         # rtau := -c' dx - b' dy - h' dz - dkap
         r.tau[:] = -(model.c.T @ d.x) - (model.b.T @ d.y) - (model.h.T @ d.z.vec) - d.kap[0, 0]
 
-        if model.issymmetric:
-            # rkap := (kap / tau) dtau + dkap
-            r.kap[:] = (pnt.kap / pnt.tau) * d.tau[0, 0] + d.kap[0, 0]
-        else:
-            # rkap := (mu / tau^2) dtau + dkap   
-            r.kap[:] = (mu / pnt.tau / pnt.tau) * d.tau[0, 0] + d.kap[0, 0]
+        # rkap := (kap / tau) dtau + dkap
+        r.kap[:] = (pnt.kap / pnt.tau) * d.tau[0, 0] + d.kap[0, 0]
 
         return r
 

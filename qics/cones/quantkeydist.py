@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 import qics._utils.linalg as lin
 import qics._utils.gradient as grad
 from qics.cones.base import Cone
@@ -27,55 +28,78 @@ class QuantKeyDist(Cone):
 
     Parameters
     ----------
-    K_list : list of ndarray
-        List of Kraus operators :math:`\\{ K_i \\in \\mathbb{C}^{mr \\times n } \\}_{i=1}^l` corresponding to :math:`\\mathcal{G}` such that 
+    G_info : int or list of ndarray
+        Defines the linear map :math:`\\mathcal{G}`. If ``G_info`` is an ``int``, then :math:`\\mathcal{G}(X)=X` and
+        this argument specifies the dimension of :math:`X`. If ``G_info`` is a ``list`` of ``ndarray``, then this argument specifies the
+        list of Kraus operators :math:`\\{ K_i \\in \\mathbb{C}^{mr \\times n } \\}_{i=1}^l` corresponding to :math:`\\mathcal{G}` such that 
         
         .. math::
 
             \\mathcal{G}(X) = \\sum_{i=1}^l K_i X K_i^\\dagger.
         
     Z_info : int or list of ndarray
-        Specify the Kraus operators :math:`\\{ Z_i \\in \\mathbb{C}^{mr \\times mr } \\}_{i=1}^r` corresponding to :math:`\\mathcal{Z}` such that
+        Defines the linear map :math:`\\mathcal{Z}`. If ``Z_info`` is an ``int``, then this argument specifies the block-structure
+        which is being zeroed out, i.e., defines :math:`r` where
 
         .. math::
 
-            \\mathcal{Z}(Y) = \\sum_{i=1}^r Z_i Y Z_i^\\dagger.
+            \\mathcal{Z}(Y) = \\sum_{i=1}^r (| i \\rangle \\langle i | \\otimes \\mathbb{I}_m) Y (| i \\rangle \\langle i | \\otimes \\mathbb{I}_m).
 
-        Note that these pinching map Kraus operators should be of the form
-
-        .. math::
-
-            Z_i = | i \\rangle \\langle i | \\otimes \\mathbb{I}_m,
-
-        for all :math:`i=1,\\ldots,r`. Can either specify the dimension :math:`r` if ``Z_info`` is type ``int``, or directly specify the 
-        Kraus operators :math:`\\{ Z_i \\}_{i=1}^r` if ``Z_info`` is type ``list``.
+        If ``Z_info`` is a ``list`` of ``ndarray``, then this argument directly specifies the Kraus operator corresponding to :math:`\\mathcal{Z}`.
         
     iscomplex : bool
         Whether the matrix is symmetric :math:`X \\in \\mathbb{S}^n` (False) or Hermitian :math:`X \\in \\mathbb{H}^n` (True). Default is False.
     """    
-    def __init__(self, K_list, Z_info, iscomplex=False):
+    def __init__(self, G_info, Z_info, iscomplex=False):
+        
+        # Process G_info
+        if isinstance(G_info, int):
+            self.n          = G_info                    # Input dimension
+            self.N          = G_info                    # Output dimension
+            self.K_list_raw = [[np.eye(self.N)]]
+            self.G_is_Id    = True
+        else:
+            self.n          = G_info[0].shape[1]
+            self.N          = G_info[0].shape[0]
+            self.K_list_raw = G_info
+            self.G_is_Id = False
+            if G_info[0].shape[0] == G_info[0].shape[1]:
+                if np.linalg.norm(G_info[0] - np.eye(G_info[0].shape[0])) < 1e-10:
+                    self.G_is_Id = True
+        
+        # Process Z_info
+        if isinstance(Z_info, int):
+            self.r = Z_info
+            self.m = self.N // self.r
+            assert self.m * Z_info == self.N
+            self.Z_list_raw = [np.zeros(self.N, self.N) for _ in range(self.r)]
+            for k in range(self.r):
+                range_k = np.arange(k*self.n, (k+1)*self.n)
+                self.Z_list_raw[k][range_k, range_k] = 1.
+            self.Z_idxs = [np.arange(i*self.n, (i+1)*self.n) for i in range(self.r)]
+        else:
+            self.r = len(Z_info)
+            self.m = self.N // self.r
+            self.Z_list_raw = Z_info
+            self.Z_idxs = [np.where(Z)[0] for Z in Z_info]
+
         # Dimension properties
-        self.n = K_list[0].shape[1]    # Get input dimension
-        self.nu = 1 + self.n           # Barrier parameter
+        self.nu = 1 + self.n            # Barrier parameter
         self.iscomplex = iscomplex      # Is the problem complex-valued 
         
-        self.vn = self.n*self.n if iscomplex else self.n*(self.n+1)//2      # Compact dimension of system
+        self.vn = self.n*self.n if iscomplex else self.n*(self.n+1)//2
+        self.vm = self.m*self.m if iscomplex else self.m*(self.m+1)//2      # Compact dimension of system
 
         self.dim   = [1, self.n*self.n] if (not iscomplex) else [1, 2*self.n*self.n]
         self.type  = ['r', 's']         if (not iscomplex) else ['r', 'h']
         self.dtype = np.float64         if (not iscomplex) else np.complex128       
 
-        # Always block the ZK operator as Z maps to block matrices
-        self.K_list_blk  = [facial_reduction(K_list)]
-        if isinstance(Z_info, int):
-            m = K_list[0].shape[0] // Z_info
-            assert m * Z_info == K_list[0].shape[0]
-            self.ZK_list_blk = [facial_reduction([K[i*m : (i+1)*m, :] for K in K_list]) for i in range(Z_info)]
-        else:
-            self.ZK_list_blk = [facial_reduction([K[np.where(Z)[0], :] for K in K_list]) for Z in Z_info]
+        # Facial reduction
+        self.K_list_blk  = [facial_reduction(self.K_list_raw)]
+        self.ZK_list_blk = [facial_reduction([K[Z_idxs_k, :] for K in self.K_list_raw]) for Z_idxs_k in self.Z_idxs]
 
-        self.nk  = [K_list[0].shape[0] for K_list in self.K_list_blk]
-        self.nzk = [K_list[0].shape[0] for K_list in self.ZK_list_blk]
+        self.Nk  = [K_list[0].shape[0] for K_list in self.K_list_blk]
+        self.Nzk = [K_list[0].shape[0] for K_list in self.ZK_list_blk]
 
         # Update flags
         self.feas_updated        = False
@@ -83,10 +107,13 @@ class QuantKeyDist(Cone):
         self.hess_aux_updated    = False
         self.invhess_aux_updated = False
         self.dder3_aux_updated   = False
-        self.congr_aux_updated = False
+        self.congr_aux_updated   = False
         self.invhess_aux_aux_updated = False
 
-        self.precompute_mat_vec()     
+        if self.G_is_Id:
+            self.precompute_mat_vec(self.m)
+        else:
+            self.precompute_mat_vec()
 
         return
 
@@ -101,7 +128,8 @@ class QuantKeyDist(Cone):
         entr_KK   = sum([quant_entropy(KK)   for KK   in KK_blk])
         entr_ZKKZ = sum([quant_entropy(ZKKZ) for ZKKZ in ZKKZ_blk])
 
-        t0 = 1. + (-entr_KK + entr_ZKKZ)
+        f0 = -entr_KK + entr_ZKKZ
+        t0 = f0/2 + np.sqrt(1 + f0*f0/4)
 
         point = [
             np.array([[t0]]), 
@@ -237,6 +265,69 @@ class QuantKeyDist(Cone):
         out[1][:] = out_X
 
         return out
+    
+    def hess_congr(self, A):
+        assert self.grad_updated
+        if not self.hess_aux_updated:
+            self.update_hessprod_aux()
+        if not self.congr_aux_updated:
+            self.congr_aux(A)
+        if not self.invhess_aux_updated:
+            self.update_invhessprod_aux()
+
+        if self.G_is_Id:
+
+            p = A.shape[0]
+            lhs = np.zeros((p, sum(self.dim)))
+
+            # Precompute Hessian products for quantum conditional entropy
+            # D2Phi(X)[Hx] =  Ux [log^[1](Dx) .* (Ux'     Hx  Ux)] Ux' 
+            #              - [Uy [log^[1](Dy) .* (Uy' PTr(Hx) Uy)] Uy'] kron I
+            self.Work0 *= 0
+            for (Z_idxs_k, U, D1_log) in zip(self.Z_idxs, self.Uzkx_blk, self.D1zkx_log_blk):
+                temp = self.Ax[np.ix_(np.arange(p), Z_idxs_k, Z_idxs_k)]
+                lin.congr_multi(self.work2, U.conj().T, temp, self.work3)
+                self.work2 *= D1_log * self.zi
+                lin.congr_multi(self.work1, U, self.work2, self.work3)
+                self.Work0[np.ix_(np.arange(p), Z_idxs_k, Z_idxs_k)] = self.work1
+
+            lin.congr_multi(self.Work2, self.Ux.conj().T, self.Ax, self.Work3)
+            self.Work2 *= self.D1x_comb
+            lin.congr_multi(self.Work1, self.Ux, self.Work2, self.Work3)
+
+            self.Work1 -= self.Work0
+
+            # ====================================================================
+            # Hessian products with respect to t
+            # ====================================================================
+            # D2_tt F(t, X)[Ht] =  Ht / z^2
+            # D2_tX F(t, X)[Hx] = -DPhi(X)[Hx] / z^2
+            outt  = self.At - (self.Ax.view(dtype=np.float64).reshape((p, 1, -1)) @ self.DPhi.view(dtype=np.float64).reshape((-1, 1))).ravel()
+            outt *= self.zi2
+
+            lhs[:, 0] = outt
+
+            # ====================================================================
+            # Hessian products with respect to X
+            # ====================================================================
+            # D2_Xt F(t, X)[Ht] = -Ht DPhi(X) / z^2
+            # D2_XX F(t, X)[Hx] =  DPhi(X)[Hx] DPhi(X) / z^2 + D2Phi(X)[Hx] / z + X^-1 Hx X^-1
+            np.outer(outt, self.DPhi, out=self.Work0.reshape(p, -1))
+            self.Work1 -= self.Work0
+
+            lhs[:, 1:] = self.Work1.reshape((p, -1)).view(dtype=np.float64)
+            
+            # Multiply A (H A')
+            return lin.dense_dot_x(lhs, A.T)
+
+        else:      
+            vec = self.At - lin.dense_dot_x(self.DPhi_vec.T, self.Ax_vec.T)
+            vec *= self.zi
+            
+            temp = lin.dense_dot_x(self.hess, self.Ax_vec.T)
+            out  = lin.dense_dot_x(temp.T, self.Ax_vec.T)
+            out += np.outer(vec, vec)
+            return out
 
     def invhess_prod_ip(self, out, H):
         assert self.grad_updated
@@ -248,25 +339,65 @@ class QuantKeyDist(Cone):
         # Computes inverse Hessian product of the QKD barrier with a single vector (Ht, Hx)
         # See invhess_congr() for additional comments
 
-        (Ht, Hx) = H
-        work = Hx + Ht * self.DPhi
+        if self.G_is_Id:
 
-        # Inverse Hessian products with respect to X
-        temp_vec = work.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs]
-        temp_vec *= self.scale.reshape((-1, 1))
+            (Ht, Hx) = H
+            Wx = Hx + Ht * self.DPhi
 
-        temp_vec = lin.cho_solve(self.hess_fact, temp_vec)
+            work = np.zeros((self.r*self.vm))
 
-        work.fill(0.)
-        temp_vec[self.diag_idxs] *= 0.5
-        temp_vec /= self.scale.reshape((-1, 1))
-        work.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs] = temp_vec
-        work += work.conj().T
+            # Apply D2S(X)^-1 = (Ux kron Ux) log^[1](Dx) (Ux' kron Ux')
+            UxWxUx = self.Ux.conj().T @ Wx @ self.Ux
+            Hxx_inv_x = self.Ux @ (self.D1x_comb_inv * UxWxUx) @ self.Ux.conj().T
+            for (k, Z_idxs_k) in enumerate(self.Z_idxs):
+                temp = Hxx_inv_x[np.ix_(Z_idxs_k, Z_idxs_k)]
+                work[k*self.vm:(k+1)*self.vm] = temp.view(dtype=np.float64).reshape(-1)[self.triu_idxs] * self.scale
+            work *= -1
 
-        out[1][:] = work
+            work = lin.cho_solve(self.schur_fact, work)
 
-        # Inverse Hessian products with respect to t
-        out[0][:] = self.z2 * Ht + lin.inp(self.DPhi, out[1])
+            Work3 = np.zeros((self.n, self.n), dtype=self.dtype)
+            for (k, Z_idxs_k) in enumerate(self.Z_idxs):
+                work_k = work[k*self.vm:(k+1)*self.vm]
+                work_k[self.diag_idxs] *= 0.5
+                work_k /= self.scale
+
+                work2_k = np.zeros((self.m, self.m), dtype=self.dtype)
+                work2_k.view(dtype=np.float64).reshape(-1)[self.triu_idxs] = work_k
+                Work3[np.ix_(Z_idxs_k, Z_idxs_k)] = work2_k
+            Work3 += Work3.conj().T
+
+            # Apply D2S(X)^-1 = (Ux kron Ux) log^[1](Dx) (Ux' kron Ux')
+            temp = self.Ux.conj().T @ Work3 @ self.Ux
+            H_inv_w_x = Hxx_inv_x - self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.conj().T
+            H_inv_w_x = (H_inv_w_x + H_inv_w_x.conj().T) * 0.5
+
+            out[0][:] = Ht * self.z2 + lin.inp(H_inv_w_x, self.DPhi)
+            out[1][:] = H_inv_w_x
+
+            return out
+
+        else:
+
+            (Ht, Hx) = H
+            work = Hx + Ht * self.DPhi
+
+            # Inverse Hessian products with respect to X
+            temp_vec = work.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs]
+            temp_vec *= self.scale.reshape((-1, 1))
+
+            temp_vec = lin.cho_solve(self.hess_fact, temp_vec)
+
+            work.fill(0.)
+            temp_vec[self.diag_idxs] *= 0.5
+            temp_vec /= self.scale.reshape((-1, 1))
+            work.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs] = temp_vec
+            work += work.conj().T
+
+            out[1][:] = work
+
+            # Inverse Hessian products with respect to t
+            out[0][:] = self.z2 * Ht + lin.inp(self.DPhi, out[1])
 
         return out
 
@@ -293,25 +424,87 @@ class QuantKeyDist(Cone):
         #     Uy' Y Uy = S \ ({Uy' Wy Uy} - [1/z log^[1](Dy) (Uy'Ux kron Uy'Ux) (1/z log^[1](Dx) + Dx^-1 kron Dx^-1)^-1 {Ux' Wx Ux}])
         #     Ux' X Ux = -(1/z log^[1](Dx) + Dx^-1 kron Dx^-1)^-1 [{Ux' Wx Ux} + 1/z (Ux'Uy kron Ux'Uy) log^[1](Dy) Y]
         # where S is the Schur complement matrix of M.
-        
-        # ====================================================================
-        # Inverse Hessian products with respect to X
-        # ====================================================================
-        # Compute Wx
-        np.outer(self.At, self.DPhi_vec, out=self.work1)
-        np.add(self.Ax_vec, self.work1, out=self.work0)
 
-        # Solve system
-        lhsX = lin.cho_solve(self.hess_fact, self.work0.T)
+        if self.G_is_Id:
 
-        # ====================================================================
-        # Inverse Hessian products with respect to t
-        # ====================================================================
-        lhst  = self.z2 * self.At 
-        lhst += (lhsX.T @ self.DPhi_vec).ravel()
+            p = A.shape[0]
+            lhs = np.zeros((p, sum(self.dim)))
+
+            work = np.zeros((self.r*self.vm, p))
+
+            # ====================================================================
+            # Inverse Hessian products with respect to X
+            # ====================================================================
+            # Compute Wx
+            np.outer(self.At, self.DPhi, out=self.Work2.reshape((p, -1)))
+            np.add(self.Ax, self.Work2, out=self.Work0)
+
+            # Apply D2S(X)^-1 = (Ux kron Ux) log^[1](Dx) (Ux' kron Ux')
+            lin.congr_multi(self.Work2, self.Ux.conj().T, self.Work0, self.Work3)
+            self.Work2 *= self.D1x_comb_inv
+            lin.congr_multi(self.Work0, self.Ux, self.Work2, self.Work3)
+            # Apply PTr
+            for (k, Z_idxs_k) in enumerate(self.Z_idxs):
+                temp = self.Work0[np.ix_(np.arange(p), Z_idxs_k, Z_idxs_k)]
+                work[k*self.vm:(k+1)*self.vm] = (temp.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs] * self.scale).T
+            work *= -1
+
+            # Solve linear system N \ ( ... )
+            work = lin.cho_solve(self.schur_fact, work)
+            # Expand truncated real vectors back into matrices
+            self.Work1.fill(0.)
+            for (k, Z_idxs_k) in enumerate(self.Z_idxs):
+                work_k = work[k*self.vm:(k+1)*self.vm]
+                work_k[self.diag_idxs, :] *= 0.5
+                work_k /= self.scale.reshape((-1, 1))
+
+                work2_k = np.zeros((p, self.m, self.m), dtype=self.dtype)
+                work2_k.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs] = work_k.T
+                self.Work1[np.ix_(np.arange(p), Z_idxs_k, Z_idxs_k)] = work2_k
+            self.Work1 += self.Work1.conj().transpose((0, 2, 1))
+
+            # Apply D2S(X)^-1 = (Ux kron Ux) log^[1](Dx) (Ux' kron Ux')
+            lin.congr_multi(self.Work2, self.Ux.conj().T, self.Work1, self.Work3)
+            self.Work2 *= self.D1x_comb_inv
+            lin.congr_multi(self.Work1, self.Ux, self.Work2, self.Work3)
+
+            # Subtract previous expression from D2S(X)^-1 Wx to get X
+            self.Work0 -= self.Work1
+            lhs[:, 1:] = self.Work0.reshape((p, -1)).view(dtype=np.float64)
+
+            # ====================================================================
+            # Inverse Hessian products with respect to t
+            # ====================================================================
+            outt  = self.z2 * self.At
+            outt += (self.Work0.view(dtype=np.float64).reshape((p, 1, -1)) @ self.DPhi.view(dtype=np.float64).reshape((-1, 1))).ravel()
+            lhs[:, 0] = outt
+
+            # Multiply A (H A')
+            return lin.dense_dot_x(lhs, A.T)
+
+        else:
         
-        # Multiply A (H A')
-        return np.outer(lhst, self.At) + lhsX.T @ self.Ax_vec.T
+            # ====================================================================
+            # Inverse Hessian products with respect to X
+            # ====================================================================
+            # Compute Wx
+            np.outer(self.At, self.DPhi_vec, out=self.work1)
+            if sp.sparse.issparse(self.Ax_vec):
+                self.work0 = self.work1 + self.Ax_vec
+            else:
+                np.add(self.Ax_vec, self.work1, out=self.work0)
+
+            # Solve system
+            lhsX = lin.cho_solve(self.hess_fact, self.work0.T)
+
+            # ====================================================================
+            # Inverse Hessian products with respect to t
+            # ====================================================================
+            lhst  = self.z2 * self.At 
+            lhst += (lhsX.T @ self.DPhi_vec).ravel()
+            
+            # Multiply A (H A')
+            return np.outer(lhst, self.At) + lin.dense_dot_x(lhsX.T, self.Ax_vec.T)
 
     def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
@@ -364,44 +557,82 @@ class QuantKeyDist(Cone):
     def congr_aux(self, A):
         assert not self.congr_aux_updated
 
-        self.At     = A[:, 0]
-        self.Ax_vec = A[:, 1 + self.triu_idxs] * self.scale
+        p = A.shape[0]
 
-        self.work0 = np.empty_like(self.Ax_vec)
-        self.work1 = np.empty_like(self.Ax_vec)
+        if self.G_is_Id:
+            if sp.sparse.issparse(A):
+                A = A.toarray()
+
+            self.At = A[:, 0]
+            Ax = np.ascontiguousarray(A[:, 1:])
+
+            if self.iscomplex:
+                self.Ax = np.array([Ax_k.reshape((-1, 2)).view(dtype=np.complex128).reshape((self.n, self.n)) for Ax_k in Ax])
+            else:
+                self.Ax = np.array([Ax_k.reshape((self.n, self.n)) for Ax_k in Ax])
+
+            self.Work0 = np.zeros_like(self.Ax, dtype=self.dtype)
+            self.Work1 = np.zeros_like(self.Ax, dtype=self.dtype)
+            self.Work2 = np.zeros_like(self.Ax, dtype=self.dtype)
+            self.Work3 = np.zeros_like(self.Ax, dtype=self.dtype)
+
+            self.work1 = np.empty((p, self.m, self.m), dtype=self.dtype)
+            self.work2 = np.empty((p, self.m, self.m), dtype=self.dtype)
+            self.work3 = np.empty((p, self.m, self.m), dtype=self.dtype)
+        else:
+            if sp.sparse.issparse(A):
+                A = A.tocsr()
+            self.At = A[:, 0].toarray().flatten() if sp.sparse.issparse(A) else A[:, 0]
+            self.Ax_vec = lin.scale_axis(A[:, 1 + self.triu_idxs], scale_cols=self.scale)
+
+            self.work0 = np.zeros(self.Ax_vec.shape)
+            self.work1 = np.zeros(self.Ax_vec.shape)
 
         self.congr_aux_updated = True
-
-    def hess_congr(self, A):
-        assert self.grad_updated
-        if not self.hess_aux_updated:
-            self.update_hessprod_aux()
-        if not self.congr_aux_updated:
-            self.congr_aux(A)
-        if not self.invhess_aux_updated:
-            self.update_invhessprod_aux()                
-
-        vec = self.At - self.DPhi_vec.T @ self.Ax_vec.T
-        vec *= self.zi
-        
-        out = self.Ax_vec @ self.hess @ self.Ax_vec.T
-        out += np.outer(vec, vec)
-        return out
 
     def update_invhessprod_aux_aux(self):
         assert not self.invhess_aux_aux_updated
 
-        self.work2  = [np.zeros((self.vn, self.n, nk), dtype=self.dtype) for nk in self.nk]
-        self.work2b  = [np.zeros((self.vn, nk, self.n), dtype=self.dtype) for nk in self.nk]
-        self.work3  = [np.zeros((self.vn, nk, nk), dtype=self.dtype) for nk in self.nk]
-        self.work3b  = [np.zeros((self.vn, nk, nk), dtype=self.dtype) for nk in self.nk]
-        self.work4  = [np.zeros((self.vn, self.n, nzk), dtype=self.dtype) for nzk in self.nzk]
-        self.work4b  = [np.zeros((self.vn, nzk, self.n), dtype=self.dtype) for nzk in self.nzk]
-        self.work5  = [np.zeros((self.vn, nzk, nzk), dtype=self.dtype) for nzk in self.nzk]
-        self.work5b  = [np.zeros((self.vn, nzk, nzk), dtype=self.dtype) for nzk in self.nzk]
-        self.work6  = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
-        self.work7  = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
-        self.work8  = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
+        if self.G_is_Id:
+            self.work6 = np.zeros((self.vm, self.m, self.m), dtype=self.dtype)
+            self.work7 = np.zeros((self.vm, self.m, self.m), dtype=self.dtype)
+            self.work8 = np.zeros((self.vm, self.m, self.m), dtype=self.dtype)
+
+            # Computational basis for symmetric/Hermitian matrices
+            rt2 = np.sqrt(0.5)
+            self.E_blk = np.zeros((self.r, self.vm, self.n, self.n), dtype=self.dtype)
+            for (b, Z_idxs_k) in enumerate(self.Z_idxs):
+                k = 0
+                for J in range(self.m):
+                    j = Z_idxs_k[J]
+                    for I in range(J):
+                        i = Z_idxs_k[I]
+                        self.E_blk[b, k, i, j] = rt2
+                        self.E_blk[b, k, j, i] = rt2
+                        k += 1
+                        if self.iscomplex:
+                            self.E_blk[b, k, i, j] = rt2 *  1j
+                            self.E_blk[b, k, j, i] = rt2 * -1j
+                            k += 1
+                    self.E_blk[b, k, j, j] = 1.
+                    k += 1
+            self.E_blk = self.E_blk.reshape((-1, self.n, self.n))
+
+            self.Work6 = np.zeros((self.r*self.vm, self.n, self.n), dtype=self.dtype)
+            self.Work7 = np.zeros((self.r*self.vm, self.n, self.n), dtype=self.dtype)
+            self.Work8 = np.zeros((self.r*self.vm, self.n, self.n), dtype=self.dtype)
+        else:
+            self.work2  = [np.zeros((self.vn, self.n, nk), dtype=self.dtype) for nk in self.Nk]
+            self.work2b  = [np.zeros((self.vn, nk, self.n), dtype=self.dtype) for nk in self.Nk]
+            self.work3  = [np.zeros((self.vn, nk, nk), dtype=self.dtype) for nk in self.Nk]
+            self.work3b  = [np.zeros((self.vn, nk, nk), dtype=self.dtype) for nk in self.Nk]
+            self.work4  = [np.zeros((self.vn, self.n, nzk), dtype=self.dtype) for nzk in self.Nzk]
+            self.work4b  = [np.zeros((self.vn, nzk, self.n), dtype=self.dtype) for nzk in self.Nzk]
+            self.work5  = [np.zeros((self.vn, nzk, nzk), dtype=self.dtype) for nzk in self.Nzk]
+            self.work5b  = [np.zeros((self.vn, nzk, nzk), dtype=self.dtype) for nzk in self.Nzk]
+            self.work6  = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
+            self.work7  = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
+            self.work8  = np.zeros((self.vn, self.n, self.n), dtype=self.dtype)
 
         self.invhess_aux_aux_updated = True
 
@@ -413,43 +644,83 @@ class QuantKeyDist(Cone):
             self.update_invhessprod_aux_aux()
 
         self.z2 = self.z * self.z
-        self.DPhi_vec = self.DPhi.view(dtype=np.float64).reshape(-1, 1)[self.triu_idxs] * self.scale.reshape(-1, 1)
 
-        # Get X^-1 kron X^-1 
-        lin.congr_multi(self.work8, self.inv_X, self.E, work=self.work7)
+        if self.G_is_Id:
 
-        # Get S(G(X)) Hessians
-        for (U, D1, K_list, work0, work1, work2, work3) in zip(self.Ukx_blk, self.D1kx_log_blk, self.K_list_blk, self.work2, self.work2b, self.work3, self.work3b):
-            KU_list = [K.conj().T @ U for K in K_list]      
-            work2 *= 0
-            for KU in KU_list:
-                lin.congr_multi(work3, KU.conj().T, self.E, work=work1)
-                work2 += work3
+            # Precompute and factorize the matrix
+            #     N = 1/z (Uy kron Uy) [log^[1](Dy)]^-1 (Uy' kron Uy')
+            #         - PTr (Ux kron Ux) [(1/z log + inv)^[1](Dx)]^-1  (Ux' kron Ux') PTr'
+            # which we will need to solve linear systems with the Hessian of our barrier function
 
-            work2 *= D1 * self.zi
+            D1x_inv       = np.reciprocal(np.outer(self.Dx, self.Dx))
+            self.D1x_comb = self.zi * self.D1kx_log_blk[0] + D1x_inv
+            self.D1x_comb_inv = np.reciprocal(self.D1x_comb)
 
-            for KU in KU_list:
-                lin.congr_multi(self.work7, KU, work2, work=work0)
-                self.work8 += self.work7
+            self.schur = np.zeros((self.r*self.vm, self.r*self.vm))
 
-        # Get S(Z(G(X))) Hessians
-        for (U, D1, K_list, work0, work1, work2, work3) in zip(self.Uzkx_blk, self.D1zkx_log_blk, self.ZK_list_blk, self.work4, self.work4b, self.work5, self.work5b):
-            KU_list = [K.conj().T @ U for K in K_list]      
-            work2 *= 0
-            for KU in KU_list:
-                lin.congr_multi(work3, KU.conj().T, self.E, work=work1)
-                work2 += work3
+            # Get [1/z (Uy kron Uy) [log^[1](Dy)]^-1 (Uy' kron Uy')] matrix
+            for (k, (U, D1_log)) in enumerate(zip(self.Uzkx_blk, self.D1zkx_log_blk)):
+                # Begin with (Uy' kron Uy')
+                lin.congr_multi(self.work8, U.conj().T, self.E, work=self.work7)
+                # Apply z [log^[1](Dy)]^-1
+                self.work8 *= (self.z * np.reciprocal(D1_log))
+                # Apply (Uy kron Uy)
+                lin.congr_multi(self.work6, U, self.work8, work=self.work7)
 
-            work2 *= D1 * self.zi
+                self.schur[k*self.vm:(k+1)*self.vm, k*self.vm:(k+1)*self.vm] = self.work6.view(dtype=np.float64).reshape((self.vm, -1))[:, self.triu_idxs] * self.scale
 
-            for KU in KU_list:
-                lin.congr_multi(self.work7, KU, work2, work=work0)
-                self.work8 -= self.work7             
+            # Get [PTr (Ux kron Ux) [(1/z log + inv)^[1](Dx)]^-1  (Ux' kron Ux') PTr'] matrix
+            # Begin with [(Ux' kron Ux') PTr']
+            lin.congr_multi(self.Work8, self.Ux.conj().T, self.E_blk, work=self.Work7)
+            self.Work8 *= self.D1x_comb_inv
+            lin.congr_multi(self.Work6, self.Ux, self.Work8, work=self.Work7)
+            
+            for (k, Z_idxs_k) in enumerate(self.Z_idxs):
+                temp = self.Work6[np.ix_(np.arange(self.r*self.vm), Z_idxs_k, Z_idxs_k)]
+                self.schur[:, k*self.vm:(k+1)*self.vm] -= temp.view(dtype=np.float64).reshape((self.r*self.vm, -1))[:, self.triu_idxs] * self.scale
 
-        # Get Hessian and factorize
-        self.hess  = self.work8.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_idxs]
-        self.hess *= self.scale
-        self.hess_fact = lin.cho_fact(self.hess.copy())
+            # Subtract to obtain N then Cholesky factor
+            self.schur_fact = lin.cho_fact(self.schur)
+
+        else:
+
+            self.DPhi_vec = self.DPhi.view(dtype=np.float64).reshape(-1, 1)[self.triu_idxs] * self.scale.reshape(-1, 1)
+
+            # Get X^-1 kron X^-1 
+            lin.congr_multi(self.work8, self.inv_X, self.E, work=self.work7)
+
+            # Get S(G(X)) Hessians
+            for (U, D1, K_list, work0, work1, work2, work3) in zip(self.Ukx_blk, self.D1kx_log_blk, self.K_list_blk, self.work2, self.work2b, self.work3, self.work3b):
+                KU_list = [K.conj().T @ U for K in K_list]      
+                work2 *= 0
+                for KU in KU_list:
+                    lin.congr_multi(work3, KU.conj().T, self.E, work=work1)
+                    work2 += work3
+
+                work2 *= D1 * self.zi
+
+                for KU in KU_list:
+                    lin.congr_multi(self.work7, KU, work2, work=work0)
+                    self.work8 += self.work7
+
+            # Get S(Z(G(X))) Hessians
+            for (U, D1, K_list, work0, work1, work2, work3) in zip(self.Uzkx_blk, self.D1zkx_log_blk, self.ZK_list_blk, self.work4, self.work4b, self.work5, self.work5b):
+                KU_list = [K.conj().T @ U for K in K_list]      
+                work2 *= 0
+                for KU in KU_list:
+                    lin.congr_multi(work3, KU.conj().T, self.E, work=work1)
+                    work2 += work3
+
+                work2 *= D1 * self.zi
+
+                for KU in KU_list:
+                    lin.congr_multi(self.work7, KU, work2, work=work0)
+                    self.work8 -= self.work7             
+
+            # Get Hessian and factorize
+            self.hess  = self.work8.view(dtype=np.float64).reshape((self.vn, -1))[:, self.triu_idxs]
+            self.hess *= self.scale
+            self.hess_fact = lin.cho_fact(self.hess.copy())
 
         self.invhess_aux_updated = True
 

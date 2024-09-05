@@ -340,6 +340,8 @@ class PosSemidefinite(SymCone):
         assert not self.congr_aux_updated
 
         if sp.sparse.issparse(A):
+            A = A.tocsr()
+
             # Split A into sparse and dense groups
             A_nnz = A.getnnz(1)
             self.A_sp_idxs = np.where((A_nnz > 0) & (A_nnz < self.n))[0]
@@ -419,7 +421,7 @@ class PosSemidefinite(SymCone):
                         self.triu_idxs = np.array([j + i*self.n for j in range(self.n) for i in range(j + 1)])
                         scale = 2 * np.ones(self.n * self.n)
                         scale[::self.n+1] = 1
-                    self.A_triu = lin.scale_axis(A, scale_cols=scale)
+                    self.A_triu = lin.scale_axis(A, scale_cols=scale).tocsr()
                     self.A_triu = self.A_triu[:, self.triu_idxs]
 
         else:
