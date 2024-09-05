@@ -4,6 +4,7 @@ import math
 import time
 import itertools, sys
 
+from qics import __version__
 import qics._utils.linalg as lin
 import qics._utils.vector as vec
 from qics._stepper import NonSymStepper, SymStepper, KKTSolver
@@ -123,7 +124,7 @@ class Solver():
         # Print header
         if self.verbose:
             print("====================================================================")
-            print("            QICS v0.0 - Quantum Information Conic Solver            ")
+            print(f"           QICS v{__version__} - Quantum Information Conic Solver           ")
             print("              by K. He, J. Saunderson, H. Fawzi (2024)              ")
             print("====================================================================")
             print("Problem summary:")                
