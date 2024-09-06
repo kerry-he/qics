@@ -120,7 +120,6 @@ conic program
 
     model = qics.Model(c=c, A=A, b=b, cones=cones)
 
-
 Solving
 -----------
 
@@ -133,8 +132,46 @@ class
     solver = qics.Solver(model)
 
 Optionally, there are also many solver settings we can specify when 
-initializing the :class:`~qics.Solver`. These can be found in the API
-documentation. 
+initializing the :class:`~qics.Solver`. These include
+
+.. list-table::
+   :widths: 20 70 10
+   :header-rows: 1
+
+   * - Parameter
+     - Description
+     - Default
+   * - ``max_iter``
+     - Maximum number of solver iterations before terminating.
+     - ``100``
+   * - ``max_time``
+     - Maximum time elapsed, in seconds, before terminating.
+     - ``3600``
+   * - ``tol_gap``
+     - Stopping tolerance for (relative) optimality gap.
+     - ``1e-8``
+   * - ``tol_feas``
+     - Stopping tolerance for (relative) primal and dual feasibility.
+     - ``1e-8``
+   * - ``tol_infeas``
+     - Tolerance for detecting infeasible problem.
+     - ``1e-12``
+   * - ``tol_ip``
+     - Tolerance for detecting ill-posed problem.
+     - ``1e-13``
+   * - ``tol_near``
+     - Allowable margin for certifying near optimality when solver is stopped early.
+     - ``1000``
+   * - ``verbose``
+     - Verbosity level of the solver, where
+        - ``0``: No output.
+        - ``1``: Only print problem and solution summary.
+        - ``2``: Also print summary of the solver at each iteration.
+        - ``3``: Also print symmary of the stepper at each iteration.
+     - ``2``
+   * - ``ir``
+     - Whether to use iterative refinement when solving the KKT system.
+     - ``True``
 
 We then solve the conic program by calling
 
@@ -178,8 +215,45 @@ on the terminal.
             opt. gap:     8.89e-11
 
 The solver returns a dictionary ``info`` containing additional
-information about the solution. For example, we can access the 
-optimal variables by using
+information about the solution. This dictionary has the following keys.
+
+.. list-table::
+   :widths: 22 78
+   :header-rows: 1
+
+   * - Parameter
+     - Description
+   * - ``x_opt``, ``y_opt``, ``z_opt``, ``s_opt``
+     - Optimal primal and dual variables :math:`x^*`, :math:`y^*`, :math:`z^*`, and :math:`s^*`.
+   * - ``sol_status``
+     - Solution status. Can either be
+        - ``optimal`` : Primal-dual optimal solution reached
+        - ``pinfeas`` : Detected primal infeasibility
+        - ``dinfeas`` : Detected dual infeasibility
+        - ``near_optimal`` : Near primal-dual optimal solution
+        - ``near_pinfeas`` : Near primal infeasibility
+        - ``near_dinfeas`` : Near dual infeasibiltiy
+        - ``illposed`` : Problem is ill-posed
+        - ``unknown`` : Unknown solution status
+   * - ``exit_status``
+     - Solver exit status. Can either be
+        - ``solved`` : Terminated at desired tolerance
+        - ``max_iter`` : Exceeded maximum allowable iterations
+        - ``max_time`` : Exceeded maximum allowable time
+        - ``step_failure`` : Unable to take another step
+        - ``slow_progress`` : Residuals are decreasing too slowly
+   * - ``num_iter``
+     - Number of solver iterations.
+   * - ``solve_time``
+     - Total time elapsed by solver (in seconds).
+   * - ``p_obj``, ``d_obj``
+     - Optimal primal objective :math:`c^\top x^*` and dual objective :math:`-b^\top y^* - h^\top z^*`.
+   * - ``opt_gap``
+     - Relative optimality gap.
+   * - ``p_feas``, ``d_feas``
+     - Relative primal feasibility and dual feasiblity.
+
+For example, we can access the optimal variables by using
 
 .. code-block:: python
 

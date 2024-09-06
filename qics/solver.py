@@ -24,7 +24,7 @@ class Solver:
     max_iter : int, optional
         Maximum number of solver iterations before terminating. Default is ``100``.
     max_time : float, optional
-        Maximum time elapsed, in seconds, before terminating. Default is ``inf``.
+        Maximum time elapsed, in seconds, before terminating. Default is ``3600``.
     tol_gap : float, optional
         Stopping tolerance for (relative) optimality gap. Default is ``1e-8``.
     tol_feas : float, optional
@@ -110,16 +110,19 @@ class Solver:
             - ``sol_status`` : Solution status. Can either be:
 
                 - ``optimal``       : Primal-dual optimal solution reached
-                - ``p_infeas``      : Detected primal infeasibility
-                - ``d_infeas``      : Detected dual infeasibility
+                - ``pinfeas``      : Detected primal infeasibility
+                - ``dinfeas``      : Detected dual infeasibility
                 - ``near_optimal``  : Near primal-dual optimal solution
                 - ``near_pinfeas``  : Near primal infeasibility
                 - ``near_dinfeas``  : Near dual infeasibiltiy
+                - ``illposed``     : Problem is ill-posed
                 - ``unknown``       : Unknown solution status
 
             - ``exit_status`` : Solver exit status. Can either be:
 
                 - ``solved``        : Terminated at desired tolerance
+                - ``max_iter``      : Exceeded maximum allowable iterations
+                - ``max_time``      : Exceeded maximum allowable time
                 - ``step_failure``  : Unable to take another step
                 - ``slow_progress`` : Residuals are decreasing too slowly
 
