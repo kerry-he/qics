@@ -5,17 +5,18 @@ from qics.cones.base import Cone, get_central_ray_entr
 
 
 class ClassEntr(Cone):
-    """A class representing a (homogenized) classical entropy cone
+    r"""A class representing a (homogenized) classical entropy cone
 
     .. math::
 
-        \\mathcal{K}_{\\text{ce}} = \\text{cl}\\{ (t, u, x) \\in \\mathbb{R} \\times \\mathbb{R}_{++} \\times \\mathbb{R}^n_{++} : t \\geq -u H(x / u) \\},
+        \mathcal{K}_{\text{ce}} = \text{cl}\{ (t, u, x) \in \mathbb{R} \times 
+        \mathbb{R}_{++} \times \mathbb{R}^n_{++} : t \geq -u H(x / u) \},
 
     where
 
     .. math::
 
-        H(x) = -\\sum_{i=1}^n x_i \\log(x_i),
+        H(x) = -\sum_{i=1}^n x_i \log(x_i),
 
     is the classical (Shannon) entropy function. The classical entropy epigraph can be 
     recovered by enforcing the linear constraint :math:`u=1`.

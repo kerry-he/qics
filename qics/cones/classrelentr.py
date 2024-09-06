@@ -5,17 +5,18 @@ from qics.cones.base import Cone, get_central_ray_relentr
 
 
 class ClassRelEntr(Cone):
-    """A class representing a classical relative entropy cone
+    r"""A class representing a classical relative entropy cone
 
     .. math::
 
-        \\mathcal{K}_{\\text{cre}} = \\text{cl}\\{ (t, x, y) \\in \\mathbb{R} \\times \\mathbb{R}^n_{++} \\times \\mathbb{R}^n_{++} : t \\geq H(x \\| y) \\},
+        \mathcal{K}_{\text{cre}} = \text{cl}\{ (t, x, y) \in \mathbb{R} \times 
+        \mathbb{R}^n_{++} \times \mathbb{R}^n_{++} : t \geq H(x \| y) \},
 
     where
 
     .. math::
 
-        H(x \\| y) = \\sum_{i=1}^n x_i \\log(x_i / y_i),
+        H(x \| y) = \sum_{i=1}^n x_i \log(x_i / y_i),
 
     is the classical relative entropy function (Kullback-Leibler divergence).
 

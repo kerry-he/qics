@@ -64,53 +64,54 @@ def mat_dim(len, iscomplex=False, compact=False):
 
 
 def mat_to_vec(mat, compact=False):
-    """Reshapes a square matrix into a 1D vector, e.g., the symmetric matrix
+    r"""Reshapes a square matrix into a 1D vector, e.g., the symmetric matrix
 
     .. math::
 
-        \\begin{bmatrix}
-            a & b & d \\\ b & c & e \\\ d & e & f
-        \\end{bmatrix},
+        \begin{bmatrix}
+            a & b & d \\ b & c & e \\ d & e & f
+        \end{bmatrix},
 
     is vectorized as the real 1D vector
 
     .. math::
 
-        \\begin{bmatrix}
+        \begin{bmatrix}
             a & b & d & b & c & e & d & e & f
-        \\end{bmatrix}^{\\top},
+        \end{bmatrix}^{\top},
 
     if ``compact=False``, or
 
     .. math::
 
-        \\begin{bmatrix}
+        \begin{bmatrix}
             a & \sqrt{2} b & c & \sqrt{2} d & \sqrt{2}e & f
-        \\end{bmatrix}^{\\top},
+        \end{bmatrix}^{\top},
 
     if ``compact=True``. Alternatively, the Hermitian matrix
 
     .. math::
 
-        \\begin{bmatrix}
-            a & b+cj & e+fj \\\ b-cj & d & g+hj \\\ e-fj & g-hj & i
-        \\end{bmatrix}^{\\top},
+        \begin{bmatrix}
+            a & b+cj & e+fj \\ b-cj & d & g+hj \\ e-fj & g-hj & i
+        \end{bmatrix}^{\top},
 
     is vectorized as the real 1D vector
 
     .. math::
 
-        \\begin{bmatrix}
+        \begin{bmatrix}
             a & 0 & b & c & e & f & b & -c & d & 0 & g & h & e & -f & g & -h & i & 0
-        \\end{bmatrix}^{\\top},
+        \end{bmatrix}^{\top},
 
     if ``compact=False``, or
 
     .. math::
 
-        \\begin{bmatrix}
-            a & \sqrt{2} b & \\sqrt{2} c & d & \\sqrt{2} e & \\sqrt{2} f & \\sqrt{2} g & \\sqrt{2} h & i
-        \\end{bmatrix}^{\\top},
+        \begin{bmatrix}
+            a & \sqrt{2} b & \sqrt{2} c & d & \sqrt{2} e & \sqrt{2} f & \sqrt{2} g & 
+            \sqrt{2} h & i
+        \end{bmatrix}^{\top},
 
     if ``compact=True``.
 
@@ -155,54 +156,55 @@ def mat_to_vec(mat, compact=False):
 
 
 def vec_to_mat(vec, iscomplex=False, compact=False):
-    """Reshapes a 1D vector into a symmetric or Hermitian matrix, e.g., if
+    r"""Reshapes a 1D vector into a symmetric or Hermitian matrix, e.g., if
     ``iscomplex=False``, then the vectors
 
     .. math::
 
-        \\begin{bmatrix}
+        \begin{bmatrix}
             a & b & d & b & c & e & d & e & f
-        \\end{bmatrix}^{\\top},
+        \end{bmatrix}^{\top},
 
     if ``compact=False``, or
 
     .. math::
 
-        \\begin{bmatrix}
+        \begin{bmatrix}
             a & \sqrt{2} b & c & \sqrt{2} d & \sqrt{2}e & f
-        \\end{bmatrix}^{\\top},
+        \end{bmatrix}^{\top},
 
     if ``compact=True``, are reshaped into the real symmetric matrix
 
     .. math::
 
-        \\begin{bmatrix}
-            a & b & d \\\ b & c & e \\\ d & e & f
-        \\end{bmatrix}.
+        \begin{bmatrix}
+            a & b & d \\ b & c & e \\ d & e & f
+        \end{bmatrix}.
 
     Simiarly, if ``iscomplex=True``, then the vectors
 
     .. math::
 
-        \\begin{bmatrix}
+        \begin{bmatrix}
             a & 0 & b & c & e & f & b & -c & d & 0 & g & h & e & -f & g & -h & i & 0
-        \\end{bmatrix}^{\\top},
+        \end{bmatrix}^{\top},
 
     if ``compact=False``, or
 
     .. math::
 
-        \\begin{bmatrix}
-            a & \sqrt{2} b & \sqrt{2} c & d & \sqrt{2} e & \sqrt{2} f & \sqrt{2} g & \sqrt{2} h & i
-        \\end{bmatrix}^{\\top},
+        \begin{bmatrix}
+            a & \sqrt{2} b & \sqrt{2} c & d & \sqrt{2} e & \sqrt{2} f & \sqrt{2} g & 
+            \sqrt{2} h & i
+        \end{bmatrix}^{\top},
 
     if ``compact=True``, are reshape into the complex Hermitian matrix
 
     .. math::
 
-        \\begin{bmatrix}
-            a & b+cj & e+fj \\\ b-cj & d & g+hj \\\ e-fj & g-hj & i
-        \\end{bmatrix}^{\\top}.
+        \begin{bmatrix}
+            a & b+cj & e+fj \\ b-cj & d & g+hj \\ e-fj & g-hj & i
+        \end{bmatrix}^{\top}.
 
     Parameters
     ----------

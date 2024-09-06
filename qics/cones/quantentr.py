@@ -6,17 +6,18 @@ from qics.cones.base import Cone, get_central_ray_entr
 
 
 class QuantEntr(Cone):
-    """A class representing a (homogenized) quantum entropy cone
+    r"""A class representing a (homogenized) quantum entropy cone
 
     .. math::
 
-        \\mathcal{K}_{\\text{qe}} = \\text{cl}\\{ (t, u, X) \\in \\mathbb{R} \\times \\mathbb{R}_{++} \\times \\mathbb{H}^n_{++} : t \\geq -u S(X / u) \\},
+        \mathcal{K}_{\text{qe}} = \text{cl}\{ (t, u, X) \in \mathbb{R} \times 
+        \mathbb{R}_{++} \times \mathbb{H}^n_{++} : t \geq -u S(X / u) \},
 
     where
 
     .. math::
 
-        S(X) = -\\text{tr}[X \\log(X)],
+        S(X) = -\text{tr}[X \log(X)],
 
     is the quantum (von Neumann) entropy function. The quantum entropy epigraph can be 
     recovered by enforcing the linear constraint :math:`u=1`.
@@ -26,8 +27,8 @@ class QuantEntr(Cone):
     n : int
         Dimension of the (n, n) matrix :math:`X`.
     iscomplex : bool
-        Whether the matrix is symmetric :math:`X \\in \\mathbb{S}^n` (False) or 
-        Hermitian :math:`X \\in \\mathbb{H}^n` (True). Default is False.
+        Whether the matrix is symmetric :math:`X \in \mathbb{S}^n` (False) or 
+        Hermitian :math:`X \in \mathbb{H}^n` (True). Default is False.
     """
 
     def __init__(self, n, iscomplex=False):

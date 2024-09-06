@@ -6,17 +6,18 @@ from qics.cones.base import Cone, get_central_ray_relentr
 
 
 class QuantRelEntr(Cone):
-    """A class representing a classical relative entropy cone
+    r"""A class representing a classical relative entropy cone
 
     .. math::
 
-        \\mathcal{K}_{\\text{qre}} = \\text{cl}\\{ (t, X, Y) \\in \\mathbb{R} \\times \\mathbb{H}^n_{++} \\times \\mathbb{H}^n_{++} : t \\geq S(X \\| Y) \\},
+        \mathcal{K}_{\text{qre}} = \text{cl}\{ (t, X, Y) \in \mathbb{R} \times 
+        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq S(X \| Y) \},
 
     where
 
     .. math::
 
-        S(X \\| Y) = \\text{tr}[X \\log(X)] - \\text{tr}[X \\log(Y)],
+        S(X \| Y) = \text{tr}[X \log(X)] - \text{tr}[X \log(Y)],
 
     is the quantum (Umegaki) relative entropy function.
 
@@ -25,8 +26,8 @@ class QuantRelEntr(Cone):
     n : int
         Dimension of the (n, n) matrices :math:`X` and :math:`Y`.
     iscomplex : bool
-        Whether the matrices symmetric :math:`X,Y \\in \\mathbb{S}^n` (False) or 
-        Hermitian :math:`X,Y \\in \\mathbb{H}^n` (True). Default is False.
+        Whether the matrices symmetric :math:`X,Y \in \mathbb{S}^n` (False) or 
+        Hermitian :math:`X,Y \in \mathbb{H}^n` (True). Default is False.
     """
 
     def __init__(self, n, iscomplex=False):

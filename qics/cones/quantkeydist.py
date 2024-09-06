@@ -6,52 +6,53 @@ from qics.cones.base import Cone
 
 
 class QuantKeyDist(Cone):
-    """A class representing a quantum key distribution cone
+    r"""A class representing a quantum key distribution cone
 
     .. math::
 
-        \\mathcal{K}_{\\text{qkd}} = \\text{cl}\\{ (t, X) \\in \\mathbb{R} \\times \\mathbb{H}^n_{++} : t \\geq -S(\\mathcal{G}(X)) + S(\\mathcal{Z}(\\mathcal{G}(X))) \\},
+        \mathcal{K}_{\text{qkd}} = \text{cl}\{ (t, X) \in \mathbb{R} \times 
+        \mathbb{H}^n_{++}:t \geq -S(\mathcal{G}(X)) + S(\mathcal{Z}(\mathcal{G}(X))) \},
 
     where
 
     .. math::
 
-        S(X) = -\\text{tr}[X \\log(X)],
+        S(X) = -\text{tr}[X \log(X)],
 
     is the quantum (von Neumann) entropy function, 
-    :math:`\\mathcal{G}:\\mathbb{H}^n\\rightarrow\\mathbb{H}^{mr}` is a positive linear 
-    map, and :math:`\\mathcal{Z}:\\mathbb{H}^{mr}\\rightarrow\\mathbb{H}^{mr}` is a 
+    :math:`\mathcal{G}:\mathbb{H}^n\rightarrow\mathbb{H}^{mr}` is a positive linear 
+    map, and :math:`\mathcal{Z}:\mathbb{H}^{mr}\rightarrow\mathbb{H}^{mr}` is a 
     pinching map that maps off-diagonal blocks to zero.
 
     Parameters
     ----------
     G_info : int or list of ndarray
-        Defines the linear map :math:`\\mathcal{G}`. If ``G_info`` is an ``int``, then 
-        :math:`\\mathcal{G}(X)=X` and this argument specifies the dimension of 
+        Defines the linear map :math:`\mathcal{G}`. If ``G_info`` is an ``int``, then 
+        :math:`\mathcal{G}(X)=X` and this argument specifies the dimension of 
         :math:`X`. If ``G_info`` is a ``list`` of ``ndarray``, then this argument 
         specifies the list of Kraus operators 
-        :math:`\\{ K_i \\in \\mathbb{C}^{mr \\times n } \\}_{i=1}^l` corresponding to 
-        :math:`\\mathcal{G}` such that
+        :math:`\{ K_i \in \mathbb{C}^{mr \times n } \}_{i=1}^l` corresponding to 
+        :math:`\mathcal{G}` such that
 
         .. math::
 
-            \\mathcal{G}(X) = \\sum_{i=1}^l K_i X K_i^\\dagger.
+            \mathcal{G}(X) = \sum_{i=1}^l K_i X K_i^\dagger.
 
     Z_info : int or list of ndarray
-        Defines the linear map :math:`\\mathcal{Z}`. If ``Z_info`` is an ``int``, then 
+        Defines the linear map :math:`\mathcal{Z}`. If ``Z_info`` is an ``int``, then 
         this argument specifies the block-structure which is being zeroed out, i.e., 
         defines :math:`r` where
 
         .. math::
 
-            \\mathcal{Z}(Y) = \\sum_{i=1}^r (| i \\rangle \\langle i | \\otimes \\mathbb{I}_m) Y (| i \\rangle \\langle i | \\otimes \\mathbb{I}_m).
+            \mathcal{Z}(Y) = \sum_{i=1}^r (| i \rangle \langle i | \otimes \mathbb{I}_m) Y (| i \rangle \langle i | \otimes \mathbb{I}_m).
 
         If ``Z_info`` is a ``list`` of ``ndarray``, then this argument directly 
-        specifies the Kraus operator corresponding to :math:`\\mathcal{Z}`.
+        specifies the Kraus operator corresponding to :math:`\mathcal{Z}`.
 
     iscomplex : bool
-        Whether the matrix is symmetric :math:`X \\in \\mathbb{S}^n` (False) or 
-        Hermitian :math:`X \\in \\mathbb{H}^n` (True). Default is False.
+        Whether the matrix is symmetric :math:`X \in \mathbb{S}^n` (False) or 
+        Hermitian :math:`X \in \mathbb{H}^n` (True). Default is False.
     """
 
     def __init__(self, G_info, Z_info, iscomplex=False):

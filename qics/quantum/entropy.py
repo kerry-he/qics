@@ -2,11 +2,11 @@ import numpy as np
 
 
 def entropy(x):
-    """Computes classical (Shannon) entropy
+    r"""Computes classical (Shannon) entropy
 
     .. math::
 
-        H(x) = -\\sum_{i=1}^n x_i \\log(x_i),
+        H(x) = -\sum_{i=1}^n x_i \log(x_i),
 
     for nonnegative vector :math:`x`.
 
@@ -25,11 +25,11 @@ def entropy(x):
 
 
 def quant_entropy(X):
-    """Computes quantum (von Neumann) entropy
+    r"""Computes quantum (von Neumann) entropy
 
     .. math::
 
-        S(X) = -\\text{tr}[X \\log(X)],
+        S(X) = -\text{tr}[X \log(X)],
 
     for positive semidefinite matrix :math:`X`.
 
@@ -48,17 +48,18 @@ def quant_entropy(X):
 
 
 def purify(X):
-    """Returns a purification of a quantum state X. If X has spectral decomposition
+    r"""Returns a purification of a quantum state X. If X has spectral decomposition
 
     .. math::
 
-        X = \\sum_{i=1}^n \\lambda_i | v_i \\rangle\\langle v_i |,
+        X = \sum_{i=1}^n \lambda_i | v_i \rangle\langle v_i |,
 
-    then the purification is :math:`| \\psi \\rangle\\langle \\psi |` where
+    then the purification is :math:`| \psi \rangle\langle \psi |` where
 
     .. math::
 
-        | \\psi \\rangle = \\sum_{i=1}^n \\sqrt{\\lambda_i} (| v_i \\rangle \\otimes | v_i \\rangle).
+        | \psi \rangle = \sum_{i=1}^n \sqrt{\lambda_i} (| v_i \rangle \otimes | v_i 
+        \rangle).
 
     Parameters
     ----------

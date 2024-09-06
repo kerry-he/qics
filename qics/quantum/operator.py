@@ -2,18 +2,18 @@ import numpy as np
 
 
 def p_tr(mat, dims, sys):
-    """Performs the partial trace on a bipartite matrix, e.g., for
+    r"""Performs the partial trace on a bipartite matrix, e.g., for
     a bipartite state, this is the unique linear map satisfying
 
     .. math::
 
-        X \otimes Y \\mapsto \\text{tr}[X] Y,
+        X \otimes Y \mapsto \text{tr}[X] Y,
 
     if ``sys=0``, or
 
     .. math::
 
-        X \otimes Y \\mapsto \\text{tr}[Y] X,
+        X \otimes Y \mapsto \text{tr}[Y] X,
 
     if ``sys=1``.
 
@@ -57,7 +57,7 @@ def p_tr(mat, dims, sys):
 
 
 def p_tr_multi(out, mat, dims, sys):
-    """Performs the partial trace on a list of bipartite matrices.
+    r"""Performs the partial trace on a list of bipartite matrices.
 
     Parameters
     ----------
@@ -102,18 +102,18 @@ def p_tr_multi(out, mat, dims, sys):
 
 
 def i_kr(mat, dims, sys):
-    """Performs Kronecker product between the indentity matrix and a given matrix, 
+    r"""Performs Kronecker product between the indentity matrix and a given matrix, 
     e.g., for a bipartite system
 
     .. math::
 
-        X \\mapsto \mathbb{I} \otimes X,
+        X \mapsto \mathbb{I} \otimes X,
 
     if ``sys=0``, or
 
     .. math::
 
-        X \\mapsto X \\otimes \mathbb{I},
+        X \mapsto X \otimes \mathbb{I},
 
     if ``sys=1``.
 
@@ -162,7 +162,7 @@ def i_kr(mat, dims, sys):
 
 
 def i_kr_multi(out, mat, dims, sys):
-    """Performs Kronecker product between the indentity matrix and a given list of 
+    r"""Performs Kronecker product between the indentity matrix and a given list of 
     matrices.
 
     Parameters
@@ -208,18 +208,18 @@ def i_kr_multi(out, mat, dims, sys):
 
 
 def partial_transpose(mat, dims, sys):
-    """Performs the partial transpose on a multipartite matrix, e.g., for a bipartite 
+    r"""Performs the partial transpose on a multipartite matrix, e.g., for a bipartite 
     state, the unique linear map satisfying
 
     .. math::
 
-        X \otimes Y \\mapsto X^\\top \\otimes Y,
+        X \otimes Y \mapsto X^\top \otimes Y,
 
     if ``sys=0``, or
 
     .. math::
 
-        X \otimes Y \\mapsto X \\otimes Y^\\top,
+        X \otimes Y \mapsto X \otimes Y^\top,
 
     if ``sys=1``.
 
@@ -248,7 +248,7 @@ def partial_transpose(mat, dims, sys):
 
 
 def swap(mat, dims, sys1, sys2):
-    """Swaps two systems of a multipartite quantum state, e.g., for a bipartite state, 
+    r"""Swaps two systems of a multipartite quantum state, e.g., for a bipartite state, 
     it is the unique linear maps satisfying
 
     .. math::

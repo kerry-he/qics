@@ -4,17 +4,12 @@ from qics.cones.base import Cone
 
 
 class SecondOrder(Cone):
-    """A class representing a second order cone
+    r"""A class representing a second order cone
 
     .. math::
 
-        \\mathcal{Q}_{n+1} = \\{ (t, x) \\in \\mathbb{R} \\times \\mathbb{R}^{n} : t \\geq \\| x \\|_2 \\},
-
-    with barrier function
-
-    .. math::
-
-        (t, x) \\mapsto -\\log(t^2 - x^\\top x).
+        \mathcal{Q}_{n+1} = \{ (t, x) \in \mathbb{R} \times \mathbb{R}^{n} : 
+        t \geq \| x \|_2 \}.
 
     Parameters
     ----------

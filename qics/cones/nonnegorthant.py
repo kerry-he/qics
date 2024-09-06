@@ -4,11 +4,11 @@ from qics.cones.base import SymCone
 
 
 class NonNegOrthant(SymCone):
-    """A class representing a nonnegative orthant
+    r"""A class representing a nonnegative orthant
 
     .. math::
 
-        \\mathbb{R}^n_+ = \\{ x \\in \\mathbb{R}^n : x \\geq 0 \\}.
+        \mathbb{R}^n_+ = \{ x \in \mathbb{R}^n : x \geq 0 \}.
 
     Parameters
     ----------

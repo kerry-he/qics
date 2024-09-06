@@ -6,31 +6,31 @@ from qics._utils import linalg
 
 
 class Model:
-    """A class representing an instance of the primal.
+    r"""A class representing an instance of the primal.
 
     .. math::
 
-        \\min_{x \\in \\mathbb{R}^n} &&& c^\\top x
+        \min_{x \in \mathbb{R}^n} &&& c^\top x
 
-        \\text{s.t.} &&& b - Ax = 0
+        \text{s.t.} &&& b - Ax = 0
 
-         &&& h - Gx \\in \\mathcal{K}
+         &&& h - Gx \in \mathcal{K}
 
     and dual
 
     .. math::
 
-        \\max_{y \\in \\mathbb{R}^p, z \\in \\mathbb{R}^q} &&& -b^\\top y - h^\\top z
+        \max_{y \in \mathbb{R}^p, z \in \mathbb{R}^q} &&& -b^\top y - h^\top z
 
-        \\text{s.t.} &&& c + A^\\top y + G^\\top z = 0
+        \text{s.t.} &&& c + A^\top y + G^\top z = 0
 
-         &&& z \\in \\mathcal{K}_*
+         &&& z \in \mathcal{K}_*
 
-    standard form conic programs, where :math:`c \\in \\mathbb{R}^n`,
-    :math:`b \\in \\mathbb{R}^p`, :math:`h \\in \\mathbb{R}^q`,
-    :math:`A \\in \\mathbb{R}^{p \\times n}`, :math:`G \\in \\mathbb{R}^{q \\times n}`,
-    and :math:`\\mathcal{K} \\subset \\mathbb{R}^{q}` is a convex, proper cone with dual
-    cone :math:`\\mathcal{K}_* \\subset \\mathbb{R}^{q}`.
+    standard form conic programs, where :math:`c \in \mathbb{R}^n`,
+    :math:`b \in \mathbb{R}^p`, :math:`h \in \mathbb{R}^q`,
+    :math:`A \in \mathbb{R}^{p \times n}`, :math:`G \in \mathbb{R}^{q \times n}`,
+    and :math:`\mathcal{K} \subset \mathbb{R}^{q}` is a convex, proper cone with dual
+    cone :math:`\mathcal{K}_* \subset \mathbb{R}^{q}`.
 
 
     Parameters
@@ -46,8 +46,8 @@ class Model:
     h : (q, 1) ndarray, optional
         Float array representing linear cone constraints. Default is ``0``.
     cones : list, optional
-        List of cone classes representing the Cartesian product of cones
-        :math:`\\mathcal{K}`. Default is empty set.
+        List of :class:`qics.cones` representing the Cartesian product of cones
+        :math:`\mathcal{K}`. Default is empty set.
     offset : float, optional
         Constant offset term to add to the objective function. Default is ``0``.
     """

@@ -6,13 +6,14 @@ from qics.cones.base import Cone, get_perspective_derivatives
 
 
 class OpPerspecEpi(Cone):
-    """A class representing a operator perspective epigraph cone
+    r"""A class representing a operator perspective epigraph cone
 
     .. math::
 
-        \\mathcal{K}_{\\text{op}}^g = \\text{cl}\\{ (T, X, Y) \\in \\mathbb{H}^n \\times \\mathbb{H}^n_{++} \\times \\mathbb{H}^n_{++} : T \\succeq P_g(X, Y) \\},
+        \mathcal{K}_{\text{op}}^g = \text{cl}\{ (T, X, Y) \in \mathbb{H}^n \times 
+        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \},
 
-    for an operator concave function :math:`g:[0, \\infty)\\rightarrow\\mathbb{R}`, 
+    for an operator concave function :math:`g:[0, \infty)\rightarrow\mathbb{R}`, 
     where
 
     .. math::
@@ -28,13 +29,13 @@ class OpPerspecEpi(Cone):
     func : string or float
         Choice for the function g. Can either be
 
-        - ``"log"``             : :math:`g(x) = -\\log(x)`
+        - ``"log"``             : :math:`g(x) = -\log(x)`
         - ``(0, 1)``            : :math:`g(x) = -x^p`
         - ``(-1, 0) or (1, 2)`` : :math:`g(x) = x^p`
 
     iscomplex : bool
-        Whether the matrices are symmetric :math:`T,X,Y \\in \\mathbb{S}^n` (False) or 
-        Hermitian :math:`T,X,Y \\in \\mathbb{H}^n` (True). Default is False.
+        Whether the matrices are symmetric :math:`T,X,Y \in \mathbb{S}^n` (False) or 
+        Hermitian :math:`T,X,Y \in \mathbb{H}^n` (True). Default is False.
     """
 
     def __init__(self, n, func, iscomplex=False):

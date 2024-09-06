@@ -149,7 +149,8 @@ class Cone:
         pass
 
     def hess_congr(self, A):
-        """Compute the congruence transform AH(s)A' with the Hessian matrix H of the barrier function.
+        """Compute the congruence transform AH(s)A' with the Hessian matrix H of the 
+        barrier function.
 
         Parameters
         ----------
@@ -166,8 +167,8 @@ class Cone:
         pass
 
     def invhess_prod_ip(self, out, H):
-        """Compute the inverse Hessian product D2F(s)^-1[H] of the barrier function in the
-        direction of H, and store this in-place in out.
+        """Compute the inverse Hessian product D2F(s)^-1[H] of the barrier function in
+        the direction of H, and store this in-place in out.
 
         Parameters
         ----------
@@ -289,7 +290,7 @@ class SymCone(Cone):
         pass
 
     def comb_dir(self, out, ds, dz, sigma_mu):
-        """Compute the residual rs where rs is given as the lhs of
+        r"""Compute the residual rs where rs is given as the lhs of
 
             Lambda o (W dz + W^-T ds) = -Lambda o Lambda - (W^-T ds_a) o (W dz_a)
                                         + sigma * mu * I
@@ -395,25 +396,25 @@ central_rays_entr = np.array(
 
 def get_perspective_derivatives(func):
     if func == "log":
-        g = lambda x: -np.log(x)
-        dg = lambda x: -np.reciprocal(x)
-        d2g = lambda x: np.reciprocal(x * x)
-        d3g = lambda x: -np.reciprocal(x * x * x) * 2.0
+        def g(x): return -np.log(x)
+        def dg(x): return -np.reciprocal(x)
+        def d2g(x): return np.reciprocal(x * x)
+        def d3g(x): return -np.reciprocal(x * x * x) * 2.0
 
-        xg = lambda x: -x * np.log(x)
-        dxg = lambda x: -np.log(x) - 1.0
-        d2xg = lambda x: -np.reciprocal(x)
-        d3xg = lambda x: np.reciprocal(x * x)
+        def xg(x): return -x * np.log(x)
+        def dxg(x): return -np.log(x) - 1.0
+        def d2xg(x): return -np.reciprocal(x)
+        def d3xg(x): return np.reciprocal(x * x)
 
-        h = lambda x: x * np.log(x)
-        dh = lambda x: np.log(x) + 1.0
-        d2h = lambda x: np.reciprocal(x)
-        d3h = lambda x: -np.reciprocal(x * x)
+        def h(x): return x * np.log(x)
+        def dh(x): return np.log(x) + 1.0
+        def d2h(x): return np.reciprocal(x)
+        def d3h(x): return -np.reciprocal(x * x)
 
-        xh = lambda x: x * x * np.log(x)
-        dxh = lambda x: 2.0 * x * np.log(x) + x
-        d2xh = lambda x: 2.0 * np.log(x) + 3.0
-        d3xh = lambda x: 2 * np.reciprocal(x)
+        def xh(x): return x * x * np.log(x)
+        def dxh(x): return 2.0 * x * np.log(x) + x
+        def d2xh(x): return 2.0 * np.log(x) + 3.0
+        def d3xh(x): return 2 * np.reciprocal(x)
     elif isinstance(func, (int, float)):
         alpha = func
         if alpha > 0 and alpha < 1:
@@ -421,29 +422,29 @@ def get_perspective_derivatives(func):
         elif (alpha > 1 and alpha < 2) or (alpha > -1 and alpha < 0):
             sgn = 1
 
-        g = lambda x: sgn * np.power(x, alpha)
-        dg = lambda x: sgn * np.power(x, alpha - 1) * alpha
-        d2g = lambda x: sgn * np.power(x, alpha - 2) * (alpha * (alpha - 1))
-        d3g = (
-            lambda x: sgn * np.power(x, alpha - 3) * (alpha * (alpha - 1) * (alpha - 2))
-        )
+        def g(x): return sgn * np.power(x, alpha)
+        def dg(x): return sgn * np.power(x, alpha - 1) * alpha
+        def d2g(x): return sgn * np.power(x, alpha - 2) * (alpha * (alpha - 1))
+        def d3g(x):
+            return sgn * np.power(x, alpha - 3) * (alpha * (alpha - 1) * (alpha - 2))
 
-        xg = lambda x: sgn * np.power(x, alpha + 1)
-        dxg = lambda x: sgn * np.power(x, alpha) * (alpha + 1)
-        d2xg = lambda x: sgn * np.power(x, alpha - 1) * ((alpha + 1) * alpha)
-        d3xg = (
-            lambda x: sgn * np.power(x, alpha - 2) * ((alpha + 1) * alpha * (alpha - 1))
-        )
+        def xg(x): return sgn * np.power(x, alpha + 1)
+        def dxg(x): return sgn * np.power(x, alpha) * (alpha + 1)
+        def d2xg(x): return sgn * np.power(x, alpha - 1) * ((alpha + 1) * alpha)
+        def d3xg(x):
+            return sgn * np.power(x, alpha - 2) * ((alpha + 1) * alpha * (alpha - 1))
 
         beta = 1.0 - alpha
-        h = lambda x: sgn * np.power(x, beta)
-        dh = lambda x: sgn * np.power(x, beta - 1) * beta
-        d2h = lambda x: sgn * np.power(x, beta - 2) * (beta * (beta - 1))
-        d3h = lambda x: sgn * np.power(x, beta - 3) * (beta * (beta - 1) * (beta - 2))
+        def h(x): return sgn * np.power(x, beta)
+        def dh(x): return sgn * np.power(x, beta - 1) * beta
+        def d2h(x): return sgn * np.power(x, beta - 2) * (beta * (beta - 1))
+        def d3h(x): 
+            return sgn * np.power(x, beta - 3) * (beta * (beta - 1) * (beta - 2))
 
-        xh = lambda x: sgn * np.power(x, beta + 1)
-        dxh = lambda x: sgn * np.power(x, beta) * (beta + 1)
-        d2xh = lambda x: sgn * np.power(x, beta - 1) * ((beta + 1) * beta)
-        d3xh = lambda x: sgn * np.power(x, beta - 2) * ((beta + 1) * beta * (beta - 1))
+        def xh(x): return sgn * np.power(x, beta + 1)
+        def dxh(x): return sgn * np.power(x, beta) * (beta + 1)
+        def d2xh(x): return sgn * np.power(x, beta - 1) * ((beta + 1) * beta)
+        def d3xh(x): 
+            return sgn * np.power(x, beta - 2) * ((beta + 1) * beta * (beta - 1))
 
     return (g, dg, d2g, d3g, xg, dxg, d2xg, d3xg, h, dh, d2h, d3h, xh, dxh, d2xh, d3xh)

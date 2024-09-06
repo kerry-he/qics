@@ -62,30 +62,30 @@ def write_file(model, filename):
 
 
 def read_sdpa(filename):
-    """Reads a file in the SDPA sparse format, and returns a
+    r"""Reads a file in the SDPA sparse format, and returns a
     :class:`~qics.Model` represnting the primal
 
     .. math::
 
-        \\max_{X\\in\\mathbb{S}^n} &&& \\langle C, X \\rangle
+        \max_{X\in\mathbb{S}^n} &&& \langle C, X \rangle
 
-        \\text{s.t.} &&& \\langle A_i, X \\rangle = b_i, \\quad i=1,\\ldots,p
+        \text{s.t.} &&& \langle A_i, X \rangle = b_i, \quad i=1,\ldots,p
 
-         &&& X \\succeq 0
+         &&& X \succeq 0
 
     and dual
 
     .. math::
 
-        \\min_{y \\in \\mathbb{R}^p} &&& -b^\\top y
+        \min_{y \in \mathbb{R}^p} &&& -b^\top y
 
-        \\text{s.t.} &&& \\sum_{i=1}^p A_i y_i - C \\succeq 0
+        \text{s.t.} &&& \sum_{i=1}^p A_i y_i - C \succeq 0
 
     pair of semidefinite programs. Accepts either file extensions
 
         - ``.dat-s``: Standard SDPA sparse file.
         - ``.dat-c``: Complex-valued SDPA sparse file, in which case the data matrices
-          :math:`C\\in\\mathbb{H}^n`, :math:`A_i\\in\\mathbb{H}^n` are assumed to all be
+          :math:`C\in\mathbb{H}^n`, :math:`A_i\in\mathbb{H}^n` are assumed to all be
           Hermitian.
 
     Parameters
@@ -259,23 +259,23 @@ def read_sdpa(filename):
 
 
 def write_sdpa(model, filename):
-    """Writes a semidefinite program
+    r"""Writes a semidefinite program
 
     .. math::
 
-        \\max_{X\\in\\mathbb{S}^n} &&& \\langle C, X \\rangle
+        \max_{X\in\mathbb{S}^n} &&& \langle C, X \rangle
 
-        \\text{s.t.} &&& \\langle A_i, X \\rangle = b_i, \\quad i=1,\\ldots,p
+        \text{s.t.} &&& \langle A_i, X \rangle = b_i, \quad i=1,\ldots,p
 
-         &&& X \\succeq 0
+         &&& X \succeq 0
 
     with dual
 
     .. math::
 
-        \\min_{y \\in \\mathbb{R}^p} &&& -b^\\top y
+        \min_{y \in \mathbb{R}^p} &&& -b^\top y
 
-        \\text{s.t.} &&& \\sum_{i=1}^p A_i y_i - C \\succeq 0
+        \text{s.t.} &&& \sum_{i=1}^p A_i y_i - C \succeq 0
 
     represented by a :class:`~qics.Model` to a ``.dat-s`` (or
     ``.dat-c`` for complex-valued SDPs) file using the sparse SDPA
@@ -394,16 +394,16 @@ def write_sdpa(model, filename):
 
 
 def read_cbf(filename):
-    """Reads a file in the Conic Benchmark Format, and returns
+    r"""Reads a file in the Conic Benchmark Format, and returns
     a :class:`~qics.Model` representing a conic program of the form
 
     .. math::
 
-        \\min_{x \\in \\mathbb{R}^n} &&& c^\\top x
+        \min_{x \in \mathbb{R}^n} &&& c^\top x
 
-        \\text{s.t.} &&& b - Ax = 0
+        \text{s.t.} &&& b - Ax = 0
 
-         &&& h - Gx \\in \\mathcal{K}
+         &&& h - Gx \in \mathcal{K}
 
     Parameters
     ----------
@@ -644,15 +644,15 @@ def read_cbf(filename):
 
 
 def write_cbf(model, filename):
-    """Writes a conic program
+    r"""Writes a conic program
 
     .. math::
 
-        \\min_{x \\in \\mathbb{R}^n} &&& c^\\top x
+        \min_{x \in \mathbb{R}^n} &&& c^\top x
 
-        \\text{s.t.} &&& b - Ax = 0
+        \text{s.t.} &&& b - Ax = 0
 
-         &&& h - Gx \\in \\mathcal{K}
+         &&& h - Gx \in \mathcal{K}
 
     represented by a :class:`~qics.Model` to a ``.cbf`` (or file using
     the Conic Benchmark Format.
