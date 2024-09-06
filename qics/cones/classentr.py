@@ -3,57 +3,54 @@ import scipy as sp
 import qics._utils.linalg as lin
 from qics.cones.base import Cone, get_central_ray_entr
 
+
 class ClassEntr(Cone):
     """A class representing a (homogenized) classical entropy cone
-    
+
     .. math::
 
         \\mathcal{K}_{\\text{ce}} = \\text{cl}\\{ (t, u, x) \\in \\mathbb{R} \\times \\mathbb{R}_{++} \\times \\mathbb{R}^n_{++} : t \\geq -u H(x / u) \\},
-        
-    with barrier function
 
-    .. math::
-    
-        (t, u, x) \\mapsto -\\log(t + u H(x / u)) - \\sum_{i=1}^n \\log(x_i),
-        
     where
 
     .. math::
 
         H(x) = -\\sum_{i=1}^n x_i \\log(x_i),
-        
-    is the classical (Shannon) entropy function. The classical entropy epigraph can be recovered
-    by enforcing the linear constraint :math:`u=1`.
+
+    is the classical (Shannon) entropy function. The classical entropy epigraph can be 
+    recovered by enforcing the linear constraint :math:`u=1`.
 
     Parameters
     ----------
     n : int
-        Dimension of the vector :math:`x`, i.e., how many terms are in the classical entropy function.
-    """    
-    def __init__(self, n):    
-        # Dimension properties
-        self.n  = n # Dimension of system
-        self.nu = 2 + self.n # Barrier parameter
+        Dimension of the vector :math:`x`, i.e., how many terms are in the classical 
+        entropy function.
+    """
 
-        self.dim   = [1, 1, n]
-        self.type  = ['r', 'r', 'r']
+    def __init__(self, n):
+        # Dimension properties
+        self.n = n  # Dimension of system
+        self.nu = 2 + self.n  # Barrier parameter
+
+        self.dim = [1, 1, n]
+        self.type = ["r", "r", "r"]
 
         # Update flags
-        self.feas_updated        = False
-        self.grad_updated        = False
-        self.hess_aux_updated    = False
+        self.feas_updated = False
+        self.grad_updated = False
+        self.hess_aux_updated = False
         self.invhess_aux_updated = False
-        self.dder3_aux_updated   = False
-        self.congr_aux_updated   = False
+        self.dder3_aux_updated = False
+        self.congr_aux_updated = False
 
         return
-    
+
     def get_init_point(self, out):
         (t0, u0, x0) = get_central_ray_entr(self.n)
 
         point = [
-            np.array([[t0]]), 
-            np.array([[u0]]), 
+            np.array([[t0]]),
+            np.array([[u0]]),
             np.ones((self.n, 1)) * x0,
         ]
 
@@ -68,7 +65,7 @@ class ClassEntr(Cone):
     def get_feas(self):
         if self.feas_updated:
             return self.feas
-        
+
         self.feas_updated = True
 
         (self.t, self.u, self.x) = self.primal
@@ -76,20 +73,20 @@ class ClassEntr(Cone):
         if (self.u <= 0) or any(self.x <= 0):
             self.feas = False
             return self.feas
-        
-        self.sum_x     = np.sum(self.x)
-        self.log_x     = np.log(self.x)
-        self.log_u     = np.log(self.u[0, 0])
+
+        self.sum_x = np.sum(self.x)
+        self.log_x = np.log(self.x)
+        self.log_u = np.log(self.u[0, 0])
         self.log_sum_x = np.log(self.sum_x)
 
-        entr_x   = self.x.T @ self.log_x
-        entr_xu  = self.sum_x * self.log_u
+        entr_x = self.x.T @ self.log_x
+        entr_xu = self.sum_x * self.log_u
 
         self.z = (self.t - (entr_x - entr_xu))[0, 0]
 
-        self.feas = (self.z > 0)
+        self.feas = self.z > 0
         return self.feas
-    
+
     def update_grad(self):
         assert self.feas_updated
         assert not self.grad_updated
@@ -99,13 +96,13 @@ class ClassEntr(Cone):
         self.xi = np.reciprocal(self.x)
 
         self.DPhiu = -self.sum_x * self.ui
-        self.DPhiX = self.log_x + (1. - self.log_u)
+        self.DPhiX = self.log_x + (1.0 - self.log_u)
 
         self.grad = [
-           -self.zi,
+            -self.zi,
             self.zi * self.DPhiu - self.ui,
-            self.zi * self.DPhiX - self.xi
-        ]        
+            self.zi * self.DPhiX - self.xi,
+        ]
 
         self.grad_updated = True
 
@@ -120,9 +117,9 @@ class ClassEntr(Cone):
         (Ht, Hu, Hx) = H
 
         # Hessian product of classical entropy
-        D2PhiuH =  Hu * self.sum_x * self.ui2 - np.sum(Hx) * self.ui
-        D2PhixH = -Hu * self.ui               +        Hx  * self.xi
-        
+        D2PhiuH = Hu * self.sum_x * self.ui2 - np.sum(Hx) * self.ui
+        D2PhixH = -Hu * self.ui + Hx * self.xi
+
         # Hessian product of barrier function
         out[0][:] = (Ht - Hu * self.DPhiu - Hx.T @ self.DPhiX) * self.zi2
         out[1][:] = -out[0] * self.DPhiu + self.zi * D2PhiuH + Hu * self.ui2
@@ -145,7 +142,7 @@ class ClassEntr(Cone):
         # D2_ux Phi(u, x) [Hx] = -sum(Hx) / u
         # D2_xu Phi(u, x) [Hu] = -Hu / u
         # D2_xx Phi(u, x) [Hx] =  Hx / x
-        D2PhiuH  = self.Huu * self.Au
+        D2PhiuH = self.Huu * self.Au
         D2PhiuH += self.Hux * np.sum(self.Ax, axis=1)
 
         np.multiply(self.Hxx.T, self.Ax, out=self.work1)
@@ -157,7 +154,7 @@ class ClassEntr(Cone):
         # D2_tt F(t, u, x)[Ht] = Ht / z^2
         # D2_tu F(t, u, x)[Hu] = -(D_u Phi(u, x) [Hu]) / z^2
         # D2_tx F(t, u, x)[Hx] = -(D_X Phi(u, x) [Hx]) / z^2
-        outt  = self.At - self.Au * self.DPhiu[0, 0]
+        outt = self.At - self.Au * self.DPhiu[0, 0]
         outt -= (self.Ax @ self.DPhiX).ravel()
         outt *= self.zi2
 
@@ -169,7 +166,7 @@ class ClassEntr(Cone):
         # D2_ut F(t, u, x)[Ht] = -Ht (D_u Phi(u, x)) / z^2
         # D2_uu F(t, u, x)[Hu] = (D_u Phi(u, x) [Hu]) D_u Phi(u, x) / z^2 + (D2_uu Phi(u, x) [Hu]) / z + Hu / u^2
         # D2_ux F(t, u, x)[Hx] = (D_x Phi(u, x) [Hx]) D_u Phi(u, x) / z^2 + (D2_ux Phi(u, x) [Hx]) / z
-        outu  = -outt * self.DPhiu
+        outu = -outt * self.DPhiu
         outu += D2PhiuH
 
         lhs[:, 1] = outu
@@ -206,7 +203,7 @@ class ClassEntr(Cone):
         # Hessian product of classical entropy
         outu = self.rho * (Wu - self.Hxx_inv_Hux.T @ Wx)
         outx = self.Hxx_inv * Wx - outu * self.Hxx_inv_Hux
-        
+
         # Hessian product of barrier function
         out[0][:] = Ht * self.z2 + outu * self.DPhiu + outx.T @ self.DPhiX
         out[1][:] = outu
@@ -223,7 +220,7 @@ class ClassEntr(Cone):
         if not self.congr_aux_updated:
             self.congr_aux(A)
 
-        # The inverse Hessian product applied on (Ht, Hu, Hx) for the CE barrier is 
+        # The inverse Hessian product applied on (Ht, Hu, Hx) for the CE barrier is
         #     (u, x) =  M \ (Wu, Wx)
         #         t  =  z^2 Ht + <DPhi(u, x), (u, x)>
         # where (Wu, Wx) = [(Hu, Hx) + Ht DPhi(u, x)]
@@ -261,11 +258,11 @@ class ClassEntr(Cone):
         # ====================================================================
         # Inverse Hessian products with respect to t
         # ====================================================================
-        outt  = self.z2 * self.At 
+        outt = self.z2 * self.At
         outt += outu * self.DPhiu[0, 0]
         outt += (self.work1 @ self.DPhiX).ravel()
         lhs[:, 0] = outt
-        
+
         # Multiply A (H A')
         return lin.dense_dot_x(lhs, A.T)
 
@@ -278,39 +275,39 @@ class ClassEntr(Cone):
 
         (Ht, Hu, Hx) = H
 
-        Hu2    = Hu * Hu
-        Hx2    = Hx * Hx
+        Hu2 = Hu * Hu
+        Hx2 = Hx * Hx
         sum_Hx = np.sum(Hx)
 
         chi = (Ht - self.DPhiu * Hu - self.DPhiX.T @ Hx)[0, 0]
         chi2 = chi * chi
 
         # Classical entropy Hessians
-        D2PhiuH =  Hu * self.sum_x * self.ui2 - np.sum(Hx) * self.ui
-        D2PhixH = -Hu * self.ui               +        Hx  * self.xi
+        D2PhiuH = Hu * self.sum_x * self.ui2 - np.sum(Hx) * self.ui
+        D2PhixH = -Hu * self.ui + Hx * self.xi
 
-        D2PhiuHH = Hu   * D2PhiuH
+        D2PhiuHH = Hu * D2PhiuH
         D2PhixHH = Hx.T @ D2PhixH
 
         # Classical entropy third order derivatives
-        D3PhiuHH  = -2 * Hu2 * self.sum_x * self.ui3
-        D3PhiuHH +=  2 * Hu * sum_Hx * self.ui2
+        D3PhiuHH = -2 * Hu2 * self.sum_x * self.ui3
+        D3PhiuHH += 2 * Hu * sum_Hx * self.ui2
 
-        D3PhixHH  = -Hx2 * self.xi2
-        D3PhixHH +=  Hu2 * self.ui2
+        D3PhixHH = -Hx2 * self.xi2
+        D3PhixHH += Hu2 * self.ui2
 
         # Third derivatives of barrier
         dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhixHH + D2PhiuHH)
 
-        dder3_u  = -dder3_t * self.DPhiu
-        dder3_u -=  2 * self.zi2 * chi * D2PhiuH
-        dder3_u +=  self.zi * D3PhiuHH
-        dder3_u -=  2 * Hu2 * self.ui3
+        dder3_u = -dder3_t * self.DPhiu
+        dder3_u -= 2 * self.zi2 * chi * D2PhiuH
+        dder3_u += self.zi * D3PhiuHH
+        dder3_u -= 2 * Hu2 * self.ui3
 
-        dder3_x  = -dder3_t * self.DPhiX
-        dder3_x -=  2 * self.zi2 * chi * D2PhixH
-        dder3_x +=  self.zi * D3PhixHH
-        dder3_x -=  2 * Hx2 * self.xi3
+        dder3_x = -dder3_t * self.DPhiX
+        dder3_x -= 2 * self.zi2 * chi * D2PhixH
+        dder3_x += self.zi * D3PhixHH
+        dder3_x -= 2 * Hx2 * self.xi3
 
         out[0][:] += dder3_t * a
         out[1][:] += dder3_u * a
@@ -344,21 +341,21 @@ class ClassEntr(Cone):
         self.ui2 = self.ui * self.ui
         self.xi2 = self.xi * self.xi
 
-        self.Huu = (self.zi * self.sum_x + 1.) * self.ui2
+        self.Huu = (self.zi * self.sum_x + 1.0) * self.ui2
         self.Hux = -self.zi * self.ui[0, 0]
-        self.Hxx =  self.zi * self.xi + self.xi2 
+        self.Hxx = self.zi * self.xi + self.xi2
 
         self.hess_aux_updated = True
 
         return
-    
+
     def update_invhessprod_aux(self):
         assert not self.invhess_aux_updated
         assert self.grad_updated
 
-        self.Hxx_inv     = np.reciprocal(self.Hxx)
+        self.Hxx_inv = np.reciprocal(self.Hxx)
         self.Hxx_inv_Hux = self.Hxx_inv * self.Hux
-        self.rho         = 1. / (self.Huu - np.sum(self.Hxx_inv_Hux) * self.Hux)[0, 0]
+        self.rho = 1.0 / (self.Huu - np.sum(self.Hxx_inv_Hux) * self.Hux)[0, 0]
 
         self.z2 = self.z * self.z
 

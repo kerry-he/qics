@@ -1,5 +1,7 @@
 import math
+
 import numpy as np
+
 
 def vec_dim(side, iscomplex=False, compact=False):
     """Computes the dimension of a vectorized matrix.
@@ -9,10 +11,11 @@ def vec_dim(side, iscomplex=False, compact=False):
     side : int
         The dimension of the matrix.
     iscomplex : bool, optional
-        Whether the matrix is Hermitian (``True``) or symmetric (``False``). Default is ``False``.
+        Whether the matrix is Hermitian (``True``) or symmetric (``False``). Default is
+        ``False``.
     compact : bool, optional
         Whether to assume a compact vector representation or not. Default is ``False``.
-        
+
     Returns
     -------
     int
@@ -29,6 +32,7 @@ def vec_dim(side, iscomplex=False, compact=False):
         else:
             return side * side
 
+
 def mat_dim(len, iscomplex=False, compact=False):
     """Computes the dimension of the matrix correpsonding to a vector.
 
@@ -37,7 +41,8 @@ def mat_dim(len, iscomplex=False, compact=False):
     len : int
         The dimension of the vector.
     iscomplex : bool, optional
-        Whether the matrix is Hermitian (``True``) or symmetric (``False``). Default is ``False``.
+        Whether the matrix is Hermitian (``True``) or symmetric (``False``). Default is
+        ``False``.
     compact : bool, optional
         Whether to assume a compact vector representation or not. Default is ``False``.
 
@@ -45,7 +50,7 @@ def mat_dim(len, iscomplex=False, compact=False):
     -------
     int
         The dimension of the matrix.
-    """    
+    """
     if compact:
         if iscomplex:
             return math.isqrt(len)
@@ -57,15 +62,16 @@ def mat_dim(len, iscomplex=False, compact=False):
         else:
             return math.isqrt(len)
 
+
 def mat_to_vec(mat, compact=False):
-    """Reshapes a square matrix into a 1D vector, e.g., the symmetric matrix 
-    
+    """Reshapes a square matrix into a 1D vector, e.g., the symmetric matrix
+
     .. math::
 
         \\begin{bmatrix}
             a & b & d \\\ b & c & e \\\ d & e & f
         \\end{bmatrix},
-        
+
     is vectorized as the real 1D vector
 
     .. math::
@@ -81,15 +87,15 @@ def mat_to_vec(mat, compact=False):
         \\begin{bmatrix}
             a & \sqrt{2} b & c & \sqrt{2} d & \sqrt{2}e & f
         \\end{bmatrix}^{\\top},
-    
+
     if ``compact=True``. Alternatively, the Hermitian matrix
-    
+
     .. math::
 
         \\begin{bmatrix}
             a & b+cj & e+fj \\\ b-cj & d & g+hj \\\ e-fj & g-hj & i
         \\end{bmatrix}^{\\top},
-        
+
     is vectorized as the real 1D vector
 
     .. math::
@@ -113,8 +119,9 @@ def mat_to_vec(mat, compact=False):
     mat : ndarray
         Input matrix to vectorize.
     compact : bool, optional
-        Whether to convert to a compact vector representation or not. Default is ``False``.
-        
+        Whether to convert to a compact vector representation or not. Default is
+        ``False``.
+
     Returns
     -------
     ndarray
@@ -123,7 +130,7 @@ def mat_to_vec(mat, compact=False):
     assert mat.dtype == np.float64 or mat.dtype == np.complex128
     iscomplex = mat.dtype == np.complex128
 
-    n  = mat.shape[0]
+    n = mat.shape[0]
     vn = vec_dim(n, iscomplex=iscomplex, compact=compact)
 
     if compact:
@@ -146,10 +153,11 @@ def mat_to_vec(mat, compact=False):
         mat = np.ascontiguousarray(mat)
         return mat.view(dtype=np.float64).reshape(-1, 1).copy()
 
+
 def vec_to_mat(vec, iscomplex=False, compact=False):
-    """Reshapes a 1D vector into a symmetric or Hermitian matrix, e.g., if ``iscomplex=False``,
-    then the vectors 
-    
+    """Reshapes a 1D vector into a symmetric or Hermitian matrix, e.g., if
+    ``iscomplex=False``, then the vectors
+
     .. math::
 
         \\begin{bmatrix}
@@ -163,16 +171,16 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
         \\begin{bmatrix}
             a & \sqrt{2} b & c & \sqrt{2} d & \sqrt{2}e & f
         \\end{bmatrix}^{\\top},
-        
-    if ``compact=True``, are reshaped into the real symmetric matrix     
-    
+
+    if ``compact=True``, are reshaped into the real symmetric matrix
+
     .. math::
 
         \\begin{bmatrix}
             a & b & d \\\ b & c & e \\\ d & e & f
         \\end{bmatrix}.
-        
-    Simiarly, if ``iscomplex=True``, then the vectors 
+
+    Simiarly, if ``iscomplex=True``, then the vectors
 
     .. math::
 
@@ -189,7 +197,7 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
         \\end{bmatrix}^{\\top},
 
     if ``compact=True``, are reshape into the complex Hermitian matrix
-    
+
     .. math::
 
         \\begin{bmatrix}
@@ -201,22 +209,24 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
     mat : ndarray
         Input vector to reshape into a matrix.
     iscomplex : bool, optional
-        Whether the resulting matrix is Hermitian (``True``) or symmetric (``False``). Default is ``False``.
+        Whether the resulting matrix is Hermitian (``True``) or symmetric (``False``).
+        Default is ``False``.
     compact : bool, optional
-        Whether to convert from a compact vector representation or not. Default is ``False``.
-        
+        Whether to convert from a compact vector representation or not. Default is
+        ``False``.
+
     Returns
     -------
     ndarray
         The resulting matrix.
     """
-    vn    = vec.size
-    n     = mat_dim(vn, iscomplex=iscomplex, compact=compact)
+    vn = vec.size
+    n = mat_dim(vn, iscomplex=iscomplex, compact=compact)
     dtype = np.complex128 if iscomplex else np.float64
-    
+
     if compact:
         irt2 = np.sqrt(0.5)
-        mat  = np.empty((n, n), dtype=dtype)
+        mat = np.empty((n, n), dtype=dtype)
 
         k = 0
         for j in range(n):
@@ -228,10 +238,10 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
                     mat[i, j] = vec[k, 0] * irt2
                     k += 1
                 mat[j, i] = mat[i, j].conjugate()
-            
+
             mat[j, j] = vec[k, 0]
             k += 1
-        
+
         return mat
     else:
         if iscomplex:
@@ -243,6 +253,7 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
             mat = vec.reshape((n, n))
             return (mat + mat.T) * 0.5
 
+
 def lin_to_mat(lin, dims, iscomplex=False, compact=(False, True)):
     """Computes the matrix corresponding to a linear map from
     vectorized symmetric matrices to vectorized symmetric matrices.
@@ -252,15 +263,15 @@ def lin_to_mat(lin, dims, iscomplex=False, compact=(False, True)):
     lin : callable
         Linear operator sending symmetric matrices to symmetric matrices.
     dims : tuple[int, int]
-        The dimensions ``(ni, no)`` of the input and output matrices of the 
+        The dimensions ``(ni, no)`` of the input and output matrices of the
         linear operator.
     iscomplex : bool, optional
-        Whether the matrix to vectorize is Hermitian (``True``) or symmetric 
+        Whether the matrix to vectorize is Hermitian (``True``) or symmetric
         (``False``). Default is ``False``.
     compact : tuple[bool, bool], optional
-        Whether to use a compact vector representation or not for the input 
+        Whether to use a compact vector representation or not for the input
         and output matrices. Default is ``(False, True)``.
-        
+
     Returns
     -------
     ndarray
@@ -280,8 +291,9 @@ def lin_to_mat(lin, dims, iscomplex=False, compact=(False, True)):
 
     return mat
 
+
 def eye(n, iscomplex=False, compact=(False, True)):
-    """Computes the matrix representation of the identity map for 
+    """Computes the matrix representation of the identity map for
     (vectorized) symmetric or Hermitian matrices.
 
     Parameters
@@ -289,15 +301,15 @@ def eye(n, iscomplex=False, compact=(False, True)):
     n : int
         The dimensions of the ``(n, n)`` matrix the identity is acting on.
     iscomplex : bool, optional
-        Whether the matrix to vectorize is Hermitian (``True``) or symmetric 
+        Whether the matrix to vectorize is Hermitian (``True``) or symmetric
         (``False``). Default is ``False``.
     compact : tuple[bool, bool], optional
-        Whether to use a compact vector representation or not for the input 
+        Whether to use a compact vector representation or not for the input
         and output matrices. Default is ``(False, True)``.
-        
+
     Returns
     -------
     ndarray
         The matrix representation of the identity map.
     """
-    return lin_to_mat(lambda X : X, (n, n), iscomplex=iscomplex, compact=compact)
+    return lin_to_mat(lambda X: X, (n, n), iscomplex=iscomplex, compact=compact)

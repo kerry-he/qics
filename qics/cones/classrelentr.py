@@ -3,58 +3,55 @@ import scipy as sp
 import qics._utils.linalg as lin
 from qics.cones.base import Cone, get_central_ray_relentr
 
+
 class ClassRelEntr(Cone):
     """A class representing a classical relative entropy cone
 
     .. math::
-    
-        \\mathcal{K}_{\\text{cre}} = \\text{cl}\\{ (t, x, y) \\in \\mathbb{R} \\times \\mathbb{R}^n_{++} \\times \\mathbb{R}^n_{++} : t \\geq H(x \\| y) \\},
-        
-    with barrier function
-    
-    .. math::
 
-        (t, x, y) \\mapsto -\\log(t - H(x \\| y)) - \\sum_{i=1}^n \\log(x_i) - \\sum_{i=1}^n \\log(y_i),
-        
+        \\mathcal{K}_{\\text{cre}} = \\text{cl}\\{ (t, x, y) \\in \\mathbb{R} \\times \\mathbb{R}^n_{++} \\times \\mathbb{R}^n_{++} : t \\geq H(x \\| y) \\},
+
     where
 
     .. math::
 
         H(x \\| y) = \\sum_{i=1}^n x_i \\log(x_i / y_i),
-        
+
     is the classical relative entropy function (Kullback-Leibler divergence).
 
     Parameters
     ----------
     n : int
-        Dimension of the vectors :math:`x` and :math:`y`, i.e., how many terms are in the classical relative entropy function.
+        Dimension of the vectors :math:`x` and :math:`y`, i.e., how many terms are in 
+        the classical relative entropy function.
     """
-    def __init__(self, n):     
-        # Dimension properties
-        self.n  = n # Dimension of system
-        self.nu = 1 + 2 * self.n # Barrier parameter
 
-        self.dim   = [1, n, n]
-        self.type  = ['r', 'r', 'r']
+    def __init__(self, n):
+        # Dimension properties
+        self.n = n  # Dimension of system
+        self.nu = 1 + 2 * self.n  # Barrier parameter
+
+        self.dim = [1, n, n]
+        self.type = ["r", "r", "r"]
 
         self.idx_X = slice(1, 1 + n)
-        self.idx_Y = slice(1 + n, 1 + 2*n)        
+        self.idx_Y = slice(1 + n, 1 + 2 * n)
 
         # Update flags
-        self.feas_updated        = False
-        self.grad_updated        = False
-        self.congr_aux_updated   = False
-        self.hess_aux_updated    = False
+        self.feas_updated = False
+        self.grad_updated = False
+        self.congr_aux_updated = False
+        self.hess_aux_updated = False
         self.invhess_aux_updated = False
-        self.dder3_aux_updated   = False
+        self.dder3_aux_updated = False
 
         return
-    
+
     def get_init_point(self, out):
         (t0, x0, y0) = get_central_ray_relentr(self.n)
 
         point = [
-            np.array([[t0]]), 
+            np.array([[t0]]),
             np.ones((self.n, 1)) * x0,
             np.ones((self.n, 1)) * y0,
         ]
@@ -66,11 +63,11 @@ class ClassRelEntr(Cone):
         out[2][:] = point[2]
 
         return out
-    
+
     def get_feas(self):
         if self.feas_updated:
             return self.feas
-        
+
         self.feas_updated = True
 
         (self.t, self.x, self.y) = self.primal
@@ -78,18 +75,18 @@ class ClassRelEntr(Cone):
         if any(self.x <= 0) or any(self.y <= 0):
             self.feas = False
             return self.feas
-        
+
         self.log_x = np.log(self.x)
         self.log_y = np.log(self.y)
 
         self.z = (self.t - (self.x.T @ (self.log_x - self.log_y)))[0, 0]
 
-        self.feas = (self.z > 0)
+        self.feas = self.z > 0
         return self.feas
-    
+
     def get_val(self):
         return -np.log(self.z) - np.sum(self.log_x) - np.sum(self.log_y)
-    
+
     def update_grad(self):
         assert self.feas_updated
         assert not self.grad_updated
@@ -103,8 +100,8 @@ class ClassRelEntr(Cone):
 
         self.grad = [
             -self.zi,
-             self.zi * self.DPhiX - self.xi,
-             self.zi * self.DPhiY - self.yi
+            self.zi * self.DPhiX - self.xi,
+            self.zi * self.DPhiY - self.yi,
         ]
 
         self.grad_updated = True
@@ -119,7 +116,7 @@ class ClassRelEntr(Cone):
 
         (Ht, Hx, Hy) = H
 
-        D2PhiXH =  Hx * self.xi - Hy * self.yi
+        D2PhiXH = Hx * self.xi - Hy * self.yi
         D2PhiYH = -Hx * self.yi + Hy * self.x * self.yi2
 
         # Hessian product of barrier function
@@ -134,7 +131,7 @@ class ClassRelEntr(Cone):
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
         if not self.congr_aux_updated:
-            self.congr_aux(A)  
+            self.congr_aux(A)
 
         p = A.shape[0]
         lhs = np.empty((p, sum(self.dim)))
@@ -155,7 +152,7 @@ class ClassRelEntr(Cone):
         # D2_tt F(t, u, X)[Ht] = Ht / z^2
         # D2_tu F(t, u, X)[Hu] = -(D_u Phi(u, X) [Hu]) / z^2
         # D2_tX F(t, u, X)[Hx] = -(D_X Phi(u, X) [Hx]) / z^2
-        outt  = self.At - (self.Ax @ self.DPhiX).ravel()
+        outt = self.At - (self.Ax @ self.DPhiX).ravel()
         outt -= (self.Ay @ self.DPhiY).ravel()
         outt *= self.zi2
 
@@ -220,9 +217,9 @@ class ClassRelEntr(Cone):
         if not self.invhess_aux_updated:
             self.update_invhessprod_aux()
         if not self.congr_aux_updated:
-            self.congr_aux(A)  
+            self.congr_aux(A)
 
-        # The inverse Hessian product applied on (Ht, Hx, Hy) for the CRE barrier is 
+        # The inverse Hessian product applied on (Ht, Hx, Hy) for the CRE barrier is
         #     (x, y) =  M \ (Wx, Wy)
         #         t  =  z^2 Ht + <DPhi(x, y), (x, y)>
         # where (Wx, Wy) = [(Hx, Hy) + Ht DPhi(x, y)]
@@ -262,7 +259,7 @@ class ClassRelEntr(Cone):
         # ====================================================================
         # Inverse Hessian products with respect to t
         # ====================================================================
-        outt  = self.z2 * self.At 
+        outt = self.z2 * self.At
         outt += (self.work0 @ self.DPhiX).ravel()
         outt += (self.work2 @ self.DPhiY).ravel()
         lhs[:, 0] = outt
@@ -281,7 +278,7 @@ class ClassRelEntr(Cone):
         Hy2 = Hy * Hy
 
         # Classical relative entropy oracles
-        D2PhiXH =  Hx * self.xi - Hy * self.yi
+        D2PhiXH = Hx * self.xi - Hy * self.yi
         D2PhiYH = -Hx * self.yi + Hy * self.x * self.yi2
 
         D2PhiXHH = Hx.T @ D2PhiXH
@@ -296,15 +293,15 @@ class ClassRelEntr(Cone):
 
         dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhiXHH + D2PhiYHH)
 
-        dder3_X  = -dder3_t * self.DPhiX
-        dder3_X -=  2 * self.zi2 * chi * D2PhiXH
-        dder3_X +=  self.zi * D3PhiXHH
-        dder3_X -=  2 * Hx2 * self.xi3
+        dder3_X = -dder3_t * self.DPhiX
+        dder3_X -= 2 * self.zi2 * chi * D2PhiXH
+        dder3_X += self.zi * D3PhiXHH
+        dder3_X -= 2 * Hx2 * self.xi3
 
-        dder3_Y  = -dder3_t * self.DPhiY
-        dder3_Y -=  2 * self.zi2 * chi * D2PhiYH
-        dder3_Y +=  self.zi * D3PhiYHH
-        dder3_Y -=  2 * Hy2 * self.yi3
+        dder3_Y = -dder3_t * self.DPhiY
+        dder3_Y -= 2 * self.zi2 * chi * D2PhiYH
+        dder3_Y += self.zi * D3PhiYHH
+        dder3_Y -= 2 * Hy2 * self.yi3
 
         out[0][:] += dder3_t * a
         out[1][:] += dder3_X * a
@@ -337,18 +334,18 @@ class ClassRelEntr(Cone):
         assert not self.hess_aux_updated
         assert self.grad_updated
 
-        self.zi2  = self.zi * self.zi
-        self.xi2  = self.xi * self.xi
-        self.yi2  = self.yi * self.yi
+        self.zi2 = self.zi * self.zi
+        self.xi2 = self.xi * self.xi
+        self.yi2 = self.yi * self.yi
 
-        self.Hxx =  self.zi * self.xi + self.xi2
+        self.Hxx = self.zi * self.xi + self.xi2
         self.Hxy = -self.zi * self.yi
         self.Hyy = (self.zi * self.x + 1) * self.yi2
 
         self.hess_aux_updated = True
 
         return
-    
+
     def update_invhessprod_aux(self):
         assert not self.invhess_aux_updated
         assert self.grad_updated
