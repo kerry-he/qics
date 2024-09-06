@@ -541,13 +541,13 @@ def AHA(
     # Note that we assume off-diagonal entries of Ai have been scaled by 2
     # Also note that we assume only upper triangular elements are given to us so c < d
 
-    p = A_rows.shape[0]
+    n = A_rows.shape[0]
 
     # Loop through upper triangular entries of the Schur complement matrix (AHA)_ij
-    for j in nb.prange(p):
+    for j in nb.prange(n):
         for i in nb.prange(j + 1):
-            I = indices[i]
-            J = indices[j]
+            i_AHA = indices[i]
+            j_AHA = indices[j]
 
             tmp1 = 0.0
 
@@ -573,10 +573,10 @@ def AHA(
 
                 tmp1 += A_vals[i, alpha] * (0.5 * tmp2 + tmp3)
 
-            if I <= J:
-                out[I, J] = tmp1
+            if i_AHA <= j_AHA:
+                out[i_AHA, j_AHA] = tmp1
             else:
-                out[J, I] = tmp1
+                out[j_AHA, i_AHA] = tmp1
 
 
 @nb.njit(parallel=True, fastmath=True)
@@ -603,13 +603,13 @@ def AHA_complex(
     #          = [SUM_a=b (Ai)_ab ( ... )] + [SUM_a>b (Ai)_ab ( ... ) + (Ai)_ab* ( ... )]
     # Also note that off-diagonal entries of Ai have been scaled by 2
 
-    p = A_rows.shape[0]
+    n = A_rows.shape[0]
 
     # Loop through each entry of the Schur complement matrix (AHA)_ij
-    for j in nb.prange(p):
+    for j in nb.prange(n):
         for i in nb.prange(j + 1):
-            I = indices[i]
-            J = indices[j]
+            i_AHA = indices[i]
+            j_AHA = indices[j]
 
             tmp1 = 0.0
             for alpha in range(A_nnz[i]):
@@ -635,7 +635,7 @@ def AHA_complex(
                 tmp1 += A_vals[i, alpha].real * tmp3.real
                 tmp1 += A_vals[i, alpha].imag * tmp3.imag
 
-            if I <= J:
-                out[I, J] = tmp1
+            if i_AHA <= j_AHA:
+                out[i_AHA, j_AHA] = tmp1
             else:
-                out[J, I] = tmp1
+                out[j_AHA, i_AHA] = tmp1

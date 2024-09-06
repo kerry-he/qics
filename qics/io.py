@@ -331,13 +331,13 @@ def write_sdpa(model, filename):
     idxs = np.insert(np.cumsum(dims), 0, 0)
 
     # Write C
-    # Write in format (k, l, i, j, v), where k=0, l=block, (i, j)=index, v=value
-    for l in range(nBlock):
+    # Write in format (k, blk, i, j, v), where k=0, blk=block, (i, j)=index, v=value
+    for blk in range(nBlock):
         # Turn vectorised Cl into matrix (make diagonal if corresponds to LP)
-        Cl = c[idxs[l] : idxs[l + 1]]
-        if isinstance(cones[l], qics.cones.PosSemidefinite):
-            Cl = vec_to_mat(Cl, iscomplex=cones[l].get_iscomplex(), compact=False)
-        elif isinstance(cones[l], qics.cones.NonNegOrthant):
+        Cl = c[idxs[blk] : idxs[blk + 1]]
+        if isinstance(cones[blk], qics.cones.PosSemidefinite):
+            Cl = vec_to_mat(Cl, iscomplex=cones[blk].get_iscomplex(), compact=False)
+        elif isinstance(cones[blk], qics.cones.NonNegOrthant):
             Cl = np.diag(Cl.ravel())
         Cl = sp.sparse.coo_matrix(Cl)
 
@@ -347,7 +347,7 @@ def write_sdpa(model, filename):
                 v_str = str(-v).replace("(", "").replace(")", "")
                 f.write(
                     "0 "
-                    + str(l + 1)
+                    + str(blk + 1)
                     + " "
                     + str(i + 1)
                     + " "
@@ -358,18 +358,18 @@ def write_sdpa(model, filename):
                 )
 
     # Write A
-    # Write in format (k, l, i, j, v), where k=0, l=block, (i, j)=index, v=value
+    # Write in format (k, blk, i, j, v), where k=0, blk=block, (i, j)=index, v=value
     A = A.tocsr()
     for k in range(mDim):
-        for l in range(nBlock):
-            Akl = A[k, idxs[l] : idxs[l + 1]]
+        for blk in range(nBlock):
+            Akl = A[k, idxs[blk] : idxs[blk + 1]]
 
-            if cones[l].get_iscomplex():
+            if cones[blk].get_iscomplex():
                 Akl = Akl[:, ::2] + Akl[:, 1::2] * 1j
 
             for idx, v in zip(Akl.indices, Akl.data):
-                if isinstance(cones[l], qics.cones.PosSemidefinite):
-                    (i, j) = (idx // cones[l].n, idx % cones[l].n)
+                if isinstance(cones[blk], qics.cones.PosSemidefinite):
+                    (i, j) = (idx // cones[blk].n, idx % cones[blk].n)
                 else:
                     (i, j) = (idx, idx)
 
@@ -378,7 +378,7 @@ def write_sdpa(model, filename):
                     f.write(
                         str(k + 1)
                         + " "
-                        + str(l + 1)
+                        + str(blk + 1)
                         + " "
                         + str(i + 1)
                         + " "
