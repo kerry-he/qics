@@ -20,7 +20,8 @@ release = '0.1'
 extensions = [
     'sphinx.ext.viewcode', 
     'sphinx.ext.napoleon', 
-    'sphinx.ext.autodoc'
+    'sphinx.ext.autodoc',
+    'sphinx_copybutton'
 ]
 
 autodoc_mock_imports = ["numpy", "scipy", "numba"]
@@ -32,5 +33,9 @@ exclude_patterns = []
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'alabaster'
+html_theme = 'shibuya'
 html_static_path = ['_static']
+html_theme_options = {
+  "github_url": "https://github.com/kerry-he/qics",
+  "accent_color": "grass"
+}
