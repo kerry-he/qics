@@ -23,6 +23,7 @@ extensions = [
     'sphinx.ext.autodoc'
 ]
 
+autodoc_mock_imports = ["numpy", "scipy", "numba"]
 templates_path = ['_templates']
 exclude_patterns = []
 
