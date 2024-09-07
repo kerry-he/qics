@@ -1,5 +1,7 @@
 # QICS: Quantum Information Conic Solver
 
+[![Documentation Status](https://readthedocs.org/projects/qics/badge/?version=latest)](https://qics.readthedocs.io/en/latest/?badge=latest)
+
 **QICS** is a primal-dual interior point solver fully implemented in Python, and is specialized towards problems arising in quantum information theory. **QICS** solves conic programs of the form
 
 $$
