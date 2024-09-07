@@ -36,12 +36,12 @@ class Model:
     Parameters
     ----------
     c : (n, 1) ndarray
-        Float array representing linear objective
-    A : (p, n) ndarray, optional
+        Float array representing the linear objective.
+    A : (p, n) ndarray or scipy.sparse.sparray, optional
         Float array representing linear equality constraints. Default is empty matrix.
     b : (p, 1) ndarray, optional
         Float array representing linear equality constraints. Default is ``0``.
-    G : (q, n) ndarray, optional
+    G : (q, n) ndarray or scipy.sparse.sparray, optional
         Float array representing linear cone constraints. Default is ``-I``.
     h : (q, 1) ndarray, optional
         Float array representing linear cone constraints. Default is ``0``.
@@ -60,9 +60,10 @@ class Model:
         G=None,
         h=None,
         cones=None,
-        offset=0.0,
-        sparse_threshold=0.01,
+        offset=0.0
     ):
+        SPARSE_THRESHOLD = 0.01
+
         # Intiialize model parameters and default values for missing data
         self.n = np.size(c)
         self.p = np.size(b) if (b is not None) else 0
@@ -86,8 +87,8 @@ class Model:
         )
         self.use_A = (A is not None) and (A.size > 0)
 
-        self.A = sparsify(self.A, sparse_threshold, "csr")
-        self.G = sparsify(self.G, sparse_threshold, "csr") if self.use_G else self.G
+        self.A = sparsify(self.A, SPARSE_THRESHOLD, "csr")
+        self.G = sparsify(self.G, SPARSE_THRESHOLD, "csr") if self.use_G else self.G
 
         self.cone_idxs = build_cone_idxs(self.q, cones)
         self.nu = 1 + sum([cone.nu for cone in cones])
@@ -103,7 +104,7 @@ class Model:
         # Get slices of A or G matrices correpsonding to each cone
         if self.use_G:
             self.G_T_views = sparsify(
-                [self.G_T[:, idxs_k] for idxs_k in self.cone_idxs], sparse_threshold
+                [self.G_T[:, idxs_k] for idxs_k in self.cone_idxs], SPARSE_THRESHOLD
             )
             self.A_T_dense = (
                 self.A_T.toarray() if sp.sparse.issparse(self.A_T) else self.A_T
@@ -118,7 +119,7 @@ class Model:
                 self.A_invG.tocsr() if sp.sparse.issparse(self.A_invG) else self.A_invG
             )
             self.A_invG_views = sparsify(
-                [self.A_invG[:, idxs_k] for idxs_k in self.cone_idxs], sparse_threshold
+                [self.A_invG[:, idxs_k] for idxs_k in self.cone_idxs], SPARSE_THRESHOLD
             )
             self.issparse = any(
                 [sp.sparse.issparse(A_invG_k) for A_invG_k in self.A_invG_views]

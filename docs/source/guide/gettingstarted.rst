@@ -18,8 +18,64 @@ as a running example to see how we can solve problems in **QICS**.
 Modelling
 ------------
 
-First, we need to reformulate the above problem as a standard
-form conic program. We can do this by rewriting the problem as
+First, we need to represent the conic program in **QICS** using the :class:`qics.Model`.
+This class is initialized with the following arguments
+
+.. list-table::
+   :widths: 15 60 25
+   :header-rows: 1
+
+   * - Parameter
+     - Description
+     - Default
+   * - ``c``
+     - NumPy array of size ``(n, 1)`` representing the linear objective :math:`c`.
+     - N/A
+   * - ``A``
+     - NumPy array or sparse SciPy array of size ``(p, n)`` representing the left-hand side of 
+       the linear equality constraints :math:`A`.
+     - ``np.zeros((0, 1))``
+   * - ``b``
+     - NumPy array of size ``(p, 1)`` representing the right-hand side of 
+       the linear equality constraints :math:`b`.
+     - ``np.zeros((p, 1))``
+   * - ``G``
+     - NumPy array or sparse SciPy array of size ``(q, n)`` representing the left-hand side of 
+       the linear conic constraints :math:`G`.
+     - ``-np.eye(n)``
+   * - ``h``
+     - NumPy array of size ``(q, 1)`` representing the right-hand side of 
+       the linear equality constraints :math:`h`.
+     - ``np.zeros((q, 1))``
+   * - ``cones``
+     - List of :class:`qics.cones` representing the Cartesian product of cones :math:`\mathcal{K}`.
+     - ``[]``
+   * - ``offset``
+     - Constant offset term to add to the objective function.
+     - ``0.0``
+
+and represents the following standard form conic program.
+
+.. math::
+
+    \min_{x \in \mathbb{R}^n} &&& c^\top x
+
+    \text{s.t.} &&& b - Ax = 0 
+
+    &&& h - Gx \in \mathcal{K}.
+
+Note that if we do not specify the parameters ``G`` and ``h``, then we instead solve the simplified
+conic program
+
+.. math::
+
+    \min_{x \in \mathbb{R}^n} &&& c^\top x
+
+    \text{s.t.} &&& b - Ax = 0 
+
+    &&& x \in \mathcal{K}.
+
+We can write our quantum relative entropy program in this simplified form as
 
 .. math::
 
