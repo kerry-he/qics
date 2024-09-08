@@ -10,7 +10,7 @@ class QuantRelEntr(Cone):
 
     .. math::
 
-        \mathcal{K}_{\text{qre}} = \text{cl}\{ (t, X, Y) \in \mathbb{R} \times 
+        \mathcal{K}_{\text{qre}} = \text{cl}\{ (t, X, Y) \in \mathbb{R} \times
         \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq S(X \| Y) \},
 
     where
@@ -26,7 +26,7 @@ class QuantRelEntr(Cone):
     n : int
         Dimension of the (n, n) matrices :math:`X` and :math:`Y`.
     iscomplex : bool
-        Whether the matrices symmetric :math:`X,Y \in \mathbb{S}^n` (False) or 
+        Whether the matrices symmetric :math:`X,Y \in \mathbb{S}^n` (False) or
         Hermitian :math:`X,Y \in \mathbb{H}^n` (True). Default is False.
     """
 

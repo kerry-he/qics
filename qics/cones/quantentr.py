@@ -10,7 +10,7 @@ class QuantEntr(Cone):
 
     .. math::
 
-        \mathcal{K}_{\text{qe}} = \text{cl}\{ (t, u, X) \in \mathbb{R} \times 
+        \mathcal{K}_{\text{qe}} = \text{cl}\{ (t, u, X) \in \mathbb{R} \times
         \mathbb{R}_{++} \times \mathbb{H}^n_{++} : t \geq -u S(X / u) \},
 
     where
@@ -19,7 +19,7 @@ class QuantEntr(Cone):
 
         S(X) = -\text{tr}[X \log(X)],
 
-    is the quantum (von Neumann) entropy function. The quantum entropy epigraph can be 
+    is the quantum (von Neumann) entropy function. The quantum entropy epigraph can be
     recovered by enforcing the linear constraint :math:`u=1`.
 
     Parameters
@@ -27,7 +27,7 @@ class QuantEntr(Cone):
     n : int
         Dimension of the (n, n) matrix :math:`X`.
     iscomplex : bool
-        Whether the matrix is symmetric :math:`X \in \mathbb{S}^n` (False) or 
+        Whether the matrix is symmetric :math:`X \in \mathbb{S}^n` (False) or
         Hermitian :math:`X \in \mathbb{H}^n` (True). Default is False.
     """
 

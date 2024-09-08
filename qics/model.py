@@ -52,16 +52,7 @@ class Model:
         Constant offset term to add to the objective function. Default is ``0``.
     """
 
-    def __init__(
-        self,
-        c,
-        A=None,
-        b=None,
-        G=None,
-        h=None,
-        cones=None,
-        offset=0.0
-    ):
+    def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0):
         SPARSE_THRESHOLD = 0.01
 
         # Intiialize model parameters and default values for missing data

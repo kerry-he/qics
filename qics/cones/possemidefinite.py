@@ -27,7 +27,7 @@ class PosSemidefinite(SymCone):
     n : int
         Dimension of the (n, n) matrix :math:`X`.
     iscomplex : bool
-        Whether the matrix is symmetric :math:`X \in \mathbb{S}^n` (False) or 
+        Whether the matrix is symmetric :math:`X \in \mathbb{S}^n` (False) or
         Hermitian :math:`X \in \mathbb{H}^n` (True). Default is False.
     """
 

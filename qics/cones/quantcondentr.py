@@ -7,12 +7,12 @@ from qics.cones.base import Cone
 
 
 class QuantCondEntr(Cone):
-    r"""A class representing a quantum conditional entropy cone with :math:`k` 
+    r"""A class representing a quantum conditional entropy cone with :math:`k`
     subsystems, where the :math:`i`-th subsystem has dimension :math:`n_i`
 
     .. math::
 
-        \mathcal{K}_{\text{qce}} = \text{cl}\{ (t, X) \in \mathbb{R} \times 
+        \mathcal{K}_{\text{qce}} = \text{cl}\{ (t, X) \in \mathbb{R} \times
         \mathbb{H}^{n_0n_1 \ldots n_{k-1}}_{++} : t \geq -S(X) + S(\text{tr}_i(X)) \},
 
     where
@@ -27,13 +27,13 @@ class QuantCondEntr(Cone):
     Parameters
     ----------
     dims : tuple(int)
-        List of dimensions :math:`(n_0, n_1, \ldots, n_{k-1})` of the :math:`k` 
+        List of dimensions :math:`(n_0, n_1, \ldots, n_{k-1})` of the :math:`k`
         subsystems.
     sys : int or tuple(int)
         Which systems are being traced out by the partial trace.
     iscomplex : bool
         Whether the matrix is symmetric :math:`X \in \mathbb{S}^{n_0n_1 \ldots n_{k-1}}`
-        (False) or Hermitian :math:`X \in \mathbb{H}^{n_0n_1 \ldots n_{k-1}}` (True). 
+        (False) or Hermitian :math:`X \in \mathbb{H}^{n_0n_1 \ldots n_{k-1}}` (True).
         Default is False.
     """
 

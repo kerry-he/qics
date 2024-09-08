@@ -12,7 +12,7 @@ class OpPerspecTr(Cone):
 
         \mathcal{K}_{\text{op,tr}}^g = \text{cl}\{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[P_g(X, Y)] \},
 
-    for an operator concave function :math:`g:[0, \infty)\rightarrow\mathbb{R}`, 
+    for an operator concave function :math:`g:[0, \infty)\rightarrow\mathbb{R}`,
     where
 
     .. math::
@@ -33,7 +33,7 @@ class OpPerspecTr(Cone):
         - ``(-1, 0) or (1, 2)`` : :math:`g(x) = x^p`
 
     iscomplex : bool
-        Whether the matrices symmetric :math:`X,Y \in \mathbb{S}^n` (False) or 
+        Whether the matrices symmetric :math:`X,Y \in \mathbb{S}^n` (False) or
         Hermitian :math:`X,Y \in \mathbb{H}^n` (True). Default is False.
     """
 

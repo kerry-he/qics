@@ -123,27 +123,27 @@ def D3_f_ij(i, j, D, D2, d3f_D):
 
     D3_ij = np.zeros((n, n))
 
-    for l in range(n):
-        for k in range(l + 1):
-            D_k = D[k]
-            D_l = D[l]
+    for a in range(n):
+        for b in range(a + 1):
+            D_b = D[b]
+            D_a = D[a]
             D_ij = D_i - D_j
-            D_ik = D_i - D_k
-            D_il = D_i - D_l
-            B_ik = abs(D_ik) < rteps
-            B_il = abs(D_il) < rteps
+            D_ib = D_i - D_b
+            D_ia = D_i - D_a
+            B_ib = abs(D_ib) < rteps
+            B_ia = abs(D_ia) < rteps
 
-            if (abs(D_ij) < rteps) and B_ik and B_il:
+            if (abs(D_ij) < rteps) and B_ib and B_ia:
                 t = d3f_D[i] / 6
-            elif B_ik and B_il:
+            elif B_ib and B_ia:
                 t = (D2[i, i, i] - D2[i, i, j]) / D_ij
-            elif B_il:
-                t = (D2[i, i, j] - D2[i, j, k]) / D_ik
+            elif B_ia:
+                t = (D2[i, i, j] - D2[i, j, b]) / D_ib
             else:
-                t = (D2[i, j, k] - D2[j, k, l]) / D_il
+                t = (D2[i, j, b] - D2[j, b, a]) / D_ia
 
-            D3_ij[k, l] = t
-            D3_ij[l, k] = t
+            D3_ij[b, a] = t
+            D3_ij[a, b] = t
 
     return D3_ij
 
@@ -158,27 +158,27 @@ def D3_log_ij(i, j, D2, D, f):
 
     D3_ij = np.zeros((n, n))
 
-    for l in range(n):
-        for k in range(l + 1):
-            D_k = D[k]
-            D_l = D[l]
+    for a in range(n):
+        for b in range(a + 1):
+            D_b = D[b]
+            D_a = D[a]
             D_ij = D_i - D_j
-            D_ik = D_i - D_k
-            D_il = D_i - D_l
-            B_ik = abs(D_ik) < rteps
-            B_il = abs(D_il) < rteps
+            D_ib = D_i - D_b
+            D_ia = D_i - D_a
+            B_ib = abs(D_ib) < rteps
+            B_ia = abs(D_ia) < rteps
 
-            if (abs(D_ij) < rteps) and B_ik and B_il:
+            if (abs(D_ij) < rteps) and B_ib and B_ia:
                 t = D_i**-3 / 3 if (f == "log") else -(D_i**-2) / 6
-            elif B_ik and B_il:
+            elif B_ib and B_ia:
                 t = (D2[i, i, i] - D2[i, i, j]) / D_ij
-            elif B_il:
-                t = (D2[i, i, j] - D2[i, j, k]) / D_ik
+            elif B_ia:
+                t = (D2[i, i, j] - D2[i, j, b]) / D_ib
             else:
-                t = (D2[i, j, k] - D2[j, k, l]) / D_il
+                t = (D2[i, j, b] - D2[j, b, a]) / D_ia
 
-            D3_ij[k, l] = t
-            D3_ij[l, k] = t
+            D3_ij[b, a] = t
+            D3_ij[a, b] = t
 
     return D3_ij
 
@@ -221,12 +221,12 @@ def thrd_frechet(D, D2, d3f_D, U, H1, H2, H3=None):
             for j in range(i + 1):
                 D3_ij = D3_f_ij(i, j, D, D2, d3f_D)
 
-                for k in range(n):
-                    for l in range(n):
-                        temp = H1[i, k] * H2[k, l] * H2[l, j]
-                        temp += H2[i, k] * H1[k, l] * H2[l, j]
-                        temp += H2[i, k] * H2[k, l] * H1[l, j]
-                        out[i, j] = out[i, j] + D3_ij[k, l] * temp
+                for b in range(n):
+                    for a in range(n):
+                        temp = H1[i, b] * H2[b, a] * H2[a, j]
+                        temp += H2[i, b] * H1[b, a] * H2[a, j]
+                        temp += H2[i, b] * H2[b, a] * H1[a, j]
+                        out[i, j] = out[i, j] + D3_ij[b, a] * temp
 
                 out[j, i] = np.conj(out[i, j])
 
@@ -237,15 +237,15 @@ def thrd_frechet(D, D2, d3f_D, U, H1, H2, H3=None):
             for j in range(i + 1):
                 D3_ij = D3_f_ij(i, j, D, D2, d3f_D)
 
-                for k in range(n):
-                    for l in range(n):
-                        temp = H1[i, k] * H2[k, l] * H3[l, j]
-                        temp += H1[i, k] * H3[k, l] * H2[l, j]
-                        temp += H2[i, k] * H1[k, l] * H3[l, j]
-                        temp += H2[i, k] * H3[k, l] * H1[l, j]
-                        temp += H3[i, k] * H1[k, l] * H2[l, j]
-                        temp += H3[i, k] * H2[k, l] * H1[l, j]
-                        out[i, j] = out[i, j] + D3_ij[k, l] * temp
+                for b in range(n):
+                    for a in range(n):
+                        temp = H1[i, b] * H2[b, a] * H3[a, j]
+                        temp += H1[i, b] * H3[b, a] * H2[a, j]
+                        temp += H2[i, b] * H1[b, a] * H3[a, j]
+                        temp += H2[i, b] * H3[b, a] * H1[a, j]
+                        temp += H3[i, b] * H1[b, a] * H2[a, j]
+                        temp += H3[i, b] * H2[b, a] * H1[a, j]
+                        out[i, j] = out[i, j] + D3_ij[b, a] * temp
 
                 out[j, i] = np.conj(out[i, j])
 

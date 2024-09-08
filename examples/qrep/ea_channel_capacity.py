@@ -12,37 +12,39 @@ import qics.quantum as qu
 # for the amplitude damping channel
 
 n = 2
-N = n*n
+N = n * n
 gamma = 0.5
 
-V = np.array([[1, 0], [0, np.sqrt(gamma)], [0, np.sqrt(1-gamma)], [0, 0]])
+V = np.array([[1, 0], [0, np.sqrt(gamma)], [0, np.sqrt(1 - gamma)], [0, 0]])
 
 # Define objective functions
 # with variables (X, (t, Y), (s, u, Z))
-cX = np.zeros((n*n, 1))
-ct = np.array([[1./np.log(2)]])
-cY = np.zeros((N*N, 1))
-cs = np.array([[1./np.log(2)]])
-cu = np.array([[0.]])
-cZ = np.zeros((n*n, 1))
+cX = np.zeros((n * n, 1))
+ct = np.array([[1.0 / np.log(2)]])
+cY = np.zeros((N * N, 1))
+cs = np.array([[1.0 / np.log(2)]])
+cu = np.array([[0.0]])
+cZ = np.zeros((n * n, 1))
 c = np.vstack((cX, ct, cY, cs, cu, cZ))
 
 # Build linear constraints
 vn = vec.vec_dim(n, compact=True)
 vN = vec.vec_dim(N, compact=True)
-VV = vec.lin_to_mat(lambda X : V @ X @ V.conj().T, (n, n*n))
-trE = vec.lin_to_mat(lambda X : qu.p_tr(X, (n, n), 1), (N, n), compact=(True, True))
+VV = vec.lin_to_mat(lambda X: V @ X @ V.conj().T, (n, n * n))
+trE = vec.lin_to_mat(lambda X: qu.p_tr(X, (n, n), 1), (N, n), compact=(True, True))
 # tr[X] = 1
-A1 = np.hstack((vec.mat_to_vec(np.eye(n)).T, np.zeros((1, 3 + n*n + N*N))))
-b1 = np.array([[1.]])
+A1 = np.hstack((vec.mat_to_vec(np.eye(n)).T, np.zeros((1, 3 + n * n + N * N))))
+b1 = np.array([[1.0]])
 # u = 1
-A2 = np.hstack((np.zeros((1, 2 + n*n + N*N)), np.array([[1.]]), np.zeros((1, n*n))))
-b2 = np.array([[1.]])
+A2 = np.hstack(
+    (np.zeros((1, 2 + n * n + N * N)), np.array([[1.0]]), np.zeros((1, n * n)))
+)
+b2 = np.array([[1.0]])
 # Y = VXV'
-A3 = np.hstack((VV, np.zeros((vN, 1)), -vec.eye(N), np.zeros((vN, 2 + n*n))))
+A3 = np.hstack((VV, np.zeros((vN, 1)), -vec.eye(N), np.zeros((vN, 2 + n * n))))
 b3 = np.zeros((vN, 1))
 # Z = trE[VXV']
-A4 = np.hstack((trE @ VV, np.zeros((vn, 3 + N*N)), -vec.eye(n)))
+A4 = np.hstack((trE @ VV, np.zeros((vn, 3 + N * N)), -vec.eye(n)))
 b4 = np.zeros((vn, 1))
 
 A = np.vstack((A1, A2, A3, A4))
@@ -51,12 +53,12 @@ b = np.vstack((b1, b2, b3, b4))
 # Input into model and solve
 cones = [
     qics.cones.PosSemidefinite(n),
-    qics.cones.QuantCondEntr((n, n), 0), 
-    qics.cones.QuantEntr(n)
+    qics.cones.QuantCondEntr((n, n), 0),
+    qics.cones.QuantEntr(n),
 ]
 
 # Initialize model and solver objects
-model  = qics.Model(c=c, A=A, b=b, cones=cones)
+model = qics.Model(c=c, A=A, b=b, cones=cones)
 solver = qics.Solver(model)
 
 # Solve problem

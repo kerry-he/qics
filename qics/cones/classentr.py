@@ -9,7 +9,7 @@ class ClassEntr(Cone):
 
     .. math::
 
-        \mathcal{K}_{\text{ce}} = \text{cl}\{ (t, u, x) \in \mathbb{R} \times 
+        \mathcal{K}_{\text{ce}} = \text{cl}\{ (t, u, x) \in \mathbb{R} \times
         \mathbb{R}_{++} \times \mathbb{R}^n_{++} : t \geq -u H(x / u) \},
 
     where
@@ -18,13 +18,13 @@ class ClassEntr(Cone):
 
         H(x) = -\sum_{i=1}^n x_i \log(x_i),
 
-    is the classical (Shannon) entropy function. The classical entropy epigraph can be 
+    is the classical (Shannon) entropy function. The classical entropy epigraph can be
     recovered by enforcing the linear constraint :math:`u=1`.
 
     Parameters
     ----------
     n : int
-        Dimension of the vector :math:`x`, i.e., how many terms are in the classical 
+        Dimension of the vector :math:`x`, i.e., how many terms are in the classical
         entropy function.
     """
 

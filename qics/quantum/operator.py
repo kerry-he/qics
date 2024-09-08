@@ -20,7 +20,7 @@ def p_tr(mat, dims, sys):
     Parameters
     ----------
     mat : ndarray
-        Input ``(n0*n1*...*nk-1, n0*n1*...*nk-1)`` matrix to perform the partial trace 
+        Input ``(n0*n1*...*nk-1, n0*n1*...*nk-1)`` matrix to perform the partial trace
         on.
     dims : tuple(int)
         The dimensions ``(n0, n1, ..., nk-1)`` of the ``k`` subsystems.
@@ -30,8 +30,8 @@ def p_tr(mat, dims, sys):
     Returns
     -------
     ndarray
-        The resulting matrix after taking the partial trace. Has dimension 
-        ``(n0*n1*...*nk-1 / ni, n0*n1*...*nk-1 / ni)`` where ``i`` is the system being 
+        The resulting matrix after taking the partial trace. Has dimension
+        ``(n0*n1*...*nk-1 / ni, n0*n1*...*nk-1 / ni)`` where ``i`` is the system being
         traced out.
     """
 
@@ -62,11 +62,11 @@ def p_tr_multi(out, mat, dims, sys):
     Parameters
     ----------
     out : ndarray
-        Preallocated list of matrices to store the output. Has dimension 
-        ``(p, n0*n1*...*nk-1 / ni, n0*n1*...*nk-1 / ni)`` where ``i`` is the system 
+        Preallocated list of matrices to store the output. Has dimension
+        ``(p, n0*n1*...*nk-1 / ni, n0*n1*...*nk-1 / ni)`` where ``i`` is the system
         being traced out.
     mat : ndarray
-        Input ``(p, n0*n1*...*nk-1, n0*n1*...*nk-1)`` list of matrices to perform the 
+        Input ``(p, n0*n1*...*nk-1, n0*n1*...*nk-1)`` list of matrices to perform the
         partial trace on.
     dims : tuple[int]
         The dimensions ``(n0, n1, ..., nk)`` of the ``p`` subsystems.
@@ -102,7 +102,7 @@ def p_tr_multi(out, mat, dims, sys):
 
 
 def i_kr(mat, dims, sys):
-    r"""Performs Kronecker product between the indentity matrix and a given matrix, 
+    r"""Performs Kronecker product between the indentity matrix and a given matrix,
     e.g., for a bipartite system
 
     .. math::
@@ -120,8 +120,8 @@ def i_kr(mat, dims, sys):
     Parameters
     ----------
     mat : ndarray
-        Input matrix to perform the partial trace on. Has dimension 
-        ``(n0*n1*...*nk-1 / ni, n0*n1*...*nk-1 / ni)`` where ``i`` is the system being 
+        Input matrix to perform the partial trace on. Has dimension
+        ``(n0*n1*...*nk-1 / ni, n0*n1*...*nk-1 / ni)`` where ``i`` is the system being
         traced out.
     dim : tuple[int]
         The dimensions ``(n0, n1, ..., nk)`` of the subsystems.
@@ -162,17 +162,17 @@ def i_kr(mat, dims, sys):
 
 
 def i_kr_multi(out, mat, dims, sys):
-    r"""Performs Kronecker product between the indentity matrix and a given list of 
+    r"""Performs Kronecker product between the indentity matrix and a given list of
     matrices.
 
     Parameters
     ----------
     out : ndarray
-        Preallocated ``(p, n0*n1*...*nk-1, n0*n1*...*nk-1)`` list of matrices to store 
+        Preallocated ``(p, n0*n1*...*nk-1, n0*n1*...*nk-1)`` list of matrices to store
         the output.
     mat : ndarray
-        Input matrix to perform the partial trace on. Has dimension 
-        ``(p, n0*n1*...*nk-1 / ni, n0*n1*...*nk-1 / ni)`` where ``i`` is the system 
+        Input matrix to perform the partial trace on. Has dimension
+        ``(p, n0*n1*...*nk-1 / ni, n0*n1*...*nk-1 / ni)`` where ``i`` is the system
         being traced out.
     dim : tuple[int]
         The dimensions ``(n0, n1, ..., nk)`` of the subsystems.
@@ -189,7 +189,7 @@ def i_kr_multi(out, mat, dims, sys):
     not_sys = list(set(range(len(dims))) - set(sys))
 
     # Sort subsystems so the ones we want to partial trace are at the front
-    reordered_dims =  [k + 1 for k in sys]
+    reordered_dims = [k + 1 for k in sys]
     reordered_dims += [k + 1 + len(dims) for k in sys]
     reordered_dims += [0]
     reordered_dims += [k + 1 for k in not_sys]
@@ -208,7 +208,7 @@ def i_kr_multi(out, mat, dims, sys):
 
 
 def partial_transpose(mat, dims, sys):
-    r"""Performs the partial transpose on a multipartite matrix, e.g., for a bipartite 
+    r"""Performs the partial transpose on a multipartite matrix, e.g., for a bipartite
     state, the unique linear map satisfying
 
     .. math::
@@ -226,7 +226,7 @@ def partial_transpose(mat, dims, sys):
     Parameters
     ----------
     mat : ndarray
-        Input ``(n0*n1*...*nk-1, n0*n1*...*nk-1)`` matrix to perform the partial 
+        Input ``(n0*n1*...*nk-1, n0*n1*...*nk-1)`` matrix to perform the partial
         transpose on.
     dim : tuple[int]
         The dimensions ``(n0, n1, ..., nk-1)`` of the ``k`` subsystems.
@@ -248,7 +248,7 @@ def partial_transpose(mat, dims, sys):
 
 
 def swap(mat, dims, sys1, sys2):
-    r"""Swaps two systems of a multipartite quantum state, e.g., for a bipartite state, 
+    r"""Swaps two systems of a multipartite quantum state, e.g., for a bipartite state,
     it is the unique linear maps satisfying
 
     .. math::
@@ -258,7 +258,7 @@ def swap(mat, dims, sys1, sys2):
     Parameters
     ----------
     mat : ndarray
-        Input ``(n0*n1*...*nk-1, n0*n1*...*nk-1)`` matrix to perform the swap operator 
+        Input ``(n0*n1*...*nk-1, n0*n1*...*nk-1)`` matrix to perform the swap operator
         on.
     dim : tuple[int]
         The dimensions ``(n0, n1, ..., nk-1)`` of the ``k`` subsystems.
@@ -270,7 +270,7 @@ def swap(mat, dims, sys1, sys2):
     Returns
     -------
     ndarray
-        The resulting ``(n0*n1*...*nk-1, n0*n1*...*nk-1)`` matrix after performing the 
+        The resulting ``(n0*n1*...*nk-1, n0*n1*...*nk-1)`` matrix after performing the
         swap operator.
     """
     N = np.prod(dims)

@@ -109,7 +109,7 @@ def mat_to_vec(mat, compact=False):
     .. math::
 
         \begin{bmatrix}
-            a & \sqrt{2} b & \sqrt{2} c & d & \sqrt{2} e & \sqrt{2} f & \sqrt{2} g & 
+            a & \sqrt{2} b & \sqrt{2} c & d & \sqrt{2} e & \sqrt{2} f & \sqrt{2} g &
             \sqrt{2} h & i
         \end{bmatrix}^{\top},
 
@@ -194,7 +194,7 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
     .. math::
 
         \begin{bmatrix}
-            a & \sqrt{2} b & \sqrt{2} c & d & \sqrt{2} e & \sqrt{2} f & \sqrt{2} g & 
+            a & \sqrt{2} b & \sqrt{2} c & d & \sqrt{2} e & \sqrt{2} f & \sqrt{2} g &
             \sqrt{2} h & i
         \end{bmatrix}^{\top},
 

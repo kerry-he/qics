@@ -15,24 +15,24 @@ n = 5
 p = 2
 
 # Generate random matrix Y to project
-Y = np.random.randn(n, n) + np.random.randn(n, n)*1j
+Y = np.random.randn(n, n) + np.random.randn(n, n) * 1j
 Y = Y @ Y.conj().T
 tr_Y = np.trace(Y).real
 
 # Define objective function
-ct = np.array([[1.]])
-cu = np.array([[0.]])
+ct = np.array([[1.0]])
+cu = np.array([[0.0]])
 cX = -sp.linalg.logm(Y) - np.eye(n)
-c  = np.vstack((ct, cu, mat_to_vec(cX)))
+c = np.vstack((ct, cu, mat_to_vec(cX)))
 
 # Build linear constraints
 # u = 1
-A1 = np.hstack((np.array([[0., 1.]]), np.zeros((1, 2*n*n))))
-b1 = np.array([[1.]])
+A1 = np.hstack((np.array([[0.0, 1.0]]), np.zeros((1, 2 * n * n))))
+b1 = np.array([[1.0]])
 # <X, Ai> = bi for randomly generated Ai, bi
-A2 = np.zeros((p, 2 + 2*n*n))
+A2 = np.zeros((p, 2 + 2 * n * n))
 for i in range(p):
-    Ai = np.random.randn(n, n) + np.random.rand(n, n)*1j
+    Ai = np.random.randn(n, n) + np.random.rand(n, n) * 1j
     A2[[i], 2:] = mat_to_vec(Ai + Ai.conj().T).T
 b2 = np.random.randn(p, 1)
 
@@ -43,7 +43,7 @@ b = np.vstack((b1, b2))
 cones = [qics.cones.QuantEntr(n, iscomplex=True)]
 
 # Initialize model and solver objects
-model  = qics.Model(c=c, A=A, b=b, cones=cones, offset=tr_Y)
+model = qics.Model(c=c, A=A, b=b, cones=cones, offset=tr_Y)
 solver = qics.Solver(model)
 
 # Solve problem
