@@ -1,0 +1,2 @@
+shibuya==2024.8.30
+sphinx_copybutton==0.5.2

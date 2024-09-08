@@ -9,7 +9,7 @@ class ClassEntr(Cone):
 
     .. math::
 
-        \mathcal{K}_{\text{ce}} = \text{cl}\{ (t, u, x) \in \mathbb{R} \times 
+        \mathcal{K}_{\text{ce}} = \text{cl}\{ (t, u, x) \in \mathbb{R} \times
         \mathbb{R}_{++} \times \mathbb{R}^n_{++} : t \geq -u H(x / u) \},
 
     where
@@ -18,13 +18,13 @@ class ClassEntr(Cone):
 
         H(x) = -\sum_{i=1}^n x_i \log(x_i),
 
-    is the classical (Shannon) entropy function. The classical entropy epigraph can be 
+    is the classical (Shannon) entropy function. The classical entropy epigraph can be
     recovered by enforcing the linear constraint :math:`u=1`.
 
     Parameters
     ----------
     n : int
-        Dimension of the vector :math:`x`, i.e., how many terms are in the classical 
+        Dimension of the vector :math:`x`, i.e., how many terms are in the classical
         entropy function.
     """
 
@@ -87,6 +87,9 @@ class ClassEntr(Cone):
 
         self.feas = self.z > 0
         return self.feas
+
+    def get_val(self):
+        return -np.log(self.z) - np.sum(self.log_u) - np.sum(self.log_x)
 
     def update_grad(self):
         assert self.feas_updated

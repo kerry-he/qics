@@ -10,10 +10,10 @@ class OpPerspecEpi(Cone):
 
     .. math::
 
-        \mathcal{K}_{\text{op}}^g = \text{cl}\{ (T, X, Y) \in \mathbb{H}^n \times 
+        \mathcal{K}_{\text{op}}^g = \text{cl}\{ (T, X, Y) \in \mathbb{H}^n \times
         \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \},
 
-    for an operator concave function :math:`g:[0, \infty)\rightarrow\mathbb{R}`, 
+    for an operator concave function :math:`g:[0, \infty)\rightarrow\mathbb{R}`,
     where
 
     .. math::
@@ -34,7 +34,7 @@ class OpPerspecEpi(Cone):
         - ``(-1, 0) or (1, 2)`` : :math:`g(x) = x^p`
 
     iscomplex : bool
-        Whether the matrices are symmetric :math:`T,X,Y \in \mathbb{S}^n` (False) or 
+        Whether the matrices are symmetric :math:`T,X,Y \in \mathbb{S}^n` (False) or
         Hermitian :math:`T,X,Y \in \mathbb{H}^n` (True). Default is False.
     """
 

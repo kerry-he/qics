@@ -4,7 +4,7 @@ import qics.quantum
 
 
 def density_matrix(n, iscomplex=False):
-    r"""Generate random density matrix on Haar measure, i.e., positive semifedinite 
+    r"""Generate random density matrix on Haar measure, i.e., positive semifedinite
     matrix :math:`X` satisfying :math:`\text{tr}[X] = 1`.
 
     Parameters
@@ -12,7 +12,7 @@ def density_matrix(n, iscomplex=False):
     n : int
         Dimension of random ``(n, n)`` matrix.
     iscomplex : bool, optional
-        Whether the matrix is symmetric (``False``) or Hermitian (``True``). Default is 
+        Whether the matrix is symmetric (``False``) or Hermitian (``True``). Default is
         ``False``.
 
     Returns
@@ -29,8 +29,8 @@ def density_matrix(n, iscomplex=False):
 
 
 def pure_density_matrix(n, iscomplex=False):
-    r"""Generate random pure density matrix i.e., rank 1 positive semifedinite matrix 
-    :math:`X` satisfying :math:`\text{tr}[X] = 1`. See 
+    r"""Generate random pure density matrix i.e., rank 1 positive semifedinite matrix
+    :math:`X` satisfying :math:`\text{tr}[X] = 1`. See
     `here <https://sumeetkhatri.com/wp-content/uploads/2020/05/random_pure_states.pdf>`_
     for additional details.
 
@@ -39,7 +39,7 @@ def pure_density_matrix(n, iscomplex=False):
     n : int
         Dimension of random ``(n, n)`` matrix.
     iscomplex : bool, optional
-        Whether the matrix is symmetric (``False``) or Hermitian (``True``). Default is 
+        Whether the matrix is symmetric (``False``) or Hermitian (``True``). Default is
         ``False``.
 
     Returns
@@ -58,9 +58,9 @@ def pure_density_matrix(n, iscomplex=False):
 
 
 def unitary(n, iscomplex=False):
-    r"""Generate random unitary uniformly distributed on Haar measure, i.e., matrix 
-    :math:`U` satisfying :math:`U^\dagger U = UU^\dagger = \mathbb{I}`. See 
-    `here <https://case.edu/artsci/math/esmeckes/Meckes_SAMSI_Lecture2.pdf>`_ for 
+    r"""Generate random unitary uniformly distributed on Haar measure, i.e., matrix
+    :math:`U` satisfying :math:`U^\dagger U = UU^\dagger = \mathbb{I}`. See
+    `here <https://case.edu/artsci/math/esmeckes/Meckes_SAMSI_Lecture2.pdf>`_ for
     additional details.
 
     Parameters
@@ -85,9 +85,9 @@ def unitary(n, iscomplex=False):
 
 
 def stinespring_operator(nin, nout=None, nenv=None, iscomplex=False):
-    r"""Generate random Stinespring operator uniformly distributed on Hilbert-Schmidt 
-    measure, i.e., isometry :math:`V` corresponding to quantum channel 
-    :math:`\mathcal{N}(X) = \text{tr}_E[V X V^\dagger]`. See 
+    r"""Generate random Stinespring operator uniformly distributed on Hilbert-Schmidt
+    measure, i.e., isometry :math:`V` corresponding to quantum channel
+    :math:`\mathcal{N}(X) = \text{tr}_E[V X V^\dagger]`. See
     `here <https://arxiv.org/abs/2011.02994>`_ for additional details.
 
     Parameters
@@ -99,7 +99,7 @@ def stinespring_operator(nin, nout=None, nenv=None, iscomplex=False):
     nenv : int, optional
         Dimension of environment system. Default is ``nout``.
     iscomplex : bool, optional
-        Whether the Stinespring is real (``False``) or complex (``True``). Default is 
+        Whether the Stinespring is real (``False``) or complex (``True``). Default is
         ``False``.
 
     Returns
@@ -114,7 +114,7 @@ def stinespring_operator(nin, nout=None, nenv=None, iscomplex=False):
 
 
 def degradable_channel(nin, nout, nenv, iscomplex=False):
-    r"""Generate random degradable channel, represented as a Stinespring isometry 
+    r"""Generate random degradable channel, represented as a Stinespring isometry
     :math:`V` such that
 
     .. math::
@@ -140,16 +140,16 @@ def degradable_channel(nin, nout, nenv, iscomplex=False):
     nenv : int, optional
         Dimension of environment system. Default is ``nout``.
     iscomplex : bool, optional
-        Whether the Stinespring is real (``False``) or complex (``True``). Default is 
+        Whether the Stinespring is real (``False``) or complex (``True``). Default is
         ``False``.
 
     Returns
     -------
     ndarray
-        Stinespring operator :math:`V` of dimension ``(nout*nenv, nin)`` corresponding 
+        Stinespring operator :math:`V` of dimension ``(nout*nenv, nin)`` corresponding
         to :math:`\mathcal{N}(X)=\text{tr}_2[V X V^\dagger]`.
     ndarray
-        Stinespring operator :math:`W` of dimension ``(nin*nenv, nout)`` corresponding 
+        Stinespring operator :math:`W` of dimension ``(nin*nenv, nout)`` corresponding
         to :math:`\mathcal{N}_\text{c}(X)=\text{tr}_2[W \mathcal{N}(X) W^\dagger]`.
     """
     assert nenv <= nin
@@ -178,7 +178,7 @@ def degradable_channel(nin, nout, nenv, iscomplex=False):
 
 
 def choi_operator(nin, nout=None, M=None, iscomplex=False):
-    r"""Random Choi operator uniformly distributed on Hilbert-Schmidt measure. See 
+    r"""Random Choi operator uniformly distributed on Hilbert-Schmidt measure. See
     `here <https://arxiv.org/abs/2011.02994>`_ for additional details
 
     Parameters
@@ -190,7 +190,7 @@ def choi_operator(nin, nout=None, M=None, iscomplex=False):
     M : int, optional
         Dimension used to generate random Choi operator. Default is ``nout*nin``.
     iscomplex : bool, optional
-        Whether the Stinespring is real (``False``) or complex (``True``). Default is 
+        Whether the Stinespring is real (``False``) or complex (``True``). Default is
         ``False``.
 
     Returns

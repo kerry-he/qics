@@ -10,7 +10,7 @@ class QuantKeyDist(Cone):
 
     .. math::
 
-        \mathcal{K}_{\text{qkd}} = \text{cl}\{ (t, X) \in \mathbb{R} \times 
+        \mathcal{K}_{\text{qkd}} = \text{cl}\{ (t, X) \in \mathbb{R} \times
         \mathbb{H}^n_{++}:t \geq -S(\mathcal{G}(X)) + S(\mathcal{Z}(\mathcal{G}(X))) \},
 
     where
@@ -19,19 +19,19 @@ class QuantKeyDist(Cone):
 
         S(X) = -\text{tr}[X \log(X)],
 
-    is the quantum (von Neumann) entropy function, 
-    :math:`\mathcal{G}:\mathbb{H}^n\rightarrow\mathbb{H}^{mr}` is a positive linear 
-    map, and :math:`\mathcal{Z}:\mathbb{H}^{mr}\rightarrow\mathbb{H}^{mr}` is a 
+    is the quantum (von Neumann) entropy function,
+    :math:`\mathcal{G}:\mathbb{H}^n\rightarrow\mathbb{H}^{mr}` is a positive linear
+    map, and :math:`\mathcal{Z}:\mathbb{H}^{mr}\rightarrow\mathbb{H}^{mr}` is a
     pinching map that maps off-diagonal blocks to zero.
 
     Parameters
     ----------
     G_info : int or list of ndarray
-        Defines the linear map :math:`\mathcal{G}`. If ``G_info`` is an ``int``, then 
-        :math:`\mathcal{G}(X)=X` and this argument specifies the dimension of 
-        :math:`X`. If ``G_info`` is a ``list`` of ``ndarray``, then this argument 
-        specifies the list of Kraus operators 
-        :math:`\{ K_i \in \mathbb{C}^{mr \times n } \}_{i=1}^l` corresponding to 
+        Defines the linear map :math:`\mathcal{G}`. If ``G_info`` is an ``int``, then
+        :math:`\mathcal{G}(X)=X` and this argument specifies the dimension of
+        :math:`X`. If ``G_info`` is a ``list`` of ``ndarray``, then this argument
+        specifies the list of Kraus operators
+        :math:`\{ K_i \in \mathbb{C}^{mr \times n } \}_{i=1}^l` corresponding to
         :math:`\mathcal{G}` such that
 
         .. math::
@@ -39,19 +39,19 @@ class QuantKeyDist(Cone):
             \mathcal{G}(X) = \sum_{i=1}^l K_i X K_i^\dagger.
 
     Z_info : int or list of ndarray
-        Defines the linear map :math:`\mathcal{Z}`. If ``Z_info`` is an ``int``, then 
-        this argument specifies the block-structure which is being zeroed out, i.e., 
+        Defines the linear map :math:`\mathcal{Z}`. If ``Z_info`` is an ``int``, then
+        this argument specifies the block-structure which is being zeroed out, i.e.,
         defines :math:`r` where
 
         .. math::
 
             \mathcal{Z}(Y) = \sum_{i=1}^r (| i \rangle \langle i | \otimes \mathbb{I}_m) Y (| i \rangle \langle i | \otimes \mathbb{I}_m).
 
-        If ``Z_info`` is a ``list`` of ``ndarray``, then this argument directly 
+        If ``Z_info`` is a ``list`` of ``ndarray``, then this argument directly
         specifies the Kraus operator corresponding to :math:`\mathcal{Z}`.
 
     iscomplex : bool
-        Whether the matrix is symmetric :math:`X \in \mathbb{S}^n` (False) or 
+        Whether the matrix is symmetric :math:`X \in \mathbb{S}^n` (False) or
         Hermitian :math:`X \in \mathbb{H}^n` (True). Default is False.
     """
 
@@ -76,7 +76,7 @@ class QuantKeyDist(Cone):
             self.r = Z_info
             self.m = self.N // self.r
             assert self.m * Z_info == self.N
-            self.Z_list_raw = [np.zeros(self.N, self.N) for _ in range(self.r)]
+            self.Z_list_raw = [np.zeros((self.N, self.N)) for _ in range(self.r)]
             for k in range(self.r):
                 range_k = np.arange(k * self.n, (k + 1) * self.n)
                 self.Z_list_raw[k][range_k, range_k] = 1.0
@@ -699,10 +699,10 @@ class QuantKeyDist(Cone):
             self.E_blk = np.zeros((self.r, self.vm, self.n, self.n), dtype=self.dtype)
             for b, Z_idxs_k in enumerate(self.Z_idxs):
                 k = 0
-                for J in range(self.m):
-                    j = Z_idxs_k[J]
-                    for I in range(J):
-                        i = Z_idxs_k[I]
+                for j_subblk in range(self.m):
+                    j = Z_idxs_k[j_subblk]
+                    for i_subblk in range(j_subblk):
+                        i = Z_idxs_k[i_subblk]
                         self.E_blk[b, k, i, j] = rt2
                         self.E_blk[b, k, j, i] = rt2
                         k += 1

@@ -7,7 +7,6 @@ import qics.vectorize as vec
 #   s.t. Y_ii = 1
 
 for n in range(20, 201, 20):
-
     np.random.seed(1)
 
     # Generate random matrix C
@@ -15,19 +14,19 @@ for n in range(20, 201, 20):
     C = C @ C.T
 
     # Define objective function
-    ct = np.array(([[1.]]))
-    cX = np.zeros((n*n, 1))
-    cY = np.zeros((n*n, 1))
-    c  = np.vstack((ct, cX, cY))
+    ct = np.array(([[1.0]]))
+    cX = np.zeros((n * n, 1))
+    cY = np.zeros((n * n, 1))
+    c = np.vstack((ct, cX, cY))
 
     # Build linear constraints
     # X = C
     sn = vec.vec_dim(n, compact=True)
-    A1 = np.hstack((np.zeros((sn, 1)), vec.eye(n), np.zeros((sn, n*n))))
+    A1 = np.hstack((np.zeros((sn, 1)), vec.eye(n), np.zeros((sn, n * n))))
     b1 = vec.mat_to_vec(C, compact=True)
     # Yii = 1
-    A2 = np.zeros((n, 1 + 2*n*n))
-    A2[range(n), range(1 + n*n, 1 + 2*n*n, n+1)] = 1.
+    A2 = np.zeros((n, 1 + 2 * n * n))
+    A2[range(n), range(1 + n * n, 1 + 2 * n * n, n + 1)] = 1.0
     b2 = np.ones((n, 1))
 
     A = np.vstack((A1, A2))
@@ -37,5 +36,5 @@ for n in range(20, 201, 20):
     cones = [qics.cones.QuantRelEntr(n)]
 
     # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones)
+    model = qics.Model(c=c, A=A, b=b, cones=cones)
     qics.io.write_cbf(model, "nc_" + str(n) + ".cbf")

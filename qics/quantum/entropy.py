@@ -58,7 +58,7 @@ def purify(X):
 
     .. math::
 
-        | \psi \rangle = \sum_{i=1}^n \sqrt{\lambda_i} (| v_i \rangle \otimes | v_i 
+        | \psi \rangle = \sum_{i=1}^n \sqrt{\lambda_i} (| v_i \rangle \otimes | v_i
         \rangle).
 
     Parameters

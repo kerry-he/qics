@@ -9,7 +9,7 @@ class ClassRelEntr(Cone):
 
     .. math::
 
-        \mathcal{K}_{\text{cre}} = \text{cl}\{ (t, x, y) \in \mathbb{R} \times 
+        \mathcal{K}_{\text{cre}} = \text{cl}\{ (t, x, y) \in \mathbb{R} \times
         \mathbb{R}^n_{++} \times \mathbb{R}^n_{++} : t \geq H(x \| y) \},
 
     where
@@ -23,7 +23,7 @@ class ClassRelEntr(Cone):
     Parameters
     ----------
     n : int
-        Dimension of the vectors :math:`x` and :math:`y`, i.e., how many terms are in 
+        Dimension of the vectors :math:`x` and :math:`y`, i.e., how many terms are in
         the classical relative entropy function.
     """
 

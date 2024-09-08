@@ -458,10 +458,11 @@ class Solver:
             self.z_infeas = self.z_infeas_best
 
     def print_title(self):
-        print(f"{"":=^{68}}")
-        print(f"{"QICS v" + __version__ + " - Quantum Information Conic Solver":^68}")
-        print(f"{"by K. He, J. Saunderson, H. Fawzi (2024)":^68}")
-        print(f"{"":=^{68}}")
+        filler = "="
+        print(f"{'':{filler}^{68}}")
+        print(f"{'QICS v' + __version__ + ' - Quantum Information Conic Solver':^68}")
+        print(f"{'by K. He, J. Saunderson, H. Fawzi (2024)':^68}")
+        print(f"{'':{filler}^{68}}")
 
         print("Problem summary:")
         print(f"\tno. vars:     {self.model.n:<10}", end="")
@@ -474,7 +475,8 @@ class Solver:
         print(f"\t\tsparse:       {self.model.issparse!r:<10}")
 
     def print_iter_heading(self):
-        print(f"\n{'':=^{self.printbar_size}}", end="")
+        filler = "="
+        print(f"\n{'':{filler}^{self.printbar_size}}", end="")
         print(f"\n {'iter':^4}   {'mu':^7}   {'k/t':^7}  ", end="")
         print(f"|  {'p_obj':^10}  {'d_obj':^10}  {'gap':^7}  ", end="")
         print(f"|  {'p_feas':^7}   {'d_feas':^7}  ", end="")
@@ -487,7 +489,7 @@ class Solver:
                     f"|  {'step':^6}   {'dir_tol':^7}   {'prox':^7}   {'alpha':^5}",
                     end="",
                 )
-        print(f"\n{'':=^{self.printbar_size}}", end="")
+        print(f"\n{'':{filler}^{self.printbar_size}}", end="")
 
     def print_iter(self):
         yz_feas = max(self.y_feas, self.z_feas)

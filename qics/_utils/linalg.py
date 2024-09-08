@@ -27,7 +27,7 @@ def inp(x, y):
     x : ndarray
         First vector to compute inner product with.
     y : ndarray
-        Second vector to compute inner product with. Should be the same type and 
+        Second vector to compute inner product with. Should be the same type and
         dimension as x.
 
     Returns
@@ -41,8 +41,8 @@ def inp(x, y):
 
 
 def cho_fact(A):
-    """Perform a Cholesky decomposition on a positive definite matrix. Increment 
-    diagonals by a small amount if Cholesky decomposition fails until the factorization 
+    """Perform a Cholesky decomposition on a positive definite matrix. Increment
+    diagonals by a small amount if Cholesky decomposition fails until the factorization
     succeeds.
 
     Parameters
