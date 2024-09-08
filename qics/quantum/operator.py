@@ -156,7 +156,7 @@ def i_kr(mat, dims, sys):
 
     r = np.meshgrid(*[range(dims[k]) for k in sys])
     r = list(np.array(r).reshape(len(sys), -1))
-    out_view[*r, *r, ...] = mat.reshape(*new_dims, *new_dims)
+    out_view[tuple(r + r)] = mat.reshape(*new_dims, *new_dims)
 
     return out
 
@@ -189,9 +189,9 @@ def i_kr_multi(out, mat, dims, sys):
     not_sys = list(set(range(len(dims))) - set(sys))
 
     # Sort subsystems so the ones we want to partial trace are at the front
-    reordered_dims = [0]
-    reordered_dims += [k + 1 for k in sys]
+    reordered_dims =  [k + 1 for k in sys]
     reordered_dims += [k + 1 + len(dims) for k in sys]
+    reordered_dims += [0]
     reordered_dims += [k + 1 for k in not_sys]
     reordered_dims += [k + 1 + len(dims) for k in not_sys]
 
@@ -202,7 +202,7 @@ def i_kr_multi(out, mat, dims, sys):
 
     r = np.meshgrid(*[range(dims[k]) for k in sys])
     r = list(np.array(r).reshape(len(sys), -1))
-    out_view[:, *r, *r, ...] = mat.reshape(-1, 1, *new_dims, *new_dims)
+    out_view[tuple(r + r)] = mat.reshape(-1, *new_dims, *new_dims)
 
     return out
 
