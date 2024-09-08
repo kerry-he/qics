@@ -460,8 +460,8 @@ class Solver:
     def print_title(self):
         filler = "="
         print(f"{'':{filler}^{68}}")
-        print(f"{"QICS v" + __version__ + " - Quantum Information Conic Solver":^68}")
-        print(f"{"by K. He, J. Saunderson, H. Fawzi (2024)":^68}")
+        print(f"{'QICS v' + __version__ + ' - Quantum Information Conic Solver':^68}")
+        print(f"{'by K. He, J. Saunderson, H. Fawzi (2024)':^68}")
         print(f"{'':{filler}^{68}}")
 
         print("Problem summary:")
