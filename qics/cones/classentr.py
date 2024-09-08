@@ -87,7 +87,7 @@ class ClassEntr(Cone):
 
         self.feas = self.z > 0
         return self.feas
-    
+
     def get_val(self):
         return -np.log(self.z) - np.sum(self.log_u) - np.sum(self.log_x)
 

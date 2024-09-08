@@ -51,7 +51,7 @@ class NonNegOrthant(SymCone):
         return out
 
     def hess_prod_ip(self, out, H):
-        out[0][:] = H[0]/ (self.x**2)
+        out[0][:] = H[0] / (self.x**2)
         return out
 
     def hess_congr(self, A):
