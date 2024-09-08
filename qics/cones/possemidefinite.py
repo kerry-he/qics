@@ -37,8 +37,8 @@ class PosSemidefinite(SymCone):
         self.nu = n  # Barrier parameter
         self.iscomplex = iscomplex  # Hermitian or symmetric vector space
 
-        self.dim = n * n if (not iscomplex) else 2 * n * n
-        self.type = "s" if (not iscomplex) else "h"
+        self.dim = [n * n] if (not iscomplex) else [2 * n * n]
+        self.type = ["s"] if (not iscomplex) else ["h"]
         self.dtype = np.float64 if (not iscomplex) else np.complex128
 
         # Update flags
@@ -69,15 +69,15 @@ class PosSemidefinite(SymCone):
 
     def get_init_point(self, out):
         self.set_point(
-            np.eye(self.n, dtype=self.dtype), np.eye(self.n, dtype=self.dtype)
+            [np.eye(self.n, dtype=self.dtype)], [np.eye(self.n, dtype=self.dtype)]
         )
 
-        out[:] = self.X
+        out[0][:] = self.X
         return out
 
     def set_point(self, primal, dual=None, a=True):
-        self.X = primal * a
-        self.Z = dual * a
+        self.X = primal[0] * a
+        self.Z = dual[0] * a
 
         self.feas_updated = False
         self.grad_updated = False
@@ -114,23 +114,23 @@ class PosSemidefinite(SymCone):
 
         self.X_chol_inv, _ = self.cho_inv(self.X_chol, lower=True)
         self.X_inv = self.X_chol_inv.conj().T @ self.X_chol_inv
-        self.grad = -self.X_inv
+        self.grad = [-self.X_inv]
 
         self.grad_updated = True
 
-    def grad_ip(self, out):
-        assert self.feas_updated
-        if not self.grad_updated:
-            self.update_grad()
-        out[:] = self.grad
-        return out
+    # def grad_ip(self, out):
+    #     assert self.feas_updated
+    #     if not self.grad_updated:
+    #         self.update_grad()
+    #     out[0][:] = self.grad
+    #     return out
 
     def hess_prod_ip(self, out, H):
         if not self.grad_updated:
             self.update_grad()
-        XHX = self.X_inv @ H @ self.X_inv
-        np.add(XHX, XHX.conj().T, out=out)
-        out *= 0.5
+        XHX = self.X_inv @ H[0] @ self.X_inv
+        np.add(XHX, XHX.conj().T, out=out[0])
+        out[0] *= 0.5
         return out
 
     def hess_congr(self, A):
@@ -139,9 +139,9 @@ class PosSemidefinite(SymCone):
         return self.base_congr(A, self.X_inv, self.X_chol_inv.conj().T)
 
     def invhess_prod_ip(self, out, H):
-        XHX = self.X @ H @ self.X
-        np.add(XHX, XHX.conj().T, out=out)
-        out *= 0.5
+        XHX = self.X @ H[0] @ self.X
+        np.add(XHX, XHX.conj().T, out=out[0])
+        out[0] *= 0.5
         return out
 
     def invhess_congr(self, A):
@@ -179,7 +179,7 @@ class PosSemidefinite(SymCone):
                 )
 
             if len(self.A_ds_idxs) > 0:
-                lhs = np.zeros((len(self.A_ds_idxs), self.dim))
+                lhs = np.zeros((len(self.A_ds_idxs), self.dim[0]))
                 if self.iscomplex:
                     lin.congr_multi(
                         lhs.reshape((len(self.A_ds_idxs), self.n, 2 * self.n)).view(
@@ -202,7 +202,7 @@ class PosSemidefinite(SymCone):
                 out[self.A_ds_idxs, :] = out[:, self.A_ds_idxs].T
         else:
             # Compute symmetric matrix multiplication [A (L kr L)] [A (L kr L)]'
-            lhs = np.zeros((len(self.A_ds_idxs), self.dim))
+            lhs = np.zeros((len(self.A_ds_idxs), self.dim[0]))
             if self.iscomplex:
                 lin.congr_multi(
                     lhs.reshape((len(self.A_ds_idxs), self.n, 2 * self.n)).view(
@@ -227,8 +227,8 @@ class PosSemidefinite(SymCone):
         if not self.grad_updated:
             self.update_grad()
 
-        XHX_2 = self.X_inv @ H @ self.X_chol_inv.conj().T
-        out -= 2 * a * XHX_2 @ XHX_2.conj().T
+        XHX_2 = self.X_inv @ H[0] @ self.X_chol_inv.conj().T
+        out[0] -= 2 * a * XHX_2 @ XHX_2.conj().T
         return out
 
     def prox(self):
@@ -285,9 +285,9 @@ class PosSemidefinite(SymCone):
     def nt_prod_ip(self, out, H):
         if not self.nt_aux_updated:
             self.nt_aux()
-        WHW = self.W_inv @ H @ self.W_inv
-        np.add(WHW, WHW.conj().T, out=out)
-        out *= 0.5
+        WHW = self.W_inv @ H[0] @ self.W_inv
+        np.add(WHW, WHW.conj().T, out=out[0])
+        out[0] *= 0.5
 
     def nt_congr(self, A):
         if not self.nt_aux_updated:
@@ -297,9 +297,9 @@ class PosSemidefinite(SymCone):
     def invnt_prod_ip(self, out, H):
         if not self.nt_aux_updated:
             self.nt_aux()
-        WHW = self.W @ H @ self.W
-        np.add(WHW, WHW.conj().T, out=out)
-        out *= 0.5
+        WHW = self.W @ H[0] @ self.W
+        np.add(WHW, WHW.conj().T, out=out[0])
+        out[0] *= 0.5
 
     def invnt_congr(self, A):
         if not self.nt_aux_updated:
@@ -319,8 +319,8 @@ class PosSemidefinite(SymCone):
 
         # Compute (W^-T ds_a) o (W dz_a) = (R^-1 dS R^-T) o (R^T dZ R)
         #                                = 0.5 * ([R^-1 dS dZ R] + [R^T dZ dS R^-T])
-        temp1 = self.R_inv @ dS
-        temp2 = dZ @ self.R
+        temp1 = self.R_inv @ dS[0]
+        temp2 = dZ[0] @ self.R
         temp3 = temp1 @ temp2
         np.add(temp3, temp3.conj().T, out=temp1)
         temp1 *= -0.5
@@ -340,7 +340,7 @@ class PosSemidefinite(SymCone):
 
         # Compute W^-1 [ ... ] = R^-T [... ] R^-1
         temp = self.R_inv.conj().T @ temp1 @ self.R_inv
-        np.add(temp, temp.conj().T, out=out)
+        np.add(temp, temp.conj().T, out=out[0])
 
     def step_to_boundary(self, dS, dZ):
         # Compute the maximum step alpha in [0, 1] we can take such that

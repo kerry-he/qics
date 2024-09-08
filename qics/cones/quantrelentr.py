@@ -111,7 +111,6 @@ class QuantRelEntr(Cone):
 
     def get_val(self):
         assert self.feas_updated
-
         return -np.log(self.z) - np.sum(self.log_Dx) - np.sum(self.log_Dy)
 
     def update_grad(self):

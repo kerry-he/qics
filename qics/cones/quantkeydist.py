@@ -76,7 +76,7 @@ class QuantKeyDist(Cone):
             self.r = Z_info
             self.m = self.N // self.r
             assert self.m * Z_info == self.N
-            self.Z_list_raw = [np.zeros(self.N, self.N) for _ in range(self.r)]
+            self.Z_list_raw = [np.zeros((self.N, self.N)) for _ in range(self.r)]
             for k in range(self.r):
                 range_k = np.arange(k * self.n, (k + 1) * self.n)
                 self.Z_list_raw[k][range_k, range_k] = 1.0

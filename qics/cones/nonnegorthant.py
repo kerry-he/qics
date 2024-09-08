@@ -21,8 +21,8 @@ class NonNegOrthant(SymCone):
         self.n = n
         self.nu = n
 
-        self.dim = n
-        self.type = "r"
+        self.dim = [n]
+        self.type = ["r"]
 
         self.Ax = None
 
@@ -30,14 +30,14 @@ class NonNegOrthant(SymCone):
         return
 
     def get_init_point(self, out):
-        self.set_point(np.ones((self.n, 1)), np.ones((self.n, 1)))
+        self.set_point([np.ones((self.n, 1))], [np.ones((self.n, 1))])
 
-        out[:] = self.x
+        out[0][:] = self.x
         return out
 
     def set_point(self, primal, dual=None, a=True):
-        self.x = primal * a
-        self.z = dual * a
+        self.x = primal[0] * a
+        self.z = dual[0] * a
         return
 
     def get_feas(self):
@@ -47,18 +47,18 @@ class NonNegOrthant(SymCone):
         return -np.sum(np.log(self.x))
 
     def grad_ip(self, out):
-        out[:] = -np.reciprocal(self.x)
+        out[0][:] = -np.reciprocal(self.x)
         return out
 
     def hess_prod_ip(self, out, H):
-        out[:] = H / (self.x**2)
+        out[0][:] = H[0]/ (self.x**2)
         return out
 
     def hess_congr(self, A):
         return self.base_congr(A, np.reciprocal(self.x))
 
     def invhess_prod_ip(self, out, H):
-        out[:] = H * (self.x**2)
+        out[0][:] = H[0] * (self.x**2)
         return out
 
     def invhess_congr(self, A):
@@ -75,7 +75,7 @@ class NonNegOrthant(SymCone):
             return Ax.T @ Ax
 
     def third_dir_deriv_axpy(self, out, H, a=True):
-        out -= 2 * a * H * H / (self.x * self.x * self.x)
+        out[0] -= 2 * a * H[0] * H[0] / (self.x * self.x * self.x)
         return out
 
     def prox(self):
@@ -96,14 +96,14 @@ class NonNegOrthant(SymCone):
     # See: [Section 4.1]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf
 
     def nt_prod_ip(self, out, H):
-        out[:] = H * self.z / self.x
+        out[0][:] = H[0] * self.z / self.x
         return out
 
     def nt_congr(self, A):
         return self.base_congr(A, np.sqrt(self.z / self.x))
 
     def invnt_prod_ip(self, out, H):
-        out[:] = H * self.x / self.z
+        out[0][:] = H[0] * self.x / self.z
         return out
 
     def invnt_congr(self, A):
@@ -116,7 +116,7 @@ class NonNegOrthant(SymCone):
         # which is rearranged into the form H ds + dz = rs, i.e.,
         #     rs := W^-1 [ Lambda \ (-Lambda o Lambda - (W^-T ds_a) o (W dz_a) + sigma*mu 1) ]
         # See: [Section 5.4]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf
-        out[:] = (sigma_mu - ds * dz) / self.x - self.z
+        out[0][:] = (sigma_mu - ds[0] * dz[0]) / self.x - self.z
 
     def step_to_boundary(self, ds, dz):
         # Compute the maximum step alpha in [0, 1] we can take such that
