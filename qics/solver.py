@@ -398,10 +398,10 @@ class Solver:
 
         # Get primal and dual feasibilities
         self.x_res = sp.linalg.blas.daxpy(c, self.x_res, a=-tau)
-        self.y_res = (
-            sp.linalg.blas.daxpy(b, self.y_res, a=-tau) if model.use_A else self.y_res
-        )
-        self.z_res = sp.linalg.blas.daxpy(h, self.z_res, a=-tau)
+        if model.p > 0:
+            self.y_res = sp.linalg.blas.daxpy(b, self.y_res, a=-tau)
+        if model.q > 0:
+            self.z_res = sp.linalg.blas.daxpy(h, self.z_res, a=-tau)
         self.tau_res = p_obj_tau - d_obj_tau + kap
 
         self.x_feas = lin.norm_inf(self.x_res) / (1.0 + self.c_max) / tau

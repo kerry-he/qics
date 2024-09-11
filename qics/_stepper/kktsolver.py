@@ -63,9 +63,15 @@ class KKTSolver:
         # Precompute and factor Schur complement matrix
         if model.use_G:
             GHG = blk_hess_congruence(model.G_T_views, model)
-            self.GHG_fact = lin.cho_fact(GHG)
+            self.GHG_fact = lin.cho_fact(GHG, increment_diag=(not model.use_A))
 
             if model.use_A:
+                self.GHG_issingular = (self.GHG_fact is None)
+                if self.GHG_issingular:
+                    # GHG is singular, Cholesky factor GHG + AA instead
+                    GHG += model.A.T @ model.A
+                    self.GHG_fact = lin.cho_fact(GHG)
+
                 GHGA = lin.cho_solve(self.GHG_fact, model.A_T_dense)
                 AGHGA = lin.dense_dot_x(GHGA.T, model.A_coo.T).T
                 self.AGHGA_fact = lin.cho_fact(AGHGA)
@@ -172,11 +178,15 @@ class KKTSolver:
             if rs is not None:
                 self.work1 += rs
             temp = r.x - model.G_T @ self.work1.vec
+            if self.GHG_issingular:
+                temp -= model.A_T @ r.y
             temp = r.y + model.A @ lin.cho_solve(self.GHG_fact, temp)
             d.y[:] = lin.cho_solve(self.AGHGA_fact, temp)
 
             # dx := (G'HG) \ [rx - G' (H rz + rs) - A' dy]
             temp = r.x - model.G_T @ self.work1.vec - model.A_T @ d.y
+            if self.GHG_issingular:
+                temp -= model.A_T @ r.y
             d.x[:] = lin.cho_solve(self.GHG_fact, temp)
 
             # dz := H (rz + G dx) + rs
@@ -218,7 +228,7 @@ class KKTSolver:
 
         elif not model.use_A and model.use_G:
             # If A = [] (i.e, no primal linear constraints), then
-            #     [ rx ]   [    ]    [       G' ]  [ dx ]
+            #     [ rx ] + [    ] := [       G' ]  [ dx ]
             #     [ rz ]   [H\rs]    [ -G  H^-1 ]  [ dz ]
             # dx := G'HG \ [rx - G' (H rz + rs)]
             # dz := H (rz + G dx) + rs
@@ -239,26 +249,22 @@ class KKTSolver:
 
         elif not model.use_A and not model.use_G:
             # If both A = [] and G = -I, then
-            #     [ rx ]   [    ]    [     -I  ]  [ dx ]
-            #     [ rz ]   [H\rs]    [ I  H^-1 ]  [ dz ]
-            # dx := rz + H \ [rx + rs]
-            # dz := H (rz - dx) + rs
+            #     [ rx ] + [    ] := [       G  ]  [ dx ]
+            #     [ rz ]   [H\rs]    [ -G  H^-1 ]  [ dz ]
+            # dz := G \ rx
+            # dx := -G \ [rz + H \ (rs - dz)]
 
-            # dx := rz + H \ [rx + rs]
-            self.work1.vec[:] = r.x
+            # dz := G \ rx
+            np.multiply(r.x, model.G_inv, out=d.z.vec)
+
+            # dx := rz + H \ [rx - dz]
+            self.work1.vec[:] = -d.z.vec
             if rs is not None:
                 self.work1 += rs
             blk_invhess_prod_ip(self.work2, self.work1, model)
             d.x[:] = self.work2.vec
             d.x += r.z.vec
-
-            # dz := H (rz - dx) + rs
-            self.work1.vec[:] = r.z
-            self.work1.vec -= d.x
-            blk_hess_prod_ip(self.work2, self.work1, model)
-            d.z.vec[:] = self.work2.vec
-            if rs is not None:
-                d.z.vec += rs
+            d.x *= -model.G_inv
 
         return d
 

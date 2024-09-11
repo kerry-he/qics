@@ -76,7 +76,7 @@ class Model:
         self.use_G = (G is not None) and (
             self.n != self.q or (np.linalg.norm(np.eye(self.n) + self.G) > 1e-10)
         )
-        self.use_A = (A is not None) and (A.size > 0)
+        self.use_A = (A is not None) and (np.prod(A.shape) > 0)
 
         self.A = sparsify(self.A, SPARSE_THRESHOLD, "csr")
         self.G = sparsify(self.G, SPARSE_THRESHOLD, "csr") if self.use_G else self.G
@@ -115,6 +115,9 @@ class Model:
             self.issparse = any(
                 [sp.sparse.issparse(A_invG_k) for A_invG_k in self.A_invG_views]
             )
+        else:
+            self.G_inv = np.reciprocal(self.G.diagonal()).reshape((-1, 1))
+            self.issparse = True
 
         self.issymmetric = all([cone_k.get_issymmetric() for cone_k in cones])
         self.iscomplex = any([cone_k.get_iscomplex() for cone_k in cones])

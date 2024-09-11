@@ -40,7 +40,7 @@ def inp(x, y):
     return (x_view @ y_view)[0, 0]
 
 
-def cho_fact(A):
+def cho_fact(A, increment_diag=True):
     """Perform a Cholesky decomposition on a positive definite matrix. Increment
     diagonals by a small amount if Cholesky decomposition fails until the factorization
     succeeds.
@@ -62,6 +62,8 @@ def cho_fact(A):
             fact = sp.linalg.cho_factor(A, check_finite=False)
             return fact
         except np.linalg.LinAlgError:
+            if not increment_diag:
+                return None
             A.flat[:: A.shape[0] + 1] += diag_incr
             diag_incr *= 1e1
 
