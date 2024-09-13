@@ -392,7 +392,7 @@ def solve_sys_ir(x, b, A, A_inv, res, cor, settings):
         res_norm = res.norm() / (1 + r_norm)
 
         # Exit if iterative refinement made things worse
-        improv_ratio = prev_res_norm / res_norm
+        improv_ratio = prev_res_norm / (res_norm + 1e-15)
         if improv_ratio < 1:
             return prev_res_norm
 

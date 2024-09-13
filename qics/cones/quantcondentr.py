@@ -45,10 +45,8 @@ class QuantCondEntr(Cone):
         self.iscomplex = iscomplex
 
         if isinstance(sys, int):
-            sys = [
-                sys,
-            ]
-        if isinstance(sys, tuple):
+            sys = [sys]
+        if isinstance(sys, tuple) or isinstance(sys, set):
             sys = list(sys)
 
         self.sys = sys  # System being traced out

@@ -38,11 +38,11 @@ class QuantKeyDist(Cone):
 
             \mathcal{G}(X) = \sum_{i=1}^l K_i X K_i^\dagger.
 
-    Z_info : int or list of ndarray
-        Defines the linear map :math:`\mathcal{Z}`. If ``Z_info`` is an ``int``, then
-        this argument specifies the block-structure which is being zeroed out, i.e.,
-        defines :math:`r` where
-
+    Z_info : int or tuple or list(ndarray)
+        Defines the linear map :math:`\mathcal{Z}`. There are three ways the user can
+        specify this argument. If ``Z_info`` is an ``int``, then this argument specifies
+        the block-structure which is being zeroed out, i.e., defines :math:`r` where
+        
         .. math::
 
             \mathcal{Z}(Y) = \sum_{i=1}^r (| i \rangle \langle i | \otimes \mathbb{I}_m) Y (| i \rangle \langle i | \otimes \mathbb{I}_m).
@@ -60,7 +60,7 @@ class QuantKeyDist(Cone):
         if isinstance(G_info, int):
             self.n = G_info  # Input dimension
             self.N = G_info  # Output dimension
-            self.K_list_raw = [[np.eye(self.N)]]
+            self.K_list_raw = [np.eye(self.N)]
             self.G_is_Id = True
         else:
             self.n = G_info[0].shape[1]
@@ -83,6 +83,24 @@ class QuantKeyDist(Cone):
             self.Z_idxs = [
                 np.arange(i * self.n, (i + 1) * self.n) for i in range(self.r)
             ]
+        elif isinstance(Z_info, tuple):
+            (dims, sys) = Z_info
+            r = np.meshgrid(*[range(dims[k]) for k in sys])
+            r = list(np.array(r).reshape(len(self.subsystems), -1).T)
+            self.Z_list_raw = []
+            for i in range(len(r)):
+                Z_i = np.array([1])
+                counter = 0
+                for (k, dimk) in enumerate(self.dimensions):
+                    if k in self.subsystems:
+                        Z_ik = np.zeros(dimk[0])
+                        Z_ik[r[i][counter]] = 1
+                        Z_i = np.kron(Z_i, Z_ik)
+                        counter += 1
+                    else:
+                        Z_i = np.kron(Z_i, np.ones(dimk[0]))
+                self.Z_list_raw += [np.diag(Z_i)]
+            self.Z_idxs = [np.where(Z)[0] for Z in Z_info]    
         else:
             self.r = len(Z_info)
             self.m = self.N // self.r

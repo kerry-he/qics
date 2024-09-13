@@ -73,10 +73,19 @@ class Model:
         self.h = h.copy() if (h is not None) else np.zeros((self.n, 1))
         self.cones = cones
 
-        self.use_G = (G is not None) and (
-            self.n != self.q or (np.linalg.norm(np.eye(self.n) + self.G) > 1e-10)
-        )
-        self.use_A = (A is not None) and (A.size > 0)
+        def _is_like_eye(A, tol=1e-10):
+            if A.shape[0] != A.shape[1]:
+                return False
+            if sp.sparse.issparse(A):
+                A_minus_eye = sp.sparse.eye(self.n) - abs(self.G)
+                return sp.sparse.linalg.norm(A_minus_eye) < tol
+            else:
+                A_minus_eye = np.eye(self.n) - abs(self.G)
+                return np.linalg.norm(A_minus_eye) < tol
+
+        # Use G if G is not like the identity matrix
+        self.use_G = not _is_like_eye(self.G)
+        self.use_A = (A is not None) and (np.prod(A.shape) > 0)
 
         self.A = sparsify(self.A, SPARSE_THRESHOLD, "csr")
         self.G = sparsify(self.G, SPARSE_THRESHOLD, "csr") if self.use_G else self.G
@@ -104,7 +113,7 @@ class Model:
             self.issparse = any([sp.sparse.issparse(G_T_k) for G_T_k in self.G_T_views])
         elif self.use_A:
             # After rescaling, G is some easily invertible square diagonal matrix
-            self.G_inv = -self.c_scale.reshape((-1, 1))
+            self.G_inv = np.reciprocal(self.G.diagonal()).reshape((-1, 1))
             self.A_invG = linalg.scale_axis(self.A.copy(), scale_cols=self.G_inv)
             self.A_invG = (
                 self.A_invG.tocsr() if sp.sparse.issparse(self.A_invG) else self.A_invG

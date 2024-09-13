@@ -39,7 +39,7 @@ def p_tr(mat, dims, sys):
         sys = [
             sys,
         ]
-    if isinstance(sys, tuple):
+    if isinstance(sys, tuple) or isinstance(sys, set):
         sys = list(sys)
     not_sys = list(set(range(len(dims))) - set(sys))
 
