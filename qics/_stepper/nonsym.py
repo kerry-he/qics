@@ -62,6 +62,7 @@ class NonSymStepper:
         return point, success, alpha
 
     def line_search(self, model, point, mode="co_toa"):
+        alpha = alpha_sched[0]
         alpha_iter = -1
         eta = 0.99
 
@@ -73,10 +74,11 @@ class NonSymStepper:
 
         while True:
             alpha_iter += 1
-            alpha = alpha_sched[alpha_iter]
 
             if alpha_iter >= len(alpha_sched):
                 return point, alpha, False
+            
+            alpha = alpha_sched[alpha_iter]
 
             # Step point in direction and step size
             next_point.vec[:] = point.vec

@@ -9,11 +9,13 @@ class Vector:
         self.vec = None
 
     def __iadd__(self, other):
-        self.vec[:] = sp.linalg.blas.daxpy(other.vec, self.vec, a=1)
+        if self.vec.size > 0:
+            self.vec[:] = sp.linalg.blas.daxpy(other.vec, self.vec, a=1)
         return self
 
     def __isub__(self, other):
-        self.vec[:] = sp.linalg.blas.daxpy(other.vec, self.vec, a=-1)
+        if self.vec.size > 0:
+            self.vec[:] = sp.linalg.blas.daxpy(other.vec, self.vec, a=-1)
         return self
 
     def __imul__(self, a):
@@ -21,7 +23,8 @@ class Vector:
         return self
 
     def axpy(self, a, other):
-        self.vec[:] = sp.linalg.blas.daxpy(other.vec, self.vec, a=a)
+        if self.vec.size > 0:
+            self.vec[:] = sp.linalg.blas.daxpy(other.vec, self.vec, a=a)
         return self
 
     def copy_from(self, other):

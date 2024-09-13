@@ -124,6 +124,9 @@ class Model:
             self.issparse = any(
                 [sp.sparse.issparse(A_invG_k) for A_invG_k in self.A_invG_views]
             )
+        else:
+            self.G_inv = np.reciprocal(self.G.diagonal()).reshape((-1, 1))
+            self.issparse = True
 
         self.issymmetric = all([cone_k.get_issymmetric() for cone_k in cones])
         self.iscomplex = any([cone_k.get_iscomplex() for cone_k in cones])
