@@ -16,12 +16,12 @@ where $c \in \mathbb{R}^n$, $b \in \mathbb{R}^p$, $h \in \mathbb{R}^q$, $A \in \
 |----------------|:---------------------:|:---------------:|
 | Positive semidefinite |  [`qics.cones.PosSemidefinite`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.PosSemidefinite)  | $\\{ X \in \mathbb{H}^n : X \succeq 0 \\}$ |
 | Quantum entropy |  [`qics.cones.QuantEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.QuantEntr)  | $\text{cl}\\{ (t, u, X) \in \mathbb{R} \times \mathbb{R}_{++} \times \mathbb{H}^n\_{++} : t \geq -u S(u^{-1} X) \\}$ |
-| Quantum relative entropy |  [`qics.cones.QuantRelEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.QuantRelEntr)  | $\text{cl}\{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq S(X \| Y) \}$ |
+| Quantum relative entropy |  [`qics.cones.QuantRelEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.QuantRelEntr)  | $\text{cl}\{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq S(X \\| Y) \}$ |
 | Quantum conditional entropy |  [`qics.cones.QuantCondEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.QuantCondEntr)  | $\text{cl}\\{ (t, X) \in \mathbb{R} \times \mathbb{H}^{n}_{++} : t \geq -S(X) + S(\text{tr}_i(X)) \\}$ |
 | Quantum key distribution |  [`qics.cones.QuantKeyDist`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.QuantKeyDist)  | $\text{cl}\\{ (t, X) \in \mathbb{R} \times \mathbb{H}^n_{++} : t \geq -S(\mathcal{G}(X)) + S(\mathcal{Z}(\mathcal{G}(X))) \\}$ |
-| Operator perspective epigraph |  [`qics.cones.OpPerspecTr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.OpPerspecTr)  | $\text{cl}\\{ (T, X, Y) \in \mathbb{H}^n \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \\}$ |
+| Operator perspective epigraph |  [`qics.cones.OpPerspecEpi`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.OpPerspecEpi)  | $\text{cl}\\{ (T, X, Y) \in \mathbb{H}^n \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \\}$ |
 
-where $S(X)=-\text{tr}[X\log(X)]$ is the quantum entropy, $S(X \| Y)=\text{tr}[X\log(X) - X\log(Y)]$ is the quantum relative entropy, and $P_g(X, Y)=X^{1/2} g(X^{-1/2} Y X^{-1/2}) X^{1/2}$ is the non-commutative or operator perspective.
+where $S(X)=-\text{tr}[X\log(X)]$ is the quantum entropy, $S(X \\| Y)=\text{tr}[X\log(X) - X\log(Y)]$ is the quantum relative entropy, and $P_g(X, Y)=X^{1/2} g(X^{-1/2} Y X^{-1/2}) X^{1/2}$ is the non-commutative or operator perspective.
 
 A full list of cones which we support can be found in our [documentation](https://qics.readthedocs.io/en/stable/api/cones.html).
 
@@ -41,7 +41,7 @@ A full list of cones which we support can be found in our [documentation](https:
 
 ## Installation
 
-**QICS** is currently supported for Python 3.8 or later, and can be directly installed from [pip](https://pypi.org/project/pip/) by calling
+**QICS** is currently supported for Python 3.8 or later, and can be directly installed from [pip](https://pypi.org/project/qics/) by calling
 
 ```bash
 pip install qics
@@ -51,15 +51,38 @@ pip install qics
 
 The full documentation of the code can be found [here](https://qics.readthedocs.io/en/stable/). Technical details about our implementation can be found in our paper.
 
-## Example
+## PICOS interface
 
-We illustrate how to use **QICS** with a quick example below. Additional details describing this example can be found [here](https://qics.readthedocs.io/en/stable/guide/gettingstarted.html).
+The easiest way to use **QICS** is through the Python optimization modelling interface [PICOS](https://picos-api.gitlab.io/picos/). Below, we show how a simple [nearest 
+correlation matrix](https://qics.readthedocs.io/en/stable/examples/qrep/nearest.html#nearest-correlation-matrix) problem can be solved. 
+
+```python
+  import numpy
+  import picos
+
+  # Define the conic program
+  P = picos.Problem()
+  X = numpy.array([[2., 1.], [1., 2.]])
+  Y = picos.SymmetricVariable("Y", 2)
+  
+  P.set_objective("min", picos.qrelentr(X, Y))
+  P.add_constraint(picos.maindiag(Y) == 1)
+
+  # Solve the conic program
+  P.solve(solver="qics")
+```
+
+Some additional details about how to use QICS with PICOS can be found [here](https://qics.readthedocs.io/en/stable/guide/gettingstarted.html).
+
+## Native interface
+
+Alternatively, advanced users can use the QICS' native interface, which provides additional flexibilty in how the problem is parsed to the solver. Below, we show how the same nearest correlation matrix problem can be solved using QICS' native interface.
 
 ```python
  import numpy
  import qics
 
- # Define conic program we want to solve
+ # Define the conic program
  c = numpy.array([[1., 0., 0., 0., 0., 0., 0., 0., 0.]]).T
  A = numpy.array([
      [0., 1., 0., 0., 0., 0., 0., 0., 0.],
@@ -77,4 +100,4 @@ We illustrate how to use **QICS** with a quick example below. Additional details
  info = solver.solve()
 ```
 
-See the [documentation](https://qics.readthedocs.io/en/stable/examples/index.html) for additional examples for how to solve semidefinite programs and quantum relative entropy programs using **QICS**.
+Additional details describing this example can be found [here](https://qics.readthedocs.io/en/stable/guide/gettingstarted.html).
