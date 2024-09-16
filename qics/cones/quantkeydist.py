@@ -78,10 +78,10 @@ class QuantKeyDist(Cone):
             assert self.m * Z_info == self.N
             self.Z_list_raw = [np.zeros((self.N, self.N)) for _ in range(self.r)]
             for k in range(self.r):
-                range_k = np.arange(k * self.n, (k + 1) * self.n)
+                range_k = np.arange(k * self.m, (k + 1) * self.m)
                 self.Z_list_raw[k][range_k, range_k] = 1.0
             self.Z_idxs = [
-                np.arange(i * self.n, (i + 1) * self.n) for i in range(self.r)
+                np.arange(i * self.m, (i + 1) * self.m) for i in range(self.r)
             ]
         elif isinstance(Z_info, tuple):
             (dims, sys) = Z_info
