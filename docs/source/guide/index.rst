@@ -5,6 +5,6 @@ User guide
    :maxdepth: 3
    :caption: Contents:
 
-   installation.rst
    gettingstarted.rst
    matrices.rst
+   picos.rst

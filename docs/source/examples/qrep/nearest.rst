@@ -10,8 +10,9 @@ can be solved in **QICS** below.
 Bregman projection
 --------------------
 
-For a given convex function :math:`\varphi:\text{dom}\ \varphi\rightarrow\mathbb{R}`,
+For a given convex function :math:`\varphi:\text{dom}\ \varphi\rightarrow\mathbb{R}`, 
 the associated Bregman divergence :math:`D_\varphi : \text{dom}\ \varphi\times\text{int}\ \text{dom}\ \varphi\rightarrow\mathbb{R}`
+is defined as
 
 .. math::
 
@@ -24,114 +25,104 @@ A Bregman projection of a point :math:`\mathcal{y}` onto a set
 
     \min_{x \in \mathcal{C}} \quad D_\varphi( x \| y ).
 
-When :math:`\varphi(X)=-S(X)` is the negative quantum entropy, 
-the Bregman divergence is the (normalized) quantum relative entropy
-:math:`D_\varphi( X \| Y ) = S( X \| Y ) - \text{tr}[X - Y]`.
+When :math:`\varphi(X)=-S(X)` is the negative quantum entropy, the Bregman divergence is
+the (normalized) quantum relative entropy :math:`D_\varphi( X \| Y ) = S( X \| Y ) - \text{tr}[X - Y]`.
 
-The Bregman projection for this kernel of a matrix :math:`Y\in\mathbb{H}^n` 
-onto the intersection of the positive semidefinite cone and a polytope is 
+The Bregman projection for this kernel of a matrix :math:`Y\in\mathbb{H}^n` onto the
+set of density matrices if given by
 
 .. math::
 
     \min_{X \in \mathbb{H}^n} &&& S( X \| Y ) - \text{tr}[X - Y]
 
-    \text{s.t.} &&& \langle A_i, X \rangle = b_i \qquad i=1,\ldots,p
+    \text{s.t.} &&& \text{tr}[X] = 1
 
     &&& X \succeq 0,
 
-For linear constraints encoded by :math:`A_i\in\mathbb{H}^n` and 
-:math:`b_i\in\mathbb{R}` for :math:`i=1,\ldots,p`. As the second argument
-of the quantum relative entropy is fixed, we can model the problem
-using just the quantum entropy cone.
+As the second argument of the quantum relative entropy is fixed, we can model the 
+problem using just the quantum entropy cone.
 
-.. math::
+.. tabs::
 
-    \min_{t,u\in\mathbb{R},\  X \in \mathbb{H}^n} &&& t - \langle \log(Y)+\mathbb{I}, X \rangle + \text{tr}[Y]
+    .. code-tab:: python Native
 
-    \text{s.t.} \quad\; &&& u = 1
+        import numpy
+        import scipy
+        import qics
 
-    &&& \langle A_i, X \rangle = b_i \qquad i=1,\ldots,p
+        numpy.random.seed(1)
 
-    &&& (t, u, X) \in \mathcal{K}_{\text{qe}}^n,
+        n = 5
 
-.. code-block:: python
+        # Generate random matrix Y to project
+        Y = numpy.random.randn(n, n) + numpy.random.randn(n, n)*1j
+        Y = Y @ Y.conj().T
+        tr_Y = numpy.trace(Y).real
 
-    import numpy as np
-    import scipy as sp
-    import qics
+        # Define objective function
+        ct = numpy.array([[1.]])
+        cu = numpy.array([[0.]])
+        cX = -scipy.linalg.logm(Y) - numpy.eye(n)
+        c  = numpy.vstack((ct, cu, qics.vectorize.mat_to_vec(cX)))
 
-    from qics.vectorize import mat_to_vec
+        # Build linear constraints
+        # u = 1
+        A1 = numpy.hstack((numpy.array([[0., 1.]]), numpy.zeros((1, 2*n*n))))
+        b1 = numpy.array([[1.]])
+        # tr[X] = 1
+        A2 = numpy.hstack((
+            numpy.array([[0., 0.]]), 
+            qics.vectorize.mat_to_vec(numpy.eye(n, dtype=numpy.complex128)).T
+        ))
+        b2 = numpy.array([[1.]])
 
-    np.random.seed(1)
+        A = numpy.vstack((A1, A2))
+        b = numpy.vstack((b1, b2))
 
-    n = 5
-    p = 2
+        # Define cones to optimize over
+        cones = [qics.cones.QuantEntr(n, iscomplex=True)]
 
-    # Generate random matrix Y to project
-    Y = np.random.randn(n, n) + np.random.randn(n, n)*1j
-    Y = Y @ Y.conj().T
-    tr_Y = np.trace(Y).real
+        # Initialize model and solver objects
+        model = qics.Model(c=c, A=A, b=b, cones=cones, offset=tr_Y)
+        solver = qics.Solver(model)
 
-    # Define objective function
-    ct = np.array([[1.]])
-    cu = np.array([[0.]])
-    cX = -sp.linalg.logm(Y) - np.eye(n)
-    c  = np.vstack((ct, cu, mat_to_vec(cX)))
+        # Solve problem
+        info = solver.solve()
 
-    # Build linear constraints
-    # u = 1
-    A1 = np.hstack((np.array([[0., 1.]]), np.zeros((1, 2*n*n))))
-    b1 = np.array([[1.]])
-    # <X, Ai> = bi for randomly generated Ai, bi
-    A2 = np.zeros((p, 2 + 2*n*n))
-    for i in range(p):
-        Ai = np.random.randn(n, n) + np.random.rand(n, n)*1j
-        A2[[i], 2:] = mat_to_vec(Ai + Ai.conj().T).T
-    b2 = np.random.randn(p, 1)
+    .. code-tab:: python PICOS
 
-    A = np.vstack((A1, A2))
-    b = np.vstack((b1, b2))
+        import numpy
+        import scipy
+        import picos
 
-    # Define cones to optimize over
-    cones = [qics.cones.QuantEntr(n, iscomplex=True)]
+        numpy.random.seed(1)
 
-    # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones, offset=tr_Y)
-    solver = qics.Solver(model)
+        n = 5
 
-    # Solve problem
-    info = solver.solve()
+        # Generate random matrix Y to project
+        Y = numpy.random.randn(n, n) + numpy.random.randn(n, n)*1j
+        Y = Y @ Y.conj().T
+        trY = numpy.trace(Y).real
+        logY = scipy.linalg.logm(Y)
 
-.. code-block:: none
+        # Define problem
+        P = picos.Problem()
+        X = picos.HermitianVariable("X", n)
 
-    ====================================================================
-                QICS v0.0 - Quantum Information Conic Solver
-                by K. He, J. Saunderson, H. Fawzi (2024)
-    ====================================================================
-    Problem summary:
-            no. cones:  1                        no. vars:    52
-            barr. par:  8                        no. constr:  3
-            symmetric:  False                    cone dim:    52
-            complex:    True
+        P.set_objective("min", -picos.qentr(X) - (X | logY + numpy.eye(n)).real + trY)
+        P.add_constraint(picos.trace(X) == 1)
 
-    ...
+        # Solve problem
+        P.solve(solver="qics", verbosity=1)        
 
-    Solution summary
-            sol. status:  optimal                num. iter:    13
-            exit status:  solved                 solve time:   1.338
-
-            primal obj:   3.411085972738e+00     primal feas:  1.06e-10
-            dual obj:     3.411085973116e+00     dual feas:    5.38e-11
-            opt. gap:     1.22e-11
+.. _Nearest:
 
 Nearest correlation matrix
 ---------------------------
 
-Correlation matrices are characterized by being a real positive 
-semidefinite matrices with diagonal entries all equal to one.
-Therefore, the closest correlation matrix to a given matrix 
-:math:`C\in\mathbb{S}^n`, can be found by solving the following
-problem
+Correlation matrices are characterized by being a real positive semidefinite matrices 
+with diagonal entries all equal to one. Therefore, the closest correlation matrix to a 
+given matrix  :math:`C\in\mathbb{S}^n`, can be found by solving the following problem
 
 .. math::
 
@@ -141,84 +132,72 @@ problem
 
     &&& Y \succeq 0.
 
-To write this in the form accepted by **QICS**, we will represent
-the problem in standard form
+.. tabs::
 
-.. math::
+    .. code-tab:: python Native
 
-    \min_{t \in\mathbb{R}, \ X,Y \in \mathbb{S}^n} &&& t
+        import numpy
+        import qics
 
-    \text{s.t.} \quad\; &&& X = C
-    
-    &&& Y_{ii} = 1 \qquad i=1,\ldots,n
+        numpy.random.seed(1)
 
-    &&& (t, X, Y) \in \mathcal{K}_{\text{qre}}^n.
+        n = 5
 
-.. code-block:: python
+        # Generate random matrix C
+        C = numpy.random.randn(n, n)
+        C = C @ C.T
 
-    import numpy as np
-    import qics
-    import qics.vectorize as vec
+        # Define objective function
+        ct = numpy.array(([[1.]]))
+        cX = numpy.zeros((n*n, 1))
+        cY = numpy.zeros((n*n, 1))
+        c  = numpy.vstack((ct, cX, cY))
 
-    np.random.seed(1)
+        # Build linear constraints
+        # X = C
+        sn = qics.vectorize.vec_dim(n, compact=True)
+        A1 = numpy.hstack((numpy.zeros((sn, 1)), qics.vectorize.eye(n), numpy.zeros((sn, n*n))))
+        b1 = qics.vectorize.mat_to_vec(C, compact=True)
+        # Yii = 1
+        A2 = numpy.zeros((n, 1 + 2*n*n))
+        A2[range(n), range(1 + n*n, 1 + 2*n*n, n+1)] = 1.
+        b2 = numpy.ones((n, 1))
 
-    n = 5
+        A = numpy.vstack((A1, A2))
+        b = numpy.vstack((b1, b2))
 
-    # Generate random matrix C
-    C = np.random.randn(n, n)
-    C = C @ C.T
+        # Define cones to optimize over
+        cones = [qics.cones.QuantRelEntr(n)]
 
-    # Define objective function
-    ct = np.array(([[1.]]))
-    cX = np.zeros((n*n, 1))
-    cY = np.zeros((n*n, 1))
-    c  = np.vstack((ct, cX, cY))
+        # Initialize model and solver objects
+        model = qics.Model(c=c, A=A, b=b, cones=cones)
+        solver = qics.Solver(model)
 
-    # Build linear constraints
-    # X = C
-    sn = vec.vec_dim(n, compact=True)
-    A1 = np.hstack((np.zeros((sn, 1)), vec.eye(n), np.zeros((sn, n*n))))
-    b1 = vec.mat_to_vec(C, compact=True)
-    # Yii = 1
-    A2 = np.zeros((n, 1 + 2*n*n))
-    A2[range(n), range(1 + n*n, 1 + 2*n*n, n+1)] = 1.
-    b2 = np.ones((n, 1))
+        # Solve problem
+        info = solver.solve()
 
-    A = np.vstack((A1, A2))
-    b = np.vstack((b1, b2))
+    .. code-tab:: python PICOS
 
-    # Define cones to optimize over
-    cones = [qics.cones.QuantRelEntr(n)]
+        import numpy
+        import picos
 
-    # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones)
-    solver = qics.Solver(model)
+        numpy.random.seed(1)
 
-    # Solve problem
-    info = solver.solve()
+        n = 5
 
-.. code-block:: none
+        # Generate random matrix C
+        C = numpy.random.randn(n, n)
+        C = C @ C.T
 
-    ====================================================================
-                QICS v0.0 - Quantum Information Conic Solver
-                by K. He, J. Saunderson, H. Fawzi (2024)
-    ====================================================================
-    Problem summary:
-            no. cones:  1                        no. vars:    51
-            barr. par:  12                       no. constr:  20
-            symmetric:  False                    cone dim:    51
-            complex:    False
+        # Define problem
+        P = picos.Problem()
+        Y = picos.SymmetricVariable("Y", n)
 
-    ...
+        P.set_objective("min", picos.qrelentr(C, Y))
+        P.add_constraint(picos.maindiag(Y) == 1)
 
-    Solution summary
-            sol. status:  optimal                num. iter:    12
-            exit status:  solved                 solve time:   4.268
-
-            primal obj:   5.450544797212e+01     primal feas:  7.76e-09
-            dual obj:     5.450544802133e+01     dual feas:    3.88e-09
-            opt. gap:     9.03e-10
-
+        # Solve problem
+        P.solve(solver="qics", verbosity=1)
 
 Relative entropy of entanglement
 ----------------------------------
@@ -240,7 +219,7 @@ it must be a member of
 
     \mathsf{PPT} = \{ X \in \mathbb{H}^{n_1n_2} : T_2(X) \succeq 0 \},
 
-where :math:`T_1:\mathbb{S}^{n_1n_2}\rightarrow\mathbb{S}^{n_1n_2}`
+where :math:`T_2:\mathbb{S}^{n_1n_2}\rightarrow\mathbb{S}^{n_1n_2}`
 denotes the partial transpose operator with respect to the second
 subsystem. Note that in general, the PPT crieria is not a sufficient 
 condition for separability, i.e., there exists entangled quantum 
@@ -260,108 +239,98 @@ Given this, the relative entropy of entagnlement of a quantum state
 
     &&& Y \succeq 0.
 
-We can model this in the standard form accepted by **QICS** as
+.. tabs::
 
-.. math::
+    .. code-tab:: python Native
 
-    \min_{t \in\mathbb{R}, \ X,Y,Z \in \mathbb{H}^{n_1n_2}} &&& t
+        import numpy
+        import qics
 
-    \text{s.t.} \quad\quad &&& X = C
+        numpy.random.seed(1)
 
-    &&& \text{tr}[Y] = 1
-    
-    &&& T_2(Y) - Z = 0
+        n1 = 2
+        n2 = 3
+        N  = n1 * n2
 
-    &&& (t, X, Y, Z) \in \mathcal{K}_{\text{qre}}^{n_1n_2} \times \mathbb{H}^{n_1n_2}_+.
+        # Generate random (complex) quantum state
+        C = qics.quantum.random.density_matrix(N, iscomplex=True)
 
-.. code-block:: python
+        # Define objective function
+        ct = numpy.array(([[1.]]))
+        cX = numpy.zeros((2*N*N, 1))
+        cY = numpy.zeros((2*N*N, 1))
+        cZ = numpy.zeros((2*N*N, 1))
+        c  = numpy.vstack((ct, cX, cY, cZ))
 
-    import numpy as np
-    import qics
-    import qics.vectorize as vec
-    import qics.quantum as qu
+        # Build linear constraints
+        # X = C
+        sN = qics.vectorize.vec_dim(N, iscomplex=True, compact=True)
+        A1 = numpy.hstack((
+            numpy.zeros((sN, 1)),
+            qics.vectorize.eye(N, iscomplex=True),
+            numpy.zeros((sN, 2*N*N)),
+            numpy.zeros((sN, 2*N*N)),
+        ))
+        b1 = qics.vectorize.mat_to_vec(C, compact=True)
+        # tr[Y] = 1
+        A2 = numpy.hstack((
+            numpy.zeros((1, 1)),
+            numpy.zeros((1, 2*N*N)),
+            qics.vectorize.mat_to_vec(numpy.eye(N, dtype=numpy.complex128)).T,
+            numpy.zeros((1, 2*N*N))
+        ))
+        b2 = numpy.array([[1.]])
+        # T2(Y) = Z
+        p_transpose = qics.vectorize.lin_to_mat(
+            lambda X : qics.quantum.partial_transpose(X, (n1, n2), 1),
+            (N, N), iscomplex=True
+        )
+        A3 = numpy.hstack((
+            numpy.zeros((sN, 1)),
+            numpy.zeros((sN, 2*N*N)),
+            p_transpose,
+            -qics.vectorize.eye(N, iscomplex=True)
+        ))
+        b3 = numpy.zeros((sN, 1))
 
-    np.random.seed(1)
+        A = numpy.vstack((A1, A2, A3))
+        b = numpy.vstack((b1, b2, b3))
 
-    n1 = 2
-    n2 = 3
-    N  = n1 * n2
+        # Input into model and solve
+        cones = [
+            qics.cones.QuantRelEntr(N, iscomplex=True),
+            qics.cones.PosSemidefinite(N, iscomplex=True)
+        ]
 
-    # Generate random (complex) quantum state
-    C = qu.random.density_matrix(N, iscomplex=True)
+        # Initialize model and solver objects
+        model = qics.Model(c=c, A=A, b=b, cones=cones)
+        solver = qics.Solver(model)
 
-    # Define objective function
-    ct = np.array(([[1.]]))
-    cX = np.zeros((2*N*N, 1))
-    cY = np.zeros((2*N*N, 1))
-    cZ = np.zeros((2*N*N, 1))
-    c  = np.vstack((ct, cX, cY, cZ))
+        # Solve problem
+        info = solver.solve()
 
-    # Build linear constraints
-    # X = C
-    sN = vec.vec_dim(N, iscomplex=True, compact=True)
-    A1 = np.hstack((
-        np.zeros((sN, 1)),
-        vec.eye(N, iscomplex=True),
-        np.zeros((sN, 2*N*N)),
-        np.zeros((sN, 2*N*N)),
-    ))
-    b1 = vec.mat_to_vec(C, compact=True)
-    # tr[Y] = 1
-    A2 = np.hstack((
-        np.zeros((1, 1)),
-        np.zeros((1, 2*N*N)),
-        vec.mat_to_vec(np.eye(N, dtype=np.complex128)).T,
-        np.zeros((1, 2*N*N))
-    ))
-    b2 = np.array([[1.]])
-    # T2(Y) = Z
-    p_transpose = vec.lin_to_mat(
-        lambda X : qu.partial_transpose(X, (n1, n2), 1),
-        (N, N), iscomplex=True
-    )
-    A3 = np.hstack((
-        np.zeros((sN, 1)),
-        np.zeros((sN, 2*N*N)),
-        p_transpose,
-        -vec.eye(N, iscomplex=True)
-    ))
-    b3 = np.zeros((sN, 1))
+    .. code-tab:: python PICOS
 
-    A = np.vstack((A1, A2, A3))
-    b = np.vstack((b1, b2, b3))
+        import numpy
+        import picos
+        import qics
 
-    # Input into model and solve
-    cones = [
-        qics.cones.QuantRelEntr(N, iscomplex=True),
-        qics.cones.PosSemidefinite(N, iscomplex=True)
-    ]
+        numpy.random.seed(1)
 
-    # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones)
-    solver = qics.Solver(model)
+        n1 = 2
+        n2 = 3
+        N  = n1 * n2
 
-    # Solve problem
-    info = solver.solve()
+        # Generate random (complex) quantum state
+        C = qics.quantum.random.density_matrix(N, iscomplex=True)
 
-.. code-block:: none
+        # Define problem
+        P = picos.Problem()
+        Y = picos.HermitianVariable("Y", N)
+        
+        P.set_objective("min", picos.qrelentr(C, Y))
+        P.add_constraint(picos.trace(Y) == 1.0)
+        P.add_constraint(picos.partial_transpose(Y, subsystems=1, dimensions=(n1, n2)) >> 0)
 
-    ====================================================================
-                QICS v0.0 - Quantum Information Conic Solver
-                by K. He, J. Saunderson, H. Fawzi (2024)
-    ====================================================================
-    Problem summary:
-            no. cones:  2                        no. vars:    217
-            barr. par:  20                       no. constr:  73
-            symmetric:  False                    cone dim:    217
-            complex:    True
-
-    ...
-
-    Solution summary
-            sol. status:  optimal                num. iter:    10
-            exit status:  solved                 solve time:   5.030
-
-            primal obj:   4.838694958245e-03     primal feas:  2.07e-09
-            dual obj:     4.838693850761e-03     dual feas:    1.03e-09
-            opt. gap:     1.11e-09
+        # Solve problem
+        P.solve(solver="qics", verbosity=1)
