@@ -42,7 +42,7 @@ class QuantKeyDist(Cone):
         Defines the linear map :math:`\mathcal{Z}`. There are three ways the user can
         specify this argument. If ``Z_info`` is an ``int``, then this argument specifies
         the block-structure which is being zeroed out, i.e., defines :math:`r` where
-        
+
         .. math::
 
             \mathcal{Z}(Y) = \sum_{i=1}^r (| i \rangle \langle i | \otimes \mathbb{I}_m) Y (| i \rangle \langle i | \otimes \mathbb{I}_m).
@@ -91,7 +91,7 @@ class QuantKeyDist(Cone):
             for i in range(len(r)):
                 Z_i = np.array([1])
                 counter = 0
-                for (k, dimk) in enumerate(self.dimensions):
+                for k, dimk in enumerate(self.dimensions):
                     if k in self.subsystems:
                         Z_ik = np.zeros(dimk[0])
                         Z_ik[r[i][counter]] = 1
@@ -100,7 +100,7 @@ class QuantKeyDist(Cone):
                     else:
                         Z_i = np.kron(Z_i, np.ones(dimk[0]))
                 self.Z_list_raw += [np.diag(Z_i)]
-            self.Z_idxs = [np.where(Z)[0] for Z in Z_info]    
+            self.Z_idxs = [np.where(Z)[0] for Z in Z_info]
         else:
             self.r = len(Z_info)
             self.m = self.N // self.r

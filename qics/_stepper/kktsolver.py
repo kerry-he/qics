@@ -66,7 +66,7 @@ class KKTSolver:
             self.GHG_fact = lin.cho_fact(GHG, increment_diag=(not model.use_A))
 
             if model.use_A:
-                self.GHG_issingular = (self.GHG_fact is None)
+                self.GHG_issingular = self.GHG_fact is None
                 if self.GHG_issingular:
                     # GHG is singular, Cholesky factor GHG + AA instead
                     GHG += model.A.T @ model.A

@@ -680,6 +680,9 @@ class OpPerspecEpi(Cone):
 
         p = A.shape[0]
 
+        if sp.sparse.issparse(A):
+            A = A.tocsr()
+
         self.Ax_compact = lin.scale_axis(
             A[:, self.idx_X][:, self.triu_idxs], scale_cols=self.scale
         )
