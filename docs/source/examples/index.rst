@@ -1,9 +1,6 @@
 Examples
 ==================
 
-We have examples!
-
-
 .. toctree::
    :maxdepth: 2
    :caption: Contents:

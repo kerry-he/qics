@@ -40,81 +40,84 @@ capacity is given by the Holevo-Schumacher–Westmoreland theorem :ref:`[2,3] <c
 We can solve for this channel capacity using the :class:`~qics.cones.QuantEntr` cone
 as follows
 
-.. code-block:: python
+.. tabs::
 
-    import numpy as np
-    import qics
-    import qics.vectorize as vec
-    import qics.quantum as qu
+    .. code-tab:: python Native
 
-    np.random.seed(1)
+        import numpy
+        import qics
 
-    n = m = 16
+        numpy.random.seed(1)
 
-    rhos = [qu.random.density_matrix(n, iscomplex=True) for i in range(m)]
+        n = m = 16
 
-    # Define objective function
-    # where x = ({pi}, t) and c = ({-S(N(Xi))}, 1)
-    c1 = np.array([[-qu.quant_entropy(rho)] for rho in rhos])
-    c2 = np.array([[1.0]])
-    c  = np.vstack((c1, c2))
+        rhos = [qics.quantum.random.density_matrix(n, iscomplex=True) for i in range(m)]
 
-    # Build linear constraint Σ_i pi = 1
-    A = np.hstack((np.ones((1, m)), np.zeros((1, 1))))
-    b = np.ones((1, 1))
+        # Define objective function
+        # where x = ({pi}, t) and c = ({-S(N(Xi))}, 1)
+        c1 = numpy.array([[-qics.quantum.quant_entropy(rho)] for rho in rhos])
+        c2 = numpy.array([[1.0]])
+        c  = numpy.vstack((c1, c2))
 
-    # Build linear cone constraints
-    # x_nn = p
-    G1 = np.hstack((-np.eye(m), np.zeros((m, 1))))
-    h1 = np.zeros((m, 1))
-    # t_qe = t
-    G2 = np.hstack((np.zeros((1, m)), -np.ones((1, 1))))
-    h2 = np.zeros((1, 1))
-    # u_qe = 1
-    G3 = np.hstack((np.zeros((1, m)), np.zeros((1, 1))))
-    h3 = np.ones((1, 1))
-    # X_qe = Σ_i pi N(Xi)
-    rhos_vec = np.hstack(([vec.mat_to_vec(rho) for rho in rhos]))
-    G4 = np.hstack((-rhos_vec, np.zeros((2*n*n, 1))))
-    h4 = np.zeros((2*n*n, 1))
+        # Build linear constraint Σ_i pi = 1
+        A = numpy.hstack((numpy.ones((1, m)), numpy.zeros((1, 1))))
+        b = numpy.ones((1, 1))
 
-    G = np.vstack((G1, G2, G3, G4))
-    h = np.vstack((h1, h2, h3, h4))
+        # Build linear cone constraints
+        # x_nn = p
+        G1 = numpy.hstack((-numpy.eye(m), numpy.zeros((m, 1))))
+        h1 = numpy.zeros((m, 1))
+        # t_qe = t
+        G2 = numpy.hstack((numpy.zeros((1, m)), -numpy.ones((1, 1))))
+        h2 = numpy.zeros((1, 1))
+        # u_qe = 1
+        G3 = numpy.hstack((numpy.zeros((1, m)), numpy.zeros((1, 1))))
+        h3 = numpy.ones((1, 1))
+        # X_qe = Σ_i pi N(Xi)
+        rhos_vec = numpy.hstack(([qics.vectorize.mat_to_vec(rho) for rho in rhos]))
+        G4 = numpy.hstack((-rhos_vec, numpy.zeros((2*n*n, 1))))
+        h4 = numpy.zeros((2*n*n, 1))
 
-    # Input into model and solve
-    cones = [
-        qics.cones.NonNegOrthant(n), 
-        qics.cones.QuantEntr(n, iscomplex=True)
-    ]
+        G = numpy.vstack((G1, G2, G3, G4))
+        h = numpy.vstack((h1, h2, h3, h4))
 
-    # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
-    solver = qics.Solver(model)
+        # Input into model and solve
+        cones = [
+            qics.cones.NonNegOrthant(n), 
+            qics.cones.QuantEntr(n, iscomplex=True)
+        ]
 
-    # Solve problem
-    info = solver.solve()
+        # Initialize model and solver objects
+        model = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
+        solver = qics.Solver(model)
 
-.. code-block:: none
+        # Solve problem
+        info = solver.solve()
 
-    ====================================================================
-                QICS v0.0 - Quantum Information Conic Solver
-                by K. He, J. Saunderson, H. Fawzi (2024)
-    ====================================================================
-    Problem summary:
-            no. cones:  2                        no. vars:    17
-            barr. par:  35                       no. constr:  1
-            symmetric:  False                    cone dim:    530
-            complex:    True
+    .. code-tab:: python PICOS
 
-    ...
+        import numpy
+        import picos
+        import qics
 
-    Solution summary
-            sol. status:  optimal                num. iter:    20
-            exit status:  solved                 solve time:   1.246
+        numpy.random.seed(1)
 
-            primal obj:  -5.030868958255e+00     primal feas:  1.80e-09
-            dual obj:    -5.030868964121e+00     dual feas:    4.03e-09
-            opt. gap:     1.17e-09
+        n = m = 16
+
+        rhos = [qics.quantum.random.density_matrix(n, iscomplex=True) for i in range(m)]
+        entr_rhos = numpy.array([[qics.quantum.quant_entropy(rho)] for rho in rhos])
+
+        # Define problem
+        P = picos.Problem()
+        p = picos.RealVariable("p", m)
+        average_rho = picos.sum([p[i]*rhos[i] for i in range(m)])
+
+        P.set_objective("max", picos.qentr(average_rho) + (p | entr_rhos))
+        P.add_constraint(picos.sum(p) == 1)
+        P.add_constraint(p > 0)
+
+        # Solve problem
+        P.solve(solver="qics", verbosity=2)
 
 
 Entanglement-assisted channel capacity
@@ -149,87 +152,102 @@ As a concrete example, consider the amplitude damping channel defined by the iso
 
 and some parameter :math:`\gamma\in[0, 1]`. We can solve this in **QICS** as follows.
 
-.. code-block:: python
+.. tabs::
 
-    import numpy as np
-    import qics
-    import qics.vectorize as vec
-    import qics.quantum as qu
+    .. code-tab:: python Native
 
-    n = 2
-    N = n*n
-    gamma = 0.5
+        import numpy
+        import qics
 
-    V = np.array([[1, 0], [0, np.sqrt(gamma)], [0, np.sqrt(1-gamma)], [0, 0]])
+        n = 2
+        N = n * n
+        gamma = 0.5
 
-    # Define objective functions
-    # with variables (X, (t, Y), (s, u, Z))
-    cX = np.zeros((n*n, 1))
-    ct = np.array([[1./np.log(2)]])
-    cY = np.zeros((N*N, 1))
-    cs = np.array([[1./np.log(2)]])
-    cu = np.array([[0.]])
-    cZ = np.zeros((n*n, 1))
-    c = np.vstack((cX, ct, cY, cs, cu, cZ))
+        V = numpy.array([
+            [1., 0.                 ], 
+            [0., numpy.sqrt(1-gamma)], 
+            [0., numpy.sqrt(gamma)  ], 
+            [0., 0.                 ]
+        ])
 
-    # Build linear constraints
-    vn = vec.vec_dim(n, compact=True)
-    vN = vec.vec_dim(N, compact=True)
-    VV = vec.lin_to_mat(lambda X : V @ X @ V.conj().T, (n, n*n))
-    trE = vec.lin_to_mat(lambda X : qu.p_tr(X, (n, n), 1), (N, n), compact=(True, True))
-    # tr[X] = 1
-    A1 = np.hstack((vec.mat_to_vec(np.eye(n)).T, np.zeros((1, 3 + n*n + N*N))))
-    b1 = np.array([[1.]])
-    # u = 1
-    A2 = np.hstack((np.zeros((1, 2 + n*n + N*N)), np.array([[1.]]), np.zeros((1, n*n))))
-    b2 = np.array([[1.]])
-    # Y = VXV'
-    A3 = np.hstack((VV, np.zeros((vN, 1)), -vec.eye(N), np.zeros((vN, 2 + n*n))))
-    b3 = np.zeros((vN, 1))
-    # Z = trE[VXV']
-    A4 = np.hstack((trE @ VV, np.zeros((vn, 3 + N*N)), -vec.eye(n)))
-    b4 = np.zeros((vn, 1))
+        # Define objective functions
+        # with variables (X, (t, Y), (s, u, Z))
+        cX = numpy.zeros((n * n, 1))
+        ct = numpy.array([[1.0 / numpy.log(2)]])
+        cY = numpy.zeros((N * N, 1))
+        cs = numpy.array([[1.0 / numpy.log(2)]])
+        cu = numpy.array([[0.0]])
+        cZ = numpy.zeros((n * n, 1))
+        c = numpy.vstack((cX, ct, cY, cs, cu, cZ))
 
-    A = np.vstack((A1, A2, A3, A4))
-    b = np.vstack((b1, b2, b3, b4))
+        # Build linear constraints
+        vn = qics.vectorize.vec_dim(n, compact=True)
+        vN = qics.vectorize.vec_dim(N, compact=True)
+        VV = qics.vectorize.lin_to_mat(lambda X: V @ X @ V.T, (n, n * n))
+        trE = qics.vectorize.lin_to_mat(
+            lambda X: qics.quantum.p_tr(X, (n, n), 1), (N, n), compact=(True, True)
+        )
+        # tr[X] = 1
+        A1 = numpy.hstack(
+            (qics.vectorize.mat_to_vec(numpy.eye(n)).T, numpy.zeros((1, 3 + n * n + N * N)))
+        )
+        b1 = numpy.array([[1.0]])
+        # u = 1
+        A2 = numpy.hstack(
+            (numpy.zeros((1, 2 + n * n + N * N)), numpy.array([[1.0]]), numpy.zeros((1, n * n)))
+        )
+        b2 = numpy.array([[1.0]])
+        # Y = VXV'
+        A3 = numpy.hstack(
+            (VV, numpy.zeros((vN, 1)), -qics.vectorize.eye(N), numpy.zeros((vN, 2 + n * n)))
+        )
+        b3 = numpy.zeros((vN, 1))
+        # Z = trE[VXV']
+        A4 = numpy.hstack((trE @ VV, numpy.zeros((vn, 3 + N * N)), -qics.vectorize.eye(n)))
+        b4 = numpy.zeros((vn, 1))
 
-    # Input into model and solve
-    cones = [
-        qics.cones.PosSemidefinite(n),
-        qics.cones.QuantCondEntr((n, n), 0),
-        qics.cones.QuantEntr(n)
-    ]
+        A = numpy.vstack((A1, A2, A3, A4))
+        b = numpy.vstack((b1, b2, b3, b4))
 
-    # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones)
-    solver = qics.Solver(model)
+        # Input into model and solve
+        cones = [
+            qics.cones.PosSemidefinite(n),
+            qics.cones.QuantCondEntr((n, n), 0),
+            qics.cones.QuantEntr(n),
+        ]
 
-    # Solve problem
-    info = solver.solve()
+        # Initialize model and solver objects
+        model = qics.Model(c=c, A=A, b=b, cones=cones)
+        solver = qics.Solver(model)
 
-.. code-block:: none
+        # Solve problem
+        info = solver.solve()
 
-    ====================================================================
-                QICS v0.0 - Quantum Information Conic Solver
-                  by K. He, J. Saunderson, H. Fawzi (2024)
-    ====================================================================
-    Problem summary:
-            no. cones:  3                        no. vars:    27
-            barr. par:  12                       no. constr:  15
-            symmetric:  False                    cone dim:    27
-            complex:    False
+    .. code-tab:: python PICOS
 
-    ...
+        import numpy
+        import picos
 
-    Solution summary
-            sol. status:  optimal                num. iter:    15
-            exit status:  solved                 solve time:   1.473
+        gamma = 0.5
 
-            primal obj:  -1.000000044516e+00     primal feas:  1.16e-09
-            dual obj:    -1.000000037504e+00     dual feas:    5.26e-10
-            opt. gap:     7.01e-09
+        V = numpy.array([
+            [1., 0.                 ], 
+            [0., numpy.sqrt(1-gamma)], 
+            [0., numpy.sqrt(gamma)  ], 
+            [0., 0.                 ]
+        ])
 
+        # Define problem
+        P = picos.Problem()
+        X = picos.SymmetricVariable("X", 2)
 
+        P.set_objective("max", (picos.qcondentr(V*X*V.T, 1) 
+                        + picos.qentr(picos.partial_trace(V*X*V.T, 0))) / numpy.log(2))
+        P.add_constraint(picos.trace(X) == 1)
+        P.add_constraint(X >> 0)
+
+        # Solve problem
+        P.solve(solver="qics", verbosity=2)
 
 Quantum channel capacity of degradable channels
 -------------------------------------------------
@@ -264,79 +282,102 @@ has Stinespring isometry for :math:`\Xi` given by
 
 where :math:`\delta=(1-2\gamma) / (1-\gamma)`.
 
-.. code-block:: python
+.. tabs::
 
-    import numpy as np
-    import qics
-    import qics.vectorize as vec
-    import qics.quantum as qu
+    .. code-tab:: python Native
 
-    n = 2
-    N = n*n
-    gamma = 0.5
-    delta = (1-2*gamma) / (1-gamma)
+        import numpy
+        import qics
 
-    V = np.array([[1, 0], [0, np.sqrt(gamma)], [0, np.sqrt(1-gamma)], [0, 0]])
-    W = np.array([[1, 0], [0, np.sqrt(delta)], [0, np.sqrt(1-delta)], [0, 0]])
+        n = 2
+        N = n*n
+        gamma = 0.5
+        delta = (1-2*gamma) / (1-gamma)
 
-    # Define objective functions
-    # with variables (X, (t, Y))
-    cX = np.zeros((n*n, 1))
-    ct = np.array([[1./np.log(2)]])
-    cY = np.zeros((N*N, 1))
-    c = np.vstack((cX, ct, cY))
+        V = numpy.array([
+            [1., 0.                 ], 
+            [0., numpy.sqrt(1-gamma)], 
+            [0., numpy.sqrt(gamma)  ], 
+            [0., 0.                 ]
+        ])
 
-    # Build linear constraints
-    vn = vec.vec_dim(n, compact=True)
-    vN = vec.vec_dim(N, compact=True)
-    WNW = vec.lin_to_mat(
-        lambda X : W @ qu.p_tr(V @ X @ V.conj().T, (n, n), 1) @ W.conj().T, 
-        (n, N)
-    )
-    # tr[X] = 1
-    A1 = np.hstack((vec.mat_to_vec(np.eye(n)).T, np.zeros((1, 1 + N*N))))
-    b1 = np.array([[1.]])
-    # Y = WN(X)W'
-    A2 = np.hstack((WNW, np.zeros((vN, 1)), -vec.eye(N)))
-    b2 = np.zeros((vN, 1))
+        W = numpy.array([
+            [1., 0.                 ], 
+            [0., numpy.sqrt(delta)], 
+            [0., numpy.sqrt(1-delta)  ], 
+            [0., 0.                 ]
+        ])
 
-    A = np.vstack((A1, A2))
-    b = np.vstack((b1, b2))
+        # Define objective functions
+        # with variables (X, (t, Y))
+        cX = numpy.zeros((n*n, 1))
+        ct = numpy.array([[1./numpy.log(2)]])
+        cY = numpy.zeros((N*N, 1))
+        c = numpy.vstack((cX, ct, cY))
 
-    # Input into model and solve
-    cones = [
-        qics.cones.PosSemidefinite(n),
-        qics.cones.QuantCondEntr((n, n), 1)
-    ]
+        # Build linear constraints
+        vn = qics.vectorize.vec_dim(n, compact=True)
+        vN = qics.vectorize.vec_dim(N, compact=True)
+        WNW = qics.vectorize.lin_to_mat(
+            lambda X : W @ qics.quantum.p_tr(V @ X @ V.T, (n, n), 1) @ W.T, 
+            (n, N)
+        )
+        # tr[X] = 1
+        A1 = numpy.hstack((qics.vectorize.mat_to_vec(numpy.eye(n)).T, numpy.zeros((1, 1 + N*N))))
+        b1 = numpy.array([[1.]])
+        # Y = WN(X)W'
+        A2 = numpy.hstack((WNW, numpy.zeros((vN, 1)), -qics.vectorize.eye(N)))
+        b2 = numpy.zeros((vN, 1))
 
-    # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones)
-    solver = qics.Solver(model)
+        A = numpy.vstack((A1, A2))
+        b = numpy.vstack((b1, b2))
 
-    # Solve problem
-    info = solver.solve()
+        # Input into model and solve
+        cones = [
+            qics.cones.PosSemidefinite(n),
+            qics.cones.QuantCondEntr((n, n), 1)
+        ]
 
-.. code-block:: none
+        # Initialize model and solver objects
+        model  = qics.Model(c=c, A=A, b=b, cones=cones)
+        solver = qics.Solver(model)
 
-    ====================================================================
-                QICS v0.0 - Quantum Information Conic Solver
-                by K. He, J. Saunderson, H. Fawzi (2024)
-    ====================================================================
-    Problem summary:
-            no. cones:  2                        no. vars:    21
-            barr. par:  8                        no. constr:  11
-            symmetric:  False                    cone dim:    21
-            complex:    False
+        # Solve problem
+        info = solver.solve()
 
-    ...
+    .. code-tab:: python PICOS
 
-    Solution summary
-            sol. status:  optimal                num. iter:    15
-            exit status:  solved                 solve time:   1.442
+        import numpy
+        import picos
 
-            primal obj:  -1.729304935610e-08     primal feas:  2.97e-10
-            dual obj:    -1.126936521182e-08     dual feas:    1.35e-10
-            opt. gap:     6.02e-09
+        gamma = 0.5
+        delta = (1-2*gamma) / (1-gamma)
+
+        V = numpy.array([
+            [1., 0.                 ], 
+            [0., numpy.sqrt(1-gamma)], 
+            [0., numpy.sqrt(gamma)  ], 
+            [0., 0.                 ]
+        ])
+
+        W = numpy.array([
+            [1., 0.                 ], 
+            [0., numpy.sqrt(delta)], 
+            [0., numpy.sqrt(1-delta)  ], 
+            [0., 0.                 ]
+        ])
+
+        # Define problem
+        P = picos.Problem()
+        X = picos.SymmetricVariable("X", 2)
+        W_Nx_W = W * picos.partial_trace(V*X*V.T, 1) * W.T
+
+        P.set_objective("max", picos.qcondentr(W_Nx_W, 1) / numpy.log(2))
+        P.add_constraint(picos.trace(X) == 1)
+        P.add_constraint(X >> 0)
+
+        # Solve problem
+        P.solve(solver="qics", verbosity=2)
 
 
 Entanglement-assisted rate-distortion
@@ -363,77 +404,80 @@ The entanglement-assisted rate-distortion function is given by :ref:`[6,7] <chan
 
 where :math:`| \psi \rangle` is the purification of :math:`\sigma`.
 
-.. code-block:: python
+.. tabs::
 
-    import numpy as np
-    import qics
-    import qics.vectorize as vec
-    import qics.quantum as qu
+    .. code-tab:: python Native
 
-    np.random.seed(1)
+        import numpy
+        import qics
 
-    n = 4
-    D = 0.25
+        numpy.random.seed(1)
 
-    rho      = qu.random.density_matrix(n)
-    entr_rho = qu.quant_entropy(rho)
+        n = 4
+        D = 0.25
 
-    N = n * n
-    sn = vec.vec_dim(n, compact=True)
-    vN = vec.vec_dim(N)
+        rho = qics.quantum.random.density_matrix(n)
+        entr_rho = qics.quantum.quant_entropy(rho)
 
-    # Define objective function
-    c = np.zeros((vN + 2, 1))
-    c[0] = 1.
+        N = n * n
+        sn = qics.vectorize.vec_dim(n, compact=True)
+        vN = qics.vectorize.vec_dim(N)
 
-    # Build linear constraint matrices
-    tr2 = vec.lin_to_mat(lambda X : qu.p_tr(X, (n, n), 1), (N, n))
-    purification = vec.mat_to_vec(qu.purify(rho))
-    # Tr_2[X] = rho
-    A1 = np.hstack((np.zeros((sn, 1)), tr2, np.zeros((sn, 1))))
-    b1 = vec.mat_to_vec(rho, compact=True)
-    # 1 - tr[Psi X] <= D
-    A2 = np.hstack((np.zeros((1, 1)), -purification.T, np.ones((1, 1))))
-    b2 = np.array([[D - 1]])
+        # Define objective function
+        c = numpy.zeros((vN + 2, 1))
+        c[0] = 1.
 
-    A = np.vstack((A1, A2))
-    b = np.vstack((b1, b2))
+        # Build linear constraint matrices
+        tr2 = qics.vectorize.lin_to_mat(lambda X : qics.quantum.p_tr(X, (n, n), 1), (N, n))
+        purification = qics.vectorize.mat_to_vec(qics.quantum.purify(rho))
+        # Tr_2[X] = rho
+        A1 = numpy.hstack((numpy.zeros((sn, 1)), tr2, numpy.zeros((sn, 1))))
+        b1 = qics.vectorize.mat_to_vec(rho, compact=True)
+        # 1 - tr[Psi X] <= D
+        A2 = numpy.hstack((numpy.zeros((1, 1)), -purification.T, numpy.ones((1, 1))))
+        b2 = numpy.array([[D - 1]])
 
-    # Define cones to optimize over
-    cones = [
-        qics.cones.QuantCondEntr((n, n), 0), 
-        qics.cones.NonNegOrthant(1)
-    ]
+        A = numpy.vstack((A1, A2))
+        b = numpy.vstack((b1, b2))
 
-    # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones, offset=entr_rho)
-    solver = qics.Solver(model)
+        # Define cones to optimize over
+        cones = [
+            qics.cones.QuantCondEntr((n, n), 0), 
+            qics.cones.NonNegOrthant(1)
+        ]
 
-    # Solve problem
-    info = solver.solve()
+        # Initialize model and solver objects
+        model  = qics.Model(c=c, A=A, b=b, cones=cones, offset=entr_rho)
+        solver = qics.Solver(model)
 
-.. code-block:: none
+        # Solve problem
+        info = solver.solve()
 
-    ====================================================================
-                QICS v0.0 - Quantum Information Conic Solver
-                by K. He, J. Saunderson, H. Fawzi (2024)
-    ====================================================================
-    Problem summary:
-            no. cones:  2                        no. vars:    258
-            barr. par:  19                       no. constr:  11
-            symmetric:  False                    cone dim:    258
-            complex:    False
+    .. code-tab:: python PICOS
 
-    ...
+        import numpy
+        import picos
+        import qics
 
-    Solution summary
-            sol. status:  optimal                num. iter:    21
-            exit status:  solved                 solve time:   1.489
+        numpy.random.seed(1)
 
-            primal obj:   5.121637612238e-01     primal feas:  2.73e-09
-            dual obj:     5.121637686593e-01     dual feas:    1.36e-09
-            opt. gap:     7.44e-09
+        n = 4
+        D = 0.25
 
+        rho = qics.quantum.random.density_matrix(n)
+        entr_rho = qics.quantum.quant_entropy(rho)
+        distortion_observable = numpy.eye(n*n) - qics.quantum.purify(rho)
+
+        # Define problem
+        P = picos.Problem()
+        X = picos.SymmetricVariable("X", n*n)
+
+        P.set_objective("min", -picos.qcondentr(X, 0, (n, n)) + entr_rho)
+        P.add_constraint(picos.partial_trace(X, 1, (n, n)) == rho)
+        P.add_constraint((X | distortion_observable) < D)
+
+        # Solve problem
+        P.solve(solver="qics", verbosity=2)
 
 .. _channel_refs:
 

@@ -66,7 +66,7 @@ class KKTSolver:
             self.GHG_fact = lin.cho_fact(GHG, increment_diag=(not model.use_A))
 
             if model.use_A:
-                self.GHG_issingular = (self.GHG_fact is None)
+                self.GHG_issingular = self.GHG_fact is None
                 if self.GHG_issingular:
                     # GHG is singular, Cholesky factor GHG + AA instead
                     GHG += model.A.T @ model.A
@@ -398,7 +398,7 @@ def solve_sys_ir(x, b, A, A_inv, res, cor, settings):
         res_norm = res.norm() / (1 + r_norm)
 
         # Exit if iterative refinement made things worse
-        improv_ratio = prev_res_norm / res_norm
+        improv_ratio = prev_res_norm / (res_norm + 1e-15)
         if improv_ratio < 1:
             return prev_res_norm
 

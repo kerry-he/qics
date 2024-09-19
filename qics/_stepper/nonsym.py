@@ -77,7 +77,7 @@ class NonSymStepper:
 
             if alpha_iter >= len(alpha_sched):
                 return point, alpha, False
-            
+
             alpha = alpha_sched[alpha_iter]
 
             # Step point in direction and step size

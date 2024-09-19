@@ -672,8 +672,10 @@ def write_cbf(model, filename):
         G = _compact_matrix(model.G_raw.copy(), model)
         h = _compact_matrix(model.h_raw.copy(), model)
     else:
-        c = _compact_matrix(model.c_raw.copy(), model)
-        A = _compact_matrix(model.A_raw.copy().T, model).T
+        T = _get_expand_compact_matrices(model.cones)
+
+        c = T @ model.c_raw.copy()
+        A = model.A_raw.copy() @ T.T
         b = model.b_raw.copy()
     cones = model.cones
 
@@ -941,6 +943,65 @@ def _compact_matrix(G, model):
     Gc = np.hstack(Gc)
 
     return Gc
+
+
+def _get_compact_to_full_op(n, iscomplex=False):
+    import scipy
+
+    dim_compact = n * n if iscomplex else n * (n + 1) // 2
+    dim_full = 2 * n * n if iscomplex else n * n
+
+    rows = np.zeros(dim_full)
+    cols = np.zeros(dim_full)
+    vals = np.zeros(dim_full)
+
+    irt2 = np.sqrt(0.5)
+
+    row = 0
+    k = 0
+    for j in range(n):
+        for i in range(j):
+            rows[k : k + 2] = row
+            cols[k : k + 2] = (
+                [2 * (i + j * n), 2 * (j + i * n)]
+                if iscomplex
+                else [i + j * n, j + i * n]
+            )
+            vals[k : k + 2] = irt2
+            k += 2
+            row += 1
+
+            if iscomplex:
+                rows[k : k + 2] = row
+                cols[k : k + 2] = [2 * (i + j * n) + 1, 2 * (j + i * n) + 1]
+                vals[k : k + 2] = [-irt2, irt2]
+                k += 2
+                row += 1
+
+        rows[k] = row
+        cols[k] = 2 * j * (n + 1) if iscomplex else j * (n + 1)
+        vals[k] = 1.0
+        k += 1
+        row += 1
+
+    return scipy.sparse.csr_matrix((vals, (rows, cols)), shape=(dim_compact, dim_full))
+
+
+def _get_expand_compact_matrices(cones):
+    # Split A into columns correpsonding to each variable
+    compact_to_full_op = []
+    for cone_k in cones:
+        for type_k, dim_k in zip(cone_k.type, cone_k.dim):
+            if type_k == "s":
+                n = int(np.sqrt(dim_k))
+                compact_to_full_op += [_get_compact_to_full_op(n)]
+            elif type_k == "h":
+                n = int(np.sqrt(dim_k // 2))
+                compact_to_full_op += [_get_compact_to_full_op(n, True)]
+            else:
+                compact_to_full_op += [sp.sparse.eye(dim_k)]
+
+    return sp.sparse.block_diag(compact_to_full_op, format="csc")
 
 
 def _uncompact_matrix(G, cones):

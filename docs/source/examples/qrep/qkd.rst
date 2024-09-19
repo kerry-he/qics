@@ -54,65 +54,79 @@ and we have the three linear constraints defined by
 and :math:`b = (1, q_x, q_z)`. We can solve this in **QICS** using the
 :class:`~qics.cones.QuantKeyDist` cone.
 
-.. code-block:: python
+.. tabs::
 
-    import numpy as np
-    import qics
+    .. code-tab:: python Native
 
-    qx = 0.25
-    qz = 0.75
+        import numpy
+        import qics
 
-    # Define objective function
-    c = np.vstack((np.array([[1.]]), np.zeros((16, 1))))
+        qx = 0.25
+        qz = 0.75
 
-    # Build linear constraints
-    X0 = np.array([[.5,  .5], [ .5, .5]])
-    X1 = np.array([[.5, -.5], [-.5, .5]])
-    Z0 = np.array([[1.,  0.], [ 0., 0.]])
-    Z1 = np.array([[0.,  0.], [ 0., 1.]])
+        # Define objective function
+        c = numpy.vstack((numpy.array([[1.]]), numpy.zeros((16, 1))))
 
-    Ax = np.kron(X0, X1) + np.kron(X1, X0)
-    Az = np.kron(Z0, Z1) + np.kron(Z1, Z0)
+        # Build linear constraints
+        X0 = numpy.array([[.5,  .5], [ .5, .5]])
+        X1 = numpy.array([[.5, -.5], [-.5, .5]])
+        Z0 = numpy.array([[1.,  0.], [ 0., 0.]])
+        Z1 = numpy.array([[0.,  0.], [ 0., 1.]])
 
-    A = np.vstack((
-        np.hstack((np.array([[0.]]), np.eye(4).reshape(1, -1))),
-        np.hstack((np.array([[0.]]), Ax.reshape(1, -1))),
-        np.hstack((np.array([[0.]]), Az.reshape(1, -1)))
-    ))
+        Ax = numpy.kron(X0, X1) + numpy.kron(X1, X0)
+        Az = numpy.kron(Z0, Z1) + numpy.kron(Z1, Z0)
 
-    b = np.array([[1., qx, qz]]).T
+        A = numpy.vstack((
+            numpy.hstack((numpy.array([[0.]]), numpy.eye(4).reshape(1, -1))),
+            numpy.hstack((numpy.array([[0.]]), Ax.reshape(1, -1))),
+            numpy.hstack((numpy.array([[0.]]), Az.reshape(1, -1)))
+        ))
 
-    # Input into model and solve
-    cones = [qics.cones.QuantKeyDist([np.eye(4)], 2)]
+        b = numpy.array([[1., qx, qz]]).T
 
-    # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones)
-    solver = qics.Solver(model)
+        # Input into model and solve
+        cones = [qics.cones.QuantKeyDist(4, 2)]
 
-    # Solve problem
-    info = solver.solve()
+        # Initialize model and solver objects
+        model  = qics.Model(c=c, A=A, b=b, cones=cones)
+        solver = qics.Solver(model)
+
+        # Solve problem
+        info = solver.solve()
+        print("Optimal value is: ", info["opt_val"])
+
+    .. code-tab:: python PICOS
+
+        import numpy
+        import picos
+
+        qx = 0.25
+        qz = 0.75
+
+        X0 = numpy.array([[.5,  .5], [ .5, .5]])
+        X1 = numpy.array([[.5, -.5], [-.5, .5]])
+        Z0 = numpy.array([[1.,  0.], [ 0., 0.]])
+        Z1 = numpy.array([[0.,  0.], [ 0., 1.]])
+
+        Ax = numpy.kron(X0, X1) + numpy.kron(X1, X0)
+        Az = numpy.kron(Z0, Z1) + numpy.kron(Z1, Z0)
+
+        # Define problem
+        P = picos.Problem()
+        X = picos.SymmetricVariable("X", 4) 
+        
+        P.set_objective("min", picos.qkeydist(X))
+        P.add_constraint(picos.trace(X) == 1)
+        P.add_constraint((X | Ax) == qx)
+        P.add_constraint((X | Az) == qz)        
+
+        # Solve problem
+        P.solve(solver="qics")
+        print("Optimal value is: ", P.value)
 
 .. code-block:: none
 
-    ====================================================================
-                QICS v0.0 - Quantum Information Conic Solver
-                by K. He, J. Saunderson, H. Fawzi (2024)
-    ====================================================================
-    Problem summary:
-            no. cones:  1                        no. vars:    17
-            barr. par:  6                        no. constr:  3
-            symmetric:  False                    cone dim:    17
-            complex:    False
-
-    ...
-
-    Solution summary
-            sol. status:  optimal                num. iter:    8
-            exit status:  solved                 solve time:   1.068
-
-            primal obj:   1.308120352816e-01     primal feas:  1.21e-09
-            dual obj:     1.308120344834e-01     dual feas:    6.04e-10
-            opt. gap:     7.98e-10
+    Optimal value is:  0.13081203338648836
 
 The closed form solution for this quantum key rate is
 
@@ -122,7 +136,9 @@ The closed form solution for this quantum key rate is
 
 which we use to confirm that **QICS** gives the correct solution.
 
->>> np.log(2) + ( qx*np.log(qx) + (1-qx)*np.log(1-qx) )
+>>> import numpy
+>>> qx = 0.25
+>>> numpy.log(2) + ( qx*numpy.log(qx) + (1-qx)*numpy.log(1-qx) )
 0.130812035941137
 
 
@@ -136,44 +152,42 @@ We supply some sample code for how to do this below.
 
 .. code-block:: python
 
-    import numpy as np
-    import scipy as sp
+    import numpy
+    import scipy
     import qics
-    import qics.vectorize as vec
 
     # Read file
-    data   = sp.io.loadmat('filename.mat')
+    data   = scipy.io.loadmat('filename.mat')
     gamma  = data['gamma']
     Gamma  = list(data['Gamma'].ravel())
     K_list = list(data['Klist'].ravel())
     Z_list = list(data['Zlist'].ravel())
 
-    iscomplex = np.iscomplexobj(Gamma) or np.iscomplexobj(K_list)
-    dtype = np.complex128 if iscomplex else np.float64
+    iscomplex = numpy.iscomplexobj(Gamma) or numpy.iscomplexobj(K_list)
+    dtype = numpy.complex128 if iscomplex else numpy.float64
 
-    no, ni = np.shape(K_list[0])
-    nc     = np.size(gamma)
-    vni    = vec.vec_dim(ni, iscomplex=iscomplex)
+    no, ni = numpy.shape(K_list[0])
+    nc     = numpy.size(gamma)
+    vni    = qics.vectorize.vec_dim(ni, iscomplex=iscomplex)
 
     # Define objective function
-    c = np.vstack((np.array([[1.]]), np.zeros((vni, 1))))
+    c = numpy.vstack((numpy.array([[1.]]), numpy.zeros((vni, 1))))
 
     # Build linear constraints
-    A = np.zeros((nc, 1 + vni))
+    A = numpy.zeros((nc, 1 + vni))
     for i in range(nc):
-        A[i, 1:] = vec.mat_to_vec(Gamma[i].astype(dtype)).ravel()
+        A[i, 1:] = qics.vectorize.mat_to_vec(Gamma[i].astype(dtype)).ravel()
     b = gamma
 
     # Input into model and solve
     cones = [qics.cones.QuantKeyDist(K_list, Z_list, iscomplex=iscomplex)]
 
     # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones)
+    model = qics.Model(c=c, A=A, b=b, cones=cones)
     solver = qics.Solver(model)
 
     # Solve problem
     info = solver.solve()
-
 
 
 .. _qkd_refs:

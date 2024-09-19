@@ -24,6 +24,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
     "sphinx_copybutton",
+    "sphinx_tabs.tabs",
 ]
 
 autodoc_mock_imports = ["numpy", "scipy", "numba"]
