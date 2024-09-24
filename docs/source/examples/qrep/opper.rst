@@ -22,69 +22,71 @@ which we can model using the constraint :math:`(\theta, \mathbb{I}, \omega)\in\m
 
 We can solve this in **QICS** using the :class:`~qics.cones.OpPerspecEpi` cone.
 
-.. code-block:: python
+.. tabs::
 
-    import numpy as np
-    import qics
-    import qics.vectorize as vec
-    import qics.quantum as qu
+    .. code-tab:: python Native
 
-    np.random.seed(1)
+        import numpy
+        import qics
 
-    n = 4
-    alpha = 0.25
+        numpy.random.seed(1)
 
-    rho   = qu.random.density_matrix(n, iscomplex=True)
-    sigma = qu.random.density_matrix(n, iscomplex=True)
+        n = 4
+        alpha = 0.25
 
-    # Define objective function
-    cT = (1 - alpha) * vec.mat_to_vec(sigma)
-    cX = np.zeros((2*n*n, 1))
-    cY = alpha * vec.mat_to_vec(rho)
-    c = np.vstack((cT, cX, cY))
+        rho   = qics.quantum.random.density_matrix(n, iscomplex=True)
+        sigma = qics.quantum.random.density_matrix(n, iscomplex=True)
 
-    # Build linear constraint matrices
-    vn = vec.vec_dim(n, compact=True, iscomplex=True)
-    # X = I
-    A = np.hstack((
-        np.zeros((vn, 2*n*n)), 
-        vec.eye(n, iscomplex=True), 
-        np.zeros((vn, 2*n*n))
-    ))
-    b = vec.mat_to_vec(np.eye(n, dtype=np.complex128), compact=True)
+        # Define objective function
+        cT = (1 - alpha) * qics.vectorize.mat_to_vec(sigma)
+        cX = numpy.zeros((2*n*n, 1))
+        cY = alpha * qics.vectorize.mat_to_vec(rho)
+        c = numpy.vstack((cT, cX, cY))
 
-    # Define cones to optimize over
-    cones = [qics.cones.OpPerspecEpi(n, alpha/(alpha - 1), iscomplex=True)]
+        # Build linear constraint matrices
+        vn = qics.vectorize.vec_dim(n, compact=True, iscomplex=True)
+        # X = I
+        A = numpy.hstack((
+            numpy.zeros((vn, 2*n*n)), 
+            qics.vectorize.eye(n, iscomplex=True), 
+            numpy.zeros((vn, 2*n*n))
+        ))
+        b = qics.vectorize.mat_to_vec(numpy.eye(n, dtype=numpy.complex128), compact=True)
 
-    # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones)
-    solver = qics.Solver(model)
+        # Define cones to optimize over
+        cones = [qics.cones.OpPerspecEpi(n, alpha/(alpha - 1), iscomplex=True)]
 
-    # Solve problem
-    info = solver.solve()
+        # Initialize model and solver objects
+        model  = qics.Model(c=c, A=A, b=b, cones=cones)
+        solver = qics.Solver(model)
 
-.. code-block:: none
+        # Solve problem
+        info = solver.solve()
 
-    ====================================================================
-                QICS v0.0 - Quantum Information Conic Solver
-                by K. He, J. Saunderson, H. Fawzi (2024)
-    ====================================================================
-    Problem summary:
-            no. cones:  1                        no. vars:    96
-            barr. par:  13                       no. constr:  16
-            symmetric:  False                    cone dim:    96
-            complex:    True
+    .. code-tab:: python PICOS
 
-    ...
+        import numpy
+        import picos
+        import qics
 
-    Solution summary
-            sol. status:  optimal                num. iter:    14
-            exit status:  solved                 solve time:   4.260
+        numpy.random.seed(1)
 
-            primal obj:   8.299380401228e-01     primal feas:  3.45e-09
-            dual obj:     8.299380434717e-01     dual feas:    2.61e-09
-            opt. gap:     3.35e-09
+        n = 4
+        alpha = 0.25
 
+        rho   = qics.quantum.random.density_matrix(n, iscomplex=True)
+        sigma = qics.quantum.random.density_matrix(n, iscomplex=True)
+
+        # Define problem
+        P = picos.Problem()
+        omega = picos.HermitianVariable("omega", n)
+        theta = picos.HermitianVariable("theta", n)
+
+        P.set_objective("min", alpha*(omega | rho).real + (1-alpha)*(theta | sigma).real)
+        P.add_constraint(theta >> picos.mtxgeomean(picos.I(n), omega, alpha/(alpha-1)))
+
+        # Solve problem
+        P.solve(solver="qics", verbosity=2)
 
 .. _opper_refs:
 

@@ -466,7 +466,7 @@ where :math:`| \psi \rangle` is the purification of :math:`\sigma`.
 
         rho = qics.quantum.random.density_matrix(n)
         entr_rho = qics.quantum.quant_entropy(rho)
-        distortion_observable = numpy.eye(n*n) - qics.quantum.purify(rho)
+        distortion_observable = picos.I(n*n) - qics.quantum.purify(rho)
 
         # Define problem
         P = picos.Problem()
