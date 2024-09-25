@@ -109,7 +109,7 @@ problem using just the quantum entropy cone.
         P = picos.Problem()
         X = picos.HermitianVariable("X", n)
 
-        P.set_objective("min", -picos.quantentr(X) - (X | logY + numpy.eye(n)).real + trY)
+        P.set_objective("min", -picos.quantentr(X) - (X | logY + picos.I(n)).real + trY)
         P.add_constraint(picos.trace(X) == 1)
 
         # Solve problem
