@@ -210,22 +210,21 @@ def scnd_frechet_multi(
     return out
 
 
-@nb.njit
+@nb.njit(parallel=True)
 def thrd_frechet(D, D2, d3f_D, U, H1, H2, H3=None):
     n = D.size
     out = np.zeros_like(H1)
 
     # If H3 is None, then assume H2=H3
     if H3 is None:
-        for i in range(n):
+        for i in nb.prange(n):
             for j in range(i + 1):
                 D3_ij = D3_f_ij(i, j, D, D2, d3f_D)
 
                 for b in range(n):
                     for a in range(n):
-                        temp = H1[i, b] * H2[b, a] * H2[a, j]
-                        temp += H2[i, b] * H1[b, a] * H2[a, j]
-                        temp += H2[i, b] * H2[b, a] * H1[a, j]
+                        temp  = H1[i, b] * H2[b, a] * H2[a, j]
+                        temp += H2[i, b] * (H1[b, a] * H2[a, j] + H2[b, a] * H1[a, j])
                         out[i, j] = out[i, j] + D3_ij[b, a] * temp
 
                 out[j, i] = np.conj(out[i, j])
@@ -233,18 +232,23 @@ def thrd_frechet(D, D2, d3f_D, U, H1, H2, H3=None):
         out *= 2
 
     else:
-        for i in range(n):
+        for i in nb.prange(n):
             for j in range(i + 1):
                 D3_ij = D3_f_ij(i, j, D, D2, d3f_D)
 
                 for b in range(n):
                     for a in range(n):
-                        temp = H1[i, b] * H2[b, a] * H3[a, j]
-                        temp += H1[i, b] * H3[b, a] * H2[a, j]
-                        temp += H2[i, b] * H1[b, a] * H3[a, j]
-                        temp += H2[i, b] * H3[b, a] * H1[a, j]
-                        temp += H3[i, b] * H1[b, a] * H2[a, j]
-                        temp += H3[i, b] * H2[b, a] * H1[a, j]
+                        work = H2[b, a] * H3[a, j]
+                        work += H3[b, a] * H2[a, j]
+                        temp  = H1[i, b] * work
+
+                        work = H1[b, a] * H3[a, j]
+                        work += H3[b, a] * H1[a, j]
+                        temp += H2[i, b] * work
+
+                        work = H1[b, a] * H2[a, j]
+                        work += H2[b, a] * H1[a, j]
+                        temp += H3[i, b] * work
                         out[i, j] = out[i, j] + D3_ij[b, a] * temp
 
                 out[j, i] = np.conj(out[i, j])

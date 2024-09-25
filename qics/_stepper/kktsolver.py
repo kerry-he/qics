@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 import qics._utils.linalg as lin
-import qics._utils.vector as vec
+import qics.point
 
 
 class KKTSolver:
@@ -26,7 +26,7 @@ class KKTSolver:
     using block elimination and Cholesky factorization of the Schur complement matrix.
     """
 
-    def __init__(self, model, ir=True):
+    def __init__(self, model, ir=True, use_invhess=True):
         self.model = model
 
         # Iterative refinement settings
@@ -37,22 +37,26 @@ class KKTSolver:
             "improv_ratio": 5.0,  # Expected reduction in tolerance, else slow progress
         }
 
+        self.use_invhess = use_invhess
+
         # Preallocate vectors do to computations with
-        self.cbh = vec.PointXYZ(model)
+        self.cbh = qics.point.PointXYZ(model)
         self.cbh.x[:] = model.c
         self.cbh.y[:] = model.b
         self.cbh.z.vec[:] = model.h
 
-        self.ir_pnt = vec.Point(model)
-        self.res_pnt = vec.Point(model)
+        self.ir_pnt = qics.point.Point(model)
+        self.res_pnt = qics.point.Point(model)
 
-        self.ir_xyz = vec.PointXYZ(model)
-        self.res_xyz = vec.PointXYZ(model)
-        self.c_xyz = vec.PointXYZ(model)
-        self.v_xyz = vec.PointXYZ(model)
+        self.ir_xyz = qics.point.PointXYZ(model)
+        self.res_xyz = qics.point.PointXYZ(model)
+        self.c_xyz = qics.point.PointXYZ(model)
+        self.v_xyz = qics.point.PointXYZ(model)
 
-        self.work1 = vec.VecProduct(model.cones)
-        self.work2 = vec.VecProduct(model.cones)
+        self.work1 = qics.point.VecProduct(model.cones)
+        self.work2 = qics.point.VecProduct(model.cones)
+
+        self.GHG_fact = None
 
         return
 
@@ -62,11 +66,12 @@ class KKTSolver:
 
         # Precompute and factor Schur complement matrix
         if model.use_G:
-            GHG = blk_hess_congruence(model.G_T_views, model)
-            self.GHG_fact = lin.cho_fact(GHG, increment_diag=(not model.use_A))
+            if self.GHG_fact is None or self.use_invhess:
+                GHG = blk_hess_congruence(model.G_T_views, model)
+                self.GHG_fact = lin.cho_fact(GHG, increment_diag=(not model.use_A))
 
             if model.use_A:
-                self.GHG_issingular = self.GHG_fact is None
+                self.GHG_issingular = (self.GHG_fact is None)
                 if self.GHG_issingular:
                     # GHG is singular, Cholesky factor GHG + AA instead
                     GHG += model.A.T @ model.A
@@ -82,7 +87,7 @@ class KKTSolver:
 
         # Solve constant 3x3 subsystem
         self.solve_sys_3(self.c_xyz, self.cbh)
-        if self.ir:
+        if self.ir and self.use_invhess:
             self.solve_sys_3_ir(self.c_xyz, self.cbh)
 
         return

@@ -46,8 +46,33 @@ class Vector:
 
 
 class Point(Vector):
-    """A class for a vector containing the variables involved in a homogeneous self-dual
-    embedding of a primal-dual conic program (x, y, z, s, tau, kap)"""
+    r"""A class for a vector containing the variables involved in a homogeneous self-
+    dual embedding of a primal-dual conic program :math:`(x, y, z, s, \tau, \kappa)`.
+    
+    Parameters
+    ----------
+    model : :class:`qics.Model`
+        Model class which specifies the conic program which this class corresponds to.
+
+    Attributes
+    ----------
+    vec : numpy.ndarray
+        Vector representing the full concatenated point :math:`(x, y, z, s, \tau, 
+        \kappa)`.
+    x : numpy.ndarray
+        View of ``vec`` attribute correpsonding to the primal variable :math:`x`.
+    y : numpy.ndarray
+        View of ``vec`` attribute correpsonding to the dual variable :math:`y`.
+    z : :class:`qics.VecProduct`
+        View of ``vec`` attribute correpsonding to the dual variable :math:`z`.
+    s : :class:`qics.VecProduct`
+        View of ``vec`` attribute correpsonding to the dual variable :math:`s`.
+    tau : numpy.ndarray
+        View of ``vec`` attribute correpsonding to the dual variable :math:`\tau`.
+    kap : numpy.ndarray
+        View of ``vec`` attribute correpsonding to the dual variable :math:`\kappa`.                
+    
+    """
 
     def __init__(self, model):
         (n, p, q) = (model.n, model.p, model.q)
@@ -95,18 +120,36 @@ class VecProduct(Vector):
     """A class for a Cartesian product of vector spaces corresponding
     to a list of cones.
 
-    Note that there are two ways to access the vector:
-        self.vec : View as a stacked, 1D vector
-        self[i]  : View of the i-th component in the Certesian product
+    For ``x = VecProduct(cones)``, we use ``x[i][j]`` to obtain the :math:`j`-th 
+    variable of the :math:`i`-th cone. For example, if 
+    
+    >>> cones = [
+    ...     qics.cones.NonNegOrthant(2),
+    ...     qics.cones.QuantRelEntr(3),
+    ...     qics.cones.PosSemidefinite(4, iscomplex=True)
+    ... ]
+    >>> x = VecProduct(cones)
 
-    Also note that a complex matrix
+    then 
 
-        [ 0.+1.j   2.+3.j ]
-        [ 4.+5.j   6.+7.j ]
+        - ``x[0][0]`` is an (2, 1) real vector
+        - ``x[1][0]`` is a (1, 1) real vector
+        - ``x[1][1]`` and ``x[1][2]`` are (3, 3) real symmetric matrices
+        - ``x[2][0]`` is a (4, 4) complex Hermitian matrix 
 
-    is vectorized as the real 1D vector
 
-        [0., 1., 2., 3., 4., 5., 6., 7.]
+    Parameters
+    ----------
+    cones : list(:class:`qics.cones`)
+        List of cones defining a Cartesian product of vector spaces.
+    vec : :class:`numpy.ndarray`, optional
+        If specified, then this class is built as a view of ``vec``. Otherwise, a new
+        NumPy is allocated which this class is built on top of. 
+
+    Attributes
+    ----------
+    vec : numpy.ndarray
+        Raw vector representing the full concatenated Cartesian product of vectors.
     """
 
     def __init__(self, cones, vec=None):

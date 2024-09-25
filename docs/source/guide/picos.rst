@@ -30,19 +30,19 @@ problems ot be solved using QICS.
      - Convexity
      - Description
    * - Quantum entropy
-     - :class:`picos.qentr`
+     - :class:`picos.quantentr`
      - Concave
      - :math:`S(X) = -\text{tr}[X\log(X)]`
    * - Quantum relative entropy
-     - :class:`picos.qrelentr`
+     - :class:`picos.quantrelentr`
      - Convex
      - :math:`S(X \| Y) = \text{tr}[X\log(X) - X\log(Y)]`
    * - Quantum conditional entropy
-     - :class:`picos.qcondentr`
+     - :class:`picos.quantcondentr`
      - Concave
      - :math:`S(X) - S(\text{tr}_i(X))`
    * - Quantum key distribution
-     - :class:`picos.qkeydist`
+     - :class:`picos.quantkeydist`
      - Convex
      - :math:`-S(\mathcal{G}(X)) + S(\mathcal{Z}(\mathcal{G}(X)))`
    * - Operator relative entropy
@@ -61,13 +61,13 @@ objective function, e.g.,
 
 .. code-block:: python
     
-    P.set_objective("min", picos.qrelentr(X, Y))
+    P.set_objective("min", picos.quantrelentr(X, Y))
 
 or as an inequality constraint, e.g.,
 
 .. code-block:: python
 
-    P.add_constraint(t > picos.qrelentr(X, Y))
+    P.add_constraint(t > picos.quantrelentr(X, Y))
 
 Matrix-valued functions (i.e., operator relative entropy and matrix geometric mean) can
 be used in a matrix inequality expression, e.g.,

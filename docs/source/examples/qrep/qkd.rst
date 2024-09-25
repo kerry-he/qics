@@ -115,7 +115,7 @@ and :math:`b = (1, q_x, q_z)`. We can solve this in **QICS** using the
         P = picos.Problem()
         X = picos.SymmetricVariable("X", 4) 
         
-        P.set_objective("min", picos.qkeydist(X))
+        P.set_objective("min", picos.quantkeydist(X))
         P.add_constraint(picos.trace(X) == 1)
         P.add_constraint((X | Ax) == qx)
         P.add_constraint((X | Az) == qz)        

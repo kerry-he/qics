@@ -1,6 +1,8 @@
 import numpy as np
 import math
-from qics._utils.vector import Point
+from qics.point import Point, VecProduct
+import qics._utils.linalg as lin
+from qics._stepper.kktsolver import blk_hess_congruence
 
 alpha_sched = [0.9999, 0.999, 0.99, 0.9, 0.8, 0.7, 0.5, 0.3, 0.2, 0.1, 0.01, 0.001]
 
@@ -16,6 +18,8 @@ class NonSymStepper:
         self.dir_p = Point(model)
         self.dir_p_toa = Point(model)
         self.next_point = Point(model)
+
+        self.grad = VecProduct(model.cones)
 
         return
 
@@ -77,7 +81,7 @@ class NonSymStepper:
 
             if alpha_iter >= len(alpha_sched):
                 return point, alpha, False
-
+            
             alpha = alpha_sched[alpha_iter]
 
             # Step point in direction and step size
@@ -137,12 +141,23 @@ class NonSymStepper:
                     in_prox = False
                     break
 
-                # Check if close enough to central path
-                prox_k = cone_k.prox()
-                self.prox = max(self.prox, prox_k)
+                if self.kktsolver.use_invhess:
+                    # Check if close enough to central path
+                    prox_k = cone_k.prox()
+                    self.prox = max(self.prox, prox_k)
+                    in_prox = self.prox < eta
+                    if not in_prox:
+                        break
+                else:
+                    cone_k.grad_ip(self.grad[k])
+
+            if in_prox and not self.kktsolver.use_invhess:
+                GHG = blk_hess_congruence(model.G_T_views, model)
+                self.kktsolver.GHG_fact = lin.cho_fact(GHG)
+                psi = model.G_T @ (next_point.z.vec / rtmu + self.grad.vec)
+
+                self.prox = (psi.T @ lin.cho_solve(self.kktsolver.GHG_fact, psi))[0, 0]
                 in_prox = self.prox < eta
-                if not in_prox:
-                    break
 
             # If feasible, return point
             if in_prox:

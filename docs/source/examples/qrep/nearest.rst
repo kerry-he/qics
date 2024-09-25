@@ -109,7 +109,7 @@ problem using just the quantum entropy cone.
         P = picos.Problem()
         X = picos.HermitianVariable("X", n)
 
-        P.set_objective("min", -picos.qentr(X) - (X | logY + numpy.eye(n)).real + trY)
+        P.set_objective("min", -picos.quantentr(X) - (X | logY + numpy.eye(n)).real + trY)
         P.add_constraint(picos.trace(X) == 1)
 
         # Solve problem
@@ -193,7 +193,7 @@ given matrix  :math:`C\in\mathbb{S}^n`, can be found by solving the following pr
         P = picos.Problem()
         Y = picos.SymmetricVariable("Y", n)
 
-        P.set_objective("min", picos.qrelentr(C, Y))
+        P.set_objective("min", picos.quantrelentr(C, Y))
         P.add_constraint(picos.maindiag(Y) == 1)
 
         # Solve problem
@@ -328,7 +328,7 @@ Given this, the relative entropy of entagnlement of a quantum state
         P = picos.Problem()
         Y = picos.HermitianVariable("Y", N)
         
-        P.set_objective("min", picos.qrelentr(C, Y))
+        P.set_objective("min", picos.quantrelentr(C, Y))
         P.add_constraint(picos.trace(Y) == 1.0)
         P.add_constraint(picos.partial_transpose(Y, subsystems=1, dimensions=(n1, n2)) >> 0)
 

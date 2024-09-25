@@ -118,7 +118,7 @@ correlation matrix<Nearest>` problem can be solved.
    X = numpy.array([[2., 1.], [1., 2.]])
    Y = picos.SymmetricVariable("Y", 2)
    
-   P.set_objective("min", picos.qrelentr(X, Y))
+   P.set_objective("min", picos.quantrelentr(X, Y))
    P.add_constraint(picos.maindiag(Y) == 1)
 
    # Solve the conic program

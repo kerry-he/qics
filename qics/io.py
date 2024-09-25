@@ -515,9 +515,9 @@ def read_cbf(filename):
 
         if keyword == "QCECONES":
             line = f.readline().strip()
-            (ncones, totalparam) = [int(i) for i in line.strip().split(" ")]
+            (ncones, _) = [int(i) for i in line.strip().split(" ")]
             for i in range(ncones):
-                # nparam = int(f.readline().strip())
+                _ = int(f.readline().strip())
                 line = f.readline()
                 dims_k = [int(i) for i in line.strip().split(" ")]
                 sys_k = int(f.readline().strip())

@@ -1,4 +1,4 @@
-from qics._utils.vector import Point
+from qics.point import Point
 
 
 class SymStepper:

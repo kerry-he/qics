@@ -333,7 +333,7 @@ For example, we can access the optimal variables by using
 which we can confirm satisfies our desired constraints.
 
 .. note::
-    The ``info["s_opt"]`` object is a :class:`~qics.utils.vector.VecProduct`,
+    The ``info["s_opt"]`` object is a :class:`qics.point.VecProduct`,
     which represent a Cartesian product of real vectors, symmetric matrices, 
     and Hermitian matrices. The first index tells us we are accessing the 
     variables correpsonding to the first cone, i.e., :math:`(t, X, Y)` in the 

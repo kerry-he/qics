@@ -112,7 +112,7 @@ as follows
         p = picos.RealVariable("p", m)
         average_rho = picos.sum([p[i]*rhos[i] for i in range(m)])
 
-        P.set_objective("max", picos.qentr(average_rho) + (p | entr_rhos))
+        P.set_objective("max", picos.quantentr(average_rho) + (p | entr_rhos))
         P.add_constraint(picos.sum(p) == 1)
         P.add_constraint(p > 0)
 
@@ -241,8 +241,8 @@ and some parameter :math:`\gamma\in[0, 1]`. We can solve this in **QICS** as fol
         P = picos.Problem()
         X = picos.SymmetricVariable("X", 2)
 
-        P.set_objective("max", (picos.qcondentr(V*X*V.T, 1) 
-                        + picos.qentr(picos.partial_trace(V*X*V.T, 0))) / numpy.log(2))
+        P.set_objective("max", (picos.quantcondentr(V*X*V.T, 1) 
+                        + picos.quantentr(picos.partial_trace(V*X*V.T, 0))) / numpy.log(2))
         P.add_constraint(picos.trace(X) == 1)
         P.add_constraint(X >> 0)
 
@@ -372,7 +372,7 @@ where :math:`\delta=(1-2\gamma) / (1-\gamma)`.
         X = picos.SymmetricVariable("X", 2)
         W_Nx_W = W * picos.partial_trace(V*X*V.T, 1) * W.T
 
-        P.set_objective("max", picos.qcondentr(W_Nx_W, 1) / numpy.log(2))
+        P.set_objective("max", picos.quantcondentr(W_Nx_W, 1) / numpy.log(2))
         P.add_constraint(picos.trace(X) == 1)
         P.add_constraint(X >> 0)
 
@@ -472,7 +472,7 @@ where :math:`| \psi \rangle` is the purification of :math:`\sigma`.
         P = picos.Problem()
         X = picos.SymmetricVariable("X", n*n)
 
-        P.set_objective("min", -picos.qcondentr(X, 0, (n, n)) + entr_rho)
+        P.set_objective("min", -picos.quantcondentr(X, 0, (n, n)) + entr_rho)
         P.add_constraint(picos.partial_trace(X, 1, (n, n)) == rho)
         P.add_constraint((X | distortion_observable) < D)
 

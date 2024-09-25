@@ -170,3 +170,4 @@ cython_debug/
 *.dat-s
 *.csv
 *.dat-c
+*.cbf

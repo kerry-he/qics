@@ -37,11 +37,20 @@ class NonNegOrthant(SymCone):
 
     def set_point(self, primal, dual=None, a=True):
         self.x = primal[0] * a
-        self.z = dual[0] * a
+        self.z = dual[0] * a if (dual is not None) else None
         return
+    
+    def set_dual(self, dual, a=True):
+        self.z = dual[0] * a
 
     def get_feas(self):
-        return np.all(np.greater(self.x, 0)) and np.all(np.greater(self.z, 0))
+        if self.z is None:
+            return np.all(np.greater(self.x, 0))
+        else:
+            return np.all(np.greater(self.x, 0)) and np.all(np.greater(self.z, 0))
+
+    def get_dual_feas(self):
+        return np.all(np.greater(self.z, 0))
 
     def get_val(self):
         return -np.sum(np.log(self.x))

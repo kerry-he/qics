@@ -77,13 +77,16 @@ class PosSemidefinite(SymCone):
 
     def set_point(self, primal, dual=None, a=True):
         self.X = primal[0] * a
-        self.Z = dual[0] * a
+        self.Z = dual[0] * a if (dual is not None) else None
 
         self.feas_updated = False
         self.grad_updated = False
         self.nt_aux_updated = False
 
         return
+
+    def set_dual(self, dual, a=True):
+        self.Z = dual[0] * a
 
     def get_feas(self):
         if self.feas_updated:
@@ -97,13 +100,18 @@ class PosSemidefinite(SymCone):
             self.feas = False
             return self.feas
 
-        self.Z_chol, info = self.cho_fact(self.Z, lower=True)
-        if info != 0:
-            self.feas = False
-            return self.feas
+        if self.Z is not None:
+            self.Z_chol, info = self.cho_fact(self.Z, lower=True)
+            if info != 0:
+                self.feas = False
+                return self.feas
 
         self.feas = True
         return self.feas
+    
+    def get_dual_feas(self):
+        self.Z_chol, info = self.cho_fact(self.Z, lower=True)
+        return info == 0
 
     def get_val(self):
         (sign, logabsdet) = np.linalg.slogdet(self.X)

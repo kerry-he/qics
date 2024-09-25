@@ -41,15 +41,22 @@ class Cone:
 
         return sum([lin.inp(H_psi_k, psi_k) for (H_psi_k, psi_k) in zip(H_psi, psi)])
 
-    def set_point(self, primal, dual, a=True):
+    def set_point(self, primal, dual=None, a=True):
         self.primal = [primal_k * a for primal_k in primal]
-        self.dual = [dual_k * a for dual_k in dual]
+        if dual is not None:
+            self.dual = [dual_k * a for dual_k in dual]
 
         self.feas_updated = False
         self.grad_updated = False
         self.hess_aux_updated = False
         self.invhess_aux_updated = False
         self.dder3_aux_updated = False
+
+    def set_dual(self, dual, a=True):
+        self.dual = [dual_k * a for dual_k in dual]
+
+    def get_dual_feas(self):
+        return True
 
     def grad_ip(self, out):
         assert self.feas_updated

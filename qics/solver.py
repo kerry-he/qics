@@ -7,7 +7,7 @@ import numpy as np
 import scipy as sp
 
 import qics._utils.linalg as lin
-import qics._utils.vector as vec
+import qics.point as vec
 from qics import __version__
 from qics._stepper import KKTSolver, NonSymStepper, SymStepper
 
@@ -15,11 +15,11 @@ spinner = itertools.cycle(["-", "/", "|", "\\"])
 
 
 class Solver:
-    """A class representing an instance of a solver.
+    r"""A class representing an instance of a solver.
 
     Parameters
     ----------
-    model : qics.Model
+    model : :class:`qics.Model`
         Model class which specifies an instance of a conic program.
     max_iter : int, optional
         Maximum number of solver iterations before terminating. Default is ``100``.
@@ -49,6 +49,15 @@ class Solver:
     ir : bool, optional
         Whether to use iterative refinement when solving the KKT system. Default is
         ``True``.
+    init_pnt : :class:`qics.point.Point`, optional
+        Where to initialize the interior-point algorithm from. Variables which contain
+        ``numpy.nan`` are flagged to be intialized using the default initialization.
+        Default is ``None``, which intializes all variables using the default method.
+    use_invhess : bool, optional
+        Whether or not to avoid using inverse Hessian product oracles by solving a
+        modified cone program with :math:`\mathcal{K}'=\{ x : -Gx \in \mathcal{K} \}`.
+        Requires an initial point :math:`x_0` to be specified such that :math:`-Gx_0
+        \in \text{int}\mathcal{K}`. Default is ``True``.
     """
 
     def __init__(
@@ -63,6 +72,8 @@ class Solver:
         tol_near=1e3,
         verbose=2,
         ir=True,
+        init_pnt=None,
+        use_invhess=True,
     ):
         self.max_iter = max_iter
         self.max_time = max_time
@@ -75,6 +86,7 @@ class Solver:
         self.tol_near = tol_near
 
         self.point = vec.Point(model)
+        self.point.vec.fill(np.nan)
         self.point_best = vec.Point(model)
 
         self.small_step_tol = 0.005
@@ -85,12 +97,34 @@ class Solver:
         self.exit_status = None
 
         self.model = model
-        kktsolver = KKTSolver(model, ir=ir)
+        kktsolver = KKTSolver(model, ir=ir, use_invhess=use_invhess)
         self.stepper = (
             SymStepper(kktsolver, model)
             if model.issymmetric
             else NonSymStepper(kktsolver, model)
         )
+
+        if init_pnt is not None:
+            self.point.x[:] = init_pnt.x * model.c_scale.reshape((-1, 1))
+            self.point.y[:] = init_pnt.y * model.b_scale.reshape((-1, 1))
+            self.point.z.vec[:] = init_pnt.z.vec * model.h_scale.reshape((-1, 1))
+            self.point.s.vec[:] = init_pnt.s.vec * model.h_scale.reshape((-1, 1))
+            self.point.tau[:] = init_pnt.tau
+            self.point.kap[:] = init_pnt.kap
+
+        self.use_invhess = use_invhess
+        if not use_invhess:
+            assert init_pnt is not None, "Must provide an initial x0 such that h-G*x0 \
+                is in the interior of the cone K"
+            assert not any(np.isnan(self.point.x)), "Must provide an initial x0 such that \
+                h-G*x0 is in the interior of the cone K"
+            assert (model.h == 0.0).all(), "Vector h must be zero to avoid using \
+                inverse Hessian oracles."
+            assert model.use_G, "Avoiding using inverse Hessian is not supported nor \
+                recommended when G is the identity matrix."
+            assert not model.issymmetric, "Avoiding using inverse Hessian is not \
+                supported when K is symmetric."
+            self.point.s.vec[:] = -self.model.G @ self.point.x
 
         return
 
@@ -324,14 +358,28 @@ class Solver:
     def setup_point(self):
         model = self.model
 
-        self.point.tau[:] = 1.0
-        self.point.kap[:] = 1.0
+        if any(np.isnan(self.point.x)):
+            self.point.x.fill(0.0)
+        if any(np.isnan(self.point.y)):
+            self.point.y.fill(0.0)
 
         for k, cone_k in enumerate(model.cones):
-            cone_k.get_init_point(self.point.s[k])
-            assert cone_k.get_feas()
-            cone_k.grad_ip(self.point.z[k])
-        self.point.z.vec *= -1
+            if any(np.isnan(self.point.s.vecs[k])):
+                cone_k.get_init_point(self.point.s[k])
+            else:
+                cone_k.set_point(self.point.s[k])
+            assert cone_k.get_feas(), "Initial primal variable s is infeasible."
+
+            if any(np.isnan(self.point.z.vecs[k])):
+                cone_k.grad_ip(self.point.z[k])
+                self.point.z.vecs[k] *= -1
+            cone_k.set_dual(self.point.z[k])
+            assert cone_k.get_dual_feas(), "Initial dual variable z is infeasible."
+
+        if any(np.isnan(self.point.tau)):
+            self.point.tau.fill(1.0)
+        if any(np.isnan(self.point.kap)):
+            self.point.kap.fill(1.0)
 
         self.calc_mu()
         if not math.isclose(self.mu, 1.0):
