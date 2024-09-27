@@ -52,7 +52,7 @@ where :math:`S(X)=-\text{tr}[X\log(X)]` is the quantum entropy,
 :math:`P_g(X, Y)=X^{1/2} g(X^{-1/2} Y X^{-1/2}) X^{1/2}` is the non-commutative or 
 operator perspective.
 
-The full list of supported cones can be found :doc:`here</api/cones>`.
+The full list of supported cones can be found :ref:`here<reference cones>`.
 
 
 Features
@@ -110,12 +110,11 @@ correlation matrix<Nearest>` problem can be solved.
 
 .. code-block:: python
 
-   import numpy
    import picos
 
    # Define the conic program
    P = picos.Problem()
-   X = numpy.array([[2., 1.], [1., 2.]])
+   X = picos.Constant("X", [[2., 1.], [1., 2.]])
    Y = picos.SymmetricVariable("Y", 2)
    
    P.set_objective("min", picos.quantrelentr(X, Y))
@@ -161,7 +160,6 @@ Additional details describing this example can be found :ref:`here<getting-start
 .. toctree::
    :hidden:
    :maxdepth: 3
-   :caption: Contents:
 
    Introduction<self>
    guide/index.rst

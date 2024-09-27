@@ -23,11 +23,22 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.doctest",
     "sphinx_copybutton",
     "sphinx_tabs.tabs",
 ]
 
-autodoc_mock_imports = ["numpy", "scipy", "numba"]
+# Configure intersphinx.
+intersphinx_cache_limit = 10
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
+    "picos": ("https://picos-api.gitlab.io/picos/", None),
+}
+
+autodoc_mock_imports = ["numba"]
 templates_path = ["_templates"]
 exclude_patterns = []
 

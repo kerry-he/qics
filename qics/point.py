@@ -132,10 +132,10 @@ class VecProduct(Vector):
 
     then 
 
-        - ``x[0][0]`` is an (2, 1) real vector
-        - ``x[1][0]`` is a (1, 1) real vector
-        - ``x[1][1]`` and ``x[1][2]`` are (3, 3) real symmetric matrices
-        - ``x[2][0]`` is a (4, 4) complex Hermitian matrix 
+    - ``x[0][0]`` is an (2, 1) real vector
+    - ``x[1][0]`` is a (1, 1) real vector
+    - ``x[1][1]`` and ``x[1][2]`` are (3, 3) real symmetric matrices
+    - ``x[2][0]`` is a (4, 4) complex Hermitian matrix 
 
 
     Parameters

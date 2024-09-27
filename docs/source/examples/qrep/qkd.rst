@@ -56,77 +56,85 @@ and :math:`b = (1, q_x, q_z)`. We can solve this in **QICS** using the
 
 .. tabs::
 
-    .. code-tab:: python Native
+    .. group-tab:: Native
 
-        import numpy
-        import qics
+        .. testcode::
 
-        qx = 0.25
-        qz = 0.75
+            import numpy
+            import qics
 
-        # Define objective function
-        c = numpy.vstack((numpy.array([[1.]]), numpy.zeros((16, 1))))
+            qx = 0.25
+            qz = 0.75
 
-        # Build linear constraints
-        X0 = numpy.array([[.5,  .5], [ .5, .5]])
-        X1 = numpy.array([[.5, -.5], [-.5, .5]])
-        Z0 = numpy.array([[1.,  0.], [ 0., 0.]])
-        Z1 = numpy.array([[0.,  0.], [ 0., 1.]])
+            # Define objective function
+            c = numpy.vstack((numpy.array([[1.]]), numpy.zeros((16, 1))))
 
-        Ax = numpy.kron(X0, X1) + numpy.kron(X1, X0)
-        Az = numpy.kron(Z0, Z1) + numpy.kron(Z1, Z0)
+            # Build linear constraints
+            X0 = numpy.array([[.5,  .5], [ .5, .5]])
+            X1 = numpy.array([[.5, -.5], [-.5, .5]])
+            Z0 = numpy.array([[1.,  0.], [ 0., 0.]])
+            Z1 = numpy.array([[0.,  0.], [ 0., 1.]])
 
-        A = numpy.vstack((
-            numpy.hstack((numpy.array([[0.]]), numpy.eye(4).reshape(1, -1))),
-            numpy.hstack((numpy.array([[0.]]), Ax.reshape(1, -1))),
-            numpy.hstack((numpy.array([[0.]]), Az.reshape(1, -1)))
-        ))
+            Ax = numpy.kron(X0, X1) + numpy.kron(X1, X0)
+            Az = numpy.kron(Z0, Z1) + numpy.kron(Z1, Z0)
 
-        b = numpy.array([[1., qx, qz]]).T
+            A = numpy.vstack((
+                numpy.hstack((numpy.array([[0.]]), numpy.eye(4).reshape(1, -1))),
+                numpy.hstack((numpy.array([[0.]]), Ax.reshape(1, -1))),
+                numpy.hstack((numpy.array([[0.]]), Az.reshape(1, -1)))
+            ))
 
-        # Input into model and solve
-        cones = [qics.cones.QuantKeyDist(4, 2)]
+            b = numpy.array([[1., qx, qz]]).T
 
-        # Initialize model and solver objects
-        model  = qics.Model(c=c, A=A, b=b, cones=cones)
-        solver = qics.Solver(model)
+            # Input into model and solve
+            cones = [qics.cones.QuantKeyDist(4, 2)]
 
-        # Solve problem
-        info = solver.solve()
-        print("Optimal value is: ", info["opt_val"])
+            # Initialize model and solver objects
+            model  = qics.Model(c=c, A=A, b=b, cones=cones)
+            solver = qics.Solver(model, verbose=0)
 
-    .. code-tab:: python PICOS
+            # Solve problem
+            info = solver.solve()
+            print("Optimal value is:", numpy.round(info['p_obj'], 4))
+        |
+        .. testoutput::
 
-        import numpy
-        import picos
+            Optimal value is: 0.1308
 
-        qx = 0.25
-        qz = 0.75
+    .. group-tab:: PICOS
 
-        X0 = numpy.array([[.5,  .5], [ .5, .5]])
-        X1 = numpy.array([[.5, -.5], [-.5, .5]])
-        Z0 = numpy.array([[1.,  0.], [ 0., 0.]])
-        Z1 = numpy.array([[0.,  0.], [ 0., 1.]])
+        .. testcode::
 
-        Ax = numpy.kron(X0, X1) + numpy.kron(X1, X0)
-        Az = numpy.kron(Z0, Z1) + numpy.kron(Z1, Z0)
+            import numpy
+            import picos
 
-        # Define problem
-        P = picos.Problem()
-        X = picos.SymmetricVariable("X", 4) 
-        
-        P.set_objective("min", picos.quantkeydist(X))
-        P.add_constraint(picos.trace(X) == 1)
-        P.add_constraint((X | Ax) == qx)
-        P.add_constraint((X | Az) == qz)        
+            qx = 0.25
+            qz = 0.75
 
-        # Solve problem
-        P.solve(solver="qics")
-        print("Optimal value is: ", P.value)
+            X0 = numpy.array([[.5,  .5], [ .5, .5]])
+            X1 = numpy.array([[.5, -.5], [-.5, .5]])
+            Z0 = numpy.array([[1.,  0.], [ 0., 0.]])
+            Z1 = numpy.array([[0.,  0.], [ 0., 1.]])
 
-.. code-block:: none
+            Ax = numpy.kron(X0, X1) + numpy.kron(X1, X0)
+            Az = numpy.kron(Z0, Z1) + numpy.kron(Z1, Z0)
 
-    Optimal value is:  0.13081203338648836
+            # Define problem
+            P = picos.Problem()
+            X = picos.SymmetricVariable("X", 4) 
+            
+            P.set_objective("min", picos.quantkeydist(X))
+            P.add_constraint(picos.trace(X) == 1)
+            P.add_constraint((X | Ax) == qx)
+            P.add_constraint((X | Az) == qz)        
+
+            # Solve problem
+            P.solve(solver="qics")
+            print("Optimal value is:", round(P, 4))
+        |
+        .. testoutput::
+
+            Optimal value is: 0.1308
 
 The closed form solution for this quantum key rate is
 

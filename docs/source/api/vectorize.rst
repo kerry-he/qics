@@ -1,3 +1,5 @@
+.. py:module:: qics.vectorize
+
 qics.vectorize
 ===============
 
