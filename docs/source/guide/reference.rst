@@ -1,5 +1,3 @@
-.. _reference:
-
 Quick reference
 ===============
 
@@ -61,8 +59,6 @@ initialized using the following parameters.
    * - ``offset``
      - Constant offset term to add to the objective function.
      - ``0.0``
-
-.. _reference cones:
 
 Cones
 -----
@@ -155,6 +151,9 @@ definitions and interfaces to all of the cones QICS currently support below.
 Solving
 -------
 
+Input parameters
+~~~~~~~~~~~~~~~~
+
 Once a conic program has been defined by a :class:`qics.Model`, the problem is
 solved using a :class:`qics.Solver` class. This can be initialized with the
 following settings.
@@ -215,8 +214,11 @@ following settings.
        :math:`-Gx_0\in\text{int}\ \mathcal{K}`. 
      - ``True``
 
+Output parameters
+~~~~~~~~~~~~~~~~~
+
 Once a :class:`qics.Solver` has been initialized, the conic program can be 
-solved with :meth:`qics.Solver.solve()`. This returns a 
+solved with :meth:`qics.Solver.solve`. This returns a 
 dictionary which summarizes the solution of the conic program, and has the 
 following keys.
 

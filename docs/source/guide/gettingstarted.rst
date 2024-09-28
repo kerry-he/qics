@@ -1,5 +1,3 @@
-.. _getting-started:
-
 Getting started
 ===============
 
@@ -17,9 +15,10 @@ where
     X = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix},
 
 as a running example to see how we can solve problems in **QICS**. This is a
-simple example of the a :ref:`nearest correlation matrix<Nearest>` problem. 
-Further examples showing how QICS can be used to solve semidefinite and quantum
-relative entropy programs can be found in :doc:`/examples/index`.
+simple example of the a :ref:`nearest correlation matrix
+<examples/qrep/nearest:nearest correlation matrix>` problem. Further examples
+showing how QICS can be used to solve semidefinite and quantum relative entropy
+programs can be found in :doc:`/examples/index`.
 
 Modelling
 ---------
@@ -59,7 +58,7 @@ lements represented by
            Y_{11} & Y_{12} & Y_{21} & Y_{22} 
          \end{bmatrix}^\top.
 
-See :ref:`here<Mat to vec>` for additional details about how QICS vectorizes
+See :doc:`here<matrices>` for additional details about how QICS vectorizes
 matrices. We can now represent our linear objective function as 
 :math:`c^\top x`, where
 
@@ -137,7 +136,7 @@ Solving
 -------
 
 Now that we have built our model, solving the conic program is fairly
-straightforward. First, we initialize a :class:`~qics.Solver` class with the
+straightforward. First, we initialize a :class:`qics.Solver` class with the
 model we have defined.
 
 .. testsetup::
@@ -146,7 +145,7 @@ model we have defined.
 
 Optionally, there are also many solver settings we can specify when initializing
 the :class:`qics.Solver`. A list of these options can be found 
-:ref:`here<reference solving>`. Once we have initialized our 
+:ref:`here<guide/reference:input parameters>`. Once we have initialized our 
 :class:`qics.Solver`, we then solve the conic program by calling
 
 .. testcode::
@@ -160,32 +159,32 @@ the terminal.
     :options: +ELLIPSIS, +NORMALIZE_WHITESPACE
 
     ====================================================================
-               QICS v0.1.1 - Quantum Information Conic Solver           
-                  by K. He, J. Saunderson, H. Fawzi (2024)              
+               QICS v0.1.1 - Quantum Information Conic Solver
+                  by K. He, J. Saunderson, H. Fawzi (2024)
     ====================================================================
     Problem summary:
-        no. vars:     9                         barr. par:    6         
-        no. constr:   5                         symmetric:    False     
-        cone dim:     9                         complex:      False     
-        no. cones:    1                         sparse:       False     
+        no. vars:     9                         barr. par:    6
+        no. constr:   5                         symmetric:    False
+        cone dim:     9                         complex:      False
+        no. cones:    1                         sparse:       False
 
-    ...  
+    ...
 
     Solution summary
-        sol. status:  optimal                   num. iter:    7         
+        sol. status:  optimal                   num. iter:    7
         exit status:  solved                    solve time:   ...
-        primal obj:   2.772588704565e+00        primal feas:  6.28e-09
-        dual obj:     2.772588709092e+00        dual feas:    3.14e-09
+        primal obj:   2.772588704718e+00        primal feas:  6.28e-09
+        dual obj:     2.772588709215e+00        dual feas:    3.14e-09
 
 The solver returns a dictionary ``info`` containing additional information about
-the solution. For example, we can access the optimal variable :math:`Y` by using
+the solution. A list of all keys contained in this dictionary can be found
+:ref:`here<guide/reference:output parameters>`. For example, we can access the
+optimal variable :math:`Y` by using
 
 .. testcode::
 
     print("Optimal matrix variable Y is:")
     print(info["s_opt"][0][2])
-
-|
 
 .. testoutput::
 

@@ -1,5 +1,5 @@
 Nearest matrix
-==================
+==============
 
 A common optimization problem that arises is to find the 
 nearest matrix to another fixed matrix with respect to the 
@@ -114,8 +114,6 @@ problem using just the quantum entropy cone.
 
         # Solve problem
         P.solve(solver="qics", verbosity=1)        
-
-.. _Nearest:
 
 Nearest correlation matrix
 ---------------------------

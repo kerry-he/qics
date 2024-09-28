@@ -96,7 +96,7 @@ and :math:`b = (1, q_x, q_z)`. We can solve this in **QICS** using the
             # Solve problem
             info = solver.solve()
             print("Optimal value is:", numpy.round(info['p_obj'], 4))
-        |
+
         .. testoutput::
 
             Optimal value is: 0.1308
@@ -131,7 +131,7 @@ and :math:`b = (1, q_x, q_z)`. We can solve this in **QICS** using the
             # Solve problem
             P.solve(solver="qics")
             print("Optimal value is:", round(P, 4))
-        |
+
         .. testoutput::
 
             Optimal value is: 0.1308

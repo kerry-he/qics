@@ -1,5 +1,3 @@
-.. _picos-interface:
-
 PICOS interface
 ===============
 
@@ -65,14 +63,15 @@ mean) can be used in a matrix inequality expression, e.g.,
     
     P.add_constraint(T >> picos.oprelentr(X, Y))
 
-or composed with a trace function to represent the corresponding scalar valued function
+or composed with a trace function to represent the corresponding scalar valued
+function
 
 .. code-block:: python
     
     P.set_objective("min", picos.trace(picos.oprelentr(X, Y)))
 
-Note that these expressions need to define a **convex** optimization problem. Once a 
-PICOS problem has been defined, it can be solved using QICS by calling
+Note that these expressions need to define a **convex** optimization problem.
+Once a PICOS problem has been defined, it can be solved using QICS by calling
 
 .. code-block:: python
     
@@ -81,9 +80,9 @@ PICOS problem has been defined, it can be solved using QICS by calling
 Example
 -------
 
-Below, we show an example of how we can solve the same problem :ref:`nearest 
-correlation matrix<Nearest>` problem introcued in :doc:`/guide/gettingstarted`, 
-i.e.,
+Below, we show an example of how we can solve the same problem :ref:`nearest
+correlation matrix<examples/qrep/nearest:nearest correlation matrix>` problem 
+introduced in :doc:`/guide/gettingstarted`, i.e.,
 
 .. math::
 
@@ -115,8 +114,6 @@ where
 
     print("\nOptimal matrix variable Y is:")
     print(Y)
-
-|
 
 .. testoutput::
 

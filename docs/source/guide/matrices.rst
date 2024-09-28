@@ -1,5 +1,3 @@
-.. _Mat to vec:
-
 Representing matrices
 =======================
 
