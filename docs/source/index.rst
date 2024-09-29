@@ -1,17 +1,11 @@
 Quantum Information Conic Solver
 ================================
 
-|Documentation Status|
-|Build Status|
-|PyPi Status|
-
-.. |Documentation Status| image:: https://readthedocs.org/projects/qics/badge/?version=latest
+.. image:: https://readthedocs.org/projects/qics/badge/?version=latest
   :target: https://qics.readthedocs.io/en/latest/?badge=latest
-
-.. |Build Status| image:: http://github.com/kerry-he/qics/actions/workflows/ci.yml/badge.svg?event=push
+.. image:: http://github.com/kerry-he/qics/actions/workflows/ci.yml/badge.svg?event=push
   :target: http://github.com/kerry-he/qics/actions/workflows/ci.yml
-
-.. |PyPi Status| image:: http://img.shields.io/pypi/v/qics.svg
+.. image:: http://img.shields.io/pypi/v/qics.svg
   :target: https://pypi.python.org/pypi/qics/
 
 **QICS** is a primal-dual interior point solver fully implemented in Python, and
