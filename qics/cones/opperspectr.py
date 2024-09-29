@@ -81,6 +81,7 @@ class OpPerspecTr(Cone):
             self.d2xh,
             self.d3xh,
         ) = get_perspective_derivatives(func)
+        self.func = func
 
         self.precompute_mat_vec()
 

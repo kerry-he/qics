@@ -4,7 +4,7 @@ User guide
 This section is serve as an introductory guide and reference for how to use 
 QICS, and contains the following pages.
 
-.. grid:: 1 1 3 2
+.. grid:: 1 1 2 3
     :gutter: 2
     :padding: 0
     :class-container: surface
@@ -30,14 +30,20 @@ QICS, and contains the following pages.
     .. grid-item-card:: :octicon:`mortar-board` Advanced tips
         :link: advanced.html
 
-        Tips for advanced users for best practices on how to input problems to
-        QICS to obtain potentially significant speedups.
+        Tips for advanced users to obtain potentially significant speedups
+        when solving problems.
+
+    .. grid-item-card:: :octicon:`file` Reading and writing
+        :link: io.html
+
+        Reading and writing semidefinite and conic programs using the SDPA
+        sparse and CBF formats.
 
     .. grid-item-card:: :octicon:`command-palette` PICOS interface
         :link: picos.html
 
         Briefly introduces how QICS can be used with the PICOS
-        interface, a Python interface for modelling optimization problems. 
+        optimization modelling interface. 
 
 
 .. toctree::
@@ -48,4 +54,5 @@ QICS, and contains the following pages.
    gettingstarted.rst
    matrices.rst
    advanced.rst
+   io.rst
    picos.rst

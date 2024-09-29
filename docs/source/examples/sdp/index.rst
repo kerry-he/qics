@@ -25,12 +25,6 @@ using QICS, which we have organized into the following categories.
 
         Suite of semidefinite programs arising in quantum information theory.
 
-    .. grid-item-card:: SDPA files
-        :link: sdpa.html
-
-        Reading and writing semidefinite programs in the SDPLIB sparse file
-        format.
-
 .. toctree::
    :hidden:
    :maxdepth: 1
@@ -38,4 +32,3 @@ using QICS, which we have organized into the following categories.
    maxcut.rst
    product.rst
    quantum.rst
-   sdpa.rst

@@ -27,7 +27,7 @@ Some notable cones that QICS supports include
 | Operator perspective epigraph |  [`qics.cones.OpPerspecEpi`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.OpPerspecEpi)  | $\text{cl}\\{ (T, X, Y) \in \mathbb{H}^n \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \\}$ |
 
 where $S(X)=-\text{tr}[X\log(X)]$ is the quantum entropy, 
-$S(X \\| Y)=\text{tr}[X\log(X) - X\log(Y)]$ is the quantum relative entropy, and
+$S(X \| Y)=\text{tr}[X\log(X) - X\log(Y)]$ is the quantum relative entropy, and
 $P_g(X, Y)=X^{1/2} g(X^{-1/2} Y X^{-1/2}) X^{1/2}$ is the non-commutative or
 operator perspective.
 

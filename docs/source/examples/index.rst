@@ -32,12 +32,6 @@ pages.
 
         Suite of semidefinite programs arising in quantum information theory.
 
-    .. grid-item-card:: SDPA files
-        :link: sdp/sdpa.html
-
-        Reading and writing semidefinite programs in the SDPLIB sparse file
-        format.
-
 **Quantum relative entropy programming**
 
 .. grid:: 1 1 2 2
