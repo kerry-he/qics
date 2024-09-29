@@ -1,5 +1,4 @@
-Quantum Information Conic Solver
-================================
+# QICS: Quantum Information Conic Solver
 
 |Documentation Status|
 |Build Status|
@@ -177,12 +176,3 @@ interface.
 
 Additional details explaining this example can be found 
 :doc:`here<guide/gettingstarted>`.
-
-.. toctree::
-   :hidden:
-   :maxdepth: 3
-
-   Introduction<self>
-   guide/index.rst
-   examples/index.rst
-   api/index.rst
