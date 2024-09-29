@@ -60,6 +60,16 @@ initialized using the following parameters.
      - Constant offset term to add to the objective function.
      - ``0.0``
 
+.. note::
+    When the parameters ``G`` and ``h`` are not specified when initializing a 
+    :class:`qics.Model`, QICS instead solves the simplified conic program
+
+    .. math::
+
+      \min_{x \in \mathbb{R}^n} \quad c^\top x \quad 
+      \text{s.t.} \quad Ax = b, \  x \in \mathcal{K}.
+
+
 Cones
 -----
 

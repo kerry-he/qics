@@ -68,10 +68,8 @@ matrices. We can now represent our linear objective function as
 
 In Python, we represent this using a :class:`numpy.ndarray` array.
 
-.. testsetup::
-
-    import numpy
-    c = numpy.array([[1., 0., 0., 0., 0., 0., 0., 0., 0.]]).T
+>>> import numpy
+>>> c = numpy.array([[1., 0., 0., 0., 0., 0., 0., 0., 0.]]).T
 
 Additionaly, we represent our linear equality constraints using :math:`Ax=b`, 
 where
@@ -100,25 +98,21 @@ and
 
 Again, in Python we represent this using :class:`numpy.ndarray` arrays.
 
-.. testsetup::
-
-    A = numpy.array([
-        [0., 1., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 1., 1., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 1., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 1., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 0., 1.]
-    ])
-    b = numpy.array([[2., 2., 2., 1., 1.]]).T
+>>> A = numpy.array([                           \
+...     [0., 1., 0., 0., 0., 0., 0., 0., 0.],   \
+...     [0., 0., 1., 1., 0., 0., 0., 0., 0.],   \
+...     [0., 0., 0., 0., 1., 0., 0., 0., 0.],   \
+...     [0., 0., 0., 0., 0., 1., 0., 0., 0.],   \
+...     [0., 0., 0., 0., 0., 0., 0., 0., 1.]    \
+... ])
+>>> b = numpy.array([[2., 2., 2., 1., 1.]]).T
 
 Finally, we want to tell **QICS** that :math:`x` must be constrained in the
 quantum relative entropy cone :math:`\mathcal{QRE}_2`. We do this by using the 
 :class:`qics.cones.QuantRelEntr` class.
 
-.. testsetup::
-
-    import qics
-    cones = [qics.cones.QuantRelEntr(2)]
+>>> import qics
+>>> cones = [qics.cones.QuantRelEntr(2)]
 
 .. note::
     We define ``cones`` as a list of cones, as often we solve conic programs
@@ -127,10 +121,7 @@ quantum relative entropy cone :math:`\mathcal{QRE}_2`. We do this by using the
 Finally, we initialize a :class:`qics.Model` class to represent our conic
 program using the matrices and cones we have defined.
 
-.. testsetup::
-
-    model = qics.Model(c=c, A=A, b=b, cones=cones)
-
+>>> model = qics.Model(c=c, A=A, b=b, cones=cones)
 
 Solving
 -------
@@ -139,25 +130,17 @@ Now that we have built our model, solving the conic program is fairly
 straightforward. First, we initialize a :class:`qics.Solver` class with the
 model we have defined.
 
-.. testsetup::
-
-    solver = qics.Solver(model)
+>>> solver = qics.Solver(model)
 
 Optionally, there are also many solver settings we can specify when initializing
 the :class:`qics.Solver`. A list of these options can be found 
 :ref:`here<guide/reference:input parameters>`. Once we have initialized our 
 :class:`qics.Solver`, we then solve the conic program by calling
 
-.. testcode::
-
-    info = solver.solve()
-
-The default ``verbose`` level for the solver will give the following output on
-the terminal.
-
-.. testoutput::
+.. doctest::
     :options: +ELLIPSIS, +NORMALIZE_WHITESPACE
 
+    >>> info = solver.solve()
     ====================================================================
                QICS v0.1.1 - Quantum Information Conic Solver
                   by K. He, J. Saunderson, H. Fawzi (2024)
@@ -167,9 +150,7 @@ the terminal.
         no. constr:   5                         symmetric:    False
         cone dim:     9                         complex:      False
         no. cones:    1                         sparse:       False
-
     ...
-
     Solution summary
         sol. status:  optimal                   num. iter:    7
         exit status:  solved                    solve time:   ...
@@ -181,16 +162,9 @@ the solution. A list of all keys contained in this dictionary can be found
 :ref:`here<guide/reference:output parameters>`. For example, we can access the
 optimal variable :math:`Y` by using
 
-.. testcode::
-
-    print("Optimal matrix variable Y is:")
-    print(info["s_opt"][0][2])
-
-.. testoutput::
-
-    Optimal matrix variable Y is: 
-    [[1.  0.5]
-     [0.5 1. ]]
+>>> print(info["s_opt"][0][2])
+[[1.  0.5]
+ [0.5 1. ]]
 
 .. note::
     The ``info["s_opt"]`` object is a :class:`qics.point.VecProduct`, which

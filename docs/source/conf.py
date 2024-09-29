@@ -30,7 +30,8 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.doctest",
     "sphinx_copybutton",
-    "sphinx_tabs.tabs",
+    "sphinx_design",
+    "sphinx_tabs.tabs"
 ]
 
 autosectionlabel_prefix_document = True

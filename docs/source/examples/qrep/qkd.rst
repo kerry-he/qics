@@ -1,38 +1,46 @@
 Quantum key distribution
 ==========================
 
-Quantum key distribution is an important application in
-quantum cryptography, in which a private key is securely 
-generated and communicated between two parties using a 
-qautnum protocol. The quantum key rate is a quantity 
-which characterizes the security of a given quantum protocol.
+Quantum key distribution is an important application in quantum cryptography, in
+which a private key is securely generated and communicated between two parties
+using a quantum protocol. The quantum key rate is a quantity which characterizes
+the security of a given quantum protocol.
 
 The quantum key rate can be computed using using the following
-quantum relative entropy from :ref:`[1,2] <qkd_refs>`
+quantum relative entropy program from :ref:`[1,2] <qkd_refs>`
 
 .. math::
 
-    \max_{X \in \mathbb{H}^n} &&& S( \mathcal{G}(X) \| \mathcal{Z}(\mathcal{G}(X)) )
+    \max_{X\in\mathbb{H}^n} &&& S(\mathcal{G}(X) \| \mathcal{Z}(\mathcal{G}(X)))
 
     \text{s.t.} &&& \langle A_i, X \rangle = b_i, \quad \forall i,\ldots,p
 
     &&& X \succeq 0,
 
-where :math:`\mathcal{G}:\mathbb{H}^n\rightarrow\mathbb{H}^{mr}` is
-related to the quantum protocol, and is usually described using 
-Kraus operators
+where :math:`\mathcal{G}:\mathbb{H}^n\rightarrow\mathbb{H}^{mr}` is a positive
+linear map related to the quantum protocol, and is usually described using 
+Kraus operators :math:`K_i\in\mathbb{C}^{mr\times n}`
 
 .. math::
 
     \mathcal{G}(X) = \sum_{i=1}^l K_i X K_i^\dagger,
 
-for :math:`K_i:\mathbb{C}^n\rightarrow\mathbb{C}^{mr}`, and 
-:math:`\mathcal{Z}:\mathbb{H}^{mr}\rightarrow\mathbb{H}^{mr}` is
+and :math:`\mathcal{Z}:\mathbb{H}^{mr}\rightarrow\mathbb{H}^{mr}` is
 the pinching map which zeros off-diagonal blocks of a block matrix
 
 .. math::
 
-    \mathcal{Z}(X) = \sum_{i=1}^l (| i \rangle \langle i | \otimes \mathbb{I}_m) X (| i \rangle \langle i | \otimes \mathbb{I}_m).
+    \mathcal{Z}(X) = \sum_{i=1}^r (| i \rangle \langle i | \otimes \mathbb{I}_m)
+    X (| i \rangle \langle i | \otimes \mathbb{I}_m).
+
+**QICS** provides the cone :class:`qics.cones.QuantKeyDist` to represent this
+slice of the quantum relative entropy.
+
+.. note::
+
+    We provide several ways to define the linear maps :math:`\mathcal{G}` and 
+    :math:`\mathcal{Z}` when initializing a :class:`qics.cones.QuantKeyDist`.
+    See the API documentation for further details.
 
 
 Entanglement based BB84
@@ -40,25 +48,35 @@ Entanglement based BB84
 
 As a concrete example, we consider the entanglement based BB84 protocol
 described in :ref:`[3] <qkd_refs>` where only the Z basis is used to 
-measure the key. In this case, we have :math:`\mathcal{G}(X) = X`, :math:`l=2`,
-and we have the three linear constraints defined by
+measure the key. In this case, we have :math:`\mathcal{G}(X) = X`, dimensions 
+:math:`n=m=r=2`, and we have the three linear constraints defined by
 
 .. math::
 
     A_1 &= \mathbb{I}\\ \\
-    A_2 &= \frac{1}{4} \left(\begin{bmatrix} 1 & 1 \\ 1 & 1 \end{bmatrix} \otimes \begin{bmatrix} 1 & -1 \\ -1 & 1 \end{bmatrix} 
-    + \begin{bmatrix} 1 & -1 \\ -1 & 1 \end{bmatrix} \otimes \begin{bmatrix} 1 & 1 \\ 1 & 1 \end{bmatrix}  \right) \\ \\
-    A_3 &= \begin{bmatrix} 1 & 0 \\ 0 & 0 \end{bmatrix} \otimes \begin{bmatrix} 0 & 0 \\ 0 & 1 \end{bmatrix} 
-    + \begin{bmatrix} 0 & 0 \\ 0 & 1 \end{bmatrix} \otimes \begin{bmatrix} 1 & 0 \\ 0 & 0 \end{bmatrix}  ,
+    A_2 &= \frac{1}{4} \left(\begin{bmatrix} 1 & 1 \\ 1 & 1 \end{bmatrix} 
+    \otimes \begin{bmatrix} 1 & -1 \\ -1 & 1 \end{bmatrix} 
+    + \begin{bmatrix} 1 & -1 \\ -1 & 1 \end{bmatrix} \otimes 
+    \begin{bmatrix} 1 & 1 \\ 1 & 1 \end{bmatrix}  \right) \\ \\
+    A_3 &= \begin{bmatrix} 1 & 0 \\ 0 & 0 \end{bmatrix} \otimes 
+    \begin{bmatrix} 0 & 0 \\ 0 & 1 \end{bmatrix} 
+    + \begin{bmatrix} 0 & 0 \\ 0 & 1 \end{bmatrix} \otimes 
+    \begin{bmatrix} 1 & 0 \\ 0 & 0 \end{bmatrix}  ,
 
-and :math:`b = (1, q_x, q_z)`. We can solve this in **QICS** using the
-:class:`~qics.cones.QuantKeyDist` cone.
+and :math:`b = (1, q_x, q_z)`. The closed form solution for this quantum key
+rate is
+
+.. math::
+
+    \log(2) + q_x \log(q_x) + (1 - q_x) \log(1 - q_x)
+
+which we use to confirm that **QICS** gives the correct solution.
 
 .. tabs::
 
     .. group-tab:: Native
 
-        .. testcode::
+        .. testcode:: native
 
             import numpy
             import qics
@@ -75,13 +93,14 @@ and :math:`b = (1, q_x, q_z)`. We can solve this in **QICS** using the
             Z0 = numpy.array([[1.,  0.], [ 0., 0.]])
             Z1 = numpy.array([[0.,  0.], [ 0., 1.]])
 
+            A0 = numpy.eye(4)
             Ax = numpy.kron(X0, X1) + numpy.kron(X1, X0)
             Az = numpy.kron(Z0, Z1) + numpy.kron(Z1, Z0)
 
             A = numpy.vstack((
-                numpy.hstack((numpy.array([[0.]]), numpy.eye(4).reshape(1, -1))),
-                numpy.hstack((numpy.array([[0.]]), Ax.reshape(1, -1))),
-                numpy.hstack((numpy.array([[0.]]), Az.reshape(1, -1)))
+                numpy.hstack((numpy.array([[0.]]), qics.vectorize.mat_to_vec(A0).T)),
+                numpy.hstack((numpy.array([[0.]]), qics.vectorize.mat_to_vec(Ax).T)),
+                numpy.hstack((numpy.array([[0.]]), qics.vectorize.mat_to_vec(Az).T))
             ))
 
             b = numpy.array([[1., qx, qz]]).T
@@ -95,15 +114,22 @@ and :math:`b = (1, q_x, q_z)`. We can solve this in **QICS** using the
 
             # Solve problem
             info = solver.solve()
-            print("Optimal value is:", numpy.round(info['p_obj'], 4))
 
-        .. testoutput::
+            sol_analytic = numpy.log(2) + (qx*numpy.log(qx) + (1 - qx)*numpy.log(1 - qx))
 
-            Optimal value is: 0.1308
+            print("QICS key rate:", info['p_obj'])
+            print("Analytic key rate:", sol_analytic)
+        
+        |
+
+        .. testoutput:: native
+
+            QICS key rate: 0.1308120333864809
+            Analytic key rate: 0.130812035941137
 
     .. group-tab:: PICOS
 
-        .. testcode::
+        .. testcode:: picos
 
             import numpy
             import picos
@@ -130,35 +156,29 @@ and :math:`b = (1, q_x, q_z)`. We can solve this in **QICS** using the
 
             # Solve problem
             P.solve(solver="qics")
-            print("Optimal value is:", round(P, 4))
 
-        .. testoutput::
+            sol_analytic = numpy.log(2) + (qx*numpy.log(qx) + (1 - qx)*numpy.log(1 - qx))
 
-            Optimal value is: 0.1308
+            print("QICS key rate:    ", P.value)
+            print("Analytic key rate:", sol_analytic)
 
-The closed form solution for this quantum key rate is
+        |
 
-.. math::
+        .. testoutput:: picos
 
-    \log(2) + q_x \log(q_x) + (1 - q_x) \log(1 - q_x)
-
-which we use to confirm that **QICS** gives the correct solution.
-
->>> import numpy
->>> qx = 0.25
->>> numpy.log(2) + ( qx*numpy.log(qx) + (1-qx)*numpy.log(1-qx) )
-0.130812035941137
-
+            QICS key rate:     0.13081203553305265
+            Analytic key rate: 0.130812035941137
 
 Reading protocols from files
 --------------------------------
 
 It is also fairly straightforward to solve quantum key rates from
-``.mat`` files from, e.g., `here <https://www.math.uwaterloo.ca/~hwolkowi/henry/reports/ZGNQKDmainsolverUSEDforPUBLCNJuly31/>`_ or 
-`here <https://github.com/kerry-he/qrep-structure/tree/main/data>`_.
+``.mat`` files from, e.g., `here <https://www.math.uwaterloo.ca/~hwolkowi/henry/reports/ZGNQKDmainsolverUSEDforPUBLCNJuly31/>`__ or 
+`here <https://github.com/kerry-he/qrep-structure/tree/main/data>`__.
 We supply some sample code for how to do this below.
 
 .. code-block:: python
+    :caption: read_qkd_file.py
 
     import numpy
     import scipy
