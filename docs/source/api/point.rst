@@ -1,3 +1,5 @@
+.. py:module:: qics.point
+
 qics.point
 =============
 
