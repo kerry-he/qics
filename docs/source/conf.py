@@ -6,11 +6,13 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import os
 import sys
 from pathlib import Path
 
 # Enable access to the PICOS module.
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, os.path.abspath("../.."))
 
 from qics._version import __version__  # noqa isort:skip
 
