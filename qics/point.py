@@ -46,32 +46,41 @@ class Vector:
 
 
 class Point(Vector):
-    r"""A class for a vector containing the variables involved in a homogeneous self-
-    dual embedding of a primal-dual conic program :math:`(x, y, z, s, \tau, \kappa)`.
+    r"""A class for a vector containing the variables involved in a 
+    homogeneous self-dual embedding of a primal-dual conic program
+    :math:`(x, y, z, s, \tau, \kappa)\in\mathbb{R}^n\times\mathbb{R}^p
+    \times\mathbb{R}^q\times\mathbb{R}^q\times\mathbb{R}\times\mathbb{R}`.
     
     Parameters
     ----------
-    model : :class:`qics.Model`
-        Model class which specifies the conic program which this class corresponds to.
-
+    model : :class:`~qics.Model`
+        Model which specifies the conic program which this vector
+        corresponds to.
+  
     Attributes
     ----------
-    vec : numpy.ndarray
-        Vector representing the full concatenated point :math:`(x, y, z, s, \tau, 
+    vec : :class:`~numpy.ndarray`
+        2D :obj:`~numpy.float64` array of size ``(n+p+2q+2, 1)`` 
+        representing the full concatenated vector :math:`(x, y, z, s, \tau, 
         \kappa)`.
-    x : numpy.ndarray
-        View of ``vec`` attribute correpsonding to the primal variable :math:`x`.
-    y : numpy.ndarray
-        View of ``vec`` attribute correpsonding to the dual variable :math:`y`.
-    z : :class:`qics.VecProduct`
-        View of ``vec`` attribute correpsonding to the dual variable :math:`z`.
-    s : :class:`qics.VecProduct`
-        View of ``vec`` attribute correpsonding to the dual variable :math:`s`.
-    tau : numpy.ndarray
-        View of ``vec`` attribute correpsonding to the dual variable :math:`\tau`.
-    kap : numpy.ndarray
-        View of ``vec`` attribute correpsonding to the dual variable :math:`\kappa`.                
-    
+    x : :class:`~numpy.ndarray`
+        A :obj:`~numpy.ndarray.view` of ``vec`` of size ``(n, 1)``
+        correpsonding to the primal variable :math:`x`.
+    y : :class:`~numpy.ndarray`
+        A :obj:`~numpy.ndarray.view` of ``vec`` of size ``(p, 1)``
+        correpsonding to the dual variable :math:`y`.
+    z : :class:`~qics.point.VecProduct`
+        A :obj:`~numpy.ndarray.view` of ``vec`` of size ``(q, 1)``
+        correpsonding to the dual variable :math:`z`.
+    s : :class:`~qics.point.VecProduct`
+        A :obj:`~numpy.ndarray.view` of ``vec`` of size ``(q, 1)``
+        correpsonding to the primal variable :math:`s`.
+    tau : :class:`~numpy.ndarray`
+        A :obj:`~numpy.ndarray.view` of ``vec`` of size ``(1, 1)``
+        correpsonding to the primal homogenizing variable :math:`\tau`.
+    kap : :class:`~numpy.ndarray`
+        A :obj:`~numpy.ndarray.view` of ``vec`` of size ``(1, 1)``
+        correpsonding to the dual homogenizing variable :math:`\kappa`.
     """
 
     def __init__(self, model):
@@ -81,10 +90,11 @@ class Point(Vector):
         self.vec = np.zeros((n + p + q + q + 2, 1))
 
         # Build views of vector
-        self.xyz = PointXYZ(model, self.vec[: n + p + q])
-        self.x = self.xyz.x
-        self.y = self.xyz.y
-        self.z = self.xyz.z
+        self._xyz = PointXYZ(model, self.vec[: n + p + q])
+
+        self.x = self._xyz.x
+        self.y = self._xyz.y
+        self.z = self._xyz.z
         self.s = VecProduct(model.cones, self.vec[n + p + q : n + p + q + q])
         self.tau = self.vec[n + p + q + q : n + p + q + q + 1]
         self.kap = self.vec[n + p + q + q + 1 : n + p + q + q + 2]
@@ -117,58 +127,95 @@ class PointXYZ(Vector):
 
 
 class VecProduct(Vector):
-    """A class for a Cartesian product of vector spaces corresponding
-    to a list of cones.
+    r"""A class for a Cartesian product of vectors corresponding to a list
+    of cones :math:`\mathcal{K}_i`, i.e., :math:`s\in\mathbb{V}` where
 
-    For ``x = VecProduct(cones)``, we use ``x[i][j]`` to obtain the :math:`j`-th 
-    variable of the :math:`i`-th cone. For example, if 
+    .. math::
+
+        \mathbb{V} = \mathbb{V}_1 \times \mathbb{V}_2 \times \ldots \times
+        \mathbb{V}_k,
     
-    >>> cones = [
-    ...     qics.cones.NonNegOrthant(2),
-    ...     qics.cones.QuantRelEntr(3),
-    ...     qics.cones.PosSemidefinite(4, iscomplex=True)
-    ... ]
-    >>> x = VecProduct(cones)
+    and :math:`\mathcal{K}_i \subset \mathbb{V}_i`. Each of these vector
+    spaces :math:`\mathbb{V}_i` are themselves a Cartesian product of
+    vector spaces
 
-    then 
+    .. math::
 
-        - ``x[0][0]`` is an (2, 1) real vector
-        - ``x[1][0]`` is a (1, 1) real vector
-        - ``x[1][1]`` and ``x[1][2]`` are (3, 3) real symmetric matrices
-        - ``x[2][0]`` is a (4, 4) complex Hermitian matrix 
-
+        \mathbb{V}_i = \mathbb{V}_{i,1} \times \mathbb{V}_{i,2} \times
+         \ldots \times \mathbb{V}_{i,k_i},
+    
+    where :math:`\mathbb{V}_{i,j}` are defined as either the set of real 
+    vectors :math:`\mathbb{R}^n`, symmetric matrices :math:`\mathbb{S}^n`,
+    or Hermitian matrices :math:`\mathbb{H}^n`.
 
     Parameters
     ----------
-    cones : list(:class:`qics.cones`)
+    cones : :obj:`list` of :mod:`~qics.cones`
         List of cones defining a Cartesian product of vector spaces.
-    vec : :class:`numpy.ndarray`, optional
-        If specified, then this class is built as a view of ``vec``. Otherwise, a new
-        NumPy is allocated which this class is built on top of. 
+    vec : :class:`~numpy.ndarray`, optional
+        If specified, then this class is initialized as a
+        :obj:`~numpy.ndarray.view` of ``vec``. Otherwise, the class is
+        initialized using a newly allocated :class:`~numpy.ndarray`.
 
     Attributes
     ----------
-    vec : numpy.ndarray
-        Raw vector representing the full concatenated Cartesian product of vectors.
+    vec : :class:`~numpy.ndarray`
+        2D :obj:`~numpy.float64` array of size ``(q, 1)`` representing the
+        full concatenated Cartesian product of vectors.
+    mats : :obj:`list` of :obj:`list` of :class:`~numpy.ndarray`
+        A nested list of :obj:`~numpy.ndarray.view` of ``vec`` where
+        ``mats[i][j]`` returns the array corresponding to the vector space
+        :math:`\mathbb{V}_{i,j}`. This attribute can also be called using
+        ``__getitem__``, i.e., by directly calling ``self[i][j]``.
+    vecs : :obj:`list` of :class:`~numpy.ndarray`
+        A list of :obj:`~numpy.ndarray.view` of ``vec`` where ``vecs[i]``
+        returns the array corresponding to the vector space
+        :math:`\mathbb{V}_{i}` as a vectorized column vector.
+
+    Examples
+    --------
+    Below we show an example of how to initialize a 
+    :class:`~qics.point.VecProduct` and how to access the vectors
+    corresponding to each cone and variable.
+
+    >>> import qics
+    >>> cones = [                                       \
+    ...     qics.cones.PosSemidefinite(3),              \
+    ...     qics.cones.QuantRelEntr(2, iscomplex=True)  \
+    ... ]
+    >>> x = qics.point.VecProduct(cones)
+    >>> x[0][0]  # Matrix corresponding to PosSemidefinite cone
+    array([[0., 0.],
+           [0., 0.]])
+    >>> x[1][0]  # Value corresponding to t of QuantRelEntr cone
+    array([[0.]])
+    >>> x[1][1]  # Matrix corresponding to X of QuantRelEntr cone
+    array([[0.+0.j, 0.+0.j, 0.+0.j],
+           [0.+0.j, 0.+0.j, 0.+0.j],
+           [0.+0.j, 0.+0.j, 0.+0.j]])
+    >>> x[1][2]  # Matrix corresponding to Y of QuantRelEntr cone
+    array([[0.+0.j, 0.+0.j, 0.+0.j],
+           [0.+0.j, 0.+0.j, 0.+0.j],
+           [0.+0.j, 0.+0.j, 0.+0.j]])
     """
 
     def __init__(self, cones, vec=None):
-        self.dims = []
-        self.types = []
-        self.dim = 0
+        dims = []
+        types = []
+        dim = 0
         for cone_k in cones:
-            self.dims.append(cone_k.dim)
-            self.types.append(cone_k.type)
-            self.dim += np.sum(cone_k.dim)
+            dims.append(cone_k.dim)
+            types.append(cone_k.type)
+            dim += np.sum(cone_k.dim)
 
         # Initialize vector
         if vec is not None:
             # If view of vector is already given, use that
-            assert vec.size == self.dim
+            assert vec.size == dim
             self.vec = vec
         else:
             # Otherwise allocate a new vector
-            self.vec = np.zeros((self.dim, 1))
+            self.vec = np.zeros((dim, 1))
 
         # Build views of vector
         def vec_to_mat(vec, dim, type, t):
@@ -192,7 +239,7 @@ class VecProduct(Vector):
         self.vecs = []
         self.mats = []
         t = 0
-        for dim_k, type_k in zip(self.dims, self.types):
+        for dim_k, type_k in zip(dims, types):
             self.vecs.append(self.vec[t : t + np.sum(dim_k)])
             if isinstance(type_k, list):
                 mats_k = []

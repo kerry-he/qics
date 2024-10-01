@@ -4,27 +4,27 @@ import numpy as np
 import scipy as sp
 
 import qics
-from qics.vectorize import mat_dim, mat_to_vec, vec_dim, vec_to_mat
+from qics.vectorize import mat_dim, vec_to_mat
 
 
 def read_file(filename):
-    """Reads a file representing a conic program, and
-    return a :class:`~qics.Model` representing this problem.
-    Currently only supports ``.dat-s``, ``.dat-c``, and ``.cbf`` file
-    formats.
+    """Reads a file representing a conic program, and return a
+    :class:`~qics.Model` representing this problem. Currently supports
+    ``*.dat-s``, ``*.dat-c``, and ``*.cbf`` file formats.
 
     Parameters
     ----------
-    filename : string
-        Name of the file we want to read.
+    filename : :obj:`string`
+        Name of the file and file format we want to read.
 
     Returns
     -------
-    qics.Model
-        Model representing the conic program.
+    :class:`~qics.Model`
+        Model representing the conic program from the specified file.
 
     See Also
     --------
+    write_file : Write a conic program to a file of a specified format.
     read_sdpa : Read file in the SDPA sparse format.
     read_cbf : Read file in the Conic Benchmark Format.
     """
@@ -38,18 +38,19 @@ def read_file(filename):
 
 def write_file(model, filename):
     """Writes a conic program represented by a :class:`~qics.Model`
-    to a specified file and format. Currently only supports ``.dat-s``,
-    ``.dat-c``, and ``.cbf`` formats.
+    to a specified file and format. Currently supports ``*.dat-s``,
+    ``*.dat-c``, and ``*.cbf`` formats.
 
     Parameters
     ----------
-    model : qics.Model
-        Instance of model containing model of the semidefinite program.
-    filename : string
-        Filename of file in SDPA sparse format to save in.
+    model : :class:`~qics.Model`
+        Model representing the conic program we want to write to a file.
+    filename : :obj:`string`
+        Name of the file and file format we want to write to.
 
     See Also
     --------
+    read_file : Read conic program from a file of a specified format.
     write_sdpa : Write file in the SDPA sparse format.
     write_cbf : Write file in the Conic Benchmark Format.
     """
@@ -63,40 +64,35 @@ def write_file(model, filename):
 
 def read_sdpa(filename):
     r"""Reads a file in the SDPA sparse format, and returns a
-    :class:`~qics.Model` represnting the primal
+    :class:`~qics.Model` represnting the standard form semidefinite program
 
     .. math::
 
-        \max_{X\in\mathbb{S}^n} &&& \langle C, X \rangle
+        \min_{x \in \mathbb{R}^p} &&& c^\top x
 
-        \text{s.t.} &&& \langle A_i, X \rangle = b_i, \quad i=1,\ldots,p
+        \text{s.t.} &&& \sum_{i=1}^p F_i x_i - F_0 \succeq 0
 
-         &&& X \succeq 0
+    Two types of SDPA sparse file formats are supported.
 
-    and dual
-
-    .. math::
-
-        \min_{y \in \mathbb{R}^p} &&& -b^\top y
-
-        \text{s.t.} &&& \sum_{i=1}^p A_i y_i - C \succeq 0
-
-    pair of semidefinite programs. Accepts either file extensions
-
-        - ``.dat-s``: Standard SDPA sparse file.
-        - ``.dat-c``: Complex-valued SDPA sparse file, in which case the data matrices
-          :math:`C\in\mathbb{H}^n`, :math:`A_i\in\mathbb{H}^n` are assumed to all be
-          Hermitian.
+    - ``*.dat-s``: Standard SDPA sparse file, where 
+      :math:`F_i\in\mathbb{S}^n` for :math:`i=0,\ldots,p`.
+    - ``*.dat-c``: Complex-valued SDPA sparse file, where 
+      :math:`F_i\in\mathbb{H}^n` for :math:`i=0,\ldots,p`.
 
     Parameters
     ----------
-    filename : string
-        Filename of file in SDPA sparse format to read.
+    filename : :obj:`string`
+        Name of the SPDA sparse file we want to read.
 
     Returns
     -------
-    qics.Model
-        Model representing the semidefinite program.
+    :class:`~qics.Model`
+        Model representing the semidefinite program from the specified 
+        file.
+
+    See Also
+    --------
+    write_sdpa : Write file in the SDPA sparse format.
     """
 
     # Determine if this is a complex or real SDP file
@@ -259,34 +255,40 @@ def read_sdpa(filename):
 
 
 def write_sdpa(model, filename):
-    r"""Writes a semidefinite program
+    r"""Writes a standard form semidefinite program, i.e.,
 
     .. math::
 
-        \max_{X\in\mathbb{S}^n} &&& \langle C, X \rangle
+        \min_{x \in \mathbb{R}^p} &&& c^\top x
 
-        \text{s.t.} &&& \langle A_i, X \rangle = b_i, \quad i=1,\ldots,p
+        \text{s.t.} &&& \sum_{i=1}^p F_i x_i - F_0 \succeq 0,
 
-         &&& X \succeq 0
-
-    with dual
+    or
 
     .. math::
 
-        \min_{y \in \mathbb{R}^p} &&& -b^\top y
+        \min_{X \in \mathbb{S}^n} &&& \langle F_0, X \rangle
 
-        \text{s.t.} &&& \sum_{i=1}^p A_i y_i - C \succeq 0
+        \text{s.t.} &&& \langle F_i, X \rangle = b_i, \quad i=1,\ldots,p
 
-    represented by a :class:`~qics.Model` to a ``.dat-s`` (or
-    ``.dat-c`` for complex-valued SDPs) file using the sparse SDPA
-    file format.
+        &&& X \succeq 0,
+
+    represented by a :class:`~qics.Model` to a file in the SDPA sparse
+    format ``*.dat-s``. If any of the matrices :math:`F_i` are complex
+    for :math:`i=0,\ldots,p`, then we use the complex SDPA sparse format
+    ``*.dat-c``.
 
     Parameters
     ----------
-    model : qics.Model
-        Instance of model containing model of the semidefinite program.
-    filename : string
-        Filename of file in SDPA sparse format to save in.
+    model : :class:`~qics.Model`
+        Model representing the standard form semidefinite program we want
+        to write to a file.
+    filename : :obj:`string`
+        Name of the SDPA sparse file we want to write to.
+
+    See Also
+    --------
+    write_sdpa : Read file in the SDPA sparse format.
     """
 
     # Get SDP data from model
@@ -296,7 +298,8 @@ def write_sdpa(model, filename):
     b = model.b_raw if model.use_A else -model.c_raw
     cones = model.cones
     iscomplex = model.iscomplex
-    assert sp.sparse.issparse(A)
+    if not sp.sparse.issparse(A):
+        A = sp.sparse.coo_matrix(A)
     assert iscomplex == (filename[-1] == "c")
 
     f = open(filename, "w")
@@ -394,8 +397,8 @@ def write_sdpa(model, filename):
 
 
 def read_cbf(filename):
-    r"""Reads a file in the Conic Benchmark Format, and returns
-    a :class:`~qics.Model` representing a conic program of the form
+    r"""Reads a file in the Conic Benchmark Format ``*.cbf``, and returns a
+    :class:`~qics.Model` representing a conic program of the form
 
     .. math::
 
@@ -403,17 +406,27 @@ def read_cbf(filename):
 
         \text{s.t.} &&& b - Ax = 0
 
-         &&& h - Gx \in \mathcal{K}
+         &&& h - Gx \in \mathcal{K}.
+
+    .. warning::
+
+        This function is quite limited in the types of ``*.cbf`` files that
+        can be read. It is recommended to only use this function together
+        with files written using :func:`~qics.io.write_cbf`.
 
     Parameters
     ----------
-    filename : string
-        Filename of file in CBF sparse format to read.
+    filename : :obj:`string`
+        Name of the CBF file we want to read.
 
     Returns
     -------
-    qics.Model
-        Model representing the conic program.
+    :class:`~qics.Model`
+        Model representing the conic program from the specified file.
+
+    See Also
+    --------
+    write_cbf : Write file in the Conic Benchmark Format.
     """
     # Determine if this is a complex or real SDP file
     file_extension = os.path.splitext(filename)[1]
@@ -422,7 +435,7 @@ def read_cbf(filename):
     f = open(filename, "r")
     cones = []
     offset = 0.0
-    lookup = {"qce": [], "qkd": []}
+    lookup = {"qce": [], "qkd": [], "mgm": []}
 
     def _read_cones(cone_type, cone_dim, lookup):
         if cone_type == "L+":
@@ -474,14 +487,38 @@ def read_cbf(filename):
             G_info = lookup["qkd"][lookup_id][0]
             Z_info = lookup["qkd"][lookup_id][1]
             return qics.cones.QuantKeyDist(G_info, Z_info, iscomplex=True)
-        elif cone_type == "SVECOPT":
-            pass
-        elif cone_type == "HVECOPT":
-            pass
-        elif cone_type == "SVECOPE":
-            pass
-        elif cone_type == "HVECOPE":
-            pass
+        elif cone_type == "SVECORE":
+            n = mat_dim(cone_dim // 3, compact=True)
+            return qics.cones.OpPerspecEpi(n, "log")
+        elif cone_type == "HVECORE":
+            n = mat_dim(cone_dim // 3, iscomplex=True, compact=True)
+            return qics.cones.OpPerspecEpi(n, "log", iscomplex=True)
+        elif "SVECMGM" in cone_type:
+            lookup_id = int(cone_type[1])
+            power = lookup["mgm"][lookup_id]
+            n = mat_dim(cone_dim // 3, compact=True)
+            return qics.cones.OpPerspecEpi(n, power)
+        elif "HVECMGM" in cone_type:
+            lookup_id = int(cone_type[1])
+            power = lookup["mgm"][lookup_id]
+            n = mat_dim(cone_dim // 3, iscomplex=True, compact=True)
+            return qics.cones.OpPerspecEpi(n, power, iscomplex=True)
+        elif cone_type == "SVECTRE":
+            n = mat_dim((cone_dim - 1) // 2, compact=True)
+            return qics.cones.OpPerspecTr(n, "log")
+        elif cone_type == "HVECTRE":
+            n = mat_dim((cone_dim - 1) // 2, iscomplex=True, compact=True)
+            return qics.cones.OpPerspecTr(n, "log", iscomplex=True)
+        elif "SVECTGM" in cone_type:
+            lookup_id = int(cone_type[1])
+            power = lookup["mgm"][lookup_id]
+            n = mat_dim((cone_dim - 1) // 2, compact=True)
+            return qics.cones.OpPerspecTr(n, power)
+        elif "HVECTGM" in cone_type:
+            lookup_id = int(cone_type[1])
+            power = lookup["mgm"][lookup_id]
+            n = mat_dim((cone_dim - 1) // 2, iscomplex=True, compact=True)
+            return qics.cones.OpPerspecTr(n, power, iscomplex=True)
 
     while True:
         line = f.readline()
@@ -557,6 +594,14 @@ def read_cbf(filename):
 
                 lookup["qkd"] += [(K_list, Z_list)]
 
+        if keyword == "MGMCONES":
+            line = f.readline().strip()
+            (ncones, _) = [int(i) for i in line.strip().split(" ")]
+            for i in range(ncones):
+                _ = int(f.readline().strip())
+                power_k = float(f.readline().strip())
+                lookup["mgm"] += [power_k]
+
         if keyword == "VAR":
             # Number and domain of variables
             # i.e., variables of the form x \in K
@@ -625,18 +670,22 @@ def read_cbf(filename):
     ## Process problem data
     ########################
     if use_G:
+        T = _get_expand_compact_matrices(cones)
+
         # Need to split A into [-G; -A] and b into [-h; -b]
         # and uncompact G, h
         c *= objsense
         G_idxs = np.delete(np.arange(A.shape[0]), A_idxs)
-        G = _uncompact_matrix(-A[G_idxs], cones)
-        h = _uncompact_matrix(-b[G_idxs], cones)
+        G = -T.T @ A[G_idxs]
+        h = -T.T @ b[G_idxs]
         A = A[A_idxs]
         b = b[A_idxs]
     else:
+        T = _get_expand_compact_matrices(cones)
+
         # No G, just need to uncompact c and A
-        c = _uncompact_matrix(c, cones) * objsense
-        A = _uncompact_matrix(A.T, cones).T
+        c = T.T @ c * objsense
+        A = A @ T
         G = None
         h = None
 
@@ -654,28 +703,34 @@ def write_cbf(model, filename):
 
          &&& h - Gx \in \mathcal{K}
 
-    represented by a :class:`~qics.Model` to a ``.cbf`` (or file using
-    the Conic Benchmark Format.
+    represented by a :class:`~qics.Model` to a ``.cbf`` file using the
+    Conic Benchmark Format.
 
     Parameters
     ----------
-    model : qics.Model
-        Instance of model containing model of the conic program.
-    filename : string
-        Filename of file in CBF sparse format to save in.
+    model : :class:`~qics.Model`
+        Model representing the conic program we want to write to a CBF 
+        file.
+    filename : :obj:`string`
+        Name of the CBF file we want to write to.
+
+    See Also
+    --------
+    write_cbf : Read file in the Conic Benchmark Format.
     """
     if model.use_G:
-        # Just need to compact columns of G
+        T = _get_expand_compact_matrices(model.cones)
+
         c = model.c_raw.copy()
         A = model.A_raw.copy()
         b = model.b_raw.copy()
-        G = _compact_matrix(model.G_raw.copy(), model)
-        h = _compact_matrix(model.h_raw.copy(), model)
+        G = T @ model.G_raw
+        h = T @ model.h_raw
     else:
         T = _get_expand_compact_matrices(model.cones)
 
-        c = T @ model.c_raw.copy()
-        A = model.A_raw.copy() @ T.T
+        c = T @ model.c_raw
+        A = model.A_raw @ T.T
         b = model.b_raw.copy()
     cones = model.cones
 
@@ -698,7 +753,7 @@ def write_cbf(model, filename):
     # Constraints
     q = 0
     cones_string = ""
-    lookup = {"qce": [], "qkd": []}
+    lookup = {"qce": [], "qkd": [], "mgm": []}
     for cone_k in cones:
         if isinstance(cone_k, qics.cones.NonNegOrthant):
             (cone_name, cone_size) = ("L+", cone_k.n)
@@ -737,29 +792,42 @@ def write_cbf(model, filename):
             lookup["qce"] += [(cone_k.dims, cone_k.sys)]
         if isinstance(cone_k, qics.cones.QuantKeyDist):
             if cone_k.get_iscomplex():
-                (cone_name, cone_size) = (
-                    "@" + str(len(lookup["qkd"])) + ":HVECQKD",
-                    1 + cone_k.n * cone_k.n,
-                )
+                cone_name = "@" + str(len(lookup["qkd"])) + ":HVECQKD"
+                cone_size = 1 + cone_k.n * cone_k.n
             else:
-                (cone_name, cone_size) = (
-                    "@" + str(len(lookup["qkd"])) + ":SVECQKD",
-                    1 + cone_k.n * (cone_k.n + 1) // 2,
-                )
+                cone_name = "@" + str(len(lookup["qkd"])) + ":SVECQKD"
+                cone_size = 1 + cone_k.n * (cone_k.n + 1) // 2
             lookup["qkd"] += [(cone_k.K_list_raw, cone_k.Z_list_raw)]
         if isinstance(cone_k, qics.cones.OpPerspecTr):
             if cone_k.get_iscomplex():
-                (cone_name, cone_size) = ("HVECOPT", 1 + 2 * cone_k.n * cone_k.n)
+                if cone_k.func == "log":
+                    cone_name = "HVECTRE"
+                else:
+                    cone_name = "@" + str(len(lookup["mgm"])) + ":HVECTGM"
+                    lookup["mgm"] += [cone_k.func]
+                cone_size = 1 + 2 * cone_k.n * cone_k.n
             else:
-                (cone_name, cone_size) = (
-                    "SVECOPT",
-                    1 + 2 * cone_k.n * (cone_k.n + 1) // 2,
-                )
+                if cone_k.func == "log":
+                    cone_name = "SVECTRE"
+                else:
+                    cone_name = "@" + str(len(lookup["mgm"])) + ":SVECTGM"
+                    lookup["mgm"] += [cone_k.func]
+                cone_size = 1 + 2 * cone_k.n * (cone_k.n + 1) // 2
         if isinstance(cone_k, qics.cones.OpPerspecEpi):
             if cone_k.get_iscomplex():
-                (cone_name, cone_size) = ("HVECOPE", 3 * cone_k.n * cone_k.n)
+                if cone_k.func == "log":
+                    cone_name = "HVECORE"
+                else:
+                    cone_name = "@" + str(len(lookup["mgm"])) + ":HVECMGM"
+                    lookup["mgm"] += [cone_k.func]
+                cone_size = 3 * cone_k.n * cone_k.n
             else:
-                (cone_name, cone_size) = ("SVECOPE", 3 * cone_k.n * (cone_k.n + 1) // 2)
+                if cone_k.func == "log":
+                    cone_name = "SVECORE"
+                else:
+                    cone_name = "@" + str(len(lookup["mgm"])) + ":SVECMGM"
+                    lookup["mgm"] += [cone_k.func]
+                cone_size = 3 * cone_k.n * (cone_k.n + 1) // 2
 
         q += cone_size
         cones_string += cone_name + " " + str(cone_size) + "\n"
@@ -789,46 +857,19 @@ def write_cbf(model, filename):
             totalnnz_k = sum([np.count_nonzero(Ki) for Ki in qkd_k[0]])
             iscomplex_k = any([np.iscomplexobj(Ki) for Ki in qkd_k[0]])
             dtype = np.complex128 if iscomplex_k else np.float64
-            f.write(
-                str(totalnnz_k)
-                + " "
-                + str(len(qkd_k[0]))
-                + " "
-                + str(qkd_k[0][0].shape[0])
-                + " "
-                + str(qkd_k[0][0].shape[1])
-                + " "
-                + str(int(iscomplex_k))
-                + "\n"
-            )
+            f.write(str(totalnnz_k) + " " + str(len(qkd_k[0])) + " "
+                + str(qkd_k[0][0].shape[0]) + " " + str(qkd_k[0][0].shape[1])
+                + " " + str(int(iscomplex_k)) + "\n")
             for t, Kt in enumerate(qkd_k[0]):
                 # Write Ki
                 Kt = sp.sparse.coo_matrix(Kt, dtype=dtype)
                 for it, jt, vt in zip(Kt.row, Kt.col, Kt.data):
                     if iscomplex_k:
-                        f.write(
-                            str(t)
-                            + " "
-                            + str(it)
-                            + " "
-                            + str(jt)
-                            + " "
-                            + str(vt.real)
-                            + " "
-                            + str(vt.imag)
-                            + "\n"
-                        )
+                        f.write(str(t) + " " + str(it) + " " + str(jt) + " "
+                            + str(vt.real) + " " + str(vt.imag) + "\n")
                     else:
-                        f.write(
-                            str(t)
-                            + " "
-                            + str(it)
-                            + " "
-                            + str(jt)
-                            + " "
-                            + str(vt)
-                            + "\n"
-                        )
+                        f.write(str(t) + " " + str(it) + " " + str(jt) + " "
+                            + str(vt) + "\n")
 
             # How many Zlist, and size of Zlist, and if complex or not
             totalnnz_k = sum([np.count_nonzero(Zi) for Zi in qkd_k[1]])
@@ -849,6 +890,14 @@ def write_cbf(model, filename):
                     f.write(
                         str(t) + " " + str(it) + " " + str(jt) + " " + str(vt) + "\n"
                     )
+        f.write("\n")
+
+    if len(lookup["mgm"]) > 0:
+        f.write("MGMCONES" + "\n")
+        f.write(str(len(lookup["mgm"])) + " " + str(len(lookup["mgm"])) + "\n")
+        for mgm_k in lookup["mgm"]:
+            f.write(str(1) + "\n")
+            f.write(str(mgm_k) + "\n")
         f.write("\n")
 
     if model.use_G:
@@ -885,7 +934,11 @@ def write_cbf(model, filename):
         f.write(str(model.offset) + "\n")
 
     if model.use_G:
-        A = sp.sparse.coo_matrix(np.vstack((-G, A)))
+        if not sp.sparse.issparse(G):
+            G = sp.sparse.coo_matrix(G)
+        if not sp.sparse.issparse(A):
+            A = sp.sparse.coo_matrix(A)        
+        A = sp.sparse.coo_matrix(sp.sparse.vstack([-G, A]))
     else:
         A = sp.sparse.coo_matrix(A)
     f.write("\n" + "ACOORD" + "\n")
@@ -905,44 +958,6 @@ def write_cbf(model, filename):
     f.close()
 
     return
-
-
-def _compact_matrix(G, model):
-    # Loop through columns
-    Gc = []
-    for i in range(G.shape[1]):
-        # Loop through cones
-        Gc_i = []
-        for j, cone_j in enumerate(model.cones):
-            G_ij = G[model.cone_idxs[j], [i]]
-            # Loop through subvectors (if necessary)
-            if isinstance(cone_j.dim, list):
-                Gc_ij = []
-                idxs = np.insert(np.cumsum(cone_j.dim), 0, 0)
-                for k in range(len(cone_j.dim)):
-                    Gc_ijk = G_ij[idxs[k] : idxs[k + 1]]
-                    if cone_j.type[k] == "s":
-                        Gc_ijk = mat_to_vec(vec_to_mat(Gc_ijk), compact=True)
-                    elif cone_j.type[k] == "h":
-                        Gc_ijk = mat_to_vec(
-                            vec_to_mat(Gc_ijk, iscomplex=True), compact=True
-                        )
-                    Gc_ij += [Gc_ijk]
-
-                Gc_ij = np.vstack(Gc_ij)
-
-            else:
-                Gc_ij = G_ij
-                if cone_j.type == "s":
-                    Gc_ij = mat_to_vec(vec_to_mat(Gc_ij), compact=True)
-                elif cone_j.type == "h":
-                    Gc_ij = mat_to_vec(vec_to_mat(Gc_ij, iscomplex=True), compact=True)
-
-            Gc_i += [Gc_ij]
-        Gc += [np.vstack(Gc_i)]
-    Gc = np.hstack(Gc)
-
-    return Gc
 
 
 def _get_compact_to_full_op(n, iscomplex=False):
@@ -1002,75 +1017,3 @@ def _get_expand_compact_matrices(cones):
                 compact_to_full_op += [sp.sparse.eye(dim_k)]
 
     return sp.sparse.block_diag(compact_to_full_op, format="csc")
-
-
-def _uncompact_matrix(G, cones):
-    # Create compact cone indices and dimensions
-    cone_tot_dims = []
-    cone_dims = []
-    for j, cone_j in enumerate(cones):
-        if isinstance(cone_j.dim, list):
-            cone_dims_j = []
-            for k in range(len(cone_j.dim)):
-                if cone_j.type[k] == "r":
-                    cone_dims_j += [cone_j.dim[k]]
-                elif cone_j.type[k] == "s":
-                    cone_dims_j += [vec_dim(mat_dim(cone_j.dim[k]), compact=True)]
-                elif cone_j.type[k] == "h":
-                    cone_dims_j += [
-                        vec_dim(
-                            mat_dim(cone_j.dim[k], iscomplex=True),
-                            compact=True,
-                            iscomplex=True,
-                        )
-                    ]
-        else:
-            if cone_j.type == "r":
-                cone_dims_j = cone_j.dim
-            elif cone_j.type == "s":
-                cone_dims_j = vec_dim(mat_dim(cone_j.dim), compact=True)
-            elif cone_j.type == "h":
-                cone_dims_j = vec_dim(
-                    mat_dim(cone_j.dim, iscomplex=True), compact=True, iscomplex=True
-                )
-        cone_dims += [cone_dims_j]
-        cone_tot_dims += [np.sum(cone_dims_j)]
-    cone_idxs = np.insert(np.cumsum(cone_tot_dims), 0, 0)
-
-    # Loop through columns
-    if sp.sparse.issparse(G):
-        G = G.toarray()
-    Gc = []
-    for i in range(G.shape[1]):
-        # Loop through cones
-        Gc_i = []
-        for j, cone_j in enumerate(cones):
-            G_ij = G[cone_idxs[j] : cone_idxs[j + 1], [i]]
-            # Loop through subvectors (if necessary)
-            if isinstance(cone_dims[j], list):
-                Gc_ij = []
-                idxs = np.insert(np.cumsum(cone_dims[j]), 0, 0)
-                for k in range(len(cone_dims[j])):
-                    Gc_ijk = G_ij[idxs[k] : idxs[k + 1]]
-                    if cone_j.type[k] == "s":
-                        Gc_ijk = mat_to_vec(vec_to_mat(Gc_ijk, compact=True))
-                    elif cone_j.type[k] == "h":
-                        Gc_ijk = mat_to_vec(
-                            vec_to_mat(Gc_ijk, iscomplex=True, compact=True)
-                        )
-                    Gc_ij += [Gc_ijk]
-
-                Gc_ij = np.vstack(Gc_ij)
-
-            else:
-                Gc_ij = G_ij
-                if cone_j.type == "s":
-                    Gc_ij = mat_to_vec(vec_to_mat(Gc_ij, compact=True))
-                elif cone_j.type == "h":
-                    Gc_ij = mat_to_vec(vec_to_mat(Gc_ij, iscomplex=True, compact=True))
-
-            Gc_i += [Gc_ij]
-        Gc += [np.vstack(Gc_i)]
-    Gc = np.hstack(Gc)
-
-    return Gc

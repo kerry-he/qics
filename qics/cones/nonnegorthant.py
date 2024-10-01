@@ -12,7 +12,7 @@ class NonNegOrthant(SymCone):
 
     Parameters
     ----------
-    n : int
+    n : :obj:`int`
         Dimension of the cone.
     """
 

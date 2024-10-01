@@ -8,14 +8,14 @@ class SecondOrder(Cone):
 
     .. math::
 
-        \mathcal{Q}_{n+1} = \{ (t, x) \in \mathbb{R} \times \mathbb{R}^{n} :
-        t \geq \| x \|_2 \}.
+        \mathcal{Q}_{n+1} = \{ (t, x) \in \mathbb{R} \times \mathbb{R}^{n}
+        : t \geq \| x \|_2 \}.
 
     Parameters
     ----------
-    n : int
-        Dimension of the vector :math:`x`, i.e., how many terms are in the Euclidean
-        norm.
+    n : :obj:`int`
+        Dimension of the vector :math:`x`, i.e., how many terms are in the
+        Euclidean norm.
     """
 
     def __init__(self, n):

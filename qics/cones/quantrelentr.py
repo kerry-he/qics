@@ -6,28 +6,36 @@ from qics.cones.base import Cone, get_central_ray_relentr
 
 
 class QuantRelEntr(Cone):
-    r"""A class representing a classical relative entropy cone
+    r"""A class representing a quantum relative entropy cone
 
     .. math::
 
-        \mathcal{K}_{\text{qre}} = \text{cl}\{ (t, X, Y) \in \mathbb{R} \times
+        \mathcal{QRE}_{n} = \text{cl}\{ (t, X, Y) \in \mathbb{R} \times
         \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq S(X \| Y) \},
 
     where
 
     .. math::
 
-        S(X \| Y) = \text{tr}[X \log(X)] - \text{tr}[X \log(Y)],
+        S(X \| Y) = \text{tr}[X \log(X) - X \log(Y)],
 
     is the quantum (Umegaki) relative entropy function.
 
     Parameters
     ----------
-    n : int
-        Dimension of the (n, n) matrices :math:`X` and :math:`Y`.
-    iscomplex : bool
-        Whether the matrices symmetric :math:`X,Y \in \mathbb{S}^n` (False) or
-        Hermitian :math:`X,Y \in \mathbb{H}^n` (True). Default is False.
+    n : :obj:`int`
+        Dimension of the matrices :math:`X` and :math:`Y`.
+    iscomplex : :obj:`bool`
+        Whether the matrices :math:`X` and :math:`Y` are defined over
+        :math:`\mathbb{H}^n` (``True``), or restricted to 
+        :math:`\mathbb{S}^n` (``False``). The default is ``False``.
+
+    See also
+    --------
+    ClassRelEntr : Classical relative entropy
+    QuantEntr : (Homogenized) quantum entropy cone
+    QuantCondEntr : Quantum conditional entropy cone
+    QuantKeyDist : Quantum key distribution cone 
     """
 
     def __init__(self, n, iscomplex=False):

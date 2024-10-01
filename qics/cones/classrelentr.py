@@ -9,7 +9,7 @@ class ClassRelEntr(Cone):
 
     .. math::
 
-        \mathcal{K}_{\text{cre}} = \text{cl}\{ (t, x, y) \in \mathbb{R} \times
+        \mathcal{CRE}_{n} = \text{cl}\{ (t, x, y) \in \mathbb{R} \times
         \mathbb{R}^n_{++} \times \mathbb{R}^n_{++} : t \geq H(x \| y) \},
 
     where
@@ -18,13 +18,19 @@ class ClassRelEntr(Cone):
 
         H(x \| y) = \sum_{i=1}^n x_i \log(x_i / y_i),
 
-    is the classical relative entropy function (Kullback-Leibler divergence).
+    is the classical relative entropy function (Kullback-Leibler 
+    divergence).
 
     Parameters
     ----------
-    n : int
-        Dimension of the vectors :math:`x` and :math:`y`, i.e., how many terms are in
-        the classical relative entropy function.
+    n : :obj:`int`
+        Dimension of the vectors :math:`x` and :math:`y`, i.e., how many
+        terms are in the classical relative entropy function.
+
+    See also
+    --------
+    ClassEntr : (Homogenized) classical entropy cone
+    QuantRelEntr : Quantum relative entropy cone
     """
 
     def __init__(self, n):

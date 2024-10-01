@@ -16,7 +16,7 @@ rhos = [qu.random.density_matrix(n, iscomplex=True) for i in range(n)]
 
 # Define objective function
 # where x = ({pi}, t) and c = ({-S(N(Xi))}, 1)
-c1 = np.array([[-qu.quant_entropy(rho)] for rho in rhos])
+c1 = np.array([[-qu.entropy(rho)] for rho in rhos])
 c2 = np.array([[1.0]])
 c = np.vstack((c1, c2))
 

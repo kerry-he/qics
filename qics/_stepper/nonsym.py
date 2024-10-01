@@ -8,7 +8,9 @@ alpha_sched = [0.9999, 0.999, 0.99, 0.9, 0.8, 0.7, 0.5, 0.3, 0.2, 0.1, 0.01, 0.0
 
 
 class NonSymStepper:
-    def __init__(self, kktsolver, model):
+    def __init__(self, kktsolver, model, toa=True):
+        self.toa = toa
+
         self.kktsolver = kktsolver
         self.prox = 0.0
 
@@ -31,9 +33,10 @@ class NonSymStepper:
         res_norm = self.kktsolver.solve_sys(self.dir_p, self.rhs)
 
         # Get TOA prediction direction
-        self.update_rhs_pred_toa(model, point, mu, self.dir_p)
-        temp_res_norm = self.kktsolver.solve_sys(self.dir_p_toa, self.rhs)
-        res_norm = max(temp_res_norm, res_norm)
+        if self.toa:
+            self.update_rhs_pred_toa(model, point, mu, self.dir_p)
+            temp_res_norm = self.kktsolver.solve_sys(self.dir_p_toa, self.rhs)
+            res_norm = max(temp_res_norm, res_norm)
 
         # Get centering direction
         self.update_rhs_cent(model, point, mu)
@@ -41,21 +44,28 @@ class NonSymStepper:
         res_norm = max(temp_res_norm, res_norm)
 
         # Get TOA centering direction
-        self.update_rhs_cent_toa(model, point, mu, self.dir_c)
-        temp_res_norm = self.kktsolver.solve_sys(self.dir_c_toa, self.rhs)
-        res_norm = max(temp_res_norm, res_norm)
+        if self.toa:
+            self.update_rhs_cent_toa(model, point, mu, self.dir_c)
+            temp_res_norm = self.kktsolver.solve_sys(self.dir_c_toa, self.rhs)
+            res_norm = max(temp_res_norm, res_norm)
+        
+        success = False
 
-        step_mode = "co_toa"
-        point, alpha, success = self.line_search(model, point, step_mode)
+        if self.toa:
+            step_mode = "co_toa"
+            point, alpha, success = self.line_search(model, point, step_mode)
+
         if not success:
             step_mode = "comb"
             point, alpha, success = self.line_search(model, point, step_mode)
-            if not success:
-                step_mode = "ce_toa"
-                point, alpha, success = self.line_search(model, point, step_mode)
-                if not success:
-                    step_mode = "cent"
-                    point, alpha, success = self.line_search(model, point, step_mode)
+
+        if not success and self.toa:
+            step_mode = "ce_toa"
+            point, alpha, success = self.line_search(model, point, step_mode)
+
+        if not success:
+            step_mode = "cent"
+            point, alpha, success = self.line_search(model, point, step_mode)
 
         if verbose == 3:
             print(

@@ -15,7 +15,7 @@ n = 4
 D = 0.25
 
 rho = qu.random.density_matrix(n)
-entr_rho = qu.quant_entropy(rho)
+entr_rho = qu.entropy(rho)
 
 N = n * n
 sn = vec.vec_dim(n, compact=True)

@@ -1,19 +1,27 @@
 Quantum Information Conic Solver
 ================================
 
-**QICS** is a primal-dual interior point solver fully implemented in Python, and is 
-specialized towards problems arising in quantum information theory. **QICS** solves 
-conic programs of the form
+.. image:: https://readthedocs.org/projects/qics/badge/?version=latest
+  :target: https://qics.readthedocs.io/en/latest/?badge=latest
+.. image:: http://github.com/kerry-he/qics/actions/workflows/ci.yml/badge.svg?event=push
+  :target: http://github.com/kerry-he/qics/actions/workflows/ci.yml
+.. image:: http://img.shields.io/pypi/v/qics.svg
+  :target: https://pypi.python.org/pypi/qics/
+
+**QICS** is a primal-dual interior point solver fully implemented in Python, and
+is specialized towards problems arising in quantum information theory. **QICS**
+solves conic programs of the form
 
 .. math::
 
   \min_{x \in \mathbb{R}^n} \quad c^\top x \quad 
   \text{s.t.} \quad b - Ax = 0, \  h - Gx \in \mathcal{K},
 
-where :math:`c\in\mathbb{R}^n`, :math:`b\in\mathbb{R}^p`, :math:`h\in\mathbb{R}^q`,
-:math:`A\in\mathbb{R}^{p\times n}`, :math:`G\in\mathbb{R}^{q\times n}`, and 
-:math:`\mathcal{K} \subset \mathbb{R}^{q}` is a Cartesian product of convex cones. Some 
-notable cones that **QICS** supports include:
+where :math:`c\in\mathbb{R}^n`, :math:`b\in\mathbb{R}^p`, 
+:math:`h\in\mathbb{R}^q`, :math:`A\in\mathbb{R}^{p\times n}`, 
+:math:`G\in\mathbb{R}^{q\times n}`, and :math:`\mathcal{K}\subset\mathbb{R}^{q}`
+is a Cartesian product of convex cones. Some notable cones that **QICS** 
+supports include:
 
 .. list-table::
    :widths: 25 25 50
@@ -32,27 +40,28 @@ notable cones that **QICS** supports include:
        \mathbb{H}^n_{++} : t \geq -u S(u^{-1} X) \}`
    * - Quantum relative entropy
      - :class:`qics.cones.QuantRelEntr`
-     - :math:`\text{cl}\{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
-       \mathbb{H}^n_{++} : t \geq S(X \| Y) \}`
+     - :math:`\text{cl}\{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++}
+       \times \mathbb{H}^n_{++} : t \geq S(X \| Y) \}`
    * - Quantum conditional entropy
      - :class:`qics.cones.QuantCondEntr`
-     - :math:`\text{cl}\{ (t, X) \in \mathbb{R} \times \mathbb{H}^{n}_{++} : 
+     - :math:`\text{cl}\{ (t, X) \in \mathbb{R} \times \mathbb{H}^{n}_{++} :
        t \geq -S(X) + S(\text{tr}_i(X)) \}`
    * - Quantum key distribution
      - :class:`qics.cones.QuantKeyDist`
-     - :math:`\text{cl}\{ (t, X) \in \mathbb{R} \times \mathbb{H}^n_{++} : 
+     - :math:`\text{cl}\{ (t, X) \in \mathbb{R} \times \mathbb{H}^n_{++} :
        t \geq -S(\mathcal{G}(X)) + S(\mathcal{Z}(\mathcal{G}(X))) \}`
    * - Operator perspective epigraph
      - :class:`qics.cones.OpPerspecEpi`
-     - :math:`\text{cl}\{ (T, X, Y) \in \mathbb{H}^n \times \mathbb{H}^n_{++} \times 
-       \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \}`
+     - :math:`\text{cl}\{ (T, X, Y) \in \mathbb{H}^n \times \mathbb{H}^n_{++}
+       \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \}`
 
 where :math:`S(X)=-\text{tr}[X\log(X)]` is the quantum entropy, 
-:math`S(X \| Y)=\text{tr}[X\log(X) - X\log(Y)]` is the quantum relative entropy, and 
-:math:`P_g(X, Y)=X^{1/2} g(X^{-1/2} Y X^{-1/2}) X^{1/2}` is the non-commutative or 
-operator perspective.
+:math:`S(X \| Y)=\text{tr}[X\log(X) - X\log(Y)]` is the quantum relative 
+entropy, and :math:`P_g(X, Y)=X^{1/2} g(X^{-1/2} Y X^{-1/2}) X^{1/2}` is the
+noncommutative or operator perspective.
 
-The full list of supported cones can be found :doc:`here</api/cones>`.
+The full list of supported cones can be found 
+:ref:`here<guide/reference:cones>`.
 
 
 Features
@@ -60,11 +69,12 @@ Features
 
 - **Efficient quantum relative entropy programming**
 
-  We support optimizing over the quantum relative entropy cone, as well as related cones
-  including the quantum conditional entropy cone, as well as slices of the quantum 
-  relative entropy cone that arise when solving quantum key rates of quantum 
-  cryptographic protocols. Numerical results show that **QICS** solves problems much 
-  faster than existing quantum relative entropy programming solvers, such as 
+  We support optimizing over the quantum relative entropy cone, as well as 
+  related cones including the quantum conditional entropy cone, as well as 
+  slices of the quantum relative entropy cone that arise when solving quantum 
+  key rates of quantum cryptographic protocols. Numerical results show that 
+  **QICS** solves problems much faster than existing quantum relative entropy 
+  programming solvers, such as 
   `Hypatia <https://github.com/jump-dev/Hypatia.jl>`_, `DDS
   <https://github.com/mehdi-karimi-math/DDS>`_, and `CVXQUAD
   <https://github.com/hfawzi/cvxquad>`_.
@@ -73,28 +83,29 @@ Features
 
   We implement an efficient semidefinite programming solver which utilizes 
   state-of-the-art techniques for symmetric cone programming, including using 
-  Nesterov-Todd scalings and exploiting sparsity in the problem structure. Numerical 
-  results show that **QICS** has comparable performance to state-of-the-art semidefinite
-  programming software, such as `MOSEK <https://www.mosek.com/>`_, 
+  Nesterov-Todd scalings and exploiting sparsity in the problem structure. 
+  Numerical results show that **QICS** has comparable performance to 
+  state-of-the-art semidefinite programming software, such as 
+  `MOSEK <https://www.mosek.com/>`_, 
   `SDPA <https://sdpa.sourceforge.net/index.html>`_, `SDPT3 
   <https://www.math.cmu.edu/~reha/sdpt3.html>`_ and `SeDuMi 
   <https://sedumi.ie.lehigh.edu/>`_.
 
 - **Complex-valued matrices**
 
-  Users can specify whether cones involving symmetric matrices, such as the positive 
-  semidefinite cone or quantum relative entropy cone, are real-valued or complex-valued
-  (i.e., Hermitian). Support for Hermitian matrices is embedded directly in the 
-  definition of the cone, which can be more computationally efficient than `lifting into
-  the real-valued symmetric cone 
+  Users can specify whether cones involving symmetric matrices, such as the
+  positive semidefinite cone or quantum relative entropy cone, are real-valued
+  or complex-valued (i.e., Hermitian). Support for Hermitian matrices is 
+  embedded directly in the definition of the cone, which can be more 
+  computationally efficient than `lifting into the real-valued symmetric cone 
   <https://docs.mosek.com/modeling-cookbook/sdo.html#hermitian-matrices>`_.
 
 
 Installation
 ------------
 
-**QICS** is currently supported for Python 3.8 or later, and can be directly installed 
-from `pip <https://pypi.org/project/qics/>`_ by calling
+**QICS** is currently supported for Python 3.8 or later, and can be directly
+installed from `pip <https://pypi.org/project/qics/>`_ by calling
 
 .. code-block:: bash
 
@@ -104,18 +115,18 @@ from `pip <https://pypi.org/project/qics/>`_ by calling
 PICOS interface
 ---------------
 
-The easiest way to use **QICS** is through the Python optimization modelling interface 
-`PICOS <https://picos-api.gitlab.io/picos/>`_. Below, we show how a simple :ref:`nearest
-correlation matrix<Nearest>` problem can be solved.
+The easiest way to use **QICS** is through the Python optimization modelling 
+interface `PICOS <https://picos-api.gitlab.io/picos/>`_. Below, we show how a 
+simple :ref:`nearest correlation matrix<examples/qrep/nearest:nearest 
+correlation matrix>` problem can be solved.
 
 .. code-block:: python
 
-   import numpy
    import picos
 
    # Define the conic program
    P = picos.Problem()
-   X = numpy.array([[2., 1.], [1., 2.]])
+   X = picos.Constant("X", [[2., 1.], [1., 2.]])
    Y = picos.SymmetricVariable("Y", 2)
    
    P.set_objective("min", picos.quantrelentr(X, Y))
@@ -124,15 +135,17 @@ correlation matrix<Nearest>` problem can be solved.
    # Solve the conic program
    P.solve(solver="qics")
 
-Some additional details about how to use QICS with PICOS can be found :ref:`here<picos-interface>`.
+Some additional details about how to use QICS with PICOS can be found 
+:doc:`here<guide/picos>`.
 
 
 Native interface
 ----------------
 
 Alternatively, advanced users can use the QICS' native interface, which provides 
-additional flexibilty in how the problem is parsed to the solver. Below, we show how the
-same nearest correlation matrix problem can be solved using QICS' native interface. 
+additional flexibilty in how the problem is parsed to the solver. Below, we show
+how the same nearest correlation matrix problem can be solved using QICS' native
+interface. 
 
 .. code-block:: python
 
@@ -156,12 +169,12 @@ same nearest correlation matrix problem can be solved using QICS' native interfa
    solver = qics.Solver(model)
    info = solver.solve()
 
-Additional details describing this example can be found :ref:`here<getting-started>`.
+Additional details explaining this example can be found 
+:doc:`here<guide/gettingstarted>`.
 
 .. toctree::
    :hidden:
    :maxdepth: 3
-   :caption: Contents:
 
    Introduction<self>
    guide/index.rst

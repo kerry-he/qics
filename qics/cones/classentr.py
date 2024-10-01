@@ -9,8 +9,8 @@ class ClassEntr(Cone):
 
     .. math::
 
-        \mathcal{K}_{\text{ce}} = \text{cl}\{ (t, u, x) \in \mathbb{R} \times
-        \mathbb{R}_{++} \times \mathbb{R}^n_{++} : t \geq -u H(x / u) \},
+        \mathcal{CE}_{n} = \text{cl}\{ (t, u, x) \in \mathbb{R} \times
+        \mathbb{R}_{++} \times \mathbb{R}^n_{++} : t \geq -u H(u^{-1}x) \},
 
     where
 
@@ -18,14 +18,33 @@ class ClassEntr(Cone):
 
         H(x) = -\sum_{i=1}^n x_i \log(x_i),
 
-    is the classical (Shannon) entropy function. The classical entropy epigraph can be
-    recovered by enforcing the linear constraint :math:`u=1`.
+    is the classical (Shannon) entropy function. 
 
     Parameters
     ----------
-    n : int
-        Dimension of the vector :math:`x`, i.e., how many terms are in the classical
-        entropy function.
+    n : :obj:`int`
+        Dimension of the vector :math:`x`, i.e., how many terms are in the
+        classical entropy function.
+
+    See also
+    --------
+    ClassRelEntr : Classical relative entropy cone
+    QuantEntr : (Homogenized) quantum entropy cone
+
+    Notes
+    -----
+    The epigraph of the classical entropy can be obtained by enforcing the
+    linear constraint :math:`u=1`. 
+    
+    Additionally, the exponential cone
+
+    .. math::
+
+        \mathcal{E}=\{ (x,y,z)\in\mathbb{R}_+\times\mathbb{R}_+
+        \times\mathbb{R} : y \geq x \exp(z/x) \},
+
+    can be modelled by realizing that if :math:`(x,y,z)\in\mathcal{E}`,
+    then :math:`(-z, y, x)\in\mathcal{CE}_1`.
     """
 
     def __init__(self, n):

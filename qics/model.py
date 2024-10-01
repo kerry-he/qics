@@ -6,7 +6,7 @@ from qics._utils import linalg
 
 
 class Model:
-    r"""A class representing an instance of the primal.
+    r"""A class representing an instance of the standard form primal
 
     .. math::
 
@@ -14,42 +14,55 @@ class Model:
 
         \text{s.t.} &&& b - Ax = 0
 
-         &&& h - Gx \in \mathcal{K}
+         &&& h - Gx \in \mathcal{K},
 
     and dual
 
     .. math::
 
-        \max_{y \in \mathbb{R}^p, z \in \mathbb{R}^q} &&& -b^\top y - h^\top z
+        \max_{y \in \mathbb{R}^p, z \in \mathbb{R}^q} &&& 
+        -b^\top y - h^\top z
 
         \text{s.t.} &&& c + A^\top y + G^\top z = 0
 
-         &&& z \in \mathcal{K}_*
+         &&& z \in \mathcal{K}_*,
 
-    standard form conic programs, where :math:`c \in \mathbb{R}^n`,
-    :math:`b \in \mathbb{R}^p`, :math:`h \in \mathbb{R}^q`,
-    :math:`A \in \mathbb{R}^{p \times n}`, :math:`G \in \mathbb{R}^{q \times n}`,
-    and :math:`\mathcal{K} \subset \mathbb{R}^{q}` is a convex, proper cone with dual
-    cone :math:`\mathcal{K}_* \subset \mathbb{R}^{q}`.
+    conic programs, where :math:`c\in\mathbb{R}^n`, 
+    :math:`b\in\mathbb{R}^p`, :math:`h\in\mathbb{R}^q`, 
+    :math:`A\in\mathbb{R}^{p\times n}`, :math:`G\in\mathbb{R}^{q\times n}`,
+    and :math:`\mathcal{K}\subset\mathbb{R}^{q}` is a convex, proper cone 
+    with dual cone :math:`\mathcal{K}_*\subset\mathbb{R}^{q}`.
 
 
     Parameters
     ----------
-    c : (n, 1) ndarray
-        Float array representing the linear objective.
-    A : (p, n) ndarray or scipy.sparse.sparray, optional
-        Float array representing linear equality constraints. Default is empty matrix.
-    b : (p, 1) ndarray, optional
-        Float array representing linear equality constraints. Default is ``0``.
-    G : (q, n) ndarray or scipy.sparse.sparray, optional
-        Float array representing linear cone constraints. Default is ``-I``.
-    h : (q, 1) ndarray, optional
-        Float array representing linear cone constraints. Default is ``0``.
-    cones : list, optional
-        List of :class:`qics.cones` representing the Cartesian product of cones
-        :math:`\mathcal{K}`. Default is empty set.
-    offset : float, optional
-        Constant offset term to add to the objective function. Default is ``0``.
+    c : :class:`~numpy.ndarray`
+        2D :obj:`~numpy.float64` array of size ``(n, 1)`` representing the
+        linear objective :math:`c`.
+    A : :class:`~numpy.ndarray` or :class:`~scipy.sparse.sparray`, optional
+        2D :obj:`~numpy.float64` array of size ``(p, 1)`` representing 
+        linear equality constraint matrix :math:`A`. The default is
+        ``numpy.empty((0, n))``, i.e., there are no linear equalitiy
+        constraints.
+    b : :class:`~numpy.ndarray`, optional
+        2D :obj:`~numpy.float64` array of size ``(p, 1)`` representing
+        linear equality constraint vector :math:`b`. The default is
+        ``numpy.zeros((p, 1))``, i.e., :math:`b=0`.
+    G : :class:`~numpy.ndarray` or :class:`~scipy.sparse.sparray`, optional
+        2D :obj:`~numpy.float64` array of size ``(q, n)`` representing
+        linear cone constraint matrix :math:`G`. The default is 
+        ``-scipy.sparse.eye(n)``, i.e., cone constraints are of the
+        simplified form :math:`x+h\in\mathcal{K}`.
+    h : :class:`~numpy.ndarray`, optional
+        2D :obj:`~numpy.float64` array of size ``(q, 1)`` representing
+        linear cone constraint vector :math:`h`. The default is 
+        ``numpy.zeros((q, 1))``, i.e., :math:`h=0`.
+    cones : :class:`list` of :mod:`~qics.cones`, optional
+        Cartesian product of cones :math:`\mathcal{K}`. Default is ``[]``
+        i.e., there are no conic constraints.
+    offset : :class:`float`, optional
+        Constant offset term to add to the objective function. Default is
+        ``0``.
     """
 
     def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0):

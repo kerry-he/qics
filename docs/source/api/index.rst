@@ -1,13 +1,30 @@
 API reference
 =============
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+Here, we provide the technical documentation for the QICS module. Regular use of
+QICS requires the following set of submodules.
 
-   qics.rst
-   cones.rst
-   vectorize.rst
-   quantum.rst
-   io.rst
-   point.rst
+- :mod:`qics`
+
+- :mod:`qics.cones`
+
+- :mod:`qics.io`
+
+- :mod:`qics.point`
+
+- :mod:`qics.quantum`
+
+  - :mod:`qics.quantum.random`
+  
+- :mod:`qics.vectorize`
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+
+   qics <qics>
+   qics.cones <cones>
+   qics.io <io>
+   qics.point <point>
+   qics.quantum <quantum>
+   qics.vectorize <vectorize>

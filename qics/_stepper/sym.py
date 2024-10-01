@@ -1,9 +1,13 @@
-from qics.point import Point
+from qics.point import Point, VecProduct
 
 
 class SymStepper:
-    def __init__(self, kktsolver, model):
-        self.kktsolver = kktsolver
+    def __init__(self, kktsolver, model, toa=True):
+        self.toa = toa
+        if not toa:
+            self.dir_dummy = VecProduct(model.cones)
+
+        self.kktsolver = kktsolver 
 
         self.rhs = Point(model)
         self.dir_a = Point(model)
@@ -82,8 +86,12 @@ class SymStepper:
         self.rhs.y[:] = res["y"] * (1 - sigma)
         self.rhs.z.vec[:] = res["z"] * (1 - sigma)
 
-        for k, cone_k in enumerate(model.cones):
-            cone_k.comb_dir(self.rhs.s[k], dir_a.s[k], dir_a.z[k], sigma * mu)
+        if self.toa:
+            for k, cone_k in enumerate(model.cones):
+                cone_k.comb_dir(self.rhs.s[k], dir_a.s[k], dir_a.z[k], sigma * mu)
+        else:
+            for k, cone_k in enumerate(model.cones):
+                cone_k.comb_dir(self.rhs.s[k], self.dir_dummy[k], self.dir_dummy[k], sigma * mu)
 
         self.rhs.tau[:] = res["tau"] * (1 - sigma)
         self.rhs.kap[:] = -point.kap + (-dir_a.kap * dir_a.tau + sigma * mu) / point.tau

@@ -1,7 +1,10 @@
-Cartesian product of cones
-============================
+Block diagonal
+==============
 
-Consider the semidefinite program from Example 2 of :ref:`[1] <blockdiag_refs>`
+**QICS** is designed to solve conic programs involving Cartesian products of
+cones. This makes it easy to take advantage of block-diagonal structures arising
+in semidefeinite programs. As an example, consider the semidefinite program from
+Example 2 of :ref:`[1] <blockdiag_refs>`
 
 .. math::
 
@@ -44,12 +47,12 @@ where
             \end{bmatrix}.
     \end{gather}
 
-It is possible to model this problem using a single :math:`7\times7`
-dimensional positive semidefinite cone :math:`\mathbb{S}^7_+`. However, 
-it is computationally advantageous to take advantage of the block 
-diagonal structure of the matrices :math:`F_i` and model the problem
-using the Cartesian product of cones :math:`\mathbb{S}^2_+\times\mathbb{S}^3_+\times\mathbb{R}^2_+`, 
-i.e., the semidefinite program is equivalent to
+It is possible to model this problem using a single :math:`7\times7` dimensional
+positive semidefinite cone :math:`\mathbb{S}^7_+`. However, it is
+computationally advantageous to take advantage of the block diagonal structure
+of the matrices :math:`F_i` and model the problem using the Cartesian product of
+cones :math:`\mathbb{S}^2_+\times\mathbb{S}^3_+\times\mathbb{R}^2_+`, i.e., the
+semidefinite program is equivalent to
 
 .. math::
 
@@ -61,8 +64,9 @@ i.e., the semidefinite program is equivalent to
 
     &&& \sum_{i=1}^5 F_{i2}x_i - F_{02} \geq_{\mathbb{R}^2_+} 0,
 
-where :math:`F_{i0}\in\mathbb{S}^2`, :math:`F_{i1}\in\mathbb{S}^3`, and :math:`F_{i2}\in\mathbb{R}^2`
-represent the first, second, and third blocks of :math:`F_{i}`, respectively, e.g.,
+where :math:`F_{i0}\in\mathbb{S}^2`, :math:`F_{i1}\in\mathbb{S}^3`, and 
+:math:`F_{i2}\in\mathbb{R}^2` represent the first, second, and third blocks of
+:math:`F_{i}`, respectively, e.g.,
 
 .. math::
 
@@ -82,11 +86,11 @@ represent the first, second, and third blocks of :math:`F_{i}`, respectively, e.
             \end{bmatrix}.
     \end{gather}
 
-We can easily solve this problem involving a Cartesian product of
-positive semidefinite cones and nonnegative orthants in **QICS** by 
-defining ``cones`` as a list of cones.
+We can easily solve this problem involving a Cartesian product of positive
+semidefinite cones and nonnegative orthants in **QICS** by defining an
+appropriate :class:`list` of :mod:`qics.cones`.
 
-.. code-block:: python
+.. testcode::
 
     import numpy as np
     import qics
@@ -141,7 +145,7 @@ defining ``cones`` as a list of cones.
 
     # Initialize model and solver objects
     model  = qics.Model(c=c, G=G, h=h, cones=cones)
-    solver = qics.Solver(model)
+    solver = qics.Solver(model, verbose=0)
 
     # Solve problem
     info = solver.solve()
@@ -149,27 +153,8 @@ defining ``cones`` as a list of cones.
     print("Optimal variable x is: ")
     print(info["x_opt"].ravel())
 
-.. code-block:: none
-
-    ====================================================================
-                QICS v0.0 - Quantum Information Conic Solver
-                by K. He, J. Saunderson, H. Fawzi (2024)
-    ====================================================================
-    Problem summary:
-            no. cones:  3                        no. vars:    5
-            barr. par:  8                        no. constr:  0
-            symmetric:  True                     cone dim:    15
-            complex:    False
-
-    ...
-
-    Solution summary
-            sol. status:  optimal                num. iter:    10
-            exit status:  solved                 solve time:   x.xxx
-
-            primal obj:   3.206269223988e+01     primal feas:  7.53e-09
-            dual obj:     3.206269235258e+01     dual feas:    5.05e-09
-            opt. gap:     3.51e-09
+.. testoutput::
+    :options: +NORMALIZE_WHITESPACE
 
     Optimal variable x is:
     [1.55164255 0.67096851 0.98149139 1.40657036 0.94216841]

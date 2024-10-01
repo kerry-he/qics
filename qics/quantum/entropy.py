@@ -2,30 +2,13 @@ import numpy as np
 
 
 def entropy(x):
-    r"""Computes classical (Shannon) entropy
+    r"""Computes either the classical (Shannon) entropy
 
     .. math::
 
         H(x) = -\sum_{i=1}^n x_i \log(x_i),
 
-    for nonnegative vector :math:`x`.
-
-    Parameters
-    ----------
-    x : ndarray
-        Nonnegative ``(n, 1)`` vector to compute classical entropy of.
-
-    Returns
-    -------
-    float
-        Classical entropy of ``x``.
-    """
-    x = x[x > 0]
-    return -sum(x * np.log(x))
-
-
-def quant_entropy(X):
-    r"""Computes quantum (von Neumann) entropy
+    for nonnegative vector :math:`x`, or the quantum (von Neumann) entropy
 
     .. math::
 
@@ -35,20 +18,27 @@ def quant_entropy(X):
 
     Parameters
     ----------
-    X : ndarray
-        Positive semidefinite ``(n, n)`` matrix to compute quantum entropy of.
+    x : :class:`~numpy.ndarray`
+        If this is a nonnegative array of size ``(n,)`` or ``(n, 1)``, we
+        compute the classical entropy of :math:`x`. If this is a symmetric
+        or Hermitian positive semidefinite array of size ``(n, n)``, then
+        we compute the quantum entropy of :math:`X`
 
     Returns
     -------
-    float
-        Quantum entropy of ``X``.
+    :obj:`float`
+        Classical entropy of :math:`x` or quantum entropy of :math:`X`.
     """
-    eig = np.linalg.eigvalsh(X)
-    return entropy(eig)
+    if x.size > 1 and len(x.shape) == 2 and x.shape[0] == x.shape[1]:
+        eig = np.linalg.eigvalsh(x)
+        return entropy(eig)
 
+    x = x[x > 0]
+    return -sum(x * np.log(x))
 
 def purify(X):
-    r"""Returns a purification of a quantum state X. If X has spectral decomposition
+    r"""Returns a purification of a quantum state :math:`X`. If :math:`X`
+    has spectral decomposition
 
     .. math::
 
@@ -58,18 +48,20 @@ def purify(X):
 
     .. math::
 
-        | \psi \rangle = \sum_{i=1}^n \sqrt{\lambda_i} (| v_i \rangle \otimes | v_i
-        \rangle).
+        | \psi \rangle = \sum_{i=1}^n \sqrt{\lambda_i} (| v_i \rangle 
+        \otimes | v_i \rangle).
 
     Parameters
     ----------
-    X : ndarray
-        Density matrix of size ``(n, n)``.
+    X : :class:`~numpy.ndarray`
+        Symmetric or Hermitian array of size ``(n, n)`` representing the
+        matrix :math:`X` we want to find the purification of.
 
     Returns
     -------
-    ndarray
-        Purification matrix of ``X`` of size ``(n*n, n*n)``.
+    :class:`~numpy.ndarray`
+        Symmetric or Hermitian array of size ``(n*n, n*n)`` representing the
+        purification of :math:`X`.
     """
     n = X.shape[0]
     D, U = np.linalg.eigh(X)

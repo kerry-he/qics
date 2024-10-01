@@ -129,7 +129,7 @@ class KKTSolver:
         #     1) (cx, cy, cz) := M \ (c, b, h)
         #     2) (vx, vy, vz) := M \ (rx, ry, rz + H \ rs)
         # (the first one has been precomputed)
-        self.solve_sys_3(self.v_xyz, r.xyz, r.s)
+        self.solve_sys_3(self.v_xyz, r._xyz, r.s)
 
         # Second, backsubstitute to obtain solutions for the full 6x6 system
         #    dtau := (rtau + rkap + c' vx + b' vy + h' vz) / (T + c' cx + b' cy + h' cz)
@@ -148,7 +148,7 @@ class KKTSolver:
         d.tau[:] = tau_num / tau_den
 
         # (dx, dy, dz) := (vx, vy, vz) - dtau * (cx, cy, cz)
-        d.xyz.vec[:] = sp.linalg.blas.daxpy(
+        d._xyz.vec[:] = sp.linalg.blas.daxpy(
             self.c_xyz.vec, self.v_xyz.vec, a=-d.tau[0, 0]
         )
 

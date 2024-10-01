@@ -8,17 +8,18 @@ def vec_dim(side, iscomplex=False, compact=False):
 
     Parameters
     ----------
-    side : int
+    side : :obj:`int`
         The dimension of the matrix.
-    iscomplex : bool, optional
-        Whether the matrix is Hermitian (``True``) or symmetric (``False``). Default is
-        ``False``.
-    compact : bool, optional
-        Whether to assume a compact vector representation or not. Default is ``False``.
+    iscomplex : :obj:`bool`, optional
+        Whether the matrix is Hermitian (``True``) or symmetric 
+        (``False``). The default is ``False``.
+    compact : :obj:`bool`, optional
+        Whether to assume a compact vector representation or not. The
+        default is ``False``.
 
     Returns
     -------
-    int
+    :obj:`int`
         The dimension of the vector.
     """
     if compact:
@@ -38,17 +39,18 @@ def mat_dim(len, iscomplex=False, compact=False):
 
     Parameters
     ----------
-    len : int
+    len : :obj:`int`
         The dimension of the vector.
-    iscomplex : bool, optional
-        Whether the matrix is Hermitian (``True``) or symmetric (``False``). Default is
-        ``False``.
-    compact : bool, optional
-        Whether to assume a compact vector representation or not. Default is ``False``.
+    iscomplex : :obj:`bool`, optional
+        Whether the matrix is Hermitian (``True``) or symmetric 
+        (``False``). The default is ``False``.
+    compact : :obj:`bool`, optional
+        Whether to assume a compact vector representation or not. The
+        default is ``False``.
 
     Returns
     -------
-    int
+    :obj:`int`
         The dimension of the matrix.
     """
     if compact:
@@ -64,68 +66,65 @@ def mat_dim(len, iscomplex=False, compact=False):
 
 
 def mat_to_vec(mat, compact=False):
-    r"""Reshapes a square matrix into a 1D vector, e.g., the symmetric matrix
+    r"""Reshapes a symmetric or Hermitian matrix into a column vector.
+
+    If ``mat`` is of type :obj:`~numpy.float64` and ``compact=False``, then
+    this performs the vectorization
+    
+    .. math::
+
+        \begin{bmatrix}a & b & d \\ b & c & e \\ d & e & f\end{bmatrix}
+        \mapsto
+        \begin{bmatrix}a & b & d & b & c & e & d & e & f\end{bmatrix}^\top.
+
+    If ``mat`` is of type :obj:`~numpy.float64` and ``compact=True``, then
+    this performs the vectorization
 
     .. math::
 
-        \begin{bmatrix}
-            a & b & d \\ b & c & e \\ d & e & f
-        \end{bmatrix},
-
-    is vectorized as the real 1D vector
-
-    .. math::
-
-        \begin{bmatrix}
-            a & b & d & b & c & e & d & e & f
-        \end{bmatrix}^{\top},
-
-    if ``compact=False``, or
-
-    .. math::
-
-        \begin{bmatrix}
+        \begin{bmatrix}a & b & d \\ b & c & e \\ d & e & f\end{bmatrix}
+        \mapsto\begin{bmatrix}
             a & \sqrt{2} b & c & \sqrt{2} d & \sqrt{2}e & f
-        \end{bmatrix}^{\top},
+        \end{bmatrix}^{\top}.
 
-    if ``compact=True``. Alternatively, the Hermitian matrix
-
-    .. math::
-
-        \begin{bmatrix}
-            a & b+cj & e+fj \\ b-cj & d & g+hj \\ e-fj & g-hj & i
-        \end{bmatrix}^{\top},
-
-    is vectorized as the real 1D vector
+    If ``mat`` is of type :obj:`~numpy.complex128` and ``compact=False``,
+    then this performs the vectorization
 
     .. math::
 
         \begin{bmatrix}
-            a & 0 & b & c & e & f & b & -c & d & 0 & g & h & e & -f & g & -h & i & 0
-        \end{bmatrix}^{\top},
+            a & b+ci & e+fi \\ b-ci & d & g+hi \\ e-fi & g-hi & k
+        \end{bmatrix}\mapsto
+        \begin{bmatrix}
+            a & 0 & b & c & e & f & b & -c & d & 0 
+            & g & h & e & -f & g & -h & k & 0
+        \end{bmatrix}^{\top}.
 
-    if ``compact=False``, or
+    If ``mat`` is of type :obj:`~numpy.complex128` and ``compact=True``,
+    then this performs the vectorization
 
     .. math::
 
         \begin{bmatrix}
-            a & \sqrt{2} b & \sqrt{2} c & d & \sqrt{2} e & \sqrt{2} f & \sqrt{2} g &
-            \sqrt{2} h & i
-        \end{bmatrix}^{\top},
-
-    if ``compact=True``.
+            a & b+ci & e+fi \\ b-ci & d & g+hi \\ e-fi & g-hi & k
+        \end{bmatrix}\mapsto
+        \begin{bmatrix}
+            a & \sqrt{2} b & \sqrt{2} c & d & \sqrt{2} e & \sqrt{2} f & 
+            \sqrt{2} g & \sqrt{2} h & k
+        \end{bmatrix}^{\top}.
 
     Parameters
     ----------
-    mat : ndarray
-        Input matrix to vectorize.
-    compact : bool, optional
-        Whether to convert to a compact vector representation or not. Default is
-        ``False``.
+    mat : :class:`~numpy.ndarray`
+        Input matrix to vectorize, either of type :obj:`~numpy.float64`
+        or :obj:`~numpy.complex128`.
+    compact : :obj:`bool`, optional
+        Whether to convert to a compact vector representation or not.
+        The default is ``False``.
 
     Returns
     -------
-    ndarray
+    :class:`~numpy.ndarray`
         The resulting vectorized matrix.
     """
     assert mat.dtype == np.float64 or mat.dtype == np.complex128
@@ -156,71 +155,69 @@ def mat_to_vec(mat, compact=False):
 
 
 def vec_to_mat(vec, iscomplex=False, compact=False):
-    r"""Reshapes a 1D vector into a symmetric or Hermitian matrix, e.g., if
-    ``iscomplex=False``, then the vectors
+    r"""Reshapes a column vector into a symmetric or Hermitian matrix.
 
+    If ``iscomplex=False`` and ``compact=False``, then this returns the
+    matrix
+    
     .. math::
 
-        \begin{bmatrix}
-            a & b & d & b & c & e & d & e & f
-        \end{bmatrix}^{\top},
+        \begin{bmatrix}a & b & d & b & c & e & d & e & f\end{bmatrix}^\top
+        \mapsto
+        \begin{bmatrix}a & b & d \\ b & c & e \\ d & e & f\end{bmatrix}.
 
-    if ``compact=False``, or
+    If ``iscomplex=False`` and ``compact=True``, then this performs the 
+    matrix
 
     .. math::
 
         \begin{bmatrix}
             a & \sqrt{2} b & c & \sqrt{2} d & \sqrt{2}e & f
-        \end{bmatrix}^{\top},
+        \end{bmatrix}^{\top}\mapsto
+        \begin{bmatrix}a & b & d \\ b & c & e \\ d & e & f\end{bmatrix}.
 
-    if ``compact=True``, are reshaped into the real symmetric matrix
+    If ``iscomplex=True`` and ``compact=False``, then this returns the
+    matrix
 
     .. math::
 
         \begin{bmatrix}
-            a & b & d \\ b & c & e \\ d & e & f
+            a & 0 & b & c & e & f & b & -c & d & 0 
+            & g & h & e & -f & g & -h & k & 0
+        \end{bmatrix}^{\top}\mapsto
+        \begin{bmatrix}
+            a & b+ci & e+fi \\ b-ci & d & g+hi \\ e-fi & g-hi & k
         \end{bmatrix}.
 
-    Simiarly, if ``iscomplex=True``, then the vectors
+    If ``iscomplex=True`` and ``compact=True``, then this returns the
+    matrix
 
     .. math::
 
         \begin{bmatrix}
-            a & 0 & b & c & e & f & b & -c & d & 0 & g & h & e & -f & g & -h & i & 0
-        \end{bmatrix}^{\top},
-
-    if ``compact=False``, or
-
-    .. math::
-
+            a & \sqrt{2} b & \sqrt{2} c & d & \sqrt{2} e & \sqrt{2} f & 
+            \sqrt{2} g & \sqrt{2} h & k
+        \end{bmatrix}^{\top}\mapsto
         \begin{bmatrix}
-            a & \sqrt{2} b & \sqrt{2} c & d & \sqrt{2} e & \sqrt{2} f & \sqrt{2} g &
-            \sqrt{2} h & i
-        \end{bmatrix}^{\top},
+            a & b+ci & e+fi \\ b-ci & d & g+hi \\ e-fi & g-hi & k
+        \end{bmatrix}.
 
-    if ``compact=True``, are reshape into the complex Hermitian matrix
-
-    .. math::
-
-        \begin{bmatrix}
-            a & b+cj & e+fj \\ b-cj & d & g+hj \\ e-fj & g-hj & i
-        \end{bmatrix}^{\top}.
 
     Parameters
     ----------
-    mat : ndarray
+    mat : :class:`~numpy.ndarray`
         Input vector to reshape into a matrix.
-    iscomplex : bool, optional
-        Whether the resulting matrix is Hermitian (``True``) or symmetric (``False``).
-        Default is ``False``.
-    compact : bool, optional
-        Whether to convert from a compact vector representation or not. Default is
-        ``False``.
+    iscomplex : :obj:`bool`, optional
+        Whether the resulting matrix is Hermitian (``True``) or symmetric
+        (``False``). The default is ``False``.
+    compact : :obj:`bool`, optional
+        Whether to convert from a compact vector representation or not. 
+        The default is ``False``.
 
     Returns
     -------
-    ndarray
-        The resulting matrix.
+    :class:`~numpy.ndarray`
+        The resulting vector.
     """
     vn = vec.size
     n = mat_dim(vn, iscomplex=iscomplex, compact=compact)
@@ -257,27 +254,27 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
 
 
 def lin_to_mat(lin, dims, iscomplex=False, compact=(False, True)):
-    """Computes the matrix corresponding to a linear map from
-    vectorized symmetric matrices to vectorized symmetric matrices.
+    """Computes the matrix corresponding to a linear map from vectorized
+    symmetric matrices to vectorized symmetric matrices.
 
     Parameters
     ----------
-    lin : callable
+    lin : :obj:`callable`
         Linear operator sending symmetric matrices to symmetric matrices.
-    dims : tuple[int, int]
+    dims : :obj:`tuple` of :obj:`int` 
         The dimensions ``(ni, no)`` of the input and output matrices of the
         linear operator.
-    iscomplex : bool, optional
-        Whether the matrix to vectorize is Hermitian (``True``) or symmetric
-        (``False``). Default is ``False``.
-    compact : tuple[bool, bool], optional
+    iscomplex : :obj:`bool`, optional
+        Whether the matrix to vectorize is Hermitian (``True``) or 
+        symmetric (``False``). Default is ``False``.
+    compact : :obj:`tuple` of :obj:`bool`, optional
         Whether to use a compact vector representation or not for the input
-        and output matrices. Default is ``(False, True)``.
+        and output matrices, respectively. Default is ``(False, True)``.
 
     Returns
     -------
-    ndarray
-        The matrix representation of lin.
+    :class:`~numpy.ndarray`
+        The matrix representation of the given linear operator.
     """
     vni = vec_dim(dims[0], iscomplex=iscomplex, compact=compact[0])
     vno = vec_dim(dims[1], iscomplex=iscomplex, compact=compact[1])
@@ -296,22 +293,22 @@ def lin_to_mat(lin, dims, iscomplex=False, compact=(False, True)):
 
 def eye(n, iscomplex=False, compact=(False, True)):
     """Computes the matrix representation of the identity map for
-    (vectorized) symmetric or Hermitian matrices.
+    vectorized symmetric or Hermitian matrices.
 
     Parameters
     ----------
-    n : int
+    n : :obj:`int`
         The dimensions of the ``(n, n)`` matrix the identity is acting on.
-    iscomplex : bool, optional
-        Whether the matrix to vectorize is Hermitian (``True``) or symmetric
-        (``False``). Default is ``False``.
-    compact : tuple[bool, bool], optional
+    iscomplex : :obj:`bool`, optional
+        Whether the matrix to vectorize is Hermitian (``True``) or 
+        symmetric (``False``). Default is ``False``.
+    compact : :obj:`tuple` of :obj:`bool`, optional
         Whether to use a compact vector representation or not for the input
-        and output matrices. Default is ``(False, True)``.
+        and output matrices, respectively. Default is ``(False, True)``.
 
     Returns
     -------
-    ndarray
-        The matrix representation of the identity map.
+    :class:`~numpy.ndarray`
+        The matrix representation of the identity superoperator.
     """
     return lin_to_mat(lambda X: X, (n, n), iscomplex=iscomplex, compact=compact)
