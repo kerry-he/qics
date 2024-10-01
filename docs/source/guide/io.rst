@@ -87,10 +87,10 @@ which writes a semidefinite program in the SDPA sparse format into the file
 
 
 
-Conic Benchmark Library
------------------------
+Conic Benchmark Format
+----------------------
 
-The Conic Benchmark Library (CBF) file format ``*.cbf`` is used to encode 
+The Conic Benchmark Format (CBF) file format ``*.cbf`` is used to encode 
 conic programs of a general standardized form which encompasses the standard
 form conic program used by **QICS**
 

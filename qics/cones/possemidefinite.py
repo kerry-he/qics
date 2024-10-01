@@ -8,27 +8,27 @@ from qics.cones.base import SymCone
 
 
 class PosSemidefinite(SymCone):
-    r"""A class representing either a real symmetric
+    r"""A class representing a positive semidefinite cone defined either
+    on real symmetric matrices
 
     .. math::
 
         \mathbb{S}^n_+ = \{ X \in \mathbb{S}^n : X \succeq 0 \},
 
-    or complex Hermitian
+    or complex Hermitian matrices
 
     .. math::
 
-        \mathbb{H}^n_+ = \{ X \in \mathbb{H}^n : X \succeq 0 \},
-
-    positive semidefinite cone.
+        \mathbb{H}^n_+ = \{ X \in \mathbb{H}^n : X \succeq 0 \}.
 
     Parameters
     ----------
-    n : int
-        Dimension of the (n, n) matrix :math:`X`.
-    iscomplex : bool
-        Whether the matrix is symmetric :math:`X \in \mathbb{S}^n` (False) or
-        Hermitian :math:`X \in \mathbb{H}^n` (True). Default is False.
+    n : :obj:`int`
+        Dimension of the matrix :math:`X`.
+    iscomplex : :obj:`bool`
+        Whether the matrix :math:`X` is defined over :math:`\mathbb{H}^n`
+        (``True``), or restricted to :math:`\mathbb{S}^n` (``False``). The
+        default is ``False``.
     """
 
     def __init__(self, n, iscomplex=False):

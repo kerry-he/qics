@@ -8,23 +8,23 @@ from qics.vectorize import mat_dim, vec_to_mat
 
 
 def read_file(filename):
-    """Reads a file representing a conic program, and
-    return a :class:`~qics.Model` representing this problem.
-    Currently only supports ``.dat-s``, ``.dat-c``, and ``.cbf`` file
-    formats.
+    """Reads a file representing a conic program, and return a
+    :class:`~qics.Model` representing this problem. Currently supports
+    ``*.dat-s``, ``*.dat-c``, and ``*.cbf`` file formats.
 
     Parameters
     ----------
-    filename : string
-        Name of the file we want to read.
+    filename : :obj:`string`
+        Name of the file and file format we want to read.
 
     Returns
     -------
-    qics.Model
-        Model representing the conic program.
+    :class:`~qics.Model`
+        Model representing the conic program from the specified file.
 
     See Also
     --------
+    write_file : Write a conic program to a file of a specified format.
     read_sdpa : Read file in the SDPA sparse format.
     read_cbf : Read file in the Conic Benchmark Format.
     """
@@ -38,18 +38,19 @@ def read_file(filename):
 
 def write_file(model, filename):
     """Writes a conic program represented by a :class:`~qics.Model`
-    to a specified file and format. Currently only supports ``.dat-s``,
-    ``.dat-c``, and ``.cbf`` formats.
+    to a specified file and format. Currently supports ``*.dat-s``,
+    ``*.dat-c``, and ``*.cbf`` formats.
 
     Parameters
     ----------
-    model : qics.Model
-        Instance of model containing model of the semidefinite program.
-    filename : string
-        Filename of file in SDPA sparse format to save in.
+    model : :class:`~qics.Model`
+        Model representing the conic program we want to write to a file.
+    filename : :obj:`string`
+        Name of the file and file format we want to write to.
 
     See Also
     --------
+    read_file : Read conic program from a file of a specified format.
     write_sdpa : Write file in the SDPA sparse format.
     write_cbf : Write file in the Conic Benchmark Format.
     """
@@ -63,40 +64,35 @@ def write_file(model, filename):
 
 def read_sdpa(filename):
     r"""Reads a file in the SDPA sparse format, and returns a
-    :class:`~qics.Model` represnting the primal
+    :class:`~qics.Model` represnting the standard form semidefinite program
 
     .. math::
 
-        \max_{X\in\mathbb{S}^n} &&& \langle C, X \rangle
+        \min_{x \in \mathbb{R}^p} &&& c^\top x
 
-        \text{s.t.} &&& \langle A_i, X \rangle = b_i, \quad i=1,\ldots,p
+        \text{s.t.} &&& \sum_{i=1}^p F_i x_i - F_0 \succeq 0
 
-         &&& X \succeq 0
+    Two types of SDPA sparse file formats are supported.
 
-    and dual
-
-    .. math::
-
-        \min_{y \in \mathbb{R}^p} &&& -b^\top y
-
-        \text{s.t.} &&& \sum_{i=1}^p A_i y_i - C \succeq 0
-
-    pair of semidefinite programs. Accepts either file extensions
-
-        - ``.dat-s``: Standard SDPA sparse file.
-        - ``.dat-c``: Complex-valued SDPA sparse file, in which case the data matrices
-          :math:`C\in\mathbb{H}^n`, :math:`A_i\in\mathbb{H}^n` are assumed to all be
-          Hermitian.
+    - ``*.dat-s``: Standard SDPA sparse file, where 
+      :math:`F_i\in\mathbb{S}^n` for :math:`i=0,\ldots,p`.
+    - ``*.dat-c``: Complex-valued SDPA sparse file, where 
+      :math:`F_i\in\mathbb{H}^n` for :math:`i=0,\ldots,p`.
 
     Parameters
     ----------
-    filename : string
-        Filename of file in SDPA sparse format to read.
+    filename : :obj:`string`
+        Name of the SPDA sparse file we want to read.
 
     Returns
     -------
-    qics.Model
-        Model representing the semidefinite program.
+    :class:`~qics.Model`
+        Model representing the semidefinite program from the specified 
+        file.
+
+    See Also
+    --------
+    write_sdpa : Write file in the SDPA sparse format.
     """
 
     # Determine if this is a complex or real SDP file
@@ -259,34 +255,40 @@ def read_sdpa(filename):
 
 
 def write_sdpa(model, filename):
-    r"""Writes a semidefinite program
+    r"""Writes a standard form semidefinite program, i.e.,
 
     .. math::
 
-        \max_{X\in\mathbb{S}^n} &&& \langle C, X \rangle
+        \min_{x \in \mathbb{R}^p} &&& c^\top x
 
-        \text{s.t.} &&& \langle A_i, X \rangle = b_i, \quad i=1,\ldots,p
+        \text{s.t.} &&& \sum_{i=1}^p F_i x_i - F_0 \succeq 0,
 
-         &&& X \succeq 0
-
-    with dual
+    or
 
     .. math::
 
-        \min_{y \in \mathbb{R}^p} &&& -b^\top y
+        \min_{X \in \mathbb{S}^n} &&& \langle F_0, X \rangle
 
-        \text{s.t.} &&& \sum_{i=1}^p A_i y_i - C \succeq 0
+        \text{s.t.} &&& \langle F_i, X \rangle = b_i, \quad i=1,\ldots,p
 
-    represented by a :class:`~qics.Model` to a ``.dat-s`` (or
-    ``.dat-c`` for complex-valued SDPs) file using the sparse SDPA
-    file format.
+        &&& X \succeq 0,
+
+    represented by a :class:`~qics.Model` to a file in the SDPA sparse
+    format ``*.dat-s``. If any of the matrices :math:`F_i` are complex
+    for :math:`i=0,\ldots,p`, then we use the complex SDPA sparse format
+    ``*.dat-c``.
 
     Parameters
     ----------
-    model : qics.Model
-        Instance of model containing model of the semidefinite program.
-    filename : string
-        Filename of file in SDPA sparse format to save in.
+    model : :class:`~qics.Model`
+        Model representing the standard form semidefinite program we want
+        to write to a file.
+    filename : :obj:`string`
+        Name of the SDPA sparse file we want to write to.
+
+    See Also
+    --------
+    write_sdpa : Read file in the SDPA sparse format.
     """
 
     # Get SDP data from model
@@ -395,8 +397,8 @@ def write_sdpa(model, filename):
 
 
 def read_cbf(filename):
-    r"""Reads a file in the Conic Benchmark Format, and returns
-    a :class:`~qics.Model` representing a conic program of the form
+    r"""Reads a file in the Conic Benchmark Format ``*.cbf``, and returns a
+    :class:`~qics.Model` representing a conic program of the form
 
     .. math::
 
@@ -404,17 +406,27 @@ def read_cbf(filename):
 
         \text{s.t.} &&& b - Ax = 0
 
-         &&& h - Gx \in \mathcal{K}
+         &&& h - Gx \in \mathcal{K}.
+
+    .. warning::
+
+        This function is quite limited in the types of ``*.cbf`` files that
+        can be read. It is recommended to only use this function together
+        with files written using :func:`~qics.io.write_cbf`.
 
     Parameters
     ----------
-    filename : string
-        Filename of file in CBF sparse format to read.
+    filename : :obj:`string`
+        Name of the CBF file we want to read.
 
     Returns
     -------
-    qics.Model
-        Model representing the conic program.
+    :class:`~qics.Model`
+        Model representing the conic program from the specified file.
+
+    See Also
+    --------
+    write_cbf : Write file in the Conic Benchmark Format.
     """
     # Determine if this is a complex or real SDP file
     file_extension = os.path.splitext(filename)[1]
@@ -691,15 +703,20 @@ def write_cbf(model, filename):
 
          &&& h - Gx \in \mathcal{K}
 
-    represented by a :class:`qics.Model` to a ``.cbf`` file using
-    the Conic Benchmark Format.
+    represented by a :class:`~qics.Model` to a ``.cbf`` file using the
+    Conic Benchmark Format.
 
     Parameters
     ----------
-    model : qics.Model
-        Instance of model containing model of the conic program.
-    filename : string
-        Filename of file in CBF sparse format to save in.
+    model : :class:`~qics.Model`
+        Model representing the conic program we want to write to a CBF 
+        file.
+    filename : :obj:`string`
+        Name of the CBF file we want to write to.
+
+    See Also
+    --------
+    write_cbf : Read file in the Conic Benchmark Format.
     """
     if model.use_G:
         T = _get_expand_compact_matrices(model.cones)

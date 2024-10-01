@@ -1,44 +1,30 @@
 API reference
 =============
 
-The main ``qics`` namespace only contains two classes, which are the primary
-interfaces used to construct and solve a conic program in QICS.
+Here, we provide the technical documentation for the QICS module. Regular use of
+QICS requires the following set of submodules.
 
-.. list-table::
-   :widths: 20 80
+- :mod:`qics`
 
-   * - :mod:`~qics.Model`
-     - Representation of a conic program
-   * - :mod:`~qics.Solver`
-     - Solves a given conic program
+- :mod:`qics.cones`
 
-Submodules
-----------
+- :mod:`qics.io`
 
-QICS also provides the following submodules to help construct conic programs
-and provide some additional quality-of-life functionalities.
+- :mod:`qics.point`
 
-.. list-table::
-   :widths: 20 80
+- :mod:`qics.quantum`
 
-   * - :mod:`~qics.cones`
-     - Cone oracles
-   * - :mod:`~qics.io`
-     - Reading and writing conic programs to files
-   * - :mod:`~qics.point`
-     - Cartesian products of vector spaces
-   * - :mod:`~qics.quantum`
-     - Useful functions for quantum information theory
-   * - :mod:`~qics.vectorize`
-     - Converting symmetric and Hermitian matrices to column vectors
+  - :mod:`qics.quantum.random`
+  
+- :mod:`qics.vectorize`
 
 .. toctree::
    :hidden:
-   :maxdepth: 2
+   :maxdepth: 1
 
-   qics.rst
-   cones.rst
-   io.rst
-   point.rst
-   quantum.rst
-   vectorize.rst
+   qics <qics>
+   qics.cones <cones>
+   qics.io <io>
+   qics.point <point>
+   qics.quantum <quantum>
+   qics.vectorize <vectorize>

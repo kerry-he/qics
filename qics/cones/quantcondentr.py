@@ -7,34 +7,55 @@ from qics.cones.base import Cone
 
 
 class QuantCondEntr(Cone):
-    r"""A class representing a quantum conditional entropy cone with :math:`k`
-    subsystems, where the :math:`i`-th subsystem has dimension :math:`n_i`
+    r"""A class representing a quantum conditional entropy cone defined on
+    :math:`k` subsystems, where the :math:`i`-th subsystem has dimension 
+    :math:`n_i`, and the :math:`i`-th subsystem is being traced out, i.e.,
 
     .. math::
 
-        \mathcal{K}_{\text{qce}} = \text{cl}\{ (t, X) \in \mathbb{R} \times
-        \mathbb{H}^{n_0n_1 \ldots n_{k-1}}_{++} : t \geq -S(X) + S(\text{tr}_i(X)) \},
+        \mathcal{QCE}_{\{n_i\}, i} = \text{cl}\{ (t, X) \in \mathbb{R} 
+        \times \mathbb{H}^{n}_{++} : t \geq -S(X) + S(\text{tr}_i(X)) \},
 
-    where
+    where :math:`n=\Pi_{i=0}^{k-1}
 
     .. math::
 
         S(X) = -\text{tr}[X \log(X)],
 
-    is the quantum (von Neumann) entropy, and :math:`\text{tr}_i` is the partial trace
-    on the :math:`i`-th subsystem.
+    is the quantum (von Neumann) entropy, and :math:`\text{tr}_i` is the 
+    partial trace on the :math:`i`-th subsystem.
 
     Parameters
     ----------
-    dims : tuple(int)
-        List of dimensions :math:`(n_0, n_1, \ldots, n_{k-1})` of the :math:`k`
+    dims : :obj:`tuple` of :obj:`int`
+        List of dimensions :math:`\{ n_i \}_{i=0}^{k-1}` of the :math:`k`
         subsystems.
-    sys : int or tuple(int)
-        Which systems are being traced out by the partial trace.
-    iscomplex : bool
-        Whether the matrix is symmetric :math:`X \in \mathbb{S}^{n_0n_1 \ldots n_{k-1}}`
-        (False) or Hermitian :math:`X \in \mathbb{H}^{n_0n_1 \ldots n_{k-1}}` (True).
-        Default is False.
+    sys : :obj:`int` or :obj:`tuple` of :obj:`int`
+        Which systems are being traced out by the partial trace. Can define
+        multiple subsystems to trace out.
+    iscomplex : :obj:`bool`
+        Whether the matrix :math:`X` is defined over :math:`\mathbb{H}^n`
+        (``True``), or restricted to :math:`\mathbb{S}^n` (``False``). The
+        default is ``False``.
+
+    See also
+    --------
+    QuantRelEntr : Quantum relative entropy cone
+
+    Notes
+    -----
+    The quantum conditional entropy can also be modelled by the quantum
+    relative entropy by noting the identity
+
+    .. math::
+
+        S(X \| \mathbb{I} \otimes \text{tr}_1(X)) 
+        = -S(X) + S(\text{tr}_1(X)).
+
+    However, the cone oracles for the quantum conditional entropy cone are
+    much more efficient than those for the quantum relative entropy cone,
+    so it is recommended to use the quantum conditional entropy cone where
+    possible.
     """
 
     def __init__(self, dims, sys, iscomplex=False):

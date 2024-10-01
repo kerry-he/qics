@@ -29,7 +29,7 @@ the matrices :math:`A_i` by stacking the rows of the matrix side-by-side, i.e.,
                              \end{bmatrix} \in \mathbb{R}^{n^2}.
 
 Using QICS, this operation can be performed using
-:func:`qics.vectorize.mat_to_vec` on matrices of the type ``numpy.float64``. An
+:obj:`qics.vectorize.mat_to_vec` on matrices of the type :obj:`numpy.float64`. An
 example of this is shown below.
 
 >>> import numpy, qics
@@ -41,7 +41,7 @@ array([[0., 1., 2.],
 >>> qics.vectorize.mat_to_vec(X).T
 array([[0., 1., 2., 1., 3., 4., 2., 4., 5.]])
 
-This is equivalent to using :func:`numpy.reshape` to reshape the matrix into a
+This is equivalent to using :obj:`numpy.reshape` to reshape the matrix into a
 vector, i.e., ``X.reshape(-1, 1).T``.
 
 Sometimes it is also useful to vectorize matrices in a more compact fashion
@@ -97,7 +97,7 @@ each entry as follows
          \text{Im}(x_{i1}) \\
          \text{Re}(x_{i2}) \\
          \text{Im}(x_{i2}) \\
-         vdots             \\
+         \vdots            \\
          \text{Re}(x_{in}) \\
          \text{Im}(x_{in}) \\
       \end{bmatrix} \in \mathbb{R}^{2n}.
@@ -120,7 +120,7 @@ matrices.
                            \end{bmatrix} \in \mathbb{R}^{2n^2}.
 
 In practice, we can perform this operation using the same 
-:func:`qics.vectorize.mat_to_vec` function as for the real symmetric case,
+:obj:`qics.vectorize.mat_to_vec` function as for the real symmetric case,
 except when the argument ``X`` is an array of type ``numpy.complex128``.
 
 >>> X = numpy.array([[0., 1.+1.j, 2.+2.j], [1.-1.j, 3., 4.+4.j], [2.-2.j, 4.-4.j, 5.]])
@@ -132,9 +132,9 @@ array([[0.+0.j, 1.+1.j, 2.+2.j],
 array([[ 0.,  0.,  1.,  1.,  2.,  2.,  1., -1.,  3.,  0.,  4.,  4.,  2.,
         -2.,  4., -4.,  5.,  0.]])
 
-This is equivalent to taking a ``numpy.float64`` view of a ``numpy.complex128``
-array, then using :func:`numpy.reshape` to reshape the matrix into a vector,
-i.e., ``X.view(numpy.float64).reshape(-1, 1).T``. 
+This is equivalent to taking a :obj:`numpy.float64` view of a 
+:obj:`numpy.complex128` array, then using :obj:`numpy.reshape` to reshape the 
+matrix into a vector, i.e., ``X.view(numpy.float64).reshape(-1, 1).T``. 
 
 Like the symmetric case, we can also define a compact vectorization for 
 Hermitian matrices which only stores a single copy of the real and imaginary
@@ -258,7 +258,7 @@ Note that we use compact vectorizations for the columns of :math:`A` and for
 :math:`B` to avoid redundant equality constraints already enforced by symmetry 
 of the matrices.
 
-In **QICS**, we provide the helper function :func:`qics.vectorize.lin_to_mat`
+In **QICS**, we provide the helper function :obj:`qics.vectorize.lin_to_mat`
 which does this. Below is an example for showing how a matrix representation for
 the identity superoperator on :math:`2\times2` symmetric matrices can be 
 generated.
@@ -268,7 +268,7 @@ array([[1.        , 0.        , 0.        , 0.        ],
        [0.        , 0.70710678, 0.70710678, 0.        ],
        [0.        , 0.        , 0.        , 1.        ]])
 
-Alternatively, we can use :func:`qics.vectorize.eye` to directly generate this
+Alternatively, we can use :obj:`qics.vectorize.eye` to directly generate this
 matrix.
 
 >>> qics.vectorize.eye(2)
@@ -279,7 +279,6 @@ array([[1.        , 0.        , 0.        , 0.        ],
 As another example, we show below how to generate the (transposed) matrix
 corresponding to the partial trace.
 
->>> from qics.quantum import p_tr
 >>> qics.vectorize.lin_to_mat(lambda X : qics.quantum.p_tr(X, (2, 2), 0), (4, 2)).T
 array([[1.        , 0.        , 0.        ],
        [0.        , 0.70710678, 0.        ],

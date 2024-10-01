@@ -10,8 +10,9 @@ class QuantKeyDist(Cone):
 
     .. math::
 
-        \mathcal{K}_{\text{qkd}} = \text{cl}\{ (t, X) \in \mathbb{R} \times
-        \mathbb{H}^n_{++}:t \geq -S(\mathcal{G}(X)) + S(\mathcal{Z}(\mathcal{G}(X))) \},
+        \mathcal{QKD}_{\mathcal{G},\mathcal{Z}} = 
+        \text{cl}\{ (t, X) \in \mathbb{R} \times \mathbb{H}^n_{++} :
+        t \geq -S(\mathcal{G}(X)) +  S(\mathcal{Z}(\mathcal{G}(X))) \},
 
     where
 
@@ -20,39 +21,88 @@ class QuantKeyDist(Cone):
         S(X) = -\text{tr}[X \log(X)],
 
     is the quantum (von Neumann) entropy function,
-    :math:`\mathcal{G}:\mathbb{H}^n\rightarrow\mathbb{H}^{mr}` is a positive linear
-    map, and :math:`\mathcal{Z}:\mathbb{H}^{mr}\rightarrow\mathbb{H}^{mr}` is a
+    :math:`\mathcal{G}:\mathbb{H}^n\rightarrow\mathbb{H}^{mr}` is a
+    positive linear map, and 
+    :math:`\mathcal{Z}:\mathbb{H}^{mr}\rightarrow\mathbb{H}^{mr}` is a
     pinching map that maps off-diagonal blocks to zero.
 
     Parameters
     ----------
-    G_info : int or list of ndarray
-        Defines the linear map :math:`\mathcal{G}`. If ``G_info`` is an ``int``, then
-        :math:`\mathcal{G}(X)=X` and this argument specifies the dimension of
-        :math:`X`. If ``G_info`` is a ``list`` of ``ndarray``, then this argument
-        specifies the list of Kraus operators
-        :math:`\{ K_i \in \mathbb{C}^{mr \times n } \}_{i=1}^l` corresponding to
-        :math:`\mathcal{G}` such that
+    G_info : :obj:`int` or :obj:`list` of :class:`~numpy.ndarray`
+        Defines the linear map :math:`\mathcal{G}`. There are two ways to
+        specify this linear map.
 
+        - If ``G_info`` is an :obj:`int`, then :math:`\mathcal{G}` is the
+          identity map, i.e., :math:`\mathcal{G}(X)=X`, and ``G_info`` 
+          specifies the dimension of :math:`X`.
+        - If ``G_info`` is a :obj:`list` of :class:`~numpy.ndarray`, then
+          ``G_info`` specifies the Kraus operators 
+          :math:`K_i \in \mathbb{C}^{mr \times n }` corresponding to
+          :math:`\mathcal{G}` such that
+
+          .. math::
+
+              \mathcal{G}(X) = \sum_{i} K_i X K_i^\dagger.
+        
+    Z_info : :obj:`int` or :obj:`tuple` or :obj:`list` of :class:`~numpy.ndarray`
+    
+        Defines the pinching map :math:`\mathcal{Z}`, which is of the form
+        
         .. math::
 
-            \mathcal{G}(X) = \sum_{i=1}^l K_i X K_i^\dagger.
+            \mathcal{Z}(Y) = \sum_{i} Z_i Y Z_i^\dagger.
 
-    Z_info : int or tuple or list(ndarray)
-        Defines the linear map :math:`\mathcal{Z}`. There are three ways the user can
-        specify this argument. If ``Z_info`` is an ``int``, then this argument specifies
-        the block-structure which is being zeroed out, i.e., defines :math:`r` where
+        There are three ways to specify this linear map. 
 
-        .. math::
+        - If ``Z_info`` is an :obj:`int`, then 
+          :math:`Z_i=|i \rangle\langle i| \otimes\mathbb{I}` for
+          :math:`i=1,\ldots,r`, where ``r=Z_info``.
 
-            \mathcal{Z}(Y) = \sum_{i=1}^r (| i \rangle \langle i | \otimes \mathbb{I}_m) Y (| i \rangle \langle i | \otimes \mathbb{I}_m).
+        - If ``Z_info`` is a :obj:`tuple` of the form ``(dims, sys)``,
+          where ``dims=(n0, n1)`` is a :obj:`tuple` of :obj:`int` and
+          ``sys`` is an :obj:`int`, then
 
-        If ``Z_info`` is a ``list`` of ``ndarray``, then this argument directly
-        specifies the Kraus operator corresponding to :math:`\mathcal{Z}`.
+          - :math:`Z_i=|i \rangle\langle i| \otimes\mathbb{I}_{n_1}`
+            for :math:`i=1,\ldots,n_0` if ``sys=0``, and
+          - :math:`Z_i=\mathbb{I}_{n_0}\otimes |i \rangle\langle i|` for 
+            :math:`i=1,\ldots,n_1` if ``sys=1``. 
+          
+          We generalize this definition to when ``dims`` and ``sys`` are
+          lists of any length.
 
-    iscomplex : bool
-        Whether the matrix is symmetric :math:`X \in \mathbb{S}^n` (False) or
-        Hermitian :math:`X \in \mathbb{H}^n` (True). Default is False.
+        - If ``Z_info`` is a :obj:`list` of :class:`~numpy.ndarray`, then
+          ``Z_info`` directly specifies the Kraus operators 
+          :math:`Z_i \in \mathbb{C}^{mr \times mr}`.
+
+          .. warning:: 
+          
+              If ``Z_info`` is specified in this way, the user themselves
+              must ensure that the Kraus operators they provide correpsond
+              to a valid pinching map.
+
+    iscomplex : :obj:`bool`
+        Whether the matrix :math:`X` is defined over :math:`\mathbb{H}^n`
+        (``True``), or restricted to :math:`\mathbb{S}^n` (``False``). The
+        default is ``False``.
+
+    See also
+    --------
+    QuantRelEntr : Quantum relative entropy cone
+
+    Notes
+    -----
+    The quantum key distribution cone can also be modelled by the quantum
+    relative entropy by noting the identity
+
+    .. math::
+
+        S(\mathcal{G}(X) \| \mathcal{Z}(\mathcal{G}(X))) 
+        = -S(\mathcal{G}(X)) +  S(\mathcal{Z}(\mathcal{G}(X))).
+
+    However, the cone oracles for the quantum key distribution cone are
+    more efficient than those for the quantum relative entropy cone 
+    (especially when :math:`\mathcal{G}` is the idenity map), so it is
+    recommended to use the quantum key distribution cone where possible.
     """
 
     def __init__(self, G_info, Z_info, iscomplex=False):
@@ -155,10 +205,10 @@ class QuantKeyDist(Cone):
             apply_kraus(np.eye(self.n), ZK_list) for ZK_list in self.ZK_list_blk
         ]
 
-        from qics.quantum import quant_entropy
+        from qics.quantum import entropy
 
-        entr_KK = sum([quant_entropy(KK) for KK in KK_blk])
-        entr_ZKKZ = sum([quant_entropy(ZKKZ) for ZKKZ in ZKKZ_blk])
+        entr_KK = sum([entropy(KK) for KK in KK_blk])
+        entr_ZKKZ = sum([entropy(ZKKZ) for ZKKZ in ZKKZ_blk])
 
         f0 = -entr_KK + entr_ZKKZ
         t0 = f0 / 2 + np.sqrt(1 + f0 * f0 / 4)

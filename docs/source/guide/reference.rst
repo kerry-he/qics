@@ -212,9 +212,13 @@ following settings.
    * - ``ir``
      - Whether to use iterative refinement when solving the KKT system.
      - ``True``
+   * - ``toa``
+     - Whether to use third-order adjustments to improve the stepping 
+       directions.
+     - ``True``
    * - ``init_pnt``
      - :class:`qics.point.Point` representing where to initialize the 
-       interior-point algorithm from. Variables which contain :class:`numpy.nan`
+       interior-point algorithm from. Variables which contain :obj:`numpy.nan`
        are flagged to be intialized using QICS' default initialization.
      - ``None``
    * - ``use_invhess``

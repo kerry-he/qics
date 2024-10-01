@@ -15,29 +15,35 @@ spinner = itertools.cycle(["-", "/", "|", "\\"])
 
 
 class Solver:
-    r"""A class representing an instance of a solver.
+    r"""A class representing an instance of a solver, and is parameterized
+    by a conic program model and adjustable solver settings.
 
     Parameters
     ----------
-    model : :class:`qics.Model`
-        Model class which specifies an instance of a conic program.
-    max_iter : int, optional
-        Maximum number of solver iterations before terminating. Default is ``100``.
-    max_time : float, optional
-        Maximum time elapsed, in seconds, before terminating. Default is ``3600``.
-    tol_gap : float, optional
-        Stopping tolerance for (relative) optimality gap. Default is ``1e-8``.
-    tol_feas : float, optional
-        Stopping tolerance for (relative) primal and dual feasibility. Default is
+    model : :class:`~qics.Model`
+        Representation of a given conic program.
+    max_iter : :obj:`int`, optional
+        Maximum number of solver iterations before terminating. The default
+        is ``100``.
+    max_time : :obj:`float`, optional
+        Maximum time elapsed, in seconds, before terminating. The default
+        is ``3600``.
+    tol_gap : :obj:`float`, optional
+        Stopping tolerance for (relative) optimality gap. The default is
         ``1e-8``.
-    tol_infeas : float, optional
-        Tolerance for detecting infeasible problem. Default is ``1e-12``.
-    tol_ip : float, optional
-        Tolerance for detecting ill-posed problem. Default is ``1e-13``.
-    tol_near : float, optional
-        Allowable margin for certifying near optimality when solver is stopped early.
-        Default is ``1e3``.
-    verbose : int, optional
+    tol_feas : :obj:`float`, optional
+        Stopping tolerance for (relative) primal and dual feasibility. The
+        default is ``1e-8``.
+    tol_infeas : :obj:`float`, optional
+        Tolerance for detecting infeasible problem. The default is 
+        ``1e-12``.
+    tol_ip : :obj:`float`, optional
+        Tolerance for detecting ill-posed problem. The default is 
+        ``1e-13``.
+    tol_near : :obj:`float`, optional
+        Allowable margin for certifying near optimality when solver is
+        stopped early. The default is ``1e3``.
+    verbose : {``0``, ``1``, ``2``, ``3``}, optional
         Verbosity level of the solver, where
 
         - ``0`` : No output.
@@ -45,19 +51,24 @@ class Solver:
         - ``2`` : Also print summary of the solver at each iteration.
         - ``3`` : Also print summary of the stepper at each iteration.
 
-        Default is ``2``.
-    ir : bool, optional
-        Whether to use iterative refinement when solving the KKT system. Default is
-        ``True``.
-    init_pnt : :class:`qics.point.Point`, optional
-        Where to initialize the interior-point algorithm from. Variables which contain
-        ``numpy.nan`` are flagged to be intialized using the default initialization.
-        Default is ``None``, which intializes all variables using the default method.
-    use_invhess : bool, optional
-        Whether or not to avoid using inverse Hessian product oracles by solving a
-        modified cone program with :math:`\mathcal{K}'=\{ x : -Gx \in \mathcal{K} \}`.
-        Requires an initial point :math:`x_0` to be specified such that :math:`-Gx_0
-        \in \text{int}\mathcal{K}`. Default is ``True``.
+        The default is ``2``.
+    ir : :obj:`bool`, optional
+        Whether to use iterative refinement when solving the KKT system.
+        The default is ``True``.
+    toa : :obj:`bool`, optional
+        Whether to use third-order adjustments to improve the stepping
+        directions. The default is ``True``.
+    init_pnt : :class:`~qics.point.Point`, optional
+        Where to initialize the interior-point algorithm from. Variables
+        which contain :obj:`~numpy.nan` are flagged to be intialized using
+        the default initialization method. The default is ``None``, which
+        intializes all variables using the default method.
+    use_invhess : :obj:`bool`, optional
+        Whether or not to avoid using inverse Hessian product oracles by
+        solving a modified cone program with
+        :math:`-G^{-1}(\mathcal{K})=\{ x : -Gx \in \mathcal{K} \}`. 
+        Requires an initial point :math:`x_0` to be specified such that 
+        :math:`-Gx_0 \in \text{int}\ \mathcal{K}`. The default is ``True``.
     """
 
     def __init__(
@@ -72,6 +83,7 @@ class Solver:
         tol_near=1e3,
         verbose=2,
         ir=True,
+        toa=True,
         init_pnt=None,
         use_invhess=True,
     ):
@@ -99,9 +111,9 @@ class Solver:
         self.model = model
         kktsolver = KKTSolver(model, ir=ir, use_invhess=use_invhess)
         self.stepper = (
-            SymStepper(kktsolver, model)
+            SymStepper(kktsolver, model, toa=toa)
             if model.issymmetric
-            else NonSymStepper(kktsolver, model)
+            else NonSymStepper(kktsolver, model, toa=toa)
         )
 
         if init_pnt is not None:
@@ -129,45 +141,52 @@ class Solver:
         return
 
     def solve(self):
-        """Run the primal-dual interior point solver for a given problem model.
+        r"""Run the primal-dual interior point solver for a given problem 
+        model.
 
         Returns
         -------
-        dict
-            Dictionary containing solver output, with the following keys
+        :obj:`dict`
+            Dictionary which summarizes the solution of a conic program. 
+            Contains the following keys.
 
-            - ``x_opt`` : Optimal primal variable x.
-            - ``y_opt`` : Optimal dual variable y.
-            - ``z_opt`` : Optimal dual variable z.
-            - ``s_opt`` : Optimal primal variable s.
+            - x_opt (:obj:`~numpy.ndarray`) : Optimal primal variable 
+              :math:`x^*`.
+            - y_opt (:obj:`~numpy.ndarray`) : Optimal dual variable 
+              :math:`y^*`.
+            - z_opt (:obj:`~qics.point.VecProduct`) : Optimal dual variable
+              :math:`z^*`.
+            - s_opt (:obj:`~qics.point.VecProduct`) : Optimal primal
+              variable :math:`s^*=h-Gx^*`.
+            - sol_status (:obj:`string`) : Solution status. Can either be:
 
-            - ``sol_status`` : Solution status. Can either be:
-
-                - ``optimal``       : Primal-dual optimal solution reached
+                - ``optimal``      : Primal-dual optimal solution reached
                 - ``pinfeas``      : Detected primal infeasibility
                 - ``dinfeas``      : Detected dual infeasibility
-                - ``near_optimal``  : Near primal-dual optimal solution
-                - ``near_pinfeas``  : Near primal infeasibility
-                - ``near_dinfeas``  : Near dual infeasibiltiy
+                - ``near_optimal`` : Near primal-dual optimal solution
+                - ``near_pinfeas`` : Near primal infeasibility
+                - ``near_dinfeas`` : Near dual infeasibiltiy
                 - ``illposed``     : Problem is ill-posed
-                - ``unknown``       : Unknown solution status
+                - ``unknown``      : Unknown solution status
 
-            - ``exit_status`` : Solver exit status. Can either be:
+            - exit_status (:obj:`string`) : Solver exit status. Can either
+              be:
 
-                - ``solved``        : Terminated at desired tolerance
-                - ``max_iter``      : Exceeded maximum allowable iterations
-                - ``max_time``      : Exceeded maximum allowable time
-                - ``step_failure``  : Unable to take another step
-                - ``slow_progress`` : Residuals are decreasing too slowly
+                - ``solved``       : Terminated at desired tolerance
+                - ``max_iter``     : Exceeded maximum allowable iterations
+                - ``max_time``     : Exceeded maximum allowable time
+                - ``step_failure`` : Unable to take another step
+                - ``slow_progress``: Residuals are decreasing too slowly
 
-            - ``num_iter`` : Number of solver iterations.
-            - ``solve_time`` : Total time elapsed (in seconds).
-
-            - ``p_obj`` : Optimal primal objective.
-            - ``d_obj`` : Optimal dual objective.
-            - ``opt_gap`` : Relative optimality gap.
-            - ``p_feas`` : Primal feasibility.
-            - ``d_feas`` : Dual feasibiltiy.
+            - num_iter (:obj:`int`) : Number of solver iterations.
+            - solve_time (:obj:`float`) : Total time elapsed (in seconds).
+            - p_obj (:obj:`float`) : Optimal primal objective 
+              :math:`c^\top x^*`.
+            - d_obj (:obj:`float`) : Optimal dual objective
+              :math:`-b^\top y^* - h^\top z^*`.
+            - opt_gap (:obj:`float`) : Relative optimality gap.
+            - p_feas (:obj:`float`) : Relative primal feasibility.
+            - d_feas (:obj:`float`) : Relative dual feasibiltiy.
         """
         # Print header
         if self.verbose:

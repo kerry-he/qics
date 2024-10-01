@@ -15,7 +15,7 @@ for n in range(2, 13, 2):
     D = 0.5
 
     rho = qu.random.density_matrix(n, iscomplex=True)
-    entr_rho = qu.quant_entropy(rho)
+    entr_rho = qu.entropy(rho)
 
     N = n * n
     sn = vec.vec_dim(n, compact=True, iscomplex=True)

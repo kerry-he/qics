@@ -58,7 +58,7 @@ cone as follows.
 
             # Define objective function
             # where x = ({pi}, t) and c = ({-S(N(Xi))}, 1)
-            c1 = numpy.array([[-qics.quantum.quant_entropy(rho)] for rho in rhos])
+            c1 = numpy.array([[-qics.quantum.entropy(rho)] for rho in rhos])
             c2 = numpy.array([[1.0]])
             c  = numpy.vstack((c1, c2))
 
@@ -119,7 +119,7 @@ cone as follows.
             n = m = 16
 
             rhos = [qics.quantum.random.density_matrix(n, iscomplex=True) for i in range(m)]
-            entr_rhos = numpy.array([[qics.quantum.quant_entropy(rho)] for rho in rhos])
+            entr_rhos = numpy.array([[qics.quantum.entropy(rho)] for rho in rhos])
 
             # Define problem
             P = picos.Problem()
@@ -522,7 +522,7 @@ below.
             D = 0.25
 
             rho = qics.quantum.random.density_matrix(n)
-            entr_rho = qics.quantum.quant_entropy(rho)
+            entr_rho = qics.quantum.entropy(rho)
 
             N = n * n
             sn = qics.vectorize.vec_dim(n, compact=True)
@@ -580,7 +580,7 @@ below.
             D = 0.25
 
             rho = qics.quantum.random.density_matrix(n)
-            entr_rho = qics.quantum.quant_entropy(rho)
+            entr_rho = qics.quantum.entropy(rho)
             distortion_observable = picos.I(n*n) - qics.quantum.purify(rho)
 
             # Define problem

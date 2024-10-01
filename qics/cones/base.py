@@ -455,7 +455,7 @@ def get_perspective_derivatives(func):
         alpha = func
         if alpha > 0 and alpha < 1:
             sgn = -1
-        elif (alpha > 1 and alpha < 2) or (alpha > -1 and alpha < 0):
+        elif (alpha > 1 and alpha < 2) or (alpha >= -1 and alpha < 0):
             sgn = 1
 
         def g(x):

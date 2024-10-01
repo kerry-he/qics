@@ -10,10 +10,12 @@ class OpPerspecTr(Cone):
 
     .. math::
 
-        \mathcal{K}_{\text{op,tr}}^g = \text{cl}\{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[P_g(X, Y)] \},
+        \mathcal{OPT}_{n, g} = \text{cl}\{ (t, X, Y) \in \mathbb{R} \times
+        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : 
+        t \geq \text{tr}[P_g(X, Y)] \},
 
-    for an operator concave function :math:`g:[0, \infty)\rightarrow\mathbb{R}`,
-    where
+    for an operator concave function 
+    :math:`g:(0, \infty)\rightarrow\mathbb{R}`, where
 
     .. math::
 
@@ -23,18 +25,43 @@ class OpPerspecTr(Cone):
 
     Parameters
     ----------
-    n : int
-        Dimension of the (n, n) matrices :math:`X` and :math:`Y`.
-    func : string or float
-        Choice for the function g. Can either be
+    n : :obj:`int`
+        Dimension of the matrices :math:`X` and :math:`Y`.
+    func : :obj:`string` or :obj:`float`
+        Choice for the function :math:`g`. Can be defined in the following
+        ways.
 
-        - ``"log"``             : :math:`g(x) = -\log(x)`
-        - ``(0, 1)``            : :math:`g(x) = -x^p`
-        - ``(-1, 0) or (1, 2)`` : :math:`g(x) = x^p`
+        - :math:`g(x) = -\log(x)` if ``func="log"``
+        - :math:`g(x) = -x^p` if ``func=p`` is a :obj:`float` where 
+          :math:`p\in(0, 1)`
+        - :math:`g(x) = x^p` if ``func=p`` is a :obj:`float` where 
+          :math:`p\in(-1, 0)\cup(1, 2)`
 
-    iscomplex : bool
-        Whether the matrices symmetric :math:`X,Y \in \mathbb{S}^n` (False) or
-        Hermitian :math:`X,Y \in \mathbb{H}^n` (True). Default is False.
+    iscomplex : :obj:`bool`
+        Whether the matrices :math:`X` and :math:`Y` are defined over
+        :math:`\mathbb{H}^n` (``True``), or restricted to 
+        :math:`\mathbb{S}^n` (``False``). The default is ``False``.
+
+    See also
+    --------
+    OpPerspecEpi : Operator perspective epigraph
+
+    Notes
+    -----
+    We do not support operator perspectives for ``p=0``, ``p=1``, and
+    ``p=2`` as these functions are more efficiently modelled using 
+    just the positive semidefinite cone. 
+
+    - When :math:`g(x)=x^0`, :math:`P_g(X, Y)=X`.
+    - When :math:`g(x)=x^1`, :math:`P_g(X, Y)=Y`.
+    - When :math:`g(x)=x^2`, :math:`P_g(X, Y)=YX^{-1}Y`, which can be 
+      modelled using the Schur complement lemma, i.e., if :math:`X\succ 0`,
+      then
+
+      .. math::
+
+          \begin{bmatrix} X & Y \\ Y & T \end{bmatrix} \succeq 0 \qquad 
+          \Longleftrightarrow \qquad T \succeq YX^{-1}Y.
     """
 
     def __init__(self, n, func, iscomplex=False):

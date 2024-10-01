@@ -10,8 +10,8 @@ class QuantEntr(Cone):
 
     .. math::
 
-        \mathcal{K}_{\text{qe}} = \text{cl}\{ (t, u, X) \in \mathbb{R} \times
-        \mathbb{R}_{++} \times \mathbb{H}^n_{++} : t \geq -u S(X / u) \},
+        \mathcal{QE}_{n} = \text{cl}\{ (t, u, X) \in \mathbb{R} \times
+        \mathbb{R}_{++} \times \mathbb{H}^n_{++} : t \geq -u S(u^{-1}X) \},
 
     where
 
@@ -19,16 +19,26 @@ class QuantEntr(Cone):
 
         S(X) = -\text{tr}[X \log(X)],
 
-    is the quantum (von Neumann) entropy function. The quantum entropy epigraph can be
-    recovered by enforcing the linear constraint :math:`u=1`.
+    is the quantum (von Neumann) entropy function.
 
     Parameters
     ----------
-    n : int
-        Dimension of the (n, n) matrix :math:`X`.
-    iscomplex : bool
-        Whether the matrix is symmetric :math:`X \in \mathbb{S}^n` (False) or
-        Hermitian :math:`X \in \mathbb{H}^n` (True). Default is False.
+    n : :obj:`int`
+        Dimension of the matrix :math:`X`.
+    iscomplex : :obj:`bool`
+        Whether the matrix :math:`X` is defined over :math:`\mathbb{H}^n`
+        (``True``), or restricted to :math:`\mathbb{S}^n` (``False``). The
+        default is ``False``.
+
+    See also
+    --------
+    ClassEntr : (Homogenized) classical entropy cone
+    QuantRelEntr : Quantum relative entropy cone
+
+    Notes
+    -----
+    The epigraph of the quantum entropy can be obtained by enforcing the
+    linear constraint :math:`u=1`.  
     """
 
     def __init__(self, n, iscomplex=False):

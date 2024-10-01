@@ -24,15 +24,17 @@ release = __version__
 
 extensions = [
     "sphinx.ext.viewcode",
-    "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.doctest",
     "sphinx_copybutton",
     "sphinx_design",
-    "sphinx_tabs.tabs"
+    "sphinx_tabs.tabs",
+    "numpydoc"
 ]
+
+numpydoc_show_class_members = False
 
 autosectionlabel_prefix_document = True
 autosectionlabel_maxdepth = 3
@@ -49,6 +51,10 @@ intersphinx_mapping = {
 autodoc_mock_imports = ["numba"]
 templates_path = ["_templates"]
 exclude_patterns = []
+
+# sphinx-copybutton configurations
+copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "
+copybutton_prompt_is_regexp = True
 
 
 # -- Options for HTML output -------------------------------------------------
