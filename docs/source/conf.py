@@ -48,7 +48,7 @@ intersphinx_mapping = {
     "picos": ("https://picos-api.gitlab.io/picos/", None),
 }
 
-autodoc_mock_imports = ["numba"]
+autodoc_mock_imports = ["numpy", "scipy", "numba"]
 templates_path = ["_templates"]
 exclude_patterns = []
 
