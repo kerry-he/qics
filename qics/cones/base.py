@@ -45,12 +45,15 @@ class Cone:
         self.primal = [primal_k * a for primal_k in primal]
         if dual is not None:
             self.dual = [dual_k * a for dual_k in dual]
+        else:
+            self.dual = None
 
         self.feas_updated = False
         self.grad_updated = False
         self.hess_aux_updated = False
         self.invhess_aux_updated = False
         self.dder3_aux_updated = False
+        self.nt_aux_updated = False
 
     def set_dual(self, dual, a=True):
         self.dual = [dual_k * a for dual_k in dual]

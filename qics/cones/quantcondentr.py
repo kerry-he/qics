@@ -16,7 +16,7 @@ class QuantCondEntr(Cone):
         \mathcal{QCE}_{\{n_i\}, i} = \text{cl}\{ (t, X) \in \mathbb{R} 
         \times \mathbb{H}^{n}_{++} : t \geq -S(X) + S(\text{tr}_i(X)) \},
 
-    where :math:`n=\Pi_{i=0}^{k-1}
+    where :math:`n=\Pi_{i=0}^{k-1} n_i` and
 
     .. math::
 

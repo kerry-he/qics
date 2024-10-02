@@ -126,13 +126,6 @@ class PosSemidefinite(SymCone):
 
         self.grad_updated = True
 
-    # def grad_ip(self, out):
-    #     assert self.feas_updated
-    #     if not self.grad_updated:
-    #         self.update_grad()
-    #     out[0][:] = self.grad
-    #     return out
-
     def hess_prod_ip(self, out, H):
         if not self.grad_updated:
             self.update_grad()
