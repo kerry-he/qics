@@ -51,6 +51,7 @@ class Cone:
         self.hess_aux_updated = False
         self.invhess_aux_updated = False
         self.dder3_aux_updated = False
+        self.nt_aux_updated = False
 
     def set_dual(self, dual, a=True):
         self.dual = [dual_k * a for dual_k in dual]
