@@ -57,21 +57,21 @@ class SecondOrder(SymCone):
         if self.z[0] <= np.sqrt(self.z[1].T @ self.z[1]):
             self.feas = False
             return self.feas
-    
+
         self.feas = True
-        return self.feas    
-    
+        return self.feas
+
     def get_dual_feas(self):
         return self.z[0] > np.sqrt(self.z[1].T @ self.z[1])
 
     def get_val(self):
-        return -0.5 * np.log(self.x[0] * self.x[0] - self.x[1].T @ self.x[1])[0, 0]
+        return -0.5 * np.log(_soc_res(self.x))
 
     def update_grad(self):
         assert self.feas_updated
         assert not self.grad_updated
 
-        self.x_res = (self.x[0] * self.x[0] - self.x[1].T @ self.x[1])[0, 0]
+        self.x_res = _soc_res(self.x)
         self.x_res_inv = 1 / self.x_res
 
         self.grad = [-self.x[0] * self.x_res_inv, self.x[1] * self.x_res_inv]
@@ -140,8 +140,8 @@ class SecondOrder(SymCone):
 
         (Ht, Hx) = H
 
-        self.slack_inv2 = self.x_res_inv * self.x_res_inv
-        self.slack_inv3 = self.x_res_inv * self.slack_inv2
+        x_res_inv2 = self.x_res_inv * self.x_res_inv
+        x_res_inv3 = self.x_res_inv * x_res_inv2
 
         # Gradients of (t, x) -> t*t - <x, x>
         DPhit = 2 * self.x[0]
@@ -159,15 +159,15 @@ class SecondOrder(SymCone):
 
         # Third order derivatives of barrier
         coeff1 = DPhitH + DPhixH
-        coeff2 = (
-            self.slack_inv2 * (D2PhitHH + D2PhixHH) - 2 * self.slack_inv3 * coeff1 * coeff1
-        ) * 0.5
+        coeff2 = x_res_inv2 * (D2PhitHH + D2PhixHH)
+        coeff2 -= 2 * x_res_inv3 * coeff1 * coeff1
+        coeff2 *= 0.5
 
         dder3_t = coeff2 * DPhit
-        dder3_t += coeff1 * self.slack_inv2 * D2PhittH
+        dder3_t += coeff1 * x_res_inv2 * D2PhittH
 
         dder3_x = coeff2 * DPhix
-        dder3_x += coeff1 * self.slack_inv2 * D2PhixxH
+        dder3_x += coeff1 * x_res_inv2 * D2PhixxH
 
         out[0][:] += dder3_t * a
         out[1][:] += dder3_x * a
@@ -195,37 +195,32 @@ class SecondOrder(SymCone):
 
         self.rt_x_res = np.sqrt(self.x_res)
         self.rt_z_res = np.sqrt(self.z_res)
-        
+
         x_bar = [self.x[0] / self.rt_x_res, self.x[1] / self.rt_x_res]
         z_bar = [self.z[0] / self.rt_z_res, self.z[1] / self.rt_z_res]
 
-        gamma = np.sqrt((1. + x_bar[0]*z_bar[0] + x_bar[1].T @ z_bar[1]) / 2.)
+        xz_bar = x_bar[0] * z_bar[0] + x_bar[1].T @ z_bar[1]
+        gamma = np.sqrt((1.0 + xz_bar) / 2.0)
 
         # Scaling point
         self.w_res = self.rt_x_res / self.rt_z_res
         self.rt_w_res = np.sqrt(self.w_res)
         self.w_bar = [
             (x_bar[0] + z_bar[0]) / (2 * gamma),
-            (x_bar[1] - z_bar[1]) / (2 * gamma)
+            (x_bar[1] - z_bar[1]) / (2 * gamma),
         ]
-        self.rt2_w_bar = [
+        self.rt_w_bar = [
             (1 + self.w_bar[0]) / np.sqrt(2 * (self.w_bar[0] + 1)),
-                 self.w_bar[1]  / np.sqrt(2 * (self.w_bar[0] + 1))
+            self.w_bar[1] / np.sqrt(2 * (self.w_bar[0] + 1)),
         ]
-        self.w = [
-            self.w_bar[0] * self.rt_w_res,
-            self.w_bar[1] * self.rt_w_res
-        ]
+        self.w = [self.w_bar[0] * self.rt_w_res, self.w_bar[1] * self.rt_w_res]
 
         # Scaled variable
         temp = (gamma + z_bar[0]) * x_bar[1] + (gamma + x_bar[0]) * z_bar[1]
-        self.lmbda_bar = [
-            gamma,
-            temp / (x_bar[0] + z_bar[0] + 2 * gamma)
-        ]
+        self.lmbda_bar = [gamma, temp / (x_bar[0] + z_bar[0] + 2 * gamma)]
         self.lmbda = [
             self.lmbda_bar[0] * np.sqrt(self.rt_x_res * self.rt_z_res),
-            self.lmbda_bar[1] * np.sqrt(self.rt_x_res * self.rt_z_res)
+            self.lmbda_bar[1] * np.sqrt(self.rt_x_res * self.rt_z_res),
         ]
         self.lmbda_res = _soc_res(self.lmbda)
         self.rt_lmbda_res = np.sqrt(self.lmbda_res)
@@ -248,7 +243,7 @@ class SecondOrder(SymCone):
 
     def nt_congr(self, A):
         if not self.nt_aux_updated:
-            self.nt_aux()        
+            self.nt_aux()
         if not self.congr_aux_updated:
             self.congr_aux(A)
 
@@ -302,18 +297,18 @@ class SecondOrder(SymCone):
         # See: [Section 5.4]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf
         if not self.nt_aux_updated:
             self.nt_aux()
-        
+
         # Compute (W^-T ds_a) o (W dz_a)
-        tmp = 2 * (self.rt2_w_bar[0] * ds[0] - self.rt2_w_bar[1].T @ ds[1])
+        rtw_ds = 2 * (self.rt_w_bar[0] * ds[0] - self.rt_w_bar[1].T @ ds[1])
         W_ds = [
-            (tmp * self.rt2_w_bar[0] - ds[0]) / self.rt_w_res,
-           (-tmp * self.rt2_w_bar[1] + ds[1]) / self.rt_w_res
+            (rtw_ds * self.rt_w_bar[0] - ds[0]) / self.rt_w_res,
+            (-rtw_ds * self.rt_w_bar[1] + ds[1]) / self.rt_w_res,
         ]
-        
-        tmp = 2 * (self.rt2_w_bar[0] * dz[0] + self.rt2_w_bar[1].T @ dz[1])
+
+        rt2_dz = 2 * (self.rt_w_bar[0] * dz[0] + self.rt_w_bar[1].T @ dz[1])
         W_dz = [
-            (tmp * self.rt2_w_bar[0] - dz[0]) * self.rt_w_res,
-            (tmp * self.rt2_w_bar[1] + dz[1]) * self.rt_w_res
+            (rt2_dz * self.rt_w_bar[0] - dz[0]) * self.rt_w_res,
+            (rt2_dz * self.rt_w_bar[1] + dz[1]) * self.rt_w_res,
         ]
 
         Wds_Wdz = _soc_prod(W_ds, W_dz)
@@ -322,20 +317,21 @@ class SecondOrder(SymCone):
         lmbda_lmbda = _soc_prod(self.lmbda, self.lmbda)
         rhs = [
             -lmbda_lmbda[0] - Wds_Wdz[0] + sigma_mu,
-            -lmbda_lmbda[1] - Wds_Wdz[1]
+            -lmbda_lmbda[1] - Wds_Wdz[1],
         ]
 
         # Compute Lambda \ [ ... ]
-        tmp = self.lmbda_res * rhs[1] + self.lmbda[1].T @ rhs[1] * self.lmbda[1]
+        lmbda_rhs = self.lmbda[1].T @ rhs[1]
+        temp = self.lmbda_res * rhs[1] + lmbda_rhs * self.lmbda[1]
         work = [
-            (self.lmbda[0] * rhs[0] - self.lmbda[1].T @ rhs[1]) / self.lmbda_res,
-            (-rhs[0] * self.lmbda[1] + tmp / self.lmbda[0]) / self.lmbda_res
+            (self.lmbda[0] * rhs[0] - lmbda_rhs) / self.lmbda_res,
+            (-rhs[0] * self.lmbda[1] + temp / self.lmbda[0]) / self.lmbda_res,
         ]
 
         # Compute W^-1 [ ... ]
-        tmp = 2 * (self.rt2_w_bar[0] * work[0] - self.rt2_w_bar[1].T @ work[1])
-        out[0][:] =  (tmp * self.rt2_w_bar[0] - work[0]) / self.rt_w_res
-        out[1][:] = (-tmp * self.rt2_w_bar[1] + work[1]) / self.rt_w_res
+        temp = 2 * (self.rt_w_bar[0] * work[0] - self.rt_w_bar[1].T @ work[1])
+        out[0][:] = (temp * self.rt_w_bar[0] - work[0]) / self.rt_w_res
+        out[1][:] = (-temp * self.rt_w_bar[1] + work[1]) / self.rt_w_res
 
     def step_to_boundary(self, ds, dz):
         # Compute the maximum step alpha in [0, 1] we can take such that
@@ -345,29 +341,25 @@ class SecondOrder(SymCone):
         if not self.nt_aux_updated:
             self.nt_aux()
 
-        temp = 2 * (self.rt2_w_bar[0] * ds[0] - self.rt2_w_bar[1].T @ ds[1])
+        rtw_ds = 2 * (self.rt_w_bar[0] * ds[0] - self.rt_w_bar[1].T @ ds[1])
         W_ds = [
-            (temp * self.rt2_w_bar[0] - ds[0]) / self.rt_w_res,
-           (-temp * self.rt2_w_bar[1] + ds[1]) / self.rt_w_res
+            (rtw_ds * self.rt_w_bar[0] - ds[0]) / self.rt_w_res,
+            (-rtw_ds * self.rt_w_bar[1] + ds[1]) / self.rt_w_res,
         ]
-        
-        temp = 2 * (self.rt2_w_bar[0] * dz[0] + self.rt2_w_bar[1].T @ dz[1])
+
+        rtw_dz = 2 * (self.rt_w_bar[0] * dz[0] + self.rt_w_bar[1].T @ dz[1])
         W_dz = [
-            (temp * self.rt2_w_bar[0] - dz[0]) * self.rt_w_res,
-            (temp * self.rt2_w_bar[1] + dz[1]) * self.rt_w_res
+            (rtw_dz * self.rt_w_bar[0] - dz[0]) * self.rt_w_res,
+            (rtw_dz * self.rt_w_bar[1] + dz[1]) * self.rt_w_res,
         ]
 
         temp = self.lmbda_bar[0] * W_ds[0] - self.lmbda_bar[1].T @ W_ds[1]
-        rho = [
-            temp / self.rt_lmbda_res,
-            (W_ds[1] - (temp + W_ds[0]) / (1 + self.lmbda_bar[0]) * self.lmbda_bar[1]) / self.rt_lmbda_res
-        ]
+        temp2 = (temp + W_ds[0]) / (1 + self.lmbda_bar[0]) * self.lmbda_bar[1]
+        rho = [temp / self.rt_lmbda_res, (W_ds[1] - temp2) / self.rt_lmbda_res]
 
         temp = self.lmbda_bar[0] * W_dz[0] - self.lmbda_bar[1].T @ W_dz[1]
-        sig = [
-            temp / self.rt_lmbda_res,
-            (W_dz[1] - (temp + W_dz[0]) / (1 + self.lmbda_bar[0]) * self.lmbda_bar[1]) / self.rt_lmbda_res
-        ]
+        temp2 = (temp + W_dz[0]) / (1 + self.lmbda_bar[0]) * self.lmbda_bar[1]
+        sig = [temp / self.rt_lmbda_res, (W_dz[1] - temp2) / self.rt_lmbda_res]
 
         rho_step = (rho[0] - np.sqrt(rho[1].T @ rho[1]))[0, 0]
         sig_step = (sig[0] - np.sqrt(sig[1].T @ sig[1]))[0, 0]
@@ -376,7 +368,6 @@ class SecondOrder(SymCone):
             return 1.0
         else:
             return 1.0 / max(-rho_step, -sig_step)
-
 
     # ========================================================================
     # Auxilliary functions
@@ -392,8 +383,10 @@ class SecondOrder(SymCone):
 
         self.congr_aux_updated = True
 
+
 def _soc_res(x):
     return (x[0] * x[0] - x[1].T @ x[1])[0, 0]
+
 
 def _soc_prod(x, y):
     return [x[0] * y[0] + x[1].T @ y[1], x[0] * y[1] + y[0] * x[1]]
