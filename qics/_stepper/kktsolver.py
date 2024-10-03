@@ -78,7 +78,7 @@ class KKTSolver:
                     self.GHG_fact = lin.cho_fact(GHG)
 
                 GHGA = lin.cho_solve(self.GHG_fact, model.A_T_dense)
-                AGHGA = lin.dense_dot_x(GHGA.T, model.A_coo.T).T
+                AGHGA = model.A @ GHGA
                 self.AGHGA_fact = lin.cho_fact(AGHGA)
 
         elif model.use_A:

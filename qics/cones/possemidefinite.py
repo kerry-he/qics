@@ -445,17 +445,7 @@ class PosSemidefinite(SymCone):
                     A_ds = A_ds[:, ::2] + A_ds[:, 1::2] * 1j
                 A_ds = A_ds.toarray()
 
-                if self.iscomplex:
-                    self.Ai_ds = np.array(
-                        [
-                            Ai.reshape((-1, 2))
-                            .view(dtype=np.complex128)
-                            .reshape(self.n, self.n)
-                            for Ai in A_ds
-                        ]
-                    )
-                else:
-                    self.Ai_ds = np.array([Ai.reshape((self.n, self.n)) for Ai in A_ds])
+                self.Ai_ds = np.array([Ai.reshape((self.n, self.n)) for Ai in A_ds])
                 self.work = np.zeros_like(self.Ai_ds, dtype=self.dtype)
 
                 # Extract and scale all off-diagonal blocks by 2

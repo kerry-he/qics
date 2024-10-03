@@ -66,9 +66,8 @@ class Solver:
     use_invhess : :obj:`bool`, optional
         Whether or not to avoid using inverse Hessian product oracles by
         solving a modified cone program with
-        :math:`-G^{-1}(\mathcal{K})=\{ x : -Gx \in \mathcal{K} \}`. 
-        Requires an initial point :math:`x_0` to be specified such that 
-        :math:`-Gx_0 \in \text{int}\ \mathcal{K}`. The default is ``True``.
+        :math:`-G^{-1}(\mathcal{K})=\{ x : -Gx \in \mathcal{K} \}`. The default
+        is ``True``.
     """
 
     def __init__(
@@ -97,6 +96,22 @@ class Solver:
         self.tol_ip = tol_ip
         self.tol_near = tol_near
 
+        if init_pnt is None:
+            init_pnt = vec.Point(model)
+            init_pnt.vec.fill(np.nan)
+
+        # Process model
+        self.use_invhess = use_invhess or not model.use_G
+        model._preprocess(self.use_invhess, init_pnt.s)
+
+        self.model = model
+        kktsolver = KKTSolver(model, ir=ir, use_invhess=self.use_invhess)
+        self.stepper = (
+            SymStepper(kktsolver, model, toa=toa)
+            if model.issymmetric
+            else NonSymStepper(kktsolver, model, toa=toa)
+        )
+
         self.point = vec.Point(model)
         self.point.vec.fill(np.nan)
         self.point_best = vec.Point(model)
@@ -117,26 +132,12 @@ class Solver:
         )
 
         if init_pnt is not None:
-            self.point.x[:] = init_pnt.x * model.c_scale.reshape((-1, 1))
-            self.point.y[:] = init_pnt.y * model.b_scale.reshape((-1, 1))
+            self.point.x[:model.n_orig] = init_pnt.x * model.c_scale.reshape((-1, 1))[:model.n_orig]
+            self.point.y[:model.p_orig] = init_pnt.y * model.b_scale.reshape((-1, 1))[:model.p_orig]
             self.point.z.vec[:] = init_pnt.z.vec * model.h_scale.reshape((-1, 1))
             self.point.s.vec[:] = init_pnt.s.vec * model.h_scale.reshape((-1, 1))
             self.point.tau[:] = init_pnt.tau
             self.point.kap[:] = init_pnt.kap
-
-        self.use_invhess = use_invhess
-        if not use_invhess:
-            assert init_pnt is not None, "Must provide an initial x0 such that h-G*x0 \
-                is in the interior of the cone K"
-            assert not any(np.isnan(self.point.x)), "Must provide an initial x0 such that \
-                h-G*x0 is in the interior of the cone K"
-            assert (model.h == 0.0).all(), "Vector h must be zero to avoid using \
-                inverse Hessian oracles."
-            assert model.use_G, "Avoiding using inverse Hessian is not supported nor \
-                recommended when G is the identity matrix."
-            assert not model.issymmetric, "Avoiding using inverse Hessian is not \
-                supported when K is symmetric."
-            self.point.s.vec[:] = -self.model.G @ self.point.x
 
         return
 
@@ -242,6 +243,9 @@ class Solver:
         # Scale variables back
         x_opt = self.point.x / self.model.c_scale.reshape((-1, 1)) / self.point.tau
         y_opt = self.point.y / self.model.b_scale.reshape((-1, 1)) / self.point.tau
+        if not self.use_invhess:
+            x_opt = x_opt[:self.model.n_orig]
+            y_opt = y_opt[:self.model.p_orig]
         z_opt = self.point.z
         z_opt.vec /= self.model.h_scale.reshape((-1, 1)) * self.point.tau
         s_opt = self.point.s
