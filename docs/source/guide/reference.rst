@@ -3,7 +3,7 @@ Quick reference
 
 This page aims to serve as a reference point for how to initialize and use the
 cone, model, and solver classes provided by QICS. Further details about these
-classes can be found in the :ref:`API reference<api>`.
+classes can be found in the :doc:`/api/index`.
 
 
 Modelling
