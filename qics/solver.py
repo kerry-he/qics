@@ -84,7 +84,7 @@ class Solver:
         ir=True,
         toa=True,
         init_pnt=None,
-        use_invhess=True,
+        use_invhess=False,
     ):
         self.max_iter = max_iter
         self.max_time = max_time
@@ -101,7 +101,7 @@ class Solver:
             init_pnt.vec.fill(np.nan)
 
         # Process model
-        self.use_invhess = use_invhess or not model.use_G
+        self.use_invhess = use_invhess or not model.use_G or _issingular(model.G)
         model._preprocess(self.use_invhess, init_pnt.s)
 
         self.model = model
@@ -124,7 +124,7 @@ class Solver:
         self.exit_status = None
 
         self.model = model
-        kktsolver = KKTSolver(model, ir=ir, use_invhess=use_invhess)
+        kktsolver = KKTSolver(model, ir=ir, use_invhess=self.use_invhess)
         self.stepper = (
             SymStepper(kktsolver, model, toa=toa)
             if model.issymmetric
@@ -244,7 +244,7 @@ class Solver:
         x_opt = self.point.x / self.model.c_scale.reshape((-1, 1)) / self.point.tau
         y_opt = self.point.y / self.model.b_scale.reshape((-1, 1)) / self.point.tau
         if not self.use_invhess:
-            x_opt = x_opt[:self.model.n_orig]
+            x_opt = (x_opt + self.model.x_offset)[:self.model.n_orig]
             y_opt = y_opt[:self.model.p_orig]
         z_opt = self.point.z
         z_opt.vec /= self.model.h_scale.reshape((-1, 1)) * self.point.tau
@@ -580,3 +580,15 @@ class Solver:
         print(f"\tdual obj:    {self.d_obj:>19.12e}", end="")
         print(f"\tdual feas:    {self.x_feas:<.2e}")
         print()
+
+def _issingular(A, tol=1e-8):
+    if A.size == 0:
+        return True
+    if sp.sparse.issparse(A):
+        if min(A.shape) == 1:
+            return len(A.data) == 0
+        else:
+            _, eig, _ = sp.sparse.linalg.svds(A, k=1, which='sm')
+            return abs(eig) < tol
+    else:
+        return np.linalg.matrix_rank(A, tol=tol) < min(A.shape)    

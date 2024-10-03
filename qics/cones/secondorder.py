@@ -54,14 +54,16 @@ class SecondOrder(SymCone):
             self.feas = False
             return self.feas
 
-        if self.z[0] <= np.sqrt(self.z[1].T @ self.z[1]):
-            self.feas = False
-            return self.feas
+        if self.z is not None:
+            if self.z[0] <= np.sqrt(self.z[1].T @ self.z[1]):
+                self.feas = False
+                return self.feas
 
         self.feas = True
         return self.feas
 
     def get_dual_feas(self):
+        self.z = self.dual
         return self.z[0] > np.sqrt(self.z[1].T @ self.z[1])
 
     def get_val(self):

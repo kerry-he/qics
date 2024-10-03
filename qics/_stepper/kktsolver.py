@@ -66,7 +66,7 @@ class KKTSolver:
 
         # Precompute and factor Schur complement matrix
         if model.use_G:
-            if self.GHG_fact is None or self.use_invhess:
+            if self.GHG_fact is None or self.use_invhess or model.issymmetric:
                 GHG = blk_hess_congruence(model.G_T_views, model)
                 self.GHG_fact = lin.cho_fact(GHG, increment_diag=(not model.use_A))
 

@@ -163,8 +163,9 @@ class Model:
         # solve problems using the cone K'={x : G*x ∈ K}.
 
         n = self.n
-        self.use_A = True
-        
+        self.x_offset = np.zeros((n, 1))
+
+        # Add variable x2 and constraint x2 = 0
         # Find an interior point of K and normalize it
         if s is None: 
             s = qics.point.VecProduct(self.cones)
@@ -175,29 +176,46 @@ class Model:
                 cone_k.get_init_point(s[k])
         s_norm = (s.vec.T @ s.vec)[0, 0]
 
-        # Add variable x2 and constraint x2 = 0
-        A_new_col = sp.sparse.coo_matrix((self.p, 1))
-        A_new_row = sp.sparse.coo_matrix(([1.], ([0], [n])), (1, n+1))
-        self.c = np.vstack((self.c, np.array([[0.]])))
-        self.A = _vstack((_hstack((self.A, A_new_col)), A_new_row))
-        self.b = np.vstack((self.b, np.array([[0.]])))
-        self.G = _hstack((self.G, -s.vec / s_norm))
-
-        (n, _) = (self.n, self.p) = (self.n + 1, self.p + 1)
-
-        # Add variable x3 if necessary
-        if np.any(self.h):
-            h_norm = (self.h.T @ self.h)[0, 0]
-            
+        G_temp = _hstack((self.G, -s.vec / s_norm))
+        if not _issingular(G_temp):
             A_new_col = sp.sparse.coo_matrix((self.p, 1))
             A_new_row = sp.sparse.coo_matrix(([1.], ([0], [n])), (1, n+1))
             self.c = np.vstack((self.c, np.array([[0.]])))
             self.A = _vstack((_hstack((self.A, A_new_col)), A_new_row))
-            self.b = np.vstack((self.b, np.array([[h_norm]])))
-            self.G = _hstack((self.G, -self.h / h_norm))
-            self.h = np.zeros((self.q, 1))
+            self.b = np.vstack((self.b, np.array([[0.]])))
+            self.G = G_temp
 
-            (self.n, self.p) = (self.n + 1, self.p + 1)
+            self.x_offset = np.vstack((self.x_offset, np.array([[0.]])))
+
+            self.use_A = True
+            (n, _) = (self.n, self.p) = (self.n + 1, self.p + 1)
+
+        # Add variable x3 if necessary
+        if np.any(self.h):
+            h_norm = (self.h.T @ self.h)[0, 0]
+            G_temp = _hstack((self.G, -self.h / h_norm))
+            if not _issingular(G_temp):
+                A_new_col = sp.sparse.coo_matrix((self.p, 1))
+                A_new_row = sp.sparse.coo_matrix(([1.], ([0], [n])), (1, n+1))
+                self.c = np.vstack((self.c, np.array([[0.]])))
+                self.A = _vstack((_hstack((self.A, A_new_col)), A_new_row))
+                self.b = np.vstack((self.b, np.array([[h_norm]])))
+                self.G = G_temp
+                self.h = np.zeros((self.q, 1))
+
+                self.x_offset = np.vstack((self.x_offset, np.array([[0.]])))
+
+                self.use_A = True
+                (n, _) = (self.n, self.p) = (self.n + 1, self.p + 1)
+            else:
+                self.x_offset = sp.sparse.linalg.lsqr(self.G, self.h)[0]
+                self.x_offset = self.x_offset.reshape((-1, 1))
+                self.offset += (self.c.T @ self.x_offset)[0, 0]
+                self.b = self.b - self.A @ self.x_offset
+                self.h = np.zeros((self.q, 1))
+        
+        if self.x_offset is None:
+            self.x_offset = np.zeros((n, 1))
 
     def _rescale(self):
         # Rescale c
@@ -287,6 +305,13 @@ def _hstack(tup):
             if sp.sparse.issparse(tup[k]):
                 tup[k] = tup[k].toarray()
         return np.hstack(tup)
+    
+def _issingular(A, tol=1e-8):
+    if sp.sparse.issparse(A):
+        _, eig, _ = sp.sparse.linalg.svds(A, k=1, which='sm')
+        return abs(eig) < tol
+    else:
+        return np.linalg.matrix_rank(A, tol=tol) < min(A.shape)    
 
 def build_cone_idxs(n, cones):
     cone_idxs = []
