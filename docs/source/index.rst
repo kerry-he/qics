@@ -44,7 +44,7 @@ supports include:
        \times \mathbb{H}^n_{++} : t \geq S(X \| Y) \}`
    * - Quantum conditional entropy
      - :class:`qics.cones.QuantCondEntr`
-     - :math:`\text{cl}\{ (t, X) \in \mathbb{R} \times \mathbb{H}^{n}_{++} :
+     - :math:`\text{cl}\{ (t, X) \in \mathbb{R}\times\mathbb{H}^{\Pi_in_i}_{++}:
        t \geq -S(X) + S(\text{tr}_i(X)) \}`
    * - Quantum key distribution
      - :class:`qics.cones.QuantKeyDist`

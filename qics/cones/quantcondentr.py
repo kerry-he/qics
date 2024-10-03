@@ -13,10 +13,10 @@ class QuantCondEntr(Cone):
 
     .. math::
 
-        \mathcal{QCE}_{\{n_i\}, i} = \text{cl}\{ (t, X) \in \mathbb{R} 
-        \times \mathbb{H}^{n}_{++} : t \geq -S(X) + S(\text{tr}_i(X)) \},
+        \mathcal{QCE}_{\{n_i\}, j} = \text{cl}\{ (t, X) \in \mathbb{R} 
+        \times \mathbb{H}^{\Pi_in_i}_{++} : t \geq -S(X) + S(\text{tr}_i(X)) \},
 
-    where :math:`n=\Pi_{i=0}^{k-1}
+    where
 
     .. math::
 

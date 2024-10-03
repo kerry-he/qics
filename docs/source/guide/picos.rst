@@ -35,7 +35,7 @@ to be solved using QICS.
    * - Operator relative entropy
      - :func:`picos.oprelentr`
      - Operator convex
-     - :math:`P_{\log}(X, Y) = X^{1/2} \log(X^{1/2} Y^{-1} X^{1/2}) X^{1/2}`
+     - :math:`-P_{\log}(X, Y) = X^{1/2} \log(X^{1/2} Y^{-1} X^{1/2}) X^{1/2}`
    * - Matrix geometric mean
      - :func:`picos.mtxgeomean`
      - Operator convex if :math:`t\in[-1, 0]\cup[1, 2]`

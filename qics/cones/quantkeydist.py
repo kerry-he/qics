@@ -67,8 +67,8 @@ class QuantKeyDist(Cone):
           - :math:`Z_i=\mathbb{I}_{n_0}\otimes |i \rangle\langle i|` for 
             :math:`i=1,\ldots,n_1` if ``sys=1``. 
           
-          We generalize this definition to when ``dims`` and ``sys`` are
-          lists of any length.
+          We generalize this definition to the case where ``dims`` and ``sys`` 
+          are lists of any length.
 
         - If ``Z_info`` is a :obj:`list` of :class:`~numpy.ndarray`, then
           ``Z_info`` directly specifies the Kraus operators 
