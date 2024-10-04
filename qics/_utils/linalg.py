@@ -138,6 +138,14 @@ def abs_max(A, axis):
         return A.max(axis=axis).toarray().reshape(-1)
     else:
         return np.maximum(A.max(axis=axis, initial=0.0), -A.min(axis=axis, initial=0.0))
+    
+def is_full_col_rank(A):
+    if A.size == 0:
+        return True
+    AA =  A.T @ A
+    if sp.sparse.issparse(AA):
+        AA = AA.toarray()    
+    return np.linalg.matrix_rank(AA) < min(A.shape)
 
 
 def dense_dot_x(A, B):

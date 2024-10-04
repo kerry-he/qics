@@ -86,21 +86,11 @@ class Model:
         self.issymmetric = all([cone.get_issymmetric() for cone in self.cones])
         self.iscomplex = any([cone.get_iscomplex() for cone in self.cones])        
 
-        # Check model uses A or G matrices
-        def _is_like_eye(A, tol=1e-10):
-            if A.shape[0] != A.shape[1]:
-                return False
-            if sp.sparse.issparse(A):
-                A_minus_eye = sp.sparse.eye(self.n) - abs(self.G)
-                return sp.sparse.linalg.norm(A_minus_eye) < tol
-            else:
-                A_minus_eye = np.eye(self.n) - abs(self.G)
-                return np.linalg.norm(A_minus_eye) < tol
-
+        # Check if model uses A or G matrices
         self.use_G = not _is_like_eye(self.G)
         self.use_A = (A is not None) and (np.prod(A.shape) > 0)
 
-    def _preprocess(self, use_invhess=False, s_init=None):
+    def _preprocess(self, use_invhess=False, init_pnt=None):
         SPARSE_THRESHOLD = 0.01
         cone_idxs = self.cone_idxs = build_cone_idxs(self.q, self.cones)
 
@@ -111,7 +101,7 @@ class Model:
 
         # Restructure to allow for avoiding inverse Hessian oracles
         if self.use_G and not use_invhess:
-            self._restructure(s_init)
+            self._restructure(init_pnt)
 
         # Rescale model
         self._rescale()
@@ -135,7 +125,7 @@ class Model:
             self.issparse = any(issparse_list)
 
         elif self.use_A:
-            # After rescaling, G is some easily invertible square diagonal matrix
+            # After rescaling, G is an easily invertible square diagonal matrix
             self.G_inv = np.reciprocal(self.G.diagonal()).reshape((-1, 1))
 
             self.A_invG = la.scale_axis(self.A.copy(), scale_cols=self.G_inv)
@@ -154,7 +144,7 @@ class Model:
 
         return
     
-    def _restructure(self, s):
+    def _restructure(self, init_pnt=None):
         # Restructures the conic program into
         #     min  <c,x1>
         #     s.t  A*x1 = b,  x2 = 0,  x3 = 1
@@ -167,17 +157,20 @@ class Model:
 
         # Add variable x2 and constraint x2 = 0
         # Find an interior point of K and normalize it
-        if s is None: 
-            s = qics.point.VecProduct(self.cones)
-            s.vec.fill(np.nan)
+        if init_pnt is None:
+            s_init = qics.point.VecProduct(self.cones)
+            s_init.vec.fill(np.nan)
+        else:
+            # If user gives us an inital s, then use this instead
+            s_init = init_pnt.s
 
         for k, cone_k in enumerate(self.cones):
-            if any(np.isnan(s.vecs[k])):
-                cone_k.get_init_point(s[k])
-        s_norm = np.sum(np.abs(s.vec))
+            if any(np.isnan(s_init.vecs[k])):
+                cone_k.get_init_point(s_init[k])
+        s_norm = np.sum(np.abs(s_init.vec))
 
-        G_temp = _hstack((self.G, -s.vec / s_norm))
-        if not _issingular(G_temp):
+        G_temp = _hstack((self.G, -s_init.vec / s_norm))
+        if not la.is_full_col_rank(G_temp):
             A_new_col = sp.sparse.coo_matrix((self.p, 1))
             A_new_row = sp.sparse.coo_matrix(([1.], ([0], [n])), (1, n+1))
             self.c = np.vstack((self.c, np.array([[0.]])))
@@ -194,7 +187,7 @@ class Model:
         if np.any(self.h):
             h_norm = np.sum(np.abs(self.h))
             G_temp = _hstack((self.G, -self.h / h_norm))
-            if not _issingular(G_temp):
+            if not la.is_full_col_rank(G_temp):
                 A_new_col = sp.sparse.coo_matrix((self.p, 1))
                 A_new_row = sp.sparse.coo_matrix(([1.], ([0], [n])), (1, n+1))
                 self.c = np.vstack((self.c, np.array([[0.]])))
@@ -278,6 +271,18 @@ class Model:
 
         return
 
+def _is_like_eye(A, tol=1e-10):
+    if A.shape[0] != A.shape[1]:
+        return False
+    n = A.shape[0]
+    if sp.sparse.issparse(A):
+        A_minus_eye = sp.sparse.eye(n) - abs(A)
+        return sp.sparse.linalg.norm(A_minus_eye) < tol
+    else:
+        A_minus_eye = np.eye(n) - abs(A)
+        return np.linalg.norm(A_minus_eye) < tol
+
+
 def _vstack(tup):
     if isinstance(tup, tuple):
         tup = list(tup)
@@ -306,13 +311,6 @@ def _hstack(tup):
                 tup[k] = tup[k].toarray()
         return np.hstack(tup)
 
-def _issingular(A):
-    if A.size == 0:
-        return True
-    AA =  A.T @ A
-    if sp.sparse.issparse(AA):
-        AA = AA.toarray()    
-    return np.linalg.matrix_rank(AA) < min(A.shape)
 
 def build_cone_idxs(n, cones):
     cone_idxs = []
