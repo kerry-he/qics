@@ -119,9 +119,9 @@ def scale_axis(A, scale_rows=None, scale_cols=None):
     if sp.sparse.issparse(A):
         A_coo = A.tocoo()
         if scale_rows is not None:
-            A_coo.data *= np.take(scale_rows, A_coo.row)
+            A_coo.data *= np.take(scale_rows.ravel(), A_coo.row)
         if scale_cols is not None:
-            A_coo.data *= np.take(scale_cols, A_coo.col)
+            A_coo.data *= np.take(scale_cols.ravel(), A_coo.col)
         return A_coo
     else:
         if scale_rows is not None:

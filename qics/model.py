@@ -66,7 +66,16 @@ class Model:
         ``0``.
     """
 
-    def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0):
+    def __init__(
+        self,
+        c,
+        A=None,
+        b=None,
+        G=None,
+        h=None,
+        cones=None,
+        offset=0.0
+    ):
         # Intiialize model parameters and default values for missing data
         self.n_orig = self.n = np.size(c)
         self.p_orig = self.p = np.size(b) if (b is not None) else 0
@@ -81,8 +90,10 @@ class Model:
         self.cones = cones
         self.offset = offset
 
+        # Barrier parameter
         self.nu = 1 + sum([cone.nu for cone in cones])
 
+        # Get properties of the problem
         self.issymmetric = all([cone.get_issymmetric() for cone in self.cones])
         self.iscomplex = any([cone.get_iscomplex() for cone in self.cones])        
 
@@ -92,7 +103,7 @@ class Model:
 
     def _preprocess(self, use_invhess=False, init_pnt=None):
         SPARSE_THRESHOLD = 0.01
-        cone_idxs = self.cone_idxs = build_cone_idxs(self.q, self.cones)
+        cone_idxs = self.cone_idxs = _build_cone_idxs(self.q, self.cones)
 
         # Sparsify A and G if they are sufficiently sparse
         self.A = _sparsify(self.A, SPARSE_THRESHOLD, "csr")
@@ -111,6 +122,7 @@ class Model:
         self.G_T = self.G.T.tocsr() if sp.sparse.issparse(self.G) else self.G.T
 
         # Get slices of A or G matrices correpsonding to each cone
+        # and some other handy precomputations
         if self.use_G:
             self.G_T_views = [self.G_T[:, idxs_k] for idxs_k in cone_idxs]
             self.G_T_views = _sparsify(self.G_T_views, SPARSE_THRESHOLD)
@@ -143,7 +155,7 @@ class Model:
             self.issparse = True
 
         return
-    
+
     def _restructure(self, init_pnt=None):
         # Restructures the conic program into
         #     min  <c,x1>
@@ -155,7 +167,7 @@ class Model:
         n = self.n
         self.x_offset = np.zeros((n, 1))
 
-        # Add variable x2 and constraint x2 = 0
+        # Add variable x2 and constraint x2 = 0 if necessary
         # Find an interior point of K and normalize it
         if init_pnt is None:
             s_init = qics.point.VecProduct(self.cones)
@@ -183,7 +195,7 @@ class Model:
             self.use_A = True
             (n, _) = (self.n, self.p) = (self.n + 1, self.p + 1)
 
-        # Add variable x3 if necessary
+        # Add variable x3 and constraint x3 = 1 if necessary
         if np.any(self.h):
             h_norm = np.sum(np.abs(self.h))
             G_temp = _hstack((self.G, -self.h / h_norm))
@@ -212,50 +224,42 @@ class Model:
 
     def _rescale(self):
         # Rescale c
-        self.c_scale = np.sqrt(
-            np.maximum.reduce(
-                [
-                    np.abs(self.c.reshape(-1)),
-                    la.abs_max(self.A, axis=0),
-                    la.abs_max(self.G, axis=0),
-                ]
-            )
-        )
+        self.c_scale = np.maximum.reduce([np.abs(self.c.ravel()), 
+                                          la.abs_max(self.A, axis=0), 
+                                          la.abs_max(self.G, axis=0)])
+        self.c_scale = np.sqrt(self.c_scale).reshape((-1, 1))
 
         # Rescale b
-        self.b_scale = np.sqrt(
-            np.maximum.reduce(
-                [np.abs(self.b.reshape(-1)), la.abs_max(self.A, axis=1)]
-            )
-        )
+        self.b_scale = np.maximum.reduce([np.abs(self.b.ravel()), 
+                                          la.abs_max(self.A, axis=1)])
+        self.b_scale = np.sqrt(self.b_scale).reshape((-1, 1))
 
         # Rescale h
         # Note we can only scale each cone by a positive factor, and
         # we can't scale each individual variable by a different factor
         # (except for the nonnegative orthant)
-        self.h_scale = np.zeros(self.q)
-        h_absmax = np.abs(self.h.reshape(-1))
-        G_absmax_row = la.abs_max(self.G, axis=1)
+        self.h_scale = np.zeros((self.q, 1))
+        h_absmax = np.abs(self.h.ravel())
+        G_absmax = la.abs_max(self.G, axis=1)
         for k, cone_k in enumerate(self.cones):
             idxs = self.cone_idxs[k]
             if isinstance(cone_k, qics.cones.NonNegOrthant):
-                self.h_scale[idxs] = np.sqrt(
-                    np.maximum.reduce([h_absmax[idxs], G_absmax_row[idxs]])
-                )
+                self.h_scale[idxs, 0] = np.maximum.reduce([h_absmax[idxs], 
+                                                           G_absmax[idxs]])
             else:
-                self.h_scale[idxs] = np.sqrt(
-                    np.max([h_absmax[idxs], G_absmax_row[idxs]])
-                )
+                self.h_scale[idxs, 0] = np.max([h_absmax[idxs], G_absmax[idxs]])
+        self.h_scale = np.sqrt(self.h_scale)
 
         # Ensure there are no divide by zeros
-        self.c_scale[self.c_scale < np.finfo(self.c_scale.dtype).eps] = 1.0
-        self.b_scale[self.b_scale < np.finfo(self.b_scale.dtype).eps] = 1.0
-        self.h_scale[self.h_scale < np.finfo(self.h_scale.dtype).eps] = 1.0
+        EPS = np.finfo(self.b_scale.dtype).eps
+        self.c_scale[self.c_scale < EPS] = 1.0
+        self.b_scale[self.b_scale < EPS] = 1.0
+        self.h_scale[self.h_scale < EPS] = 1.0
 
         # Rescale data
-        self.c /= self.c_scale.reshape((-1, 1))
-        self.b /= self.b_scale.reshape((-1, 1))
-        self.h /= self.h_scale.reshape((-1, 1))
+        self.c /= self.c_scale
+        self.b /= self.b_scale
+        self.h /= self.h_scale
 
         self.A = la.scale_axis(
             self.A,
@@ -270,6 +274,7 @@ class Model:
         )
 
         return
+
 
 def _is_like_eye(A, tol=1e-10):
     if A.shape[0] != A.shape[1]:
@@ -296,7 +301,8 @@ def _vstack(tup):
             if sp.sparse.issparse(tup[k]):
                 tup[k] = tup[k].toarray()
         return np.vstack(tup)
-    
+
+
 def _hstack(tup):
     if isinstance(tup, tuple):
         tup = list(tup)
@@ -312,7 +318,7 @@ def _hstack(tup):
         return np.hstack(tup)
 
 
-def build_cone_idxs(n, cones):
+def _build_cone_idxs(n, cones):
     cone_idxs = []
     prev_idx = 0
     for cone in cones:

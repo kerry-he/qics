@@ -85,7 +85,7 @@ class Solver:
         ir=True,
         toa=True,
         init_pnt=None,
-        use_invhess=None,
+        use_invhess=True,
     ):
         # Basic solver options
         self.max_iter = max_iter
@@ -138,10 +138,10 @@ class Solver:
         self.point.vec.fill(np.nan)
         if init_pnt is not None:
             (n_orig, p_orig) = (model.n_orig, model.p_orig)
-            self.point.x.T[:n_orig] = init_pnt.x.T * model.c_scale[:n_orig]
-            self.point.y.T[:p_orig] = init_pnt.y.T * model.b_scale[:p_orig]
-            self.point.z.vec.T[:] = init_pnt.z.vec.T * model.h_scale
-            self.point.s.vec.T[:] = init_pnt.s.vec.T * model.h_scale
+            self.point.x[:n_orig] = init_pnt.x * model.c_scale[:n_orig]
+            self.point.y[:p_orig] = init_pnt.y * model.b_scale[:p_orig]
+            self.point.z.vec[:] = init_pnt.z.vec * model.h_scale
+            self.point.s.vec[:] = init_pnt.s.vec * model.h_scale
             self.point.tau[:] = init_pnt.tau
             self.point.kap[:] = init_pnt.kap
 
@@ -245,15 +245,15 @@ class Solver:
             self.print_solution()
 
         # Scale variables back
-        x_opt = (self.point.x.T / self.model.c_scale / self.point.tau).T
-        y_opt = (self.point.y.T / self.model.b_scale / self.point.tau).T
+        x_opt = self.point.x / self.model.c_scale / self.point.tau
+        y_opt = self.point.y / self.model.b_scale / self.point.tau
         if not self.use_invhess:
             x_opt = (x_opt + self.model.x_offset)[:self.model.n_orig]
             y_opt = y_opt[:self.model.p_orig]
         z_opt = self.point.z
-        z_opt.vec.T[:] = z_opt.vec.T / self.model.h_scale * self.point.tau
+        z_opt.vec[:] = z_opt.vec / self.model.h_scale * self.point.tau
         s_opt = self.point.s
-        s_opt.vec.T[:] = s_opt.vec.T / self.model.h_scale * self.point.tau
+        s_opt.vec[:] = s_opt.vec / self.model.h_scale * self.point.tau
 
         return {
             "x_opt": x_opt,
