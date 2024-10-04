@@ -581,14 +581,10 @@ class Solver:
         print(f"\tdual feas:    {self.x_feas:<.2e}")
         print()
 
-def _issingular(A, tol=1e-8):
+def _issingular(A):
     if A.size == 0:
         return True
-    if sp.sparse.issparse(A):
-        if min(A.shape) == 1:
-            return len(A.data) == 0
-        else:
-            _, eig, _ = sp.sparse.linalg.svds(A, k=1, which='sm')
-            return abs(eig) < tol
-    else:
-        return np.linalg.matrix_rank(A, tol=tol) < min(A.shape)    
+    AA =  A.T @ A
+    if sp.sparse.issparse(AA):
+        AA = AA.toarray()    
+    return np.linalg.matrix_rank(AA) < min(A.shape)

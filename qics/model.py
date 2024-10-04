@@ -174,7 +174,7 @@ class Model:
         for k, cone_k in enumerate(self.cones):
             if any(np.isnan(s.vecs[k])):
                 cone_k.get_init_point(s[k])
-        s_norm = (s.vec.T @ s.vec)[0, 0]
+        s_norm = np.sum(np.abs(s.vec))
 
         G_temp = _hstack((self.G, -s.vec / s_norm))
         if not _issingular(G_temp):
@@ -192,7 +192,7 @@ class Model:
 
         # Add variable x3 if necessary
         if np.any(self.h):
-            h_norm = (self.h.T @ self.h)[0, 0]
+            h_norm = np.sum(np.abs(self.h))
             G_temp = _hstack((self.G, -self.h / h_norm))
             if not _issingular(G_temp):
                 A_new_col = sp.sparse.coo_matrix((self.p, 1))
@@ -305,13 +305,14 @@ def _hstack(tup):
             if sp.sparse.issparse(tup[k]):
                 tup[k] = tup[k].toarray()
         return np.hstack(tup)
-    
-def _issingular(A, tol=1e-8):
-    if sp.sparse.issparse(A):
-        _, eig, _ = sp.sparse.linalg.svds(A, k=1, which='sm')
-        return abs(eig) < tol
-    else:
-        return np.linalg.matrix_rank(A, tol=tol) < min(A.shape)    
+
+def _issingular(A):
+    if A.size == 0:
+        return True
+    AA =  A.T @ A
+    if sp.sparse.issparse(AA):
+        AA = AA.toarray()    
+    return np.linalg.matrix_rank(AA) < min(A.shape)
 
 def build_cone_idxs(n, cones):
     cone_idxs = []
