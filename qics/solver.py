@@ -251,9 +251,9 @@ class Solver:
             x_opt = (x_opt + self.model.x_offset)[:self.model.n_orig]
             y_opt = y_opt[:self.model.p_orig]
         z_opt = self.point.z
-        z_opt.vec[:] = z_opt.vec / self.model.h_scale * self.point.tau
+        z_opt.vec[:] = z_opt.vec / self.model.h_scale / self.point.tau
         s_opt = self.point.s
-        s_opt.vec[:] = s_opt.vec / self.model.h_scale * self.point.tau
+        s_opt.vec[:] = s_opt.vec / self.model.h_scale / self.point.tau
 
         return {
             "x_opt": x_opt,
