@@ -85,7 +85,7 @@ class Solver:
         ir=True,
         toa=True,
         init_pnt=None,
-        use_invhess=True,
+        use_invhess=None,
     ):
         # Basic solver options
         self.max_iter = max_iter
