@@ -154,6 +154,9 @@ def dense_dot_x(A, B):
         return dense_dot_sparse(A, B.col, B.row, B.data, B.shape)
     else:
         return A @ B
+    
+def x_dot_dense(A, B):
+    return dense_dot_x(B.T, A.T).T
 
 
 @nb.njit(parallel=True)

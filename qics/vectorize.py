@@ -312,3 +312,46 @@ def eye(n, iscomplex=False, compact=(False, True)):
         The matrix representation of the identity superoperator.
     """
     return lin_to_mat(lambda X: X, (n, n), iscomplex=iscomplex, compact=compact)
+
+
+def get_full_to_compact_op(n, iscomplex=False):
+    import scipy
+
+    dim_compact = n * n if iscomplex else n * (n + 1) // 2
+    dim_full = 2 * n * n if iscomplex else n * n
+
+    rows = np.zeros(dim_full)
+    cols = np.zeros(dim_full)
+    vals = np.zeros(dim_full)
+
+    irt2 = np.sqrt(0.5)
+
+    row = 0
+    k = 0
+    for j in range(n):
+        for i in range(j):
+            rows[k : k + 2] = row
+            cols[k : k + 2] = (
+                [2 * (i + j * n), 2 * (j + i * n)]
+                if iscomplex
+                else [i + j * n, j + i * n]
+            )
+            vals[k : k + 2] = irt2
+            k += 2
+            row += 1
+
+            if iscomplex:
+                rows[k : k + 2] = row
+                cols[k : k + 2] = [2 * (i + j * n) + 1, 2 * (j + i * n) + 1]
+                vals[k : k + 2] = [-irt2, irt2]
+                k += 2
+                row += 1
+
+        rows[k] = row
+        cols[k] = 2 * j * (n + 1) if iscomplex else j * (n + 1)
+        vals[k] = 1.0
+        k += 1
+        row += 1
+
+    shape = (dim_compact, dim_full)
+    return scipy.sparse.coo_matrix((vals, (rows, cols)), shape=shape)

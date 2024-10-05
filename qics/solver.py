@@ -119,7 +119,6 @@ class Solver:
             assert lin.is_full_col_rank(model.G), "Avoiding inverse Hessian " \
                 "oracles is not supported when G is not full column rank."
         self.use_invhess = use_invhess
-        print("use_invhess=", use_invhess)
         
         # Preprocess model
         self.model = model

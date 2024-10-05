@@ -3,6 +3,7 @@ import scipy as sp
 import qics._utils.linalg as lin
 import qics._utils.gradient as grad
 from qics.cones.base import Cone, get_central_ray_relentr
+from qics.vectorize import get_full_to_compact_op
 
 
 class QuantRelEntr(Cone):
@@ -63,9 +64,6 @@ class QuantRelEntr(Cone):
         self.invhess_aux_aux_updated = False
         self.dder3_aux_updated = False
         self.congr_aux_updated = False
-
-        self.precompute_mat_vec()
-        self.precompute_computational_basis()
 
         return
 
@@ -293,17 +291,14 @@ class QuantRelEntr(Cone):
         temp = self.UyUx @ (self.D1x_comb_inv * temp) @ self.UyUx.conj().T
         temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.conj().T
         temp = self.Uy.conj().T @ (Wy - temp) @ self.Uy
-
-        temp_vec = temp.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs]
-        temp_vec *= self.scale.reshape((-1, 1))
+        
+        temp_vec = temp.view(dtype=np.float64).reshape((-1, 1))
+        temp_vec = self.F2C_op @ temp_vec
 
         temp_vec = lin.cho_solve(self.hess_schur_fact, temp_vec)
 
-        temp.fill(0.0)
-        temp_vec[self.diag_idxs] *= 0.5
-        temp_vec /= self.scale.reshape((-1, 1))
-        temp.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs] = temp_vec
-        temp += temp.conj().T
+        temp_vec = self.F2C_op.T @ temp_vec
+        temp = temp_vec.T.view(dtype=self.dtype).reshape((self.n, self.n))
 
         temp = self.Uy @ temp @ self.Uy.conj().T
         temp = (temp + temp.conj().T) * 0.5
@@ -373,17 +368,14 @@ class QuantRelEntr(Cone):
         self.work2 -= self.work1
 
         # Solve the linear system S \ ( ... ) to obtain Uy' Y Uy
-        # Convert matrices to truncated real vectors
-        work = self.work2.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs]
-        work *= self.scale
+        # Convert matrices to compact real vectors
+        work = self.work2.view(dtype=np.float64).reshape((p, -1)).T
+        work = lin.x_dot_dense(self.F2C_op, work)
         # Solve system
-        work = lin.cho_solve(self.hess_schur_fact, work.T)
-        # Expand truncated real vectors back into matrices
-        self.work1.fill(0.0)
-        work[self.diag_idxs, :] *= 0.5
-        work /= self.scale.reshape((-1, 1))
-        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs] = work.T
-        self.work1 += self.work1.conj().transpose((0, 2, 1))
+        work = lin.cho_solve(self.hess_schur_fact, work)
+        # Expand compact real vectors back into full matrices
+        work = lin.x_dot_dense(self.F2C_op.T, work)
+        self.work1.view(dtype=np.float64).reshape((p, -1))[:] = work.T
 
         # Recover Y
         lin.congr_multi(self.work4, self.Uy, self.work1, self.work2)
@@ -578,36 +570,20 @@ class QuantRelEntr(Cone):
 
         # Get [1/z^2 log^[1](Dy) (Uy'Ux kron Uy'Ux) [(1/z log + inv)^[1](Dx)]^-1 (Ux'Uy kron Ux'Uy) log^[1](Dy)] matrix
         # Begin with log^[1](Dy)
-        if self.iscomplex:
-            work = self.D1y_log * 1j
-            work.view(np.float64).reshape(-1)[self.tril_idxs] *= -1
-            work += self.D1y_log
+        self.work6[:] = self.E
+        self.work6[self.Ek, self.Ei, self.Ej] *= self.D1y_log[self.Ei, self.Ej]
 
-            worku = work.view(np.float64).reshape(-1)[self.triu_idxs] / self.scale
-            workl = work.view(np.float64).reshape(-1)[self.tril_idxs] / self.scale
-
-            self.E.view(np.float64).reshape(self.vn, -1)[
-                range(self.vn), self.triu_idxs
-            ] = worku
-            self.E.view(np.float64).reshape(self.vn, -1)[
-                range(self.vn), self.tril_idxs
-            ] = workl
-        else:
-            work = self.D1y_log.reshape(-1)[self.triu_idxs] / self.scale
-            self.E.reshape(self.vn, -1)[range(self.vn), self.triu_idxs] = work
-            self.E.reshape(self.vn, -1)[range(self.vn), self.tril_idxs] = work
         # Apply (Ux'Uy kron Ux'Uy)
-        lin.congr_multi(self.work8, self.UyUx.conj().T, self.E, work=self.work7)
+        lin.congr_multi(self.work8, self.UyUx.conj().T, self.work6, work=self.work7)
         # Apply [(1/z log + inv)^[1](Dx)]^-1
         self.work8 *= self.D1x_comb_inv
         # Apply (Uy'Ux kron Uy'Ux)
         lin.congr_multi(self.work6, self.UyUx, self.work8, work=self.work7)
         # Apply (1/z^2 log^[1](Dy))
         self.work6 *= self.D1y_log
-        work = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[
-            :, self.triu_idxs
-        ]
-        work *= self.zi2 * self.scale
+        work = self.work6.view(dtype=np.float64).reshape((self.vn, -1))
+        work = lin.x_dot_dense(self.F2C_op, work.T)
+        work *= self.zi2
 
         # Subtract to obtain Schur complement then Cholesky factor
         hess_schur -= work
@@ -619,22 +595,11 @@ class QuantRelEntr(Cone):
     def update_invhessprod_aux_aux(self):
         assert not self.invhess_aux_aux_updated
 
-        if self.iscomplex:
-            self.tril_idxs = np.empty(self.n * self.n, dtype=int)
-            self.tril_idxs = np.empty(self.n * self.n, dtype=int)
-            k = 0
-            for j in range(self.n):
-                for i in range(j):
-                    self.tril_idxs[k] = 2 * (i + j * self.n)
-                    self.tril_idxs[k + 1] = 2 * (i + j * self.n) + 1
-                    k += 2
-                self.tril_idxs[k] = 2 * (j + j * self.n)
-                k += 1
-        else:
-            self.tril_idxs = np.array(
-                [i + j * self.n for j in range(self.n) for i in range(j + 1)]
-            )
+        self.precompute_computational_basis()
+        self.Ek, self.Ei, self.Ej = np.where(self.E)
 
+        self.F2C_op = get_full_to_compact_op(self.n, self.iscomplex)
+        
         self.work6 = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
         self.work7 = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
         self.work8 = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
