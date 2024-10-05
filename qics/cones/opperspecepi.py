@@ -3,6 +3,7 @@ import scipy as sp
 import qics._utils.linalg as lin
 import qics._utils.gradient as grad
 from qics.cones.base import Cone, get_perspective_derivatives
+from qics.vectorize import get_full_to_compact_op
 
 
 class OpPerspecEpi(Cone):
@@ -119,8 +120,6 @@ class OpPerspecEpi(Cone):
             self.d3xh,
         ) = get_perspective_derivatives(func)
         self.func = func
-
-        self.precompute_mat_vec()
 
         return
 
@@ -337,7 +336,7 @@ class OpPerspecEpi(Cone):
         if self.invhess_aux_updated:            
             # Compute Axy M Axy'
             temp = lin.dense_dot_x(self.hess, self.A_compact.T)
-            out = lin.dense_dot_x(temp.T, self.A_compact.T).T
+            out = lin.x_dot_dense(self.A_compact, temp)
 
             # Compute L^-T At L^-1
             lin.congr_multi(self.work3, self.Z_chol_inv, self.At, work=self.work1)
@@ -484,28 +483,25 @@ class OpPerspecEpi(Cone):
         # ====================================================================
         work = self.rt2Y_Uyxy.conj().T @ Ht @ self.rt2Y_Uyxy
         Wx = Hx + self.irt2Y_Uyxy @ (self.D1yxy_h * work) @ self.irt2Y_Uyxy.conj().T
-        Wx_vec = Wx.view(dtype=np.float64).reshape(-1, 1)[self.triu_idxs]
-        Wx_vec *= self.scale.reshape(-1, 1)
+        Wx_vec = Wx.view(dtype=np.float64).reshape(-1, 1)
+        Wx_vec = self.F2C_op @ Wx_vec
 
         work = self.rt2X_Uxyx.conj().T @ Ht @ self.rt2X_Uxyx
         Wy = Hy + self.irt2X_Uxyx @ (self.D1xyx_g * work) @ self.irt2X_Uxyx.conj().T
-        Wy_vec = Wy.view(dtype=np.float64).reshape(-1, 1)[self.triu_idxs]
-        Wy_vec *= self.scale.reshape(-1, 1)
+        Wy_vec = Wy.view(dtype=np.float64).reshape(-1, 1)
+        Wy_vec = self.F2C_op @ Wy_vec
 
         Wxy_vec = np.vstack((Wx_vec, Wy_vec))
         outxy = lin.cho_solve(self.hess_fact, Wxy_vec)
-
         outxy = outxy.reshape(2, -1)
-        outxy[:, self.diag_idxs] *= 0.5
-        outxy /= self.scale
 
-        outX = np.zeros_like(Wx)
-        outX.view(dtype=np.float64).reshape(-1)[self.triu_idxs] = outxy[0]
-        out[1][:] = outX + outX.conj().T
+        outX = self.F2C_op.T @ outxy[0]
+        outX = outX.view(dtype=self.dtype).reshape((self.n, self.n))
+        out[1][:] = (outX + outX.conj().T) * 0.5
 
-        outY = np.zeros_like(Wx)
-        outY.view(dtype=np.float64).reshape(-1)[self.triu_idxs] = outxy[1]
-        out[2][:] = outY + outY.conj().T
+        outY = self.F2C_op.T @ outxy[1]
+        outY = outY.view(dtype=self.dtype).reshape((self.n, self.n))
+        out[2][:] = (outY + outY.conj().T) * 0.5
 
         # ====================================================================
         # Inverse Hessian products with respect to Z
@@ -556,13 +552,10 @@ class OpPerspecEpi(Cone):
         self.work0 += self.Ay
 
         # Solve linear system (X, Y) = M \ (Wx, Wy)
-        self.work15[: self.vn] = (
-            self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs].T
-        )
-        self.work15[self.vn :] = (
-            self.work0.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs].T
-        )
-        self.work15 *= np.hstack((self.scale, self.scale)).reshape(-1, 1)
+        Wx_vec = self.work1.view(dtype=np.float64).reshape((p, -1))
+        Wy_vec = self.work0.view(dtype=np.float64).reshape((p, -1))
+        self.work15[:self.vn] = lin.x_dot_dense(self.F2C_op, Wx_vec.T)
+        self.work15[self.vn:] = lin.x_dot_dense(self.F2C_op, Wy_vec.T)
 
         sol = lin.cho_solve(self.hess_fact, self.work15)
 
@@ -577,14 +570,8 @@ class OpPerspecEpi(Cone):
 
         # Compute DxPhi[X]
         # Recover X as matrices from compact vectors
-        sol[self.diag_idxs] *= 0.5
-        sol[self.diag_idxs + self.vn] *= 0.5
-        sol /= np.hstack((self.scale, self.scale)).reshape(-1, 1)
-        self.work1.fill(0.0)
-        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs] = sol[
-            : self.vn
-        ].T
-        self.work1 += self.work1.conj().transpose((0, 2, 1))
+        work = lin.x_dot_dense(self.F2C_op.T, sol[:self.vn])
+        self.work1.view(dtype=np.float64).reshape((p, -1))[:] = work.T
 
         lin.congr_multi(
             self.work2, self.irt2Y_Uyxy.conj().T, self.work1, work=self.work3
@@ -596,11 +583,8 @@ class OpPerspecEpi(Cone):
 
         # Compute DyPhi[Y]
         # Recover Y as matrices from compact vectors
-        self.work1.fill(0.0)
-        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs] = sol[
-            self.vn :
-        ].T
-        self.work1 += self.work1.conj().transpose((0, 2, 1))
+        work = lin.x_dot_dense(self.F2C_op.T, sol[self.vn:])
+        self.work1.view(dtype=np.float64).reshape((p, -1))[:] = work.T
 
         lin.congr_multi(
             self.work2, self.irt2X_Uxyx.conj().T, self.work1, work=self.work3
@@ -813,12 +797,8 @@ class OpPerspecEpi(Cone):
         if sp.sparse.issparse(A):
             A = A.tocsr()        
 
-        self.Ax_compact = lin.scale_axis(
-            A[:, self.idx_X][:, self.triu_idxs], scale_cols=self.scale
-        )
-        self.Ay_compact = lin.scale_axis(
-            A[:, self.idx_Y][:, self.triu_idxs], scale_cols=self.scale
-        )
+        self.Ax_compact = (self.F2C_op @ A[:, self.idx_X].T).T
+        self.Ay_compact = (self.F2C_op @ A[:, self.idx_Y].T).T
         if sp.sparse.issparse(A):
             self.A_compact = sp.sparse.hstack(
                 (self.Ax_compact, self.Ay_compact), format="coo"
@@ -920,10 +900,8 @@ class OpPerspecEpi(Cone):
         lin.congr_multi(self.work14, self.inv_X, self.E, work=self.work13)
         self.work14 += self.work11
         # Vectorize matrices as compact vectors
-        Hxx = self.work14.view(dtype=np.float64).reshape((self.vn, -1))[
-            :, self.triu_idxs
-        ]
-        Hxx *= self.scale
+        work = self.work14.view(dtype=np.float64).reshape((self.vn, -1))
+        Hxx = lin.x_dot_dense(self.F2C_op, work.T)        
 
         # Make Hyy = (D2yyPhi'[Z^-1] + Y^1 kron Y^-1) block
         # D2yyPhi'[Z^-1]
@@ -942,10 +920,8 @@ class OpPerspecEpi(Cone):
         lin.congr_multi(self.work12, self.inv_Y, self.E, work=self.work13)
         self.work12 += self.work11
         # Vectorize matrices as compact vectors
-        Hyy = self.work12.view(dtype=np.float64).reshape((self.vn, -1))[
-            :, self.triu_idxs
-        ]
-        Hyy *= self.scale
+        work = self.work12.view(dtype=np.float64).reshape((self.vn, -1))
+        Hyy = lin.x_dot_dense(self.F2C_op, work.T)
 
         # Make Hyx = D2yxPhi'[Z^-1] block
         # Make -D2(xg) component
@@ -971,19 +947,17 @@ class OpPerspecEpi(Cone):
         np.add(self.work12, self.work12.conj().transpose(0, 2, 1), out=self.work13)
         self.work13 -= self.work11
         # Vectorize matrices as compact vectors
-        Hyx = self.work13.view(dtype=np.float64).reshape((self.vn, -1))[
-            :, self.triu_idxs
-        ]
-        Hyx *= self.scale
+        work = self.work13.view(dtype=np.float64).reshape((self.vn, -1))
+        Hxy = lin.x_dot_dense(self.F2C_op, work.T)
 
         # Construct Hessian and factorize
-        Hxx = (Hxx + Hxx.conj().T) * 0.5
-        Hyy = (Hyy + Hyy.conj().T) * 0.5
+        Hxx = (Hxx + Hxx.T) * 0.5
+        Hyy = (Hyy + Hyy.T) * 0.5
 
         self.hess[: self.vn, : self.vn] = Hxx
         self.hess[self.vn :, self.vn :] = Hyy
-        self.hess[self.vn :, : self.vn] = Hyx
-        self.hess[: self.vn, self.vn :] = Hyx.T
+        self.hess[self.vn :, : self.vn] = Hxy.T
+        self.hess[: self.vn, self.vn :] = Hxy
 
         self.hess_fact = lin.cho_fact(self.hess.copy())
         self.invhess_aux_updated = True
@@ -994,6 +968,7 @@ class OpPerspecEpi(Cone):
         assert not self.invhess_aux_aux_updated
 
         self.precompute_computational_basis()
+        self.F2C_op = get_full_to_compact_op(self.n, self.iscomplex)
 
         self.work10 = np.empty((self.n, self.n, self.vn), dtype=self.dtype)
         self.work11 = np.empty((self.vn, self.n, self.n), dtype=self.dtype)

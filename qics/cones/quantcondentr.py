@@ -4,6 +4,7 @@ import qics._utils.linalg as lin
 import qics._utils.gradient as grad
 from qics.quantum import p_tr, p_tr_multi, i_kr, i_kr_multi
 from qics.cones.base import Cone
+from qics.vectorize import get_full_to_compact_op
 
 
 class QuantCondEntr(Cone):
@@ -90,9 +91,6 @@ class QuantCondEntr(Cone):
         self.invhess_aux_aux_updated = False
         self.congr_aux_updated = False
         self.dder3_aux_updated = False
-
-        self.precompute_mat_vec()
-        self.precompute_computational_basis()
 
         return
 
@@ -267,16 +265,13 @@ class QuantCondEntr(Cone):
         work = -p_tr(Hxx_inv_x, self.dims, self.sys)
 
         # Solve linear system N \ ( ... )
-        temp = work.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs]
-        temp *= self.scale.reshape((-1, 1))
+        temp_vec = work.view(dtype=np.float64).reshape((-1, 1))
+        temp_vec = self.F2C_op @ temp_vec
 
-        H_inv_g_y = lin.cho_solve(self.Hy_KHxK_fact, temp)
+        H_inv_g_y = lin.cho_solve(self.Hy_KHxK_fact, temp_vec)
 
-        work.fill(0.0)
-        H_inv_g_y[self.diag_idxs] *= 0.5
-        H_inv_g_y /= self.scale.reshape((-1, 1))
-        work.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs] = H_inv_g_y
-        work += work.conj().T
+        temp_vec = self.F2C_op.T @ H_inv_g_y
+        work = temp_vec.T.view(dtype=self.dtype).reshape((self.n, self.n))
 
         # Apply PTr' = IKr
         temp = i_kr(work, self.dims, self.sys)
@@ -334,16 +329,13 @@ class QuantCondEntr(Cone):
 
         # Solve linear system N \ ( ... )
         # Convert matrices to truncated real vectors
-        work = self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs]
-        work *= self.scale
+        work = self.work1.view(dtype=np.float64).reshape((p, -1)).T
+        work = lin.x_dot_dense(self.F2C_op, work)
         # Solve system
-        work = lin.cho_solve(self.Hy_KHxK_fact, work.T)
-        # Expand truncated real vectors back into matrices
-        self.work1.fill(0.0)
-        work[self.diag_idxs, :] *= 0.5
-        work /= self.scale.reshape((-1, 1))
-        self.work1.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs] = work.T
-        self.work1 += self.work1.conj().transpose((0, 2, 1))
+        work = lin.cho_solve(self.Hy_KHxK_fact, work)
+        # Expand compact real vectors back into full matrices
+        work = lin.x_dot_dense(self.F2C_op.T, work)
+        self.work1.view(dtype=np.float64).reshape((p, -1))[:] = work.T
 
         # Apply PTr' = IKr
         i_kr_multi(self.Work1, self.work1, self.dims, self.sys)
@@ -508,9 +500,6 @@ class QuantCondEntr(Cone):
         reordered_dims = self.sys + not_sys
         reordered_dims = [0] + [k + 1 for k in reordered_dims]
 
-        # swap_idxs = list(range(1 + len(self.dims)))      # To reorder systems to shift sys to the front
-        # swap_idxs.insert(1, swap_idxs.pop(1 + self.sys))
-
         temp = self.Ux.T.reshape(self.N, *self.dims)
         temp = np.transpose(temp, reordered_dims)
         temp = temp.reshape(self.N, self.m, self.n)
@@ -553,10 +542,9 @@ class QuantCondEntr(Cone):
 
         # Subtract to obtain N then Cholesky factor
         self.work6 -= self.work7
-        work = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[
-            :, self.triu_idxs
-        ]
-        work *= self.scale
+        work = self.work6.view(dtype=np.float64).reshape((self.vn, -1))
+        work = lin.x_dot_dense(self.F2C_op, work.T)
+        
         self.Hy_KHxK_fact = lin.cho_fact(work)
 
         self.invhess_aux_updated = True
@@ -565,6 +553,17 @@ class QuantCondEntr(Cone):
 
     def update_invhessprod_aux_aux(self):
         assert not self.invhess_aux_aux_updated
+
+        self.precompute_computational_basis()
+
+        if self.iscomplex:
+            self.diag_idxs = np.cumsum([i for i in range(3, 2 * self.n + 1, 2)])
+            self.diag_idxs = np.append(0, self.diag_idxs)
+        else:
+            self.diag_idxs = np.cumsum([i for i in range(2, self.n + 1, 1)])
+            self.diag_idxs = np.append(0, self.diag_idxs)
+
+        self.F2C_op = get_full_to_compact_op(self.n, self.iscomplex)
 
         self.work6 = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
         self.work7 = np.empty((self.vn, self.n, self.n), dtype=self.dtype)

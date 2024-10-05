@@ -71,36 +71,8 @@ class Cone:
 
         return out
 
-    def precompute_mat_vec(self, n=None):
-        n = self.n if (n is None) else n
-        # Indices to convert to and from compact vectors and matrices
-        if self.iscomplex:
-            self.diag_idxs = np.append(
-                0, np.cumsum([i for i in range(3, 2 * n + 1, 2)])
-            )
-            self.triu_idxs = np.empty(n * n, dtype=int)
-            self.scale = np.empty(n * n)
-            k = 0
-            for j in range(n):
-                for i in range(j):
-                    self.triu_idxs[k] = 2 * (j + i * n)
-                    self.triu_idxs[k + 1] = 2 * (j + i * n) + 1
-                    self.scale[k : k + 2] = np.sqrt(2.0)
-                    k += 2
-                self.triu_idxs[k] = 2 * (j + j * n)
-                self.scale[k] = 1.0
-                k += 1
-        else:
-            self.diag_idxs = np.append(0, np.cumsum([i for i in range(2, n + 1, 1)]))
-            self.triu_idxs = np.array(
-                [j + i * n for j in range(n) for i in range(j + 1)]
-            )
-            self.scale = np.array(
-                [1 if i == j else np.sqrt(2.0) for j in range(n) for i in range(j + 1)]
-            )
-
     def precompute_computational_basis(self, n=None):
-        if hasattr(self, 'E'):
+        if hasattr(self, "E"):
             return
 
         n = self.n if (n is None) else n

@@ -3,6 +3,7 @@ import scipy as sp
 import qics._utils.linalg as lin
 import qics._utils.gradient as grad
 from qics.cones.base import Cone, get_perspective_derivatives
+from qics.vectorize import get_full_to_compact_op
 
 
 class OpPerspecTr(Cone):
@@ -110,7 +111,7 @@ class OpPerspecTr(Cone):
         ) = get_perspective_derivatives(func)
         self.func = func
 
-        self.precompute_mat_vec()
+        self.F2C_op = get_full_to_compact_op(self.n, self.iscomplex)
 
         return
 
@@ -227,12 +228,12 @@ class OpPerspecTr(Cone):
         )
         self.DPhiY = (self.DPhiY + self.DPhiY.conj().T) * 0.5
 
-        self.DPhiX_vec = self.DPhiX.view(dtype=np.float64).reshape(-1, 1)[
-            self.triu_idxs
-        ] * self.scale.reshape(-1, 1)
-        self.DPhiY_vec = self.DPhiY.view(dtype=np.float64).reshape(-1, 1)[
-            self.triu_idxs
-        ] * self.scale.reshape(-1, 1)
+        self.DPhiX_vec = self.DPhiX.view(dtype=np.float64).reshape(-1, 1)
+        self.DPhiX_vec = self.F2C_op @ self.DPhiX_vec
+
+        self.DPhiY_vec = self.DPhiY.view(dtype=np.float64).reshape(-1, 1)
+        self.DPhiY_vec = self.F2C_op @ self.DPhiY_vec
+
         self.DPhi_vec = np.vstack((self.DPhiX_vec, self.DPhiY_vec))
 
         self.grad = [
@@ -339,27 +340,24 @@ class OpPerspecTr(Cone):
         (Ht, Hx, Hy) = H
 
         Wx = Hx + Ht * self.DPhiX
-        Wx_vec = Wx.view(dtype=np.float64).reshape(-1)[self.triu_idxs]
-        Wx_vec *= self.scale
+        Wx_vec = Wx.view(dtype=np.float64).reshape(-1, 1)
+        Wx_vec = self.F2C_op @ Wx_vec
 
         Wy = Hy + Ht * self.DPhiY
-        Wy_vec = Wy.view(dtype=np.float64).reshape(-1)[self.triu_idxs]
-        Wy_vec *= self.scale
+        Wy_vec = Wy.view(dtype=np.float64).reshape(-1, 1)
+        Wy_vec = self.F2C_op @ Wy_vec
 
-        Wxy_vec = np.hstack((Wx_vec, Wy_vec))
+        Wxy_vec = np.vstack((Wx_vec, Wy_vec))
         outxy = lin.cho_solve(self.hess_fact, Wxy_vec)
-
         outxy = outxy.reshape(2, -1)
-        outxy[:, self.diag_idxs] *= 0.5
-        outxy /= self.scale
+        
+        outX = self.F2C_op.T @ outxy[0]
+        outX = outX.view(dtype=self.dtype).reshape((self.n, self.n))
+        out[1][:] = (outX + outX.conj().T) * 0.5
 
-        outX = np.zeros_like(Wx)
-        outX.view(dtype=np.float64).reshape(-1)[self.triu_idxs] = outxy[0]
-        out[1][:] = outX + outX.conj().T
-
-        outY = np.zeros_like(Wx)
-        outY.view(dtype=np.float64).reshape(-1)[self.triu_idxs] = outxy[1]
-        out[2][:] = outY + outY.conj().T
+        outY = self.F2C_op.T @ outxy[1]
+        outY = outY.view(dtype=self.dtype).reshape((self.n, self.n))
+        out[2][:] = (outY + outY.conj().T) * 0.5
 
         out[0][:] = (
             self.z2 * Ht + lin.inp(out[1], self.DPhiX) + lin.inp(out[2], self.DPhiY)
@@ -560,14 +558,9 @@ class OpPerspecTr(Cone):
             A = A.tocsr()
 
         self.At = A[:, 0].toarray().flatten() if sp.sparse.issparse(A) else A[:, 0]
-        self.Ax_vec = A[:, self.idx_X]
-        self.Ay_vec = A[:, self.idx_Y]
+        self.Ax_compact = (self.F2C_op @ A[:, self.idx_X].T).T
+        self.Ay_compact = (self.F2C_op @ A[:, self.idx_Y].T).T
 
-        self.Ax_compact = self.Ax_vec[:, self.triu_idxs]
-        self.Ay_compact = self.Ay_vec[:, self.triu_idxs]
-
-        self.Ax_compact = lin.scale_axis(self.Ax_compact, scale_cols=self.scale)
-        self.Ay_compact = lin.scale_axis(self.Ay_compact, scale_cols=self.scale)
         if sp.sparse.issparse(A):
             self.A_compact = sp.sparse.hstack(
                 (self.Ax_compact, self.Ay_compact), format="coo"
@@ -575,7 +568,7 @@ class OpPerspecTr(Cone):
         else:
             self.A_compact = np.hstack((self.Ax_compact, self.Ay_compact))
 
-        self.work = np.empty_like(self.A_compact.T)
+        self.work = np.empty(self.A_compact.T.shape)
 
         self.congr_aux_updated = True
 
@@ -628,11 +621,9 @@ class OpPerspecTr(Cone):
         # D2PhiXXH += self.inv_X @ Hx @ self.inv_X
         lin.congr_multi(self.work8, self.inv_X, self.E, work=self.work7)
         self.work8 += self.work5
-
-        Hxx = self.work8.view(dtype=np.float64).reshape((self.vn, -1))[
-            :, self.triu_idxs
-        ]
-        Hxx *= self.scale
+        
+        work = self.work8.view(dtype=np.float64).reshape((self.vn, -1))
+        Hxx = lin.x_dot_dense(self.F2C_op, work.T)    
 
         # Make Hyy block
         # D2PhiYYH  = self.zi * grad.scnd_frechet(self.D2xyx_g, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
@@ -652,10 +643,8 @@ class OpPerspecTr(Cone):
         lin.congr_multi(self.work6, self.inv_Y, self.E, work=self.work7)
         self.work6 += self.work5
 
-        Hyy = self.work6.view(dtype=np.float64).reshape((self.vn, -1))[
-            :, self.triu_idxs
-        ]
-        Hyy *= self.scale
+        work = self.work6.view(dtype=np.float64).reshape((self.vn, -1))
+        Hyy = lin.x_dot_dense(self.F2C_op, work.T)    
 
         # Make Hxy block
         # D2PhiXYH -= self.zi * grad.scnd_frechet(self.D2xyx_xg, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx)
@@ -684,18 +673,16 @@ class OpPerspecTr(Cone):
         self.work7 -= self.work5
         self.work7 *= self.zi
 
-        Hyx = self.work7.view(dtype=np.float64).reshape((self.vn, -1))[
-            :, self.triu_idxs
-        ]
-        Hyx *= self.scale
+        work = self.work7.view(dtype=np.float64).reshape((self.vn, -1))
+        Hxy = lin.x_dot_dense(self.F2C_op, work.T)
 
         # Construct Hessian and factorize
         Hxx = (Hxx + Hxx.conj().T) * 0.5
         Hyy = (Hyy + Hyy.conj().T) * 0.5
         self.hess[: self.vn, : self.vn] = Hxx
         self.hess[self.vn :, self.vn :] = Hyy
-        self.hess[self.vn :, : self.vn] = Hyx
-        self.hess[: self.vn, self.vn :] = Hyx.T
+        self.hess[self.vn :, : self.vn] = Hxy.T
+        self.hess[: self.vn, self.vn :] = Hxy
 
         self.hess_fact = lin.cho_fact(self.hess.copy())
         self.invhess_aux_updated = True

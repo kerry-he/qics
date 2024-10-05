@@ -3,6 +3,7 @@ import scipy as sp
 import qics._utils.linalg as lin
 import qics._utils.gradient as grad
 from qics.cones.base import Cone
+from qics.vectorize import get_full_to_compact_op
 
 
 class QuantKeyDist(Cone):
@@ -190,11 +191,11 @@ class QuantKeyDist(Cone):
         self.invhess_aux_aux_updated = False
 
         if self.G_is_Id:
-            self.precompute_mat_vec(self.m)
             self.precompute_computational_basis(self.m)
+            self.F2C_op = get_full_to_compact_op(self.m, self.iscomplex)
         else:
-            self.precompute_mat_vec()
             self.precompute_computational_basis()
+            self.F2C_op = get_full_to_compact_op(self.n, self.iscomplex)
 
         return
 
@@ -424,8 +425,8 @@ class QuantKeyDist(Cone):
             outt = (
                 self.At
                 - (
-                    self.Ax.view(dtype=np.float64).reshape((p, 1, -1))
-                    @ self.DPhi.view(dtype=np.float64).reshape((-1, 1))
+                    self.Ax.view(np.float64).reshape((p, 1, -1))
+                    @ self.DPhi.view(np.float64).reshape((-1, 1))
                 ).ravel()
             )
             outt *= self.zi2
@@ -440,7 +441,7 @@ class QuantKeyDist(Cone):
             np.outer(outt, self.DPhi, out=self.Work0.reshape(p, -1))
             self.Work1 -= self.Work0
 
-            lhs[:, 1:] = self.Work1.reshape((p, -1)).view(dtype=np.float64)
+            lhs[:, 1:] = self.Work1.reshape((p, -1)).view(np.float64)
 
             # Multiply A (H A')
             return lin.dense_dot_x(lhs, A.T)
@@ -475,9 +476,8 @@ class QuantKeyDist(Cone):
             Hxx_inv_x = self.Ux @ (self.D1x_comb_inv * UxWxUx) @ self.Ux.conj().T
             for k, Z_idxs_k in enumerate(self.Z_idxs):
                 temp = Hxx_inv_x[np.ix_(Z_idxs_k, Z_idxs_k)]
-                work[k * self.vm : (k + 1) * self.vm] = (
-                    temp.view(dtype=np.float64).reshape(-1)[self.triu_idxs] * self.scale
-                )
+                temp_vec = temp.view(np.float64).reshape(-1)
+                work[k * self.vm : (k + 1) * self.vm] = self.F2C_op @ temp_vec
             work *= -1
 
             work = lin.cho_solve(self.schur_fact, work)
@@ -485,13 +485,9 @@ class QuantKeyDist(Cone):
             Work3 = np.zeros((self.n, self.n), dtype=self.dtype)
             for k, Z_idxs_k in enumerate(self.Z_idxs):
                 work_k = work[k * self.vm : (k + 1) * self.vm]
-                work_k[self.diag_idxs] *= 0.5
-                work_k /= self.scale
-
-                work2_k = np.zeros((self.m, self.m), dtype=self.dtype)
-                work2_k.view(dtype=np.float64).reshape(-1)[self.triu_idxs] = work_k
-                Work3[np.ix_(Z_idxs_k, Z_idxs_k)] = work2_k
-            Work3 += Work3.conj().T
+                work_k = self.F2C_op.T @ work_k
+                work_k = work_k.view(self.dtype).reshape((self.m, self.m))
+                Work3[np.ix_(Z_idxs_k, Z_idxs_k)] = work_k
 
             # Apply D2S(X)^-1 = (Ux kron Ux) log^[1](Dx) (Ux' kron Ux')
             temp = self.Ux.conj().T @ Work3 @ self.Ux
@@ -510,18 +506,15 @@ class QuantKeyDist(Cone):
             work = Hx + Ht * self.DPhi
 
             # Inverse Hessian products with respect to X
-            temp_vec = work.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs]
-            temp_vec *= self.scale.reshape((-1, 1))
+            temp_vec = work.view(dtype=np.float64).reshape((-1, 1))
+            temp_vec = self.F2C_op @ temp_vec
 
             temp_vec = lin.cho_solve(self.hess_fact, temp_vec)
 
-            work.fill(0.0)
-            temp_vec[self.diag_idxs] *= 0.5
-            temp_vec /= self.scale.reshape((-1, 1))
-            work.view(dtype=np.float64).reshape((-1, 1))[self.triu_idxs] = temp_vec
-            work += work.conj().T
+            temp_vec = self.F2C_op.T @ temp_vec
+            temp = temp_vec.T.view(dtype=self.dtype).reshape((self.n, self.n))
 
-            out[1][:] = work
+            out[1][:] = temp
 
             # Inverse Hessian products with respect to t
             out[0][:] = self.z2 * Ht + lin.inp(self.DPhi, out[1])
@@ -569,13 +562,12 @@ class QuantKeyDist(Cone):
             lin.congr_multi(self.Work2, self.Ux.conj().T, self.Work0, self.Work3)
             self.Work2 *= self.D1x_comb_inv
             lin.congr_multi(self.Work0, self.Ux, self.Work2, self.Work3)
-            # Apply PTr
+            # Apply pinching map
             for k, Z_idxs_k in enumerate(self.Z_idxs):
                 temp = self.Work0[np.ix_(np.arange(p), Z_idxs_k, Z_idxs_k)]
-                work[k * self.vm : (k + 1) * self.vm] = (
-                    temp.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs]
-                    * self.scale
-                ).T
+                temp = temp.view(np.float64).reshape((p, -1)).T
+                temp = lin.x_dot_dense(self.F2C_op, temp)
+                work[k * self.vm : (k + 1) * self.vm] = temp
             work *= -1
 
             # Solve linear system N \ ( ... )
@@ -584,15 +576,9 @@ class QuantKeyDist(Cone):
             self.Work1.fill(0.0)
             for k, Z_idxs_k in enumerate(self.Z_idxs):
                 work_k = work[k * self.vm : (k + 1) * self.vm]
-                work_k[self.diag_idxs, :] *= 0.5
-                work_k /= self.scale.reshape((-1, 1))
-
-                work2_k = np.zeros((p, self.m, self.m), dtype=self.dtype)
-                work2_k.view(dtype=np.float64).reshape((p, -1))[:, self.triu_idxs] = (
-                    work_k.T
-                )
-                self.Work1[np.ix_(np.arange(p), Z_idxs_k, Z_idxs_k)] = work2_k
-            self.Work1 += self.Work1.conj().transpose((0, 2, 1))
+                work_k = lin.x_dot_dense(self.F2C_op.T, work_k)
+                work_k = work_k.T.view(self.dtype).reshape(p, self.m, self.m)
+                self.Work1[np.ix_(np.arange(p), Z_idxs_k, Z_idxs_k)] = work_k
 
             # Apply D2S(X)^-1 = (Ux kron Ux) log^[1](Dx) (Ux' kron Ux')
             lin.congr_multi(self.Work2, self.Ux.conj().T, self.Work1, self.Work3)
@@ -601,15 +587,15 @@ class QuantKeyDist(Cone):
 
             # Subtract previous expression from D2S(X)^-1 Wx to get X
             self.Work0 -= self.Work1
-            lhs[:, 1:] = self.Work0.reshape((p, -1)).view(dtype=np.float64)
+            lhs[:, 1:] = self.Work0.reshape((p, -1)).view(np.float64)
 
             # ====================================================================
             # Inverse Hessian products with respect to t
             # ====================================================================
             outt = self.z2 * self.At
             outt += (
-                self.Work0.view(dtype=np.float64).reshape((p, 1, -1))
-                @ self.DPhi.view(dtype=np.float64).reshape((-1, 1))
+                self.Work0.view(np.float64).reshape((p, 1, -1))
+                @ self.DPhi.view(np.float64).reshape((-1, 1))
             ).ravel()
             lhs[:, 0] = outt
 
@@ -727,7 +713,7 @@ class QuantKeyDist(Cone):
                 self.Ax = np.array(
                     [
                         Ax_k.reshape((-1, 2))
-                        .view(dtype=np.complex128)
+                        .view(np.complex128)
                         .reshape((self.n, self.n))
                         for Ax_k in Ax
                     ]
@@ -747,9 +733,9 @@ class QuantKeyDist(Cone):
             if sp.sparse.issparse(A):
                 A = A.tocsr()
             self.At = A[:, 0].toarray().flatten() if sp.sparse.issparse(A) else A[:, 0]
-            self.Ax_vec = lin.scale_axis(
-                A[:, 1 + self.triu_idxs], scale_cols=self.scale
-            )
+            self.Ax_vec = (self.F2C_op @ A[:, 1:].T).T
+            if sp.sparse.issparse(A):
+                self.Ax_vec = self.Ax_vec.tocoo()
 
             self.work0 = np.zeros(self.Ax_vec.shape)
             self.work1 = np.zeros(self.Ax_vec.shape)
@@ -848,14 +834,12 @@ class QuantKeyDist(Cone):
                 # Apply (Uy kron Uy)
                 lin.congr_multi(self.work6, U, self.work8, work=self.work7)
 
+                work = self.work6.view(dtype=np.float64).reshape((self.vm, -1))
+                work = lin.x_dot_dense(self.F2C_op, work.T)
+                
                 self.schur[
                     k * self.vm : (k + 1) * self.vm, k * self.vm : (k + 1) * self.vm
-                ] = (
-                    self.work6.view(dtype=np.float64).reshape((self.vm, -1))[
-                        :, self.triu_idxs
-                    ]
-                    * self.scale
-                )
+                ] = work
 
             # Get [PTr (Ux kron Ux) [(1/z log + inv)^[1](Dx)]^-1  (Ux' kron Ux') PTr'] matrix
             # Begin with [(Ux' kron Ux') PTr']
@@ -867,20 +851,18 @@ class QuantKeyDist(Cone):
                 temp = self.Work6[
                     np.ix_(np.arange(self.r * self.vm), Z_idxs_k, Z_idxs_k)
                 ]
-                self.schur[:, k * self.vm : (k + 1) * self.vm] -= (
-                    temp.view(dtype=np.float64).reshape((self.r * self.vm, -1))[
-                        :, self.triu_idxs
-                    ]
-                    * self.scale
-                )
+
+                temp = temp.view(np.float64).reshape((self.r * self.vm, -1))
+                temp = lin.x_dot_dense(self.F2C_op, temp.T).T
+
+                self.schur[:, k * self.vm : (k + 1) * self.vm] -= temp
 
             # Subtract to obtain N then Cholesky factor
             self.schur_fact = lin.cho_fact(self.schur)
 
         else:
-            self.DPhi_vec = self.DPhi.view(dtype=np.float64).reshape(-1, 1)[
-                self.triu_idxs
-            ] * self.scale.reshape(-1, 1)
+            self.DPhi_vec = self.DPhi.view(np.float64).reshape(-1, 1)
+            self.DPhi_vec = self.F2C_op @ self.DPhi_vec
 
             # Get X^-1 kron X^-1
             lin.congr_multi(self.work8, self.inv_X, self.E, work=self.work7)
@@ -930,10 +912,9 @@ class QuantKeyDist(Cone):
                     self.work8 -= self.work7
 
             # Get Hessian and factorize
-            self.hess = self.work8.view(dtype=np.float64).reshape((self.vn, -1))[
-                :, self.triu_idxs
-            ]
-            self.hess *= self.scale
+            work = self.work8.view(np.float64).reshape((self.vn, -1))
+            self.hess = lin.x_dot_dense(self.F2C_op, work.T)
+            self.hess = (self.hess + self.hess.T) * 0.5
             self.hess_fact = lin.cho_fact(self.hess.copy())
 
         self.invhess_aux_updated = True
