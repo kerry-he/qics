@@ -182,7 +182,7 @@ class Model:
         s_norm = np.sum(np.abs(s_init.vec))
 
         G_temp = _hstack((self.G, -s_init.vec / s_norm))
-        if not la.is_full_col_rank(G_temp):
+        if la.is_full_col_rank(G_temp):
             A_new_col = sp.sparse.coo_matrix((self.p, 1))
             A_new_row = sp.sparse.coo_matrix(([1.], ([0], [n])), (1, n+1))
             self.c = np.vstack((self.c, np.array([[0.]])))
@@ -199,7 +199,7 @@ class Model:
         if np.any(self.h):
             h_norm = np.sum(np.abs(self.h))
             G_temp = _hstack((self.G, -self.h / h_norm))
-            if not la.is_full_col_rank(G_temp):
+            if la.is_full_col_rank(G_temp):
                 A_new_col = sp.sparse.coo_matrix((self.p, 1))
                 A_new_row = sp.sparse.coo_matrix(([1.], ([0], [n])), (1, n+1))
                 self.c = np.vstack((self.c, np.array([[0.]])))

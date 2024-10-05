@@ -233,7 +233,10 @@ class OpPerspecEpi(Cone):
 
         # Compute derivatives of Pg(X, Y)
         self.D1yxy_h = grad.D1_f(self.Dyxy, self.h_Dyxy, self.dh(self.Dyxy))
-        self.D1xyx_g = grad.D1_f(self.Dxyx, self.g_Dxyx, self.dg(self.Dxyx))
+        if self.func == "log":
+            self.D1xyx_g = -grad.D1_log(self.Dxyx, -self.g_Dxyx)
+        else:
+            self.D1xyx_g = grad.D1_f(self.Dxyx, self.g_Dxyx, self.dg(self.Dxyx))
 
         self.DPhiX = (
             self.irt2Y_Uyxy
