@@ -51,7 +51,7 @@ pip install qics
 
 The full documentation of the code can be found [here](https://qics.readthedocs.io/en/stable/). Technical details about our implementation can be found in our paper.
 
-## PICOS interface
+## PICOS interface (coming soon)
 
 The easiest way to use **QICS** is through the Python optimization modelling interface [PICOS](https://picos-api.gitlab.io/picos/). Below, we show how a simple [nearest 
 correlation matrix](https://qics.readthedocs.io/en/stable/examples/qrep/nearest.html#nearest-correlation-matrix) problem can be solved. 
