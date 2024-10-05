@@ -73,7 +73,6 @@ class Cone:
 
     def precompute_mat_vec(self, n=None):
         n = self.n if (n is None) else n
-        vn = n * n if self.iscomplex else n * (n + 1) // 2
         # Indices to convert to and from compact vectors and matrices
         if self.iscomplex:
             self.diag_idxs = np.append(
@@ -99,6 +98,13 @@ class Cone:
             self.scale = np.array(
                 [1 if i == j else np.sqrt(2.0) for j in range(n) for i in range(j + 1)]
             )
+
+    def precompute_computational_basis(self, n=None):
+        if hasattr(self, 'E'):
+            return
+
+        n = self.n if (n is None) else n
+        vn = n * n if self.iscomplex else n * (n + 1) // 2
 
         # Computational basis for symmetric/Hermitian matrices
         rt2 = np.sqrt(0.5)

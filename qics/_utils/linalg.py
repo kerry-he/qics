@@ -139,13 +139,14 @@ def abs_max(A, axis):
     else:
         return np.maximum(A.max(axis=axis, initial=0.0), -A.min(axis=axis, initial=0.0))
     
-def is_full_col_rank(A):
+def is_full_col_rank(A, tol=1e-8):
     if A.size == 0:
         return True
     AA =  A.T @ A
     if sp.sparse.issparse(AA):
-        AA = AA.toarray()    
-    return np.linalg.matrix_rank(AA) < min(A.shape)
+        AA = AA.toarray()
+    eigs = np.linalg.eigvalsh(AA)
+    return all(eigs > tol)
 
 
 def dense_dot_x(A, B):

@@ -112,13 +112,14 @@ class Solver:
             
             use_invhess = model.issymmetric or not model.use_G \
                 or all([not isinstance(cone, SLOW_CONES) for cone in cones]) \
-                or lin.is_full_col_rank(model.G)
+                or not lin.is_full_col_rank(model.G)
         elif not use_invhess:
-            assert not model.use_G, "Avoiding inverse Hessian oracles is" \
+            assert model.use_G, "Avoiding inverse Hessian oracles is " \
                 "not supported nor recommended if G is easily invertible."
-            assert lin.is_full_col_rank(model.G), "Avoiding inverse Hessian" \
+            assert lin.is_full_col_rank(model.G), "Avoiding inverse Hessian " \
                 "oracles is not supported when G is not full column rank."
         self.use_invhess = use_invhess
+        print("use_invhess=", use_invhess)
         
         # Preprocess model
         self.model = model

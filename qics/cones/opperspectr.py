@@ -702,6 +702,8 @@ class OpPerspecTr(Cone):
     def update_invhessprod_aux_aux(self):
         assert not self.invhess_aux_aux_updated
 
+        self.precompute_computational_basis()
+
         self.hess = np.empty((2 * self.vn, 2 * self.vn))
 
         self.work4 = np.empty((self.n, self.n, self.vn), dtype=self.dtype)

@@ -65,6 +65,7 @@ class QuantRelEntr(Cone):
         self.congr_aux_updated = False
 
         self.precompute_mat_vec()
+        self.precompute_computational_basis()
 
         return
 

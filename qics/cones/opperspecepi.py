@@ -990,6 +990,8 @@ class OpPerspecEpi(Cone):
     def update_invhessprod_aux_aux(self):
         assert not self.invhess_aux_aux_updated
 
+        self.precompute_computational_basis()
+
         self.work10 = np.empty((self.n, self.n, self.vn), dtype=self.dtype)
         self.work11 = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
         self.work12 = np.empty((self.vn, self.n, self.n), dtype=self.dtype)

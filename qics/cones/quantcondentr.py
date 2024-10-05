@@ -92,6 +92,7 @@ class QuantCondEntr(Cone):
         self.dder3_aux_updated = False
 
         self.precompute_mat_vec()
+        self.precompute_computational_basis()
 
         return
 

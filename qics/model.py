@@ -260,18 +260,12 @@ class Model:
         self.c /= self.c_scale
         self.b /= self.b_scale
         self.h /= self.h_scale
-
-        self.A = la.scale_axis(
-            self.A,
-            scale_rows=np.reciprocal(self.b_scale),
-            scale_cols=np.reciprocal(self.c_scale),
-        )
-
-        self.G = la.scale_axis(
-            self.G,
-            scale_rows=np.reciprocal(self.h_scale),
-            scale_cols=np.reciprocal(self.c_scale),
-        )
+        self.A = la.scale_axis(self.A,
+                               scale_rows=np.reciprocal(self.b_scale),
+                               scale_cols=np.reciprocal(self.c_scale))
+        self.G = la.scale_axis(self.G,
+                               scale_rows=np.reciprocal(self.h_scale),
+                               scale_cols=np.reciprocal(self.c_scale))
 
         return
 

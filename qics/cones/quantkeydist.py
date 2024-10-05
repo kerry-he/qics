@@ -191,8 +191,10 @@ class QuantKeyDist(Cone):
 
         if self.G_is_Id:
             self.precompute_mat_vec(self.m)
+            self.precompute_computational_basis(self.m)
         else:
             self.precompute_mat_vec()
+            self.precompute_computational_basis()
 
         return
 
