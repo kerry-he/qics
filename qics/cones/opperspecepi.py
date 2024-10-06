@@ -332,8 +332,8 @@ class OpPerspecEpi(Cone):
         # where Z = L L' and M is precomputed in update_invhess_aux()
 
         p = A.shape[0]
-
-        if self.invhess_aux_updated:            
+        
+        if self.invhess_aux_updated:
             # Compute Axy M Axy'
             temp = lin.dense_dot_x(self.hess, self.A_compact.T)
             out = lin.x_dot_dense(self.A_compact, temp)
