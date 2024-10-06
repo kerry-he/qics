@@ -310,149 +310,134 @@ class OpPerspecTr(Cone):
             self.update_hessprod_aux()
         if not self.congr_aux_updated:
             self.congr_aux(A)
-        if not self.invhess_aux_updated:
-            self.update_invhessprod_aux()
 
-        if self.invhess_aux_updated:
-            vec = (
-                self.At
-                - self.DPhiX_vec.T @ self.Ax_compact.T
-                - self.DPhiY_vec.T @ self.Ay_compact.T
-            )
-            vec *= self.zi
+        p = A.shape[0]
+        lhs = np.empty((p, sum(self.dim)))
 
-            temp = lin.dense_dot_x(self.hess, self.A_compact.T)
-            out = lin.dense_dot_x(temp.T, self.A_compact.T).T
-            out += np.outer(vec, vec)
-            return out
-        else:
-            p = A.shape[0]
-            lhs = np.empty((p, sum(self.dim)))
+        # ==================================================================
+        # Hessian products with respect to t
+        # ==================================================================
+        # D2_tt F(t, X, Y)[Ht] = Ht / z^2
+        # D2_tX F(t, X, Y)[Hx] = -(D_X Phi(X, Y) [Hx]) / z^2
+        # D2_tY F(t, X, Y)[Hy] = -(D_Y Phi(X, Y) [Hy]) / z^2
+        Ax_vec = self.Ax.view(np.float64).reshape((p, 1, -1))
+        Ay_vec = self.Ay.view(np.float64).reshape((p, 1, -1))
+        DPhiX_vec = self.DPhiX.view(np.float64).reshape((-1, 1))
+        DPhiY_vec = self.DPhiY.view(np.float64).reshape((-1, 1))
 
-            # ==================================================================
-            # Hessian products with respect to t
-            # ==================================================================
-            # D2_tt F(t, X, Y)[Ht] = Ht / z^2
-            # D2_tX F(t, X, Y)[Hx] = -(D_X Phi(X, Y) [Hx]) / z^2
-            # D2_tY F(t, X, Y)[Hy] = -(D_Y Phi(X, Y) [Hy]) / z^2
-            Ax_vec = self.Ax.view(np.float64).reshape((p, 1, -1))
-            Ay_vec = self.Ay.view(np.float64).reshape((p, 1, -1))
-            DPhiX_vec = self.DPhiX.view(np.float64).reshape((-1, 1))
-            DPhiY_vec = self.DPhiY.view(np.float64).reshape((-1, 1))
+        outt = self.At - (Ax_vec @ DPhiX_vec).ravel()
+        outt -= (Ay_vec @ DPhiY_vec).ravel()
+        outt *= self.zi2
 
-            outt = self.At - (Ax_vec @ DPhiX_vec).ravel()
-            outt -= (Ay_vec @ DPhiY_vec).ravel()
-            outt *= self.zi2
+        lhs[:, 0] = outt
 
-            lhs[:, 0] = outt
+        # ==================================================================
+        # Hessian products with respect to X
+        # ==================================================================
+        # UyxyYHxYUyxy = self.irt2Y_Uyxy.conj().T @ Hx @ self.irt2Y_Uyxy
+        lin.congr_multi(self.work0, self.irt2Y_Uyxy.conj().T, self.Ax, work=self.work3)
+        # UxyxXHyXUxyx = self.irt2X_Uxyx.conj().T @ Hy @ self.irt2X_Uxyx
+        lin.congr_multi(self.work1, self.irt2X_Uxyx.conj().T, self.Ay, work=self.work3)
 
-            # ==================================================================
-            # Hessian products with respect to X
-            # ==================================================================
-            # UyxyYHxYUyxy = self.irt2Y_Uyxy.conj().T @ Hx @ self.irt2Y_Uyxy
-            lin.congr_multi(self.work0, self.irt2Y_Uyxy.conj().T, self.Ax, work=self.work3)
-            # UxyxXHyXUxyx = self.irt2X_Uxyx.conj().T @ Hy @ self.irt2X_Uxyx
-            lin.congr_multi(self.work1, self.irt2X_Uxyx.conj().T, self.Ay, work=self.work3)
+        # # Hessian product of tr[Pg(X, Y)]
+        # D2PhiXXH = grad.scnd_frechet(
+        #     self.D2yxy_h, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy
+        # )
+        grad.scnd_frechet_multi(
+            self.work5,
+            self.D2yxy_h,
+            self.work0,
+            self.UyxyYUyxy,
+            U=self.irt2Y_Uyxy,
+            work1=self.work3,
+            work2=self.work4,
+            work3=self.work6,
+        )
 
-            # # Hessian product of tr[Pg(X, Y)]
-            # D2PhiXXH = grad.scnd_frechet(
-            #     self.D2yxy_h, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy
-            # )
-            grad.scnd_frechet_multi(
-                self.work5,
-                self.D2yxy_h,
-                self.work0,
-                self.UyxyYUyxy,
-                U=self.irt2Y_Uyxy,
-                work1=self.work3,
-                work2=self.work4,
-                work3=self.work6,
-            )
+        # D2PhiXYH = (self.irt2X_Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X)
+        np.multiply(self.work1, self.D1xyx_g, out=self.work2)
+        lin.congr_multi(self.work3, self.irt2X_Uxyx, self.work2, work=self.work4, B=self.rt2_X @ self.Uxyx)
+        # D2PhiXYH += D2PhiXYH.conj().T
+        np.add(self.work3, self.work3.conj().transpose(0, 2, 1), out=self.work2)
+        self.work5 += self.work2
+        # D2PhiXYH -= grad.scnd_frechet(
+        #     self.D2xyx_xg, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx
+        # )
+        grad.scnd_frechet_multi(
+            self.work2,
+            self.D2xyx_xg,
+            self.work1,
+            self.UxyxXUxyx,
+            U=self.irt2X_Uxyx,
+            work1=self.work3,
+            work2=self.work4,
+            work3=self.work6,
+        )
+        self.work5 -= self.work2
 
-            # D2PhiXYH = (self.irt2X_Uxyx @ (self.D1xyx_g * UxyxXHyXUxyx) @ self.Uxyx.conj().T @ self.rt2_X)
-            np.multiply(self.work1, self.D1xyx_g, out=self.work2)
-            lin.congr_multi(self.work3, self.irt2X_Uxyx, self.work2, work=self.work4, B=self.rt2_X @ self.Uxyx)
-            # D2PhiXYH += D2PhiXYH.conj().T
-            np.add(self.work3, self.work3.conj().transpose(0, 2, 1), out=self.work2)
-            self.work5 += self.work2
-            # D2PhiXYH -= grad.scnd_frechet(
-            #     self.D2xyx_xg, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx
-            # )
-            grad.scnd_frechet_multi(
-                self.work2,
-                self.D2xyx_xg,
-                self.work1,
-                self.UxyxXUxyx,
-                U=self.irt2X_Uxyx,
-                work1=self.work3,
-                work2=self.work4,
-                work3=self.work6,
-            )
-            self.work5 -= self.work2
+        # out_X = self.zi * (D2PhiXYH + D2PhiXXH)
+        self.work5 *= self.zi
+        # out_X -= out[0] * self.DPhiX
+        np.outer(outt, self.DPhiX, out=self.work2.reshape((p, -1)))
+        self.work5 -= self.work2
+        # out_X += self.inv_X @ Hx @ self.inv_X
+        lin.congr_multi(self.work2, self.inv_X, self.Ax, work=self.work3)
+        self.work5 += self.work2
 
-            # out_X = self.zi * (D2PhiXYH + D2PhiXXH)
-            self.work5 *= self.zi
-            # out_X -= out[0] * self.DPhiX
-            np.outer(outt, self.DPhiX, out=self.work2.reshape((p, -1)))
-            self.work5 -= self.work2
-            # out_X += self.inv_X @ Hx @ self.inv_X
-            lin.congr_multi(self.work2, self.inv_X, self.Ax, work=self.work3)
-            self.work5 += self.work2
+        lhs[:, self.idx_X] = self.work5.reshape((p, -1)).view(np.float64)
 
-            lhs[:, self.idx_X] = self.work5.reshape((p, -1)).view(np.float64)
+        # ==================================================================
+        # Hessian products with respect to Y
+        # ==================================================================
+        # # Hessian product of tr[Pg(X, Y)]
+        # D2PhiYYH = grad.scnd_frechet(
+        #     self.D2xyx_g, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx
+        # )
+        grad.scnd_frechet_multi(
+            self.work5,
+            self.D2xyx_g,
+            self.work1,
+            self.UxyxXUxyx,
+            U=self.irt2X_Uxyx,
+            work1=self.work3,
+            work2=self.work4,
+            work3=self.work6,
+        )
 
-            # ==================================================================
-            # Hessian products with respect to Y
-            # ==================================================================
-            # # Hessian product of tr[Pg(X, Y)]
-            # D2PhiYYH = grad.scnd_frechet(
-            #     self.D2xyx_g, self.UxyxXUxyx, UxyxXHyXUxyx, U=self.irt2X_Uxyx
-            # )
-            grad.scnd_frechet_multi(
-                self.work5,
-                self.D2xyx_g,
-                self.work1,
-                self.UxyxXUxyx,
-                U=self.irt2X_Uxyx,
-                work1=self.work3,
-                work2=self.work4,
-                work3=self.work6,
-            )
+        # D2PhiYXH = (self.irt2Y_Uyxy @ (self.D1yxy_h * UyxyYHxYUyxy) @ self.Uyxy.conj().T @ self.rt2_Y)
+        np.multiply(self.work0, self.D1yxy_h, out=self.work2)
+        lin.congr_multi(self.work3, self.irt2Y_Uyxy, self.work2, work=self.work4, B=self.rt2_Y @ self.Uyxy)
+        # D2PhiYXH += D2PhiYXH.conj().T
+        np.add(self.work3, self.work3.conj().transpose(0, 2, 1), out=self.work2)
+        self.work5 += self.work2
+        # D2PhiYXH -= grad.scnd_frechet(
+        #     self.D2yxy_xh, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy
+        # )
+        grad.scnd_frechet_multi(
+            self.work2,
+            self.D2yxy_xh,
+            self.work0,
+            self.UyxyYUyxy,
+            U=self.irt2Y_Uyxy,
+            work1=self.work3,
+            work2=self.work4,
+            work3=self.work6,
+        )
+        self.work5 -= self.work2
 
-            # D2PhiYXH = (self.irt2Y_Uyxy @ (self.D1yxy_h * UyxyYHxYUyxy) @ self.Uyxy.conj().T @ self.rt2_Y)
-            np.multiply(self.work0, self.D1yxy_h, out=self.work2)
-            lin.congr_multi(self.work3, self.irt2Y_Uyxy, self.work2, work=self.work4, B=self.rt2_Y @ self.Uyxy)
-            # D2PhiYXH += D2PhiYXH.conj().T
-            np.add(self.work3, self.work3.conj().transpose(0, 2, 1), out=self.work2)
-            self.work5 += self.work2
-            # D2PhiYXH -= grad.scnd_frechet(
-            #     self.D2yxy_xh, self.UyxyYUyxy, UyxyYHxYUyxy, U=self.irt2Y_Uyxy
-            # )
-            grad.scnd_frechet_multi(
-                self.work2,
-                self.D2yxy_xh,
-                self.work0,
-                self.UyxyYUyxy,
-                U=self.irt2Y_Uyxy,
-                work1=self.work3,
-                work2=self.work4,
-                work3=self.work6,
-            )
-            self.work5 -= self.work2
+        # out_Y = self.zi * (D2PhiYXH + D2PhiYYH)
+        self.work5 *= self.zi
+        # out_Y -= out[0] * self.DPhiY
+        np.outer(outt, self.DPhiY, out=self.work2.reshape((p, -1)))
+        self.work5 -= self.work2
+        # out_Y += self.inv_Y @ Hy @ self.inv_Y
+        lin.congr_multi(self.work2, self.inv_Y, self.Ay, work=self.work3)
+        self.work5 += self.work2
 
-            # out_Y = self.zi * (D2PhiYXH + D2PhiYYH)
-            self.work5 *= self.zi
-            # out_Y -= out[0] * self.DPhiY
-            np.outer(outt, self.DPhiY, out=self.work2.reshape((p, -1)))
-            self.work5 -= self.work2
-            # out_Y += self.inv_Y @ Hy @ self.inv_Y
-            lin.congr_multi(self.work2, self.inv_Y, self.Ay, work=self.work3)
-            self.work5 += self.work2
+        lhs[:, self.idx_Y] = self.work5.reshape((p, -1)).view(np.float64)
 
-            lhs[:, self.idx_Y] = self.work5.reshape((p, -1)).view(np.float64)
-
-            # Multiply A (H A')
-            return lin.dense_dot_x(lhs, A.T)
+        # Multiply A (H A')
+        return lin.dense_dot_x(lhs, A.T)
 
     def invhess_prod_ip(self, out, H):
         assert self.grad_updated
