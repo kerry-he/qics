@@ -98,7 +98,7 @@ class Cone:
     def get_init_point(self, out):
         """Returns a central primal-dual point (s0, z0) satisfying
 
-             z0 = -F'(s0)
+            z0 = -F'(s0)
 
         and stores this point in-place in out.
 
@@ -137,8 +137,8 @@ class Cone:
         pass
 
     def hess_congr(self, A):
-        """Compute the congruence transform AH(s)A' with the Hessian matrix H of the
-        barrier function.
+        """Compute the congruence transform AH(s)A' with the Hessian matrix H of
+        the barrier function.
 
         Parameters
         ----------
@@ -155,8 +155,8 @@ class Cone:
         pass
 
     def invhess_prod_ip(self, out, H):
-        """Compute the inverse Hessian product D2F(s)^-1[H] of the barrier function in
-        the direction of H, and store this in-place in out.
+        """Compute the inverse Hessian product D2F(s)^-1[H] of the barrier
+        function in the direction of H, and store this in-place in out.
 
         Parameters
         ----------
