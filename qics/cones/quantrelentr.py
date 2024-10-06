@@ -496,7 +496,7 @@ class QuantRelEntr(Cone):
     # ========================================================================
     # Auxilliary functions
     # ========================================================================
-    def congr_aux(self, A):
+    def update_congr_aux(self, A):
         assert not self.congr_aux_updated
 
         p = A.shape[0]
