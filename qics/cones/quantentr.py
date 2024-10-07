@@ -172,10 +172,9 @@ class QuantEntr(Cone):
         #         = (Ht - D_u S(u, X)[Hu] - D_X S(u, X)[Hx]) / z^2
         out[0][:] = (Ht - self.DPhiu * Hu - lin.inp(self.DPhiX, Hx)) * self.zi2
 
-        # ====================================================================
+        # ======================================================================
         # Hessian products with respect to u
-        # ====================================================================
-
+        # ======================================================================
         # Hessian product of barrier function
         # D2_u F(t, u, X)[Ht, Hu, Hx] 
         #         = -D2_t F(t, u, X)[Ht, Hu, Hx] * D_u S(u, X)
@@ -186,9 +185,9 @@ class QuantEntr(Cone):
         out_u += Hu * self.ui2
         out[1][:] = out_u
 
-        # ====================================================================
+        # ======================================================================
         # Hessian products with respect to X
-        # ====================================================================
+        # ======================================================================
         # D2_X F(t, u, X)[Ht, Hu, Hx] 
         #         = -D2_t F(t, u, X)[Ht, Hu, Hx] * D_X S(u, X)
         #           + (D2_Xu S(u, X)[Hu] + D2_XX S(u, X)[Hx]) / z
@@ -225,9 +224,9 @@ class QuantEntr(Cone):
 
         lhs[:, 0] = out_t
 
-        # ====================================================================
+        # ======================================================================
         # Hessian products with respect to u
-        # ====================================================================
+        # ======================================================================
         # Hessian products for quantum entropy
         # D2_uu S(u, X) [Hu] = tr[X] Hu / u^2
         D2PhiuuH = (self.trX * self.ui2) * self.Au
@@ -277,9 +276,6 @@ class QuantEntr(Cone):
         if not self.invhess_aux_updated:
             self.update_invhessprod_aux()
 
-        # Computes inverse Hessian product of the QE barrier with a single vector (Ht, Hu, Hx)
-        # See invhess_congr() for additional comments
-
         (Ht, Hu, Hx) = H
 
         Wu = Hu + Ht * self.DPhiu
@@ -289,14 +285,27 @@ class QuantEntr(Cone):
         N_inv_Wx = self.Ux @ (self.D1x_comb_inv * work) @ self.Ux.conj().T
         N_inv_Wx = (N_inv_Wx + N_inv_Wx.conj().T) * 0.5
 
+        # ======================================================================
         # Inverse Hessian products with respect to u
-        out[1][:] = (Wu * self.uz2 + np.trace(N_inv_Wx).real * self.uz) / (
-            (self.z2 + self.trX * self.z) - self.tr_N_inv_I
-        )
+        # ======================================================================
+        # u = (Wu + tr[N \ Wx] / z) / ((1 + tr[X]/z) / u^2 - tr[N \ I] / z^2)
+        out_u = Wu * self.uz2 + np.trace(N_inv_Wx).real * self.uz
+        out_u /= (self.z2 + self.trX * self.z) - self.tr_N_inv_I
+        out[1][:] = out_u
+
+        # ======================================================================
         # Inverse Hessian products with respect to X
-        out[2][:] = N_inv_Wx + (out[1] / self.uz) * self.N_inv_I
+        # ======================================================================
+        # X = (N \ Wx) + u / z (N \ I)
+        out_X = N_inv_Wx + (out_u / self.uz) * self.N_inv_I
+        out[2][:] = out_X
+
+        # ======================================================================
         # Inverse Hessian products with respect to t
-        out[0][:] = self.z2 * Ht + self.DPhiu * out[1] + lin.inp(self.DPhiX, out[2])
+        # ======================================================================
+        # t = z^2 Ht + <DS(u, X), (u, X)>
+        out_t = self.z2 * Ht + self.DPhiu * out_u + lin.inp(self.DPhiX, out_X)
+        out[0][:] = out_t
 
         return out
 
@@ -340,27 +349,27 @@ class QuantEntr(Cone):
         work2 *= self.D1x_comb_inv
         lin.congr_multi(work1, self.Ux, work2, work3)
 
-        # ====================================================================
+        # ======================================================================
         # Inverse Hessian products with respect to u
-        # ====================================================================
+        # ======================================================================
         # u = (Wu + tr[N \ Wx] / z) / ((1 + tr[X]/z) / u^2 - tr[N \ I] / z^2)
         tr_N_inv_Wx = np.trace(work1, axis1=1, axis2=2).real
-        out_u = (Wu * self.uz2[0, 0] + tr_N_inv_Wx * self.uz[0, 0])
+        out_u = Wu * self.uz2[0, 0] + tr_N_inv_Wx * self.uz[0, 0]
         out_u /= (self.z2 + self.trX * self.z) - self.tr_N_inv_I
         lhs[:, 1] = out_u
 
-        # ====================================================================
+        # ======================================================================
         # Inverse Hessian products with respect to X
-        # ====================================================================
+        # ======================================================================
         # X = (N \ Wx) + u / z (N \ I)
         np.outer(out_u / self.uz, self.N_inv_I, out=work2.reshape((p, -1)))
         work1 += work2
         out_X = work1.reshape((p, -1)).view(np.float64)
         lhs[:, 2:] = out_X
 
-        # ====================================================================
+        # ======================================================================
         # Inverse Hessian products with respect to t
-        # ====================================================================
+        # ======================================================================
         DPhiX_vec = self.DPhiX.view(np.float64).reshape((-1, 1))
 
         # t = z^2 Ht + <DS(u, X), (u, X)>
@@ -426,9 +435,9 @@ class QuantEntr(Cone):
 
         return out
 
-    # ========================================================================
+    # ==========================================================================
     # Auxilliary functions
-    # ========================================================================
+    # ==========================================================================
     def congr_aux(self, A):
         assert not self.congr_aux_updated
 

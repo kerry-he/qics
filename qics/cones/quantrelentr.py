@@ -607,6 +607,7 @@ class QuantRelEntr(Cone):
         # Subtract to obtain Schur complement then Cholesky factor
         hess_schur -= work
         self.hess_schur_fact = lin.cho_fact(hess_schur)
+        
         self.invhess_aux_updated = True
 
     def update_invhessprod_aux_aux(self):
