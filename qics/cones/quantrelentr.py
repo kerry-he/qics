@@ -3,7 +3,7 @@ import scipy as sp
 import qics._utils.linalg as lin
 import qics._utils.gradient as grad
 from qics.cones.base import Cone, get_central_ray_relentr
-from qics.vectorize import get_full_to_compact_op, vec_to_mat
+from qics.vectorize import get_full_to_compact_op
 
 
 class QuantRelEntr(Cone):
@@ -130,21 +130,21 @@ class QuantRelEntr(Cone):
         assert not self.grad_updated
 
         # Compute gradients of quantum relative entropy
-        self.D1y_log = grad.D1_log(self.Dy, self.log_Dy)
-        self.UyXUy = self.Uy.conj().T @ self.X @ self.Uy
         # D_X S(X||Y) = log(X) - log(Y) + I
         self.DPhiX = self.log_XY + np.eye(self.n)
         # D_Y S(X||Y) = -Uy * [log^[1](Dy) .* (Uy' X Uy)] Uy'
+        self.D1y_log = grad.D1_log(self.Dy, self.log_Dy)
+        self.UyXUy = self.Uy.conj().T @ self.X @ self.Uy
         self.DPhiY = -self.Uy @ (self.D1y_log * self.UyXUy) @ self.Uy.conj().T
         self.DPhiY = (self.DPhiY + self.DPhiY.conj().T) * 0.5
 
         # Compute X^-1 and Y^-1
-        self.inv_Dx = np.reciprocal(self.Dx)
-        self.inv_Dy = np.reciprocal(self.Dy)
-
-        inv_X_rt2 = self.Ux * np.sqrt(self.inv_Dx)
+        inv_Dx = np.reciprocal(self.Dx)
+        inv_X_rt2 = self.Ux * np.sqrt(inv_Dx)
         self.inv_X = inv_X_rt2 @ inv_X_rt2.conj().T
-        inv_Y_rt2 = self.Uy * np.sqrt(self.inv_Dy)
+
+        inv_Dy = np.reciprocal(self.Dy)
+        inv_Y_rt2 = self.Uy * np.sqrt(inv_Dy)
         self.inv_Y = inv_Y_rt2 @ inv_Y_rt2.conj().T
 
         # Compute gradient of barrier function
@@ -253,6 +253,7 @@ class QuantRelEntr(Cone):
         grad.scnd_frechet_multi(work4, self.D2y_comb, work1, U=self.Uy, 
                                 work1=work2, work2=work3, work3=work5)
 
+        # Hessian product of barrier function
         # D2_Y F(t, X, Y)[Ht, Hx, Hy] 
         #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_Y S(X||Y)
         #           + (D2_YX S(X||Y)[Hx] + D2_YY S(X||Y)[Hy]) / z
@@ -275,6 +276,7 @@ class QuantRelEntr(Cone):
         work1 *= self.D1x_comb
         lin.congr_multi(work3, self.Ux, work1, work2)
 
+        # Hessian product of barrier function
         # D2_X F(t, X, Y)[Ht, Hx, Hy] 
         #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X S(X||Y)
         #           + (D2_XX S(X||Y)[Hx] + D2_XY S(X||Y)[Hy]) / z
@@ -446,7 +448,7 @@ class QuantRelEntr(Cone):
         DPhiX_vec = self.DPhiX.view(np.float64).reshape((-1, 1))
         DPhiY_vec = self.DPhiY.view(np.float64).reshape((-1, 1))
 
-        # t = z^2 Ht + <DPhi(X, Y), (X, Y)>
+        # t = z^2 Ht + <DS(X||Y), (X, Y)>
         outt = self.z2 * self.At
         outt += (out_X @ DPhiX_vec).ravel()
         outt += (out_Y @ DPhiY_vec).ravel()
@@ -470,7 +472,7 @@ class QuantRelEntr(Cone):
         UxHxUx = self.Ux.conj().T @ Hx @ self.Ux
         UyHyUy = self.Uy.conj().T @ Hy @ self.Uy
         UyHxUy = self.Uy.conj().T @ Hx @ self.Uy
-        D3_log_Y = 2 * (self.inv_Dy**3)
+        D3_log_Y = 2 * np.power(self.Dy, -3)
 
         # Quantum relative entropy Hessians
         D2PhiXXH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
@@ -517,6 +519,7 @@ class QuantRelEntr(Cone):
     def update_congr_aux(self, A):
         assert not self.congr_aux_updated
 
+        from qics.vectorize import vec_to_mat
         iscomplex = self.iscomplex
 
         # Get slices and views of A matrix to be used in congruence computations
