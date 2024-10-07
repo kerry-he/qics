@@ -3,7 +3,7 @@ import scipy as sp
 import qics._utils.linalg as lin
 import qics._utils.gradient as grad
 from qics.cones.base import Cone, get_central_ray_relentr
-from qics.vectorize import get_full_to_compact_op
+from qics.vectorize import get_full_to_compact_op, vec_to_mat
 
 
 class QuantRelEntr(Cone):
@@ -213,7 +213,7 @@ class QuantRelEntr(Cone):
         out[2][:] = (out_Y + out_Y.conj().T) * 0.5
 
         return out
-
+         
     def hess_congr(self, A):
         assert self.grad_updated
         if not self.hess_aux_updated:
@@ -224,33 +224,16 @@ class QuantRelEntr(Cone):
         p = A.shape[0]
         lhs = np.zeros((p, sum(self.dim)))
 
-        work1, work2 = self.work1, self.work2
-        work3, work5 = self.work3, self.work5
-
-        # Hessian product of quantum relative entropy
-        # D2_XX S(X||Y)[Hx] =  Ux [log^[1](Dx) .* (Ux' Hx Ux)] Ux'
-        lin.congr_multi(work1, self.Ux.conj().T, self.Ax, work2)
-        work1 *= self.D1x_comb
-        lin.congr_multi(self.D2PhiXXH, self.Ux, work1, work2)
-        # D2_YX S(X||Y)[Hx] = -Uy [log^[1](Dy) .* (Uy' Hx Uy)] Uy'
-        lin.congr_multi(work1, self.Uy.conj().T, self.Ax, work2)
-        work1 *= -self.zi * self.D1y_log
-        lin.congr_multi(self.D2PhiYXH, self.Uy, work1, work2)
-        # D2_YY S(X||Y)[Hy] = -Uy [SUM_k log_k^[2](Dy) .* ... ] Uy'
-        lin.congr_multi(work1, self.Uy.conj().T, self.Ay, work2)
-        grad.scnd_frechet_multi(self.D2PhiYYH, self.D2y_comb, work1, U=self.Uy, 
-                                work1=work2, work2=work3, work3=work5)
-        # D2_XY S(X||Y)[Hy] = -Uy [log^[1](Dy) .* (Uy' Hy Uy)] Uy'
-        work1 *= self.D1y_log * self.zi
-        lin.congr_multi(self.D2PhiXYH, self.Uy, work1, work2)
+        work0, work1, work2 = self.work0, self.work1, self.work2
+        work3, work4, work5 = self.work3, self.work4, self.work5
 
         # ======================================================================
         # Hessian products with respect to t
         # ======================================================================
         # D2_t F(t, X, Y)[Ht, Hx, Hy] 
         #         = (Ht - D_X S(X||Y)[Hx] - D_Y S(X||Y)[Hy]) / z^2
-        DPhiX_vec = self.DPhiX.view(dtype=np.float64).reshape((-1, 1))
-        DPhiY_vec = self.DPhiY.view(dtype=np.float64).reshape((-1, 1))
+        DPhiX_vec = self.DPhiX.view(np.float64).reshape((-1, 1))
+        DPhiY_vec = self.DPhiY.view(np.float64).reshape((-1, 1))
         out_t = self.At - (self.Ax_vec @ DPhiX_vec).ravel()
         out_t -= (self.Ay_vec @ DPhiY_vec).ravel()
         out_t *= self.zi2
@@ -258,30 +241,49 @@ class QuantRelEntr(Cone):
         lhs[:, 0] = out_t
 
         # ======================================================================
-        # Hessian products with respect to X
-        # ======================================================================
-        # D2_X F(t, X, Y)[Ht, Hx, Hy] 
-        #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X S(X||Y)
-        #           + (D2_XX S(X||Y)[Hx] + D2_XY S(X||Y)[Hy]) / z
-        #           + X^-1 Hx X^-1
-        np.subtract(self.D2PhiXXH, self.D2PhiXYH, out=work1)
-        np.outer(out_t, self.DPhiX, out=work2.reshape((p, -1)))
-        work1 -= work2
-
-        lhs[:, self.idx_X] = work1.reshape((p, -1)).view(dtype=np.float64)
-
-        # ======================================================================
         # Hessian products with respect to Y
         # ======================================================================
+        # Hessian products of quantum relative entropy
+        # D2_YX S(X||Y)[Hx] = -Uy [log^[1](Dy) .* (Uy' Hx Uy)] Uy'
+        lin.congr_multi(work1, self.Uy.conj().T, self.Ax, work2)
+        work1 *= -self.zi * self.D1y_log
+        lin.congr_multi(work0, self.Uy, work1, work2)
+        # D2_YY S(X||Y)[Hy] = -Uy [SUM_k log_k^[2](Dy) .* ... ] Uy'
+        lin.congr_multi(work1, self.Uy.conj().T, self.Ay, work2)
+        grad.scnd_frechet_multi(work4, self.D2y_comb, work1, U=self.Uy, 
+                                work1=work2, work2=work3, work3=work5)
+
         # D2_Y F(t, X, Y)[Ht, Hx, Hy] 
         #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_Y S(X||Y)
         #           + (D2_YX S(X||Y)[Hx] + D2_YY S(X||Y)[Hy]) / z
         #           + Y^-1 Hy Y^-1
-        np.add(self.D2PhiYYH, self.D2PhiYXH, out=work1)
+        work0 += work4
         np.outer(out_t, self.DPhiY, out=work2.reshape((p, -1)))
-        work1 -= work2
+        work0 -= work2
 
-        lhs[:, self.idx_Y] = work1.reshape((p, -1)).view(dtype=np.float64)
+        lhs[:, self.idx_Y] = work0.reshape((p, -1)).view(np.float64)
+
+        # ======================================================================
+        # Hessian products with respect to X
+        # ======================================================================
+        # Hessian products of quantum relative entropy
+        # D2_XY S(X||Y)[Hy] = -Uy [log^[1](Dy) .* (Uy' Hy Uy)] Uy'
+        work1 *= self.D1y_log * self.zi
+        lin.congr_multi(work0, self.Uy, work1, work2)
+        # D2_XX S(X||Y)[Hx] =  Ux [log^[1](Dx) .* (Ux' Hx Ux)] Ux'
+        lin.congr_multi(work1, self.Ux.conj().T, self.Ax, work2)
+        work1 *= self.D1x_comb
+        lin.congr_multi(work3, self.Ux, work1, work2)
+
+        # D2_X F(t, X, Y)[Ht, Hx, Hy] 
+        #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X S(X||Y)
+        #           + (D2_XX S(X||Y)[Hx] + D2_XY S(X||Y)[Hy]) / z
+        #           + X^-1 Hx X^-1
+        work3 -= work0
+        np.outer(out_t, self.DPhiX, out=work2.reshape((p, -1)))
+        work3 -= work2
+
+        lhs[:, self.idx_X] = work3.reshape((p, -1)).view(np.float64)
 
         # Multiply A (H A')
         return lin.dense_dot_x(lhs, A.T)
@@ -293,45 +295,62 @@ class QuantRelEntr(Cone):
         if not self.invhess_aux_updated:
             self.update_invhessprod_aux()
 
-        # Computes inverse Hessian product of the QRE barrier with a single vector (Ht, Hx, Hy)
-        # See invhess_congr() for additional comments
+        # See comments in invhess_congr for further details about how this
+        # inverse Hessian product is performed
 
         (Ht, Hx, Hy) = H
 
         Wx = Hx + Ht * self.DPhiX
         Wy = Hy + Ht * self.DPhiY
 
+        # ======================================================================
         # Inverse Hessian products with respect to Y
+        # ======================================================================
+        # Compute RHS of S \ ( ... ) expression
+        # Compute Ux' Wx Ux
         temp = self.Ux.conj().T @ Wx @ self.Ux
+         # Apply (Uy'Ux ⊗ Uy'Ux) (1/z log^[1](Dx) + Dx^-1 ⊗ Dx^-1)^-1
         temp = self.UyUx @ (self.D1x_comb_inv * temp) @ self.UyUx.conj().T
-        temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.conj().T
-        temp = self.Uy.conj().T @ (Wy - temp) @ self.Uy
+        # Apply -1/z log^[1](Dy)
+        temp = -self.zi * self.D1y_log * temp
+        # Compute Uy' Wy Uy and subtract previous expression
+        temp = self.Uy.conj().T @ Wy @ self.Uy - temp
         
-        temp_vec = temp.view(dtype=np.float64).reshape((-1, 1))
+        # Solve the linear system S \ ( ... ) to obtain Uy' Y Uy
+        # Convert matrices to compact real vectors
+        temp_vec = temp.view(np.float64).reshape((-1, 1))
         temp_vec = self.F2C_op @ temp_vec
-
+        # Solve system
         temp_vec = lin.cho_solve(self.hess_schur_fact, temp_vec)
-
+        # Expand compact real vectors back into full matrices
         temp_vec = self.F2C_op.T @ temp_vec
-        temp = temp_vec.T.view(dtype=self.dtype).reshape((self.n, self.n))
+        temp = temp_vec.T.view(self.dtype).reshape((self.n, self.n))
 
-        temp = self.Uy @ temp @ self.Uy.conj().T
-        temp = (temp + temp.conj().T) * 0.5
-        out[2][:] = temp
+        # Recover Y from Uy' Y Uy
+        out_Y = self.Uy @ temp @ self.Uy.conj().T
+        out[2][:] = (out_Y + out_Y.conj().T) * 0.5
 
+        # ======================================================================
         # Inverse Hessian products with respect to X
-        temp = self.Uy.conj().T @ out[2] @ self.Uy
+        # ======================================================================
+        # Apply -(Uy ⊗ Uy) (1/z log^[1](Dy))
         temp = -self.Uy @ (self.zi * self.D1y_log * temp) @ self.Uy.conj().T
+        # Subtract Wx from previous expression
         temp = Wx - temp
+        # Apply (Ux ⊗ Ux)
         temp = self.Ux.conj().T @ temp @ self.Ux
-        temp = self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.conj().T
-        temp = (temp + temp.conj().T) * 0.5
-        out[1][:] = temp
+        # Apply (Ux' ⊗ Ux') (1/z log^[1](Dx) + Dx^-1 ⊗ Dx^-1)^-1 to obtain X
+        out_X = self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.conj().T
+        out[1][:] = (out_X + out_X.conj().T) * 0.5
 
+        # ======================================================================
         # Inverse Hessian products with respect to t
-        out[0][:] = (
-            self.z2 * Ht + lin.inp(self.DPhiX, out[1]) + lin.inp(self.DPhiY, out[2])
-        )
+        # ======================================================================
+        # t = z^2 Ht + <DPhi(X, Y), (X, Y)>
+        out_t = self.z2 * Ht
+        out_t += lin.inp(self.DPhiX, out_X)
+        out_t += lin.inp(self.DPhiY, out_Y)
+        out[0][:] = out_t
 
         return out
 
@@ -344,88 +363,93 @@ class QuantRelEntr(Cone):
         if not self.congr_aux_updated:
             self.update_congr_aux(A)
 
-        # The inverse Hessian product applied on (Ht, Hx, Hy) for the QRE barrier is
+        # The inverse Hessian product applied on (Ht, Hx, Hy) for the QRE
+        # barrier is
         #     (X, Y) =  M \ (Wx, Wy)
         #         t  =  z^2 Ht + <DPhi(X, Y), (X, Y)>
         # where (Wx, Wy) = [(Hx, Hy) + Ht DPhi(X, Y)],
-        #     M = Vxy [ 1/z log^[1](Dx) + Dx^-1 kron Dx^-1  -1/z (Ux'Uy kron Ux'Uy) log^[1](Dy) ]
-        #             [-1/z log^[1](Dy) (Uy'Ux kron Uy'Ux)      -1/z Sy + Dy^-1 kron Dy^-1      ] Vxy'
+        #     M = Vxy [ 1/z log^[1](Dx) + Dx^-1 ⊗ Dx^-1  -1/z (Ux'Uy ⊗ Ux'Uy) log^[1](Dy) ]
+        #             [-1/z log^[1](Dy) (Uy'Ux ⊗ Uy'Ux)      -1/z Sy + Dy^-1 ⊗ Dy^-1      ] Vxy'
         # and
-        #     Vxy = [ Ux kron Ux             ]
-        #           [             Uy kron Uy ]
+        #     Vxy = [ Ux ⊗ Ux             ]
+        #           [             Uy ⊗ Uy ]
         #
-        # To solve linear systems with M, we simplify it by doing block elimination, in which case we get
-        #     Uy' Y Uy = S \ ({Uy' Wy Uy} - [1/z log^[1](Dy) (Uy'Ux kron Uy'Ux) (1/z log^[1](Dx) + Dx^-1 kron Dx^-1)^-1 {Ux' Wx Ux}])
-        #     Ux' X Ux = -(1/z log^[1](Dx) + Dx^-1 kron Dx^-1)^-1 [{Ux' Wx Ux} + 1/z (Ux'Uy kron Ux'Uy) log^[1](Dy) Y]
+        # To solve linear systems with M, we simplify it by doing block
+        # elimination, in which case we get
+        #     Uy' Y Uy = S \ ({Uy' Wy Uy} - [1/z log^[1](Dy) (Uy'Ux ⊗ Uy'Ux) (1/z log^[1](Dx) + Dx^-1 ⊗ Dx^-1)^-1 {Ux' Wx Ux}])
+        #     Ux' X Ux = -(1/z log^[1](Dx) + Dx^-1 ⊗ Dx^-1)^-1 [{Ux' Wx Ux} + 1/z (Ux'Uy ⊗ Ux'Uy) log^[1](Dy) Y]
         # where S is the Schur complement matrix of M.
 
         p = self.Ax.shape[0]
         lhs = np.empty((p, sum(self.dim)))
 
-        # ====================================================================
+        work0, work1 = self.work0, self.work1
+        work2, work3, work4 = self.work2, self.work3, self.work4
+
+        # ======================================================================
         # Inverse Hessian products with respect to Y
-        # ====================================================================
-        # Compute ({Uy' Wy Uy} - [1/z log^[1](Dy) (Uy'Ux kron Uy'Ux) (1/z log^[1](Dx) + Dx^-1 kron Dx^-1)^-1 {Ux' Wx Ux}])
+        # ======================================================================
+        # Compute RHS of S \ ( ... ) expression
         # Compute Ux' Wx Ux
-        np.outer(self.At, self.DPhiX, out=self.work2.reshape((p, -1)))
-        np.add(self.Ax, self.work2, out=self.work0)
-        lin.congr_multi(self.work2, self.Ux.conj().T, self.work0, self.work3)
-        # Apply (1/z log^[1](Dx) + Dx^-1 kron Dx^-1)^-1
-        self.work2 *= self.D1x_comb_inv
-        # Apply (Uy'Ux kron Uy'Ux)
-        lin.congr_multi(self.work1, self.UyUx, self.work2, self.work3)
+        np.outer(self.At, self.DPhiX, out=work2.reshape((p, -1)))
+        np.add(self.Ax, work2, out=work0)
+        lin.congr_multi(work2, self.Ux.conj().T, work0, work3)
+        # Apply (1/z log^[1](Dx) + Dx^-1 ⊗ Dx^-1)^-1
+        work2 *= self.D1x_comb_inv
+        # Apply (Uy'Ux ⊗ Uy'Ux)
+        lin.congr_multi(work1, self.UyUx, work2, work3)
         # Apply -1/z log^[1](Dy)
-        self.work1 *= -self.zi * self.D1y_log
+        work1 *= -self.zi * self.D1y_log
         # Compute Uy' Wy Uy and subtract previous expression
-        np.outer(self.At, self.DPhiY, out=self.work2.reshape((p, -1)))
-        np.add(self.Ay, self.work2, out=self.work3)
-        lin.congr_multi(self.work2, self.Uy.conj().T, self.work3, self.work4)
-        self.work2 -= self.work1
+        np.outer(self.At, self.DPhiY, out=work2.reshape((p, -1)))
+        np.add(self.Ay, work2, out=work3)
+        lin.congr_multi(work2, self.Uy.conj().T, work3, work4)
+        work2 -= work1
 
         # Solve the linear system S \ ( ... ) to obtain Uy' Y Uy
         # Convert matrices to compact real vectors
-        work = self.work2.view(dtype=np.float64).reshape((p, -1)).T
+        work = work2.view(np.float64).reshape((p, -1)).T
         work = lin.x_dot_dense(self.F2C_op, work)
         # Solve system
         work = lin.cho_solve(self.hess_schur_fact, work)
         # Expand compact real vectors back into full matrices
         work = lin.x_dot_dense(self.F2C_op.T, work)
-        self.work1.view(dtype=np.float64).reshape((p, -1))[:] = work.T
+        work1.view(np.float64).reshape((p, -1))[:] = work.T
 
-        # Recover Y
-        lin.congr_multi(self.work4, self.Uy, self.work1, self.work2)
-        lhs[:, self.idx_Y] = self.work4.reshape((p, -1)).view(dtype=np.float64)
+        # Recover Y from Uy' Y Uy
+        lin.congr_multi(work4, self.Uy, work1, work2)
+        out_Y = work4.reshape((p, -1)).view(np.float64)
+        lhs[:, self.idx_Y] = out_Y
 
-        # ====================================================================
+        # ======================================================================
         # Inverse Hessian products with respect to X
-        # ====================================================================
+        # ======================================================================
         # Apply -1/z log^[1](Dy)
-        self.work1 *= -self.zi * self.D1y_log
-        # Apply (Uy kron Uy)
-        lin.congr_multi(self.work2, self.Uy, self.work1, self.work3)
+        work1 *= -self.zi * self.D1y_log
+        # Apply (Uy ⊗ Uy)
+        lin.congr_multi(work2, self.Uy, work1, work3)
         # Subtract Wx from previous expression
-        self.work0 -= self.work2
-        # Apply (Ux kron Ux)
-        lin.congr_multi(self.work1, self.Ux.conj().T, self.work0, self.work3)
-        # Apply (1/z log^[1](Dx) + Dx^-1 kron Dx^-1)^-1 to obtian Ux' X Ux
-        self.work1 *= self.D1x_comb_inv
+        work0 -= work2
+        # Apply (Ux ⊗ Ux)
+        lin.congr_multi(work1, self.Ux.conj().T, work0, work3)
+        # Apply (1/z log^[1](Dx) + Dx^-1 ⊗ Dx^-1)^-1 to obtian Ux' X Ux
+        work1 *= self.D1x_comb_inv
 
-        # Recover X
-        lin.congr_multi(self.work2, self.Ux, self.work1, self.work3)
-        lhs[:, self.idx_X] = self.work2.reshape((p, -1)).view(dtype=np.float64)
+        # Recover X from Ux' X Ux
+        lin.congr_multi(work2, self.Ux, work1, work3)
+        out_X = work2.reshape((p, -1)).view(np.float64)
+        lhs[:, self.idx_X] = out_X
 
-        # ====================================================================
+        # ======================================================================
         # Inverse Hessian products with respect to t
-        # ====================================================================
+        # ======================================================================
+        DPhiX_vec = self.DPhiX.view(np.float64).reshape((-1, 1))
+        DPhiY_vec = self.DPhiY.view(np.float64).reshape((-1, 1))
+
+        # t = z^2 Ht + <DPhi(X, Y), (X, Y)>
         outt = self.z2 * self.At
-        outt += (
-            self.work2.view(dtype=np.float64).reshape((p, 1, -1))
-            @ self.DPhiX.view(dtype=np.float64).reshape((-1, 1))
-        ).ravel()
-        outt += (
-            self.work4.view(dtype=np.float64).reshape((p, 1, -1))
-            @ self.DPhiY.view(dtype=np.float64).reshape((-1, 1))
-        ).ravel()
+        outt += (out_X @ DPhiX_vec).ravel()
+        outt += (out_Y @ DPhiY_vec).ravel()
         lhs[:, 0] = outt
 
         # Multiply A (H A')
@@ -446,6 +470,7 @@ class QuantRelEntr(Cone):
         UxHxUx = self.Ux.conj().T @ Hx @ self.Ux
         UyHyUy = self.Uy.conj().T @ Hy @ self.Uy
         UyHxUy = self.Uy.conj().T @ Hx @ self.Uy
+        D3_log_Y = 2 * (self.inv_Dy**3)
 
         # Quantum relative entropy Hessians
         D2PhiXXH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
@@ -462,15 +487,8 @@ class QuantRelEntr(Cone):
 
         D3PhiYYX = -grad.scnd_frechet(self.D2y_log, UyHyUy, UyHxUy, self.Uy)
         D3PhiYXY = D3PhiYYX
-        D3PhiYYY = -grad.thrd_frechet(
-            self.Dy,
-            self.D2y_log,
-            2 * (self.inv_Dy**3),
-            self.Uy,
-            self.UyXUy,
-            UyHyUy,
-            UyHyUy,
-        )
+        D3PhiYYY = -grad.thrd_frechet(self.Dy, self.D2y_log, D3_log_Y, self.Uy,
+                                      self.UyXUy, UyHyUy)
 
         # Third derivatives of barrier
         dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhiXHH + D2PhiYHH)
@@ -493,56 +511,35 @@ class QuantRelEntr(Cone):
 
         return out
 
-    # ========================================================================
+    # ==========================================================================
     # Auxilliary functions
-    # ========================================================================
+    # ==========================================================================
     def update_congr_aux(self, A):
         assert not self.congr_aux_updated
 
-        p = A.shape[0]
+        iscomplex = self.iscomplex
+
+        # Get slices and views of A matrix to be used in congruence computations
+        if sp.sparse.issparse(A):
+            A = A.tocsr()
+        self.Ax_vec = A[:, self.idx_X]
+        self.Ay_vec = A[:, self.idx_Y]
 
         if sp.sparse.issparse(A):
             A = A.toarray()
-
+        Ax_dense = np.ascontiguousarray(A[:, self.idx_X])
+        Ay_dense = np.ascontiguousarray(A[:, self.idx_Y])
         self.At = A[:, 0]
-        Ax = np.ascontiguousarray(A[:, self.idx_X])
-        Ay = np.ascontiguousarray(A[:, self.idx_Y])
+        self.Ax = np.array([vec_to_mat(Ax_k, iscomplex) for Ax_k in Ax_dense])
+        self.Ay = np.array([vec_to_mat(Ay_k, iscomplex) for Ay_k in Ay_dense])
 
-        if self.iscomplex:
-            self.Ax = np.array(
-                [
-                    Ax_k.reshape((-1, 2))
-                    .view(dtype=np.complex128)
-                    .reshape((self.n, self.n))
-                    for Ax_k in Ax
-                ]
-            )
-            self.Ay = np.array(
-                [
-                    Ay_k.reshape((-1, 2))
-                    .view(dtype=np.complex128)
-                    .reshape((self.n, self.n))
-                    for Ay_k in Ay
-                ]
-            )
-        else:
-            self.Ax = np.array([Ax_k.reshape((self.n, self.n)) for Ax_k in Ax])
-            self.Ay = np.array([Ay_k.reshape((self.n, self.n)) for Ay_k in Ay])
-        
-        self.Ax_vec = self.Ax.view(dtype=np.float64).reshape((p, 1, -1))
-        self.Ay_vec = self.Ay.view(dtype=np.float64).reshape((p, 1, -1))
-
-        self.work0 = np.empty_like(self.Ax, dtype=self.dtype)
-        self.work1 = np.empty_like(self.Ax, dtype=self.dtype)
-        self.work2 = np.empty_like(self.Ax, dtype=self.dtype)
-        self.work3 = np.empty_like(self.Ax, dtype=self.dtype)
-        self.work4 = np.empty_like(self.Ax, dtype=self.dtype)
+        # Preallocate matrices we will need when performing these congruences
+        self.work0 = np.empty_like(self.Ax)
+        self.work1 = np.empty_like(self.Ax)
+        self.work2 = np.empty_like(self.Ax)
+        self.work3 = np.empty_like(self.Ax)
+        self.work4 = np.empty_like(self.Ax)
         self.work5 = np.empty((self.Ax.shape[::-1]), dtype=self.dtype)
-
-        self.D2PhiXXH = np.empty_like(self.Ax, dtype=self.dtype)
-        self.D2PhiYXH = np.empty_like(self.Ax, dtype=self.dtype)
-        self.D2PhiXYH = np.empty_like(self.Ay, dtype=self.dtype)
-        self.D2PhiYYH = np.empty_like(self.Ay, dtype=self.dtype)
 
         self.congr_aux_updated = True
 
@@ -563,8 +560,6 @@ class QuantRelEntr(Cone):
 
         self.hess_aux_updated = True
 
-        return
-
     def update_invhessprod_aux(self):
         assert not self.invhess_aux_updated
         assert self.grad_updated
@@ -573,35 +568,36 @@ class QuantRelEntr(Cone):
             self.update_invhessprod_aux_aux()
 
         # Precompute and factorize the Schur complement matrix
-        #     S = (-1/z Sy + Dy^-1 kron Dy^-1)
-        #         - [1/z^2 log^[1](Dy) (Uy'Ux kron Uy'Ux) [(1/z log + inv)^[1](Dx)]^-1 (Ux'Uy kron Ux'Uy) log^[1](Dy)]
+        #     S = (-1/z Sy + Dy^-1 ⊗ Dy^-1)
+        #         - [1/z^2 log^[1](Dy) (Uy'Ux ⊗ Uy'Ux) [(1/z log + inv)^[1](Dx)]^-1 (Ux'Uy ⊗ Ux'Uy) log^[1](Dy)]
         # where
         #     (Sy)_ij,kl = delta_kl (Uy' X Uy)_ij log^[2]_ijl(Dy) + delta_ij (Uy' X Uy)_kl log^[2]_jkl(Dy)
-        # which we will need to solve linear systems with the Hessian of our barrier function
+        # which we will need to solve linear systems with the Hessian of our
+        # barrier function
+
+        work6, work7, work8 = self.work6, self.work7, self.work8
 
         self.z2 = self.z * self.z
         self.UyUx = self.Uy.conj().T @ self.Ux
         self.D1x_comb_inv = np.reciprocal(self.D1x_comb)
 
-        # Get [-1/z Sy + Dy^-1 kron Dy^-1] matrix
-        hess_schur = grad.get_S_matrix(
-            self.D2y_comb, np.sqrt(2.0), iscomplex=self.iscomplex
-        )
+        # Get first term in S matrix, i.e., [-1/z Sy + Dy^-1 ⊗ Dy^-1]
+        rt2 = np.sqrt(2.0)
+        hess_schur = grad.get_S_matrix(self.D2y_comb, rt2, self.iscomplex)
 
-        # Get [1/z^2 log^[1](Dy) (Uy'Ux kron Uy'Ux) [(1/z log + inv)^[1](Dx)]^-1 (Ux'Uy kron Ux'Uy) log^[1](Dy)] matrix
-        # Begin with log^[1](Dy)
-        self.work6[:] = self.E
-        self.work6[self.Ek, self.Ei, self.Ej] *= self.D1y_log[self.Ei, self.Ej]
-
-        # Apply (Ux'Uy kron Ux'Uy)
-        lin.congr_multi(self.work8, self.UyUx.conj().T, self.work6, work=self.work7)
+        # Get second term in S matrix, i.e., [1/z^2 log^[1](Dy) ... ]
+        # Apply log^[1](Dy) to computational basis
+        work6[:] = self.E
+        work6[self.Ek, self.Ei, self.Ej] *= self.D1y_log[self.Ei, self.Ej]
+        # Apply (Ux'Uy ⊗ Ux'Uy)
+        lin.congr_multi(work8, self.UyUx.conj().T, work6, work=work7)
         # Apply [(1/z log + inv)^[1](Dx)]^-1
-        self.work8 *= self.D1x_comb_inv
-        # Apply (Uy'Ux kron Uy'Ux)
-        lin.congr_multi(self.work6, self.UyUx, self.work8, work=self.work7)
-        # Apply (1/z^2 log^[1](Dy))
-        self.work6 *= self.D1y_log
-        work = self.work6.view(dtype=np.float64).reshape((self.vn, -1))
+        work8 *= self.D1x_comb_inv
+        # Apply (Uy'Ux ⊗ Uy'Ux)
+        lin.congr_multi(work6, self.UyUx, work8, work=work7)
+        # Apply (1/z^2 log^[1](Dy)) and reshape into square symmetric matrix
+        work6 *= self.D1y_log
+        work = work6.view(np.float64).reshape((self.vn, -1))
         work = lin.x_dot_dense(self.F2C_op, work.T)
         work *= self.zi2
 
@@ -610,9 +606,8 @@ class QuantRelEntr(Cone):
         self.hess_schur_fact = lin.cho_fact(hess_schur)
         self.invhess_aux_updated = True
 
-        return
-
     def update_invhessprod_aux_aux(self):
+        # This auxiliary function should only ever be called once
         assert not self.invhess_aux_aux_updated
 
         self.precompute_computational_basis()
@@ -634,5 +629,3 @@ class QuantRelEntr(Cone):
         self.D2x_log = grad.D2_log(self.Dx, self.D1x_log)
 
         self.dder3_aux_updated = True
-
-        return
