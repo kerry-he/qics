@@ -504,59 +504,59 @@ class QuantCondEntr(Cone):
         self.z2 = self.z * self.z
         self.D1x_comb_inv = np.reciprocal(self.D1x_comb)
 
+        work6, work7, work8 = self.work6, self.work7, self.work8
+        Work6, Work7 = self.Work6, self.Work7
+        Work8, Work9 = self.Work8, self.Work9
+
         # Get first term, i.e., [1/z (Uy ⊗ Uy) [log^[1](Dy)]^-1 (Uy' ⊗ Uy')]
         # Begin with (Uy' ⊗ Uy')
-        lin.congr_multi(self.work8, self.Uy.conj().T, self.E, work=self.work7)
+        lin.congr_multi(work8, self.Uy.conj().T, self.E, work=work7)
         # Apply z [log^[1](Dy)]^-1
-        self.work8 *= self.z * np.reciprocal(self.D1y_log)
+        work8 *= self.z * np.reciprocal(self.D1y_log)
         # Apply (Uy ⊗ Uy)
-        lin.congr_multi(self.work6, self.Uy, self.work8, work=self.work7)
+        lin.congr_multi(work6, self.Uy, work8, work=work7)
 
         # Get second term, i.e., [pTr (Ux ⊗ Ux) ...]
-        # Begin with [(Ux' ⊗ Ux') pTr'], which we can do efficiently by 
+        # Begin with [(Ux' ⊗ Ux') pTr']
+        # Permutes columns of Ux' so subsystems we are tracing out are in front
         temp = self.Ux.T.reshape(self.N, *self.dims)
         temp = np.transpose(temp, self.reordered_dims)
+        # Obtain groups of columns of Ux' corresponding to 
+        #   Ux' (I ⊗ Eij) Ux = (Ux' Ei) (Ej' Ux)
         temp = temp.reshape(self.N, self.m, self.n)
-
-        lhs = np.copy(temp.conj().transpose(2, 0, 1))  # self.n1, self.N, self.n0
-        rhs = np.copy(temp.transpose(2, 1, 0))  # self.n1, self.n0, self.N
-
-        np.matmul(lhs, rhs, out=self.Work9)
-        self.Work8[self.diag_idxs] = self.Work9
+        lhs = np.copy(temp.conj().transpose(2, 0, 1))
+        rhs = np.copy(temp.transpose(2, 1, 0))
+        # Use these groups of columns of Ux' to compute [(Ux' ⊗ Ux') pTr']
+        # Compute the entries corresponding to Eii first
+        np.matmul(lhs, rhs, out=Work9)
+        Work8[self.diag_idxs] = Work9
+        # Now compute entries corresponding to Eij for i =/= j
         rhs *= np.sqrt(0.5)
         t = 0
         for j in range(self.n):
-            np.matmul(lhs[j], rhs[:j], out=self.Work9[:j])
-
+            np.matmul(lhs[j], rhs[:j], out=Work9[:j])
+            Work9_T = Work9[:j].conj().transpose(0, 2, 1)
             if self.iscomplex:
-                np.add(
-                    self.Work9[:j],
-                    self.Work9[:j].conj().transpose(0, 2, 1),
-                    out=self.Work8[t : t + 2 * j : 2],
-                )
-                np.subtract(
-                    self.Work9[:j],
-                    self.Work9[:j].conj().transpose(0, 2, 1),
-                    out=self.Work8[t + 1 : t + 2 * j + 1 : 2],
-                )
-                self.Work8[t + 1 : t + 2 * j + 1 : 2] *= -1j
+                # Get symmetric and skew-symmetric matrices corresponding to
+                # real and complex basis vectors
+                np.add(Work9[:j], Work9_T, out=Work8[t : t+2*j : 2])
+                np.subtract(Work9[:j], Work9_T, out=Work8[t+1 : t+2*j+1 : 2])
+                Work8[t + 1 : t + 2 * j + 1 : 2] *= -1j
                 t += 2 * j + 1
             else:
-                np.add(
-                    self.Work9[:j],
-                    self.Work9[:j].transpose(0, 2, 1),
-                    out=self.Work8[t : t + j],
-                )
+                # Symmeterize matrix
+                np.add(Work9[:j], Work9_T, out=Work8[t : t+j])
                 t += j + 1
+
         # Apply [(1/z log + inv)^[1](Dx)]^-1/2
-        self.Work8 *= self.D1x_comb_inv
+        Work8 *= self.D1x_comb_inv
         # Apply pTr (Ux ⊗ Ux)
-        lin.congr_multi(self.Work6, self.Ux, self.Work8, work=self.Work7)
-        p_tr_multi(self.work7, self.Work6, self.dims, self.sys)
+        lin.congr_multi(Work6, self.Ux, Work8, work=Work7)
+        p_tr_multi(work7, Work6, self.dims, self.sys)
 
         # Subtract to obtain Schur complement then Cholesky factor
-        self.work6 -= self.work7
-        work = self.work6.view(np.float64).reshape((self.vn, -1))
+        work6 -= work7
+        work = work6.view(np.float64).reshape((self.vn, -1))
         hess_schur = lin.x_dot_dense(self.F2C_op, work.T)
         self.hess_schur_fact = lin.cho_fact(hess_schur)
 
