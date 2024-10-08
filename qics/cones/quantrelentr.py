@@ -176,7 +176,7 @@ class QuantRelEntr(Cone):
         D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T
         # D2_XY S(X||Y)[Hy] = -Uy [log^[1](Dy) .* (Uy' Hy Uy)] Uy'
         D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.conj().T
-        # D2_YY S(X||Y)[Hy] = -Uy [SUM_k log_k^[2](Dy) .* ... ] Uy'
+        # D2_YY S(X||Y)[Hy] = -Uy [Σ_k log_k^[2](Dy) .* ... ] Uy'
         D2PhiYYH = -grad.scnd_frechet(self.D2y_log_UXU, UyHyUy, U=self.Uy)
 
         # ======================================================================
@@ -248,7 +248,7 @@ class QuantRelEntr(Cone):
         lin.congr_multi(work1, self.Uy.conj().T, self.Ax, work2)
         work1 *= -self.zi * self.D1y_log
         lin.congr_multi(work0, self.Uy, work1, work2)
-        # D2_YY S(X||Y)[Hy] = -Uy [SUM_k log_k^[2](Dy) .* ... ] Uy'
+        # D2_YY S(X||Y)[Hy] = -Uy [Σ_k log_k^[2](Dy) .* ... ] Uy'
         lin.congr_multi(work1, self.Uy.conj().T, self.Ay, work2)
         grad.scnd_frechet_multi(work4, self.D2y_comb, work1, U=self.Uy, 
                                 work1=work2, work2=work3, work3=work5)

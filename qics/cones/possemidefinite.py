@@ -481,14 +481,14 @@ def _sparse_congr(out, A_rows, A_cols, A_vals, A_nnz, X, indices):
 
     # We can cut the amount of operations in half by exploiting symetry of A and
     # X as follows
-    # (AHA)_ij = SUM_a,b (Ai)_ab (SUM_c,d (Aj)_cd X_ac X_db)
-    #          = SUM_a,b (Ai)_ab (  [SUM_c=d (Aj)_cd X_ac X_db]
-    #                             + [SUM_c<d (Aj)_cd X_ac X_db]
-    #                             + [SUM_c>d (Aj)_cd X_ac X_db]  )
-    #          = SUM_a,b (Ai)_ab (  [SUM_c=d (Aj)_cd X_ac X_db]
-    #                             + [SUM_c<d (Aj)_cd (X_ac X_db + X_ad X_cb)]  )
-    #          = [SUM_a=b (Ai)_ab ( ... )] + [SUM_a<b (Ai)_ab ( ... )] + [SUM_a>b (Ai)_ab ( ... )]
-    #          = [SUM_a=b (Ai)_ab ( ... )] + 2 [SUM_a<b (Ai)_ab ( ... )]
+    # (AHA)_ij = Σ_a,b (Ai)_ab (Σ_c,d (Aj)_cd X_ac X_db)
+    #          = Σ_a,b (Ai)_ab (  [Σ_c=d (Aj)_cd X_ac X_db]
+    #                             + [Σ_c<d (Aj)_cd X_ac X_db]
+    #                             + [Σ_c>d (Aj)_cd X_ac X_db]  )
+    #          = Σ_a,b (Ai)_ab (  [Σ_c=d (Aj)_cd X_ac X_db]
+    #                             + [Σ_c<d (Aj)_cd (X_ac X_db + X_ad X_cb)]  )
+    #          = [Σ_a=b (Ai)_ab ( ... )] + [Σ_a<b (Ai)_ab ( ... )] + [Σ_a>b (Ai)_ab ( ... )]
+    #          = [Σ_a=b (Ai)_ab ( ... )] + 2 [Σ_a<b (Ai)_ab ( ... )]
     # Note that we assume off-diagonal entries of Ai have been scaled by 2.
     # Also note that we assume only upper triangular elements are given to us so
     # c < d.
@@ -538,14 +538,14 @@ def _sparse_congr_complex(out, A_rows, A_cols, A_vals, A_nnz, X, indices):
 
     # We can cut the amount of operations in half by exploiting symetry of A and
     # X as follows
-    # (AHA)_ij = SUM_a,b (Ai)_ab* (SUM_c,d (Aj)_cd X_ac X_db)
-    #          = SUM_a,b (Ai)_ab* (  [SUM_c=d (Aj)_cd X_ac X_db]
-    #                              + [SUM_c>d (Aj)_cd X_ac X_db]
-    #                              + [SUM_c<d (Aj)_cd X_ac X_db]  )
-    #          = SUM_a,b (Ai)_ab* (  [SUM_c=d (Aj)_cd X_ac X_db]
-    #                              + [SUM_c<d (Aj)_cd X_ac X_db + (Aj)_cd* X_ad X_cb]  )
-    #          = [SUM_a=b (Ai)_ab ( ... )] + [SUM_a<b (Ai)_ab ( ... )] + [SUM_a>b (Ai)_ab ( ... )]
-    #          = [SUM_a=b (Ai)_ab ( ... )] + [SUM_a>b (Ai)_ab ( ... ) + (Ai)_ab* ( ... )]
+    # (AHA)_ij = Σ_a,b (Ai)_ab* (Σ_c,d (Aj)_cd X_ac X_db)
+    #          = Σ_a,b (Ai)_ab* (  [Σ_c=d (Aj)_cd X_ac X_db]
+    #                              + [Σ_c>d (Aj)_cd X_ac X_db]
+    #                              + [Σ_c<d (Aj)_cd X_ac X_db]  )
+    #          = Σ_a,b (Ai)_ab* (  [Σ_c=d (Aj)_cd X_ac X_db]
+    #                              + [Σ_c<d (Aj)_cd X_ac X_db + (Aj)_cd* X_ad X_cb]  )
+    #          = [Σ_a=b (Ai)_ab ( ... )] + [Σ_a<b (Ai)_ab ( ... )] + [Σ_a>b (Ai)_ab ( ... )]
+    #          = [Σ_a=b (Ai)_ab ( ... )] + [Σ_a>b (Ai)_ab ( ... ) + (Ai)_ab* ( ... )]
     # Also note that off-diagonal entries of Ai have been scaled by 2
 
     n = A_rows.shape[0]
@@ -575,7 +575,7 @@ def _sparse_congr_complex(out, A_rows, A_cols, A_vals, A_nnz, X, indices):
 
                 # Do addition slightly differently to guarantee a real number
                 # i.e., just take the inner product between Ai and X Aj X by
-                #     SUM_ab Re[(X Aj X)_ab] * Re[(Ai)_ab] + 2 Im[(X Aj X)_ab] * Im[(Ai)_ab]
+                #     Σ_ab Re[(X Aj X)_ab] * Re[(Ai)_ab] + 2 Im[(X Aj X)_ab] * Im[(Ai)_ab]
                 tmp3 += 0.5 * tmp2
                 tmp1 += A_vals[i, alpha].real * tmp3.real
                 tmp1 += A_vals[i, alpha].imag * tmp3.imag

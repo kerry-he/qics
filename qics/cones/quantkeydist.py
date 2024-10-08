@@ -973,7 +973,7 @@ class QuantKeyDist(Cone):
 
 
 def facial_reduction(K_list):
-    # For a set of Kraus operators i.e., SUM_i K_i @ X @ K_i.T, returns a set of
+    # For a set of Kraus operators i.e., Σ_i K_i @ X @ K_i.T, returns a set of
     # Kraus operators which preserves positive definiteness
     nk = K_list[0].shape[0]
 
