@@ -121,6 +121,8 @@ class OpPerspecEpi(Cone):
         ) = get_perspective_derivatives(func)
         self.func = func
 
+        self.F2C_op = get_full_to_compact_op(self.n, self.iscomplex)
+
         return
 
     def get_iscomplex(self):
@@ -935,7 +937,6 @@ class OpPerspecEpi(Cone):
         assert not self.invhess_aux_aux_updated
 
         self.precompute_computational_basis()
-        self.F2C_op = get_full_to_compact_op(self.n, self.iscomplex)
 
         self.work10 = np.empty((self.n, self.n, self.vn), dtype=self.dtype)
         self.work11 = np.empty((self.vn, self.n, self.n), dtype=self.dtype)

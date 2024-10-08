@@ -109,17 +109,19 @@ class Solver:
             # Default decision tree for whether to avoid inverse Hessian oracles
             SLOW_CONES = (qics.cones.QuantRelEntr, qics.cones.OpPerspecEpi, 
                           qics.cones.OpPerspecTr)
-            
-            use_invhess = model.issymmetric or not model.use_G \
-                or all([not isinstance(cone, SLOW_CONES) for cone in cones]) \
-                or not lin.is_full_col_rank(model.G)
+
+            q_slow_cones = sum([sum(cone.dim) for cone in cones 
+                                if isinstance(cone, SLOW_CONES)])
+
+            use_invhess = model.issymmetric or q_slow_cones / model.q <= 0.55 \
+                or not model.use_G or not lin.is_full_col_rank(model.G)
         elif not use_invhess:
             assert model.use_G, "Avoiding inverse Hessian oracles is " \
                 "not supported nor recommended if G is easily invertible."
             assert lin.is_full_col_rank(model.G), "Avoiding inverse Hessian " \
                 "oracles is not supported when G is not full column rank."
         self.use_invhess = use_invhess
-        
+
         # Preprocess model
         self.model = model
         model._preprocess(use_invhess, init_pnt)

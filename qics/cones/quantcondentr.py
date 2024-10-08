@@ -518,11 +518,11 @@ class QuantCondEntr(Cone):
 
         # Get second term, i.e., [pTr (Ux ⊗ Ux) ...]
         # Begin with [(Ux' ⊗ Ux') pTr']
-        # Permutes columns of Ux' so subsystems we are tracing out are in front
+        # Permute columns of Ux' so subsystems we are tracing out are in front
         temp = self.Ux.T.reshape(self.N, *self.dims)
         temp = np.transpose(temp, self.reordered_dims)
         # Obtain groups of columns of Ux' corresponding to 
-        #   Ux' (I ⊗ Eij) Ux = (Ux' Ei) (Ej' Ux)
+        #   Ux' (I ⊗ Eij) Ux = (Ux' [I ⊗ ei]) ([I ⊗ ej'] Ux)
         temp = temp.reshape(self.N, self.m, self.n)
         lhs = np.copy(temp.conj().transpose(2, 0, 1))
         rhs = np.copy(temp.transpose(2, 1, 0))

@@ -17,37 +17,39 @@ class NonNegOrthant(SymCone):
     """
 
     def __init__(self, n):
-        # Dimension properties
         self.n = n
-        self.nu = n
+
+        self.nu = n  # Barrier parameter
 
         self.dim = [n]
         self.type = ["r"]
 
-        self.Ax = None
-
         self.congr_aux_updated = False
+
         return
 
     def get_init_point(self, out):
         self.set_point([np.ones((self.n, 1))], [np.ones((self.n, 1))])
 
         out[0][:] = self.x
+
         return out
 
     def set_point(self, primal, dual=None, a=True):
         self.x = primal[0] * a
         self.z = dual[0] * a if (dual is not None) else None
-        return
     
     def set_dual(self, dual, a=True):
         self.z = dual[0] * a
 
     def get_feas(self):
-        if self.z is None:
-            return np.all(np.greater(self.x, 0))
-        else:
-            return np.all(np.greater(self.x, 0)) and np.all(np.greater(self.z, 0))
+        if np.any(np.less_equal(self.x, 0)):
+            return False
+        
+        if self.z is None and np.any(np.less_equal(self.z, 0)):
+            return False
+        
+        return True
 
     def get_dual_feas(self):
         return np.all(np.greater(self.z, 0))
@@ -75,7 +77,7 @@ class NonNegOrthant(SymCone):
 
     def base_congr(self, A, x):
         if sp.sparse.issparse(A):
-            if self.Ax is None:
+            if not hasattr(self, "Ax"):
                 self.Ax = A.copy()
             self.Ax.data = A.data * np.take(x, A.col)
             return self.Ax @ self.Ax.T
