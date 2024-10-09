@@ -592,7 +592,7 @@ class QuantRelEntr(Cone):
 
         # ======================================================================
         # Get second term in S matrix, i.e., [1/z^2 log^[1](Dy) ... ]
-        # ======================================================================        
+        # ======================================================================
         # Apply log^[1](Dy) to computational basis
         work6[:] = self.E
         work6[self.Ek, self.Ei, self.Ej] *= self.D1y_log[self.Ei, self.Ej]
