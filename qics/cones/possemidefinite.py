@@ -474,7 +474,7 @@ def _get_triu_idxs(n, iscomplex=False):
 # Numba functions for computing Schur complement matrix when A is very sparse
 # ============================================================================
 
-@nb.njit(parallel=True, fastmath=True)
+@nb.njit(cache=True, parallel=True, fastmath=True)
 def _sparse_congr(out, A_rows, A_cols, A_vals, A_nnz, X, indices):
     # Computes the congruence transform A (X kron X) A' when A is very sparse
     # See https://link.springer.com/article/10.1007/BF02614319
@@ -531,7 +531,7 @@ def _sparse_congr(out, A_rows, A_cols, A_vals, A_nnz, X, indices):
                 out[j_AHA, i_AHA] = tmp1
 
 
-@nb.njit(parallel=True, fastmath=True)
+@nb.njit(cache=True, parallel=True, fastmath=True)
 def _sparse_congr_complex(out, A_rows, A_cols, A_vals, A_nnz, X, indices):
     # Computes the congruence transform A (X kron X) A' when A is very sparse
     # See https://link.springer.com/article/10.1007/BF02614319

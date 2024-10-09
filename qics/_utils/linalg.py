@@ -159,7 +159,7 @@ def x_dot_dense(A, B):
     return dense_dot_x(B.T, A.T).T
 
 
-@nb.njit(parallel=True)
+@nb.njit(cache=True, parallel=True)
 def dense_dot_sparse(A, B_col, B_row, B_val, B_shape):
     A_dot_B = np.zeros((A.shape[0], B_shape[1]))
     for j in nb.prange(A.shape[0]):
