@@ -508,7 +508,9 @@ class QuantCondEntr(Cone):
         Work6, Work7 = self.Work6, self.Work7
         Work8, Work9 = self.Work8, self.Work9
 
+        # ======================================================================
         # Get first term, i.e., [1/z (Uy ⊗ Uy) [log^[1](Dy)]^-1 (Uy' ⊗ Uy')]
+        # ======================================================================        
         # Begin with (Uy' ⊗ Uy')
         lin.congr_multi(work8, self.Uy.conj().T, self.E, work=work7)
         # Apply z [log^[1](Dy)]^-1
@@ -516,7 +518,9 @@ class QuantCondEntr(Cone):
         # Apply (Uy ⊗ Uy)
         lin.congr_multi(work6, self.Uy, work8, work=work7)
 
+        # ======================================================================
         # Get second term, i.e., [pTr (Ux ⊗ Ux) ...]
+        # ======================================================================
         # Begin with [(Ux' ⊗ Ux') pTr']
         # Permute columns of Ux' so subsystems we are tracing out are in front
         temp = self.Ux.T.reshape(self.N, *self.dims)
@@ -554,7 +558,7 @@ class QuantCondEntr(Cone):
         lin.congr_multi(Work6, self.Ux, Work8, work=Work7)
         p_tr_multi(work7, Work6, self.dims, self.sys)
 
-        # Subtract to obtain Schur complement then Cholesky factor
+        # Subtract the two terms to obtain Schur complement then Cholesky factor
         work6 -= work7
         work = work6.view(np.float64).reshape((self.vn, -1))
         hess_schur = lin.x_dot_dense(self.F2C_op, work.T)

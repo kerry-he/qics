@@ -46,12 +46,6 @@ class PosSemidefinite(SymCone):
             self.type = ["s"]
             self.dtype = np.float64
 
-        # Update flags
-        self.feas_updated = False
-        self.grad_updated = False
-        self.nt_aux_updated = False
-        self.congr_aux_updated = False
-
         # Get LAPACK operators
         from scipy.linalg.lapack import get_lapack_funcs
 
@@ -64,6 +58,12 @@ class PosSemidefinite(SymCone):
             self.eigvalsh = get_lapack_funcs("heevr", (X,))
         else:
             self.eigvalsh = get_lapack_funcs("syevr", (X,))
+
+        # Update flags
+        self.feas_updated = False
+        self.grad_updated = False
+        self.nt_aux_updated = False
+        self.congr_aux_updated = False
 
         return
 

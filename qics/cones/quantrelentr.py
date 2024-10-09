@@ -584,11 +584,15 @@ class QuantRelEntr(Cone):
         self.UyUx = self.Uy.conj().T @ self.Ux
         self.D1x_comb_inv = np.reciprocal(self.D1x_comb)
 
+        # ======================================================================
         # Get first term in S matrix, i.e., [-1/z Sy + Dy^-1 ⊗ Dy^-1]
+        # ======================================================================
         rt2 = np.sqrt(2.0)
         hess_schur = grad.get_S_matrix(self.D2y_comb, rt2, self.iscomplex)
 
+        # ======================================================================
         # Get second term in S matrix, i.e., [1/z^2 log^[1](Dy) ... ]
+        # ======================================================================        
         # Apply log^[1](Dy) to computational basis
         work6[:] = self.E
         work6[self.Ek, self.Ei, self.Ej] *= self.D1y_log[self.Ei, self.Ej]
@@ -604,7 +608,7 @@ class QuantRelEntr(Cone):
         work = lin.x_dot_dense(self.F2C_op, work.T)
         work *= self.zi2
 
-        # Subtract to obtain Schur complement then Cholesky factor
+        # Subtract the two terms to obtain Schur complement then Cholesky factor
         hess_schur -= work
         self.hess_schur_fact = lin.cho_fact(hess_schur)
         

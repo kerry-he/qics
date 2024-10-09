@@ -91,24 +91,13 @@ class OpPerspecTr(Cone):
         self.dder3_aux_updated = False
         self.congr_aux_updated = False
 
-        (
-            self.g,
-            self.dg,
-            self.d2g,
-            self.d3g,
-            self.xg,
-            self.dxg,
-            self.d2xg,
-            self.d3xg,
-            self.h,
-            self.dh,
-            self.d2h,
-            self.d3h,
-            self.xh,
-            self.dxh,
-            self.d2xh,
-            self.d3xh,
-        ) = get_perspective_derivatives(func)
+        # Get function handles for g(x), h(x)=x*g(1/x), x*g(x), and x*h(x)
+        # and their first, second and third derivatives
+        perspective_derivatives = get_perspective_derivatives(func)
+        self.g, self.dg, self.d2g, self.d3g = perspective_derivatives["g"]
+        self.h, self.dh, self.d2h, self.d3h = perspective_derivatives["h"]
+        self.xg, self.dxg, self.d2xg, self.d3xg = perspective_derivatives["xg"]
+        self.xh, self.dxh, self.d2xh, self.d3xh = perspective_derivatives["xh"]
         self.func = func
 
         self.F2C_op = get_full_to_compact_op(self.n, self.iscomplex)

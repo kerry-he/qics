@@ -139,7 +139,7 @@ class Solver:
 
         self.point.vec.fill(np.nan)
         if init_pnt is not None:
-            (n_orig, p_orig) = (model.n_orig, model.p_orig)
+            n_orig, p_orig = model.n_orig, model.p_orig
             self.point.x[:n_orig] = init_pnt.x * model.c_scale[:n_orig]
             self.point.y[:p_orig] = init_pnt.y * model.b_scale[:p_orig]
             self.point.z.vec[:] = init_pnt.z.vec * model.h_scale

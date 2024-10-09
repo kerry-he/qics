@@ -432,61 +432,66 @@ def get_perspective_derivatives(func):
 
         def d3xh(x):
             return 2 * np.reciprocal(x)
+
     elif isinstance(func, (int, float)):
-        alpha = func
-        if alpha > 0 and alpha < 1:
+        a = func
+        if a > 0 and a < 1:
             sgn = -1
-        elif (alpha > 1 and alpha < 2) or (alpha >= -1 and alpha < 0):
+        elif (a > 1 and a < 2) or (a >= -1 and a < 0):
             sgn = 1
+        b = 1.0 - a
 
         def g(x):
-            return sgn * np.power(x, alpha)
+            return sgn * np.power(x, a)
 
         def dg(x):
-            return sgn * np.power(x, alpha - 1) * alpha
+            return sgn * np.power(x, a - 1) * a
 
         def d2g(x):
-            return sgn * np.power(x, alpha - 2) * (alpha * (alpha - 1))
+            return sgn * np.power(x, a - 2) * (a * (a - 1))
 
         def d3g(x):
-            return sgn * np.power(x, alpha - 3) * (alpha * (alpha - 1) * (alpha - 2))
+            return sgn * np.power(x, a - 3) * (a * (a - 1) * (a - 2))
 
         def xg(x):
-            return sgn * np.power(x, alpha + 1)
+            return sgn * np.power(x, a + 1)
 
         def dxg(x):
-            return sgn * np.power(x, alpha) * (alpha + 1)
+            return sgn * np.power(x, a) * (a + 1)
 
         def d2xg(x):
-            return sgn * np.power(x, alpha - 1) * ((alpha + 1) * alpha)
+            return sgn * np.power(x, a - 1) * ((a + 1) * a)
 
         def d3xg(x):
-            return sgn * np.power(x, alpha - 2) * ((alpha + 1) * alpha * (alpha - 1))
-
-        beta = 1.0 - alpha
+            return sgn * np.power(x, a - 2) * ((a + 1) * a * (a - 1))
 
         def h(x):
-            return sgn * np.power(x, beta)
+            return sgn * np.power(x, b)
 
         def dh(x):
-            return sgn * np.power(x, beta - 1) * beta
+            return sgn * np.power(x, b - 1) * b
 
         def d2h(x):
-            return sgn * np.power(x, beta - 2) * (beta * (beta - 1))
+            return sgn * np.power(x, b - 2) * (b * (b - 1))
 
         def d3h(x):
-            return sgn * np.power(x, beta - 3) * (beta * (beta - 1) * (beta - 2))
+            return sgn * np.power(x, b - 3) * (b * (b - 1) * (b - 2))
 
         def xh(x):
-            return sgn * np.power(x, beta + 1)
+            return sgn * np.power(x, b + 1)
 
         def dxh(x):
-            return sgn * np.power(x, beta) * (beta + 1)
+            return sgn * np.power(x, b) * (b + 1)
 
         def d2xh(x):
-            return sgn * np.power(x, beta - 1) * ((beta + 1) * beta)
+            return sgn * np.power(x, b - 1) * ((b + 1) * b)
 
         def d3xh(x):
-            return sgn * np.power(x, beta - 2) * ((beta + 1) * beta * (beta - 1))
+            return sgn * np.power(x, b - 2) * ((b + 1) * b * (b - 1))
 
-    return (g, dg, d2g, d3g, xg, dxg, d2xg, d3xg, h, dh, d2h, d3h, xh, dxh, d2xh, d3xh)
+    return {
+        "g": (g, dg, d2g, d3g),
+        "h": (h, dh, d2h, d3h),
+        "xg": (xg, dxg, d2xg, d3xg),
+        "xh": (xh, dxh, d2xh, d3xh)
+    }
