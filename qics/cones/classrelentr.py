@@ -18,7 +18,7 @@ class ClassRelEntr(Cone):
 
         H(x \| y) = \sum_{i=1}^n x_i \log(x_i / y_i),
 
-    is the classical relative entropy function (Kullback-Leibler 
+    is the classical relative entropy function (Kullback-Leibler
     divergence).
 
     Parameters
@@ -154,7 +154,7 @@ class ClassRelEntr(Cone):
         # ======================================================================
         # Hessian products with respect to t
         # ======================================================================
-        # D2_t F(t, x, y)[Ht, Hx, Hy] 
+        # D2_t F(t, x, y)[Ht, Hx, Hy]
         #         = (Ht - D_x H(x||y)[Hx] - D_y H(x||y)[Hy]) / z^2
         outt = self.At - (self.Ax @ self.DPhiX).ravel()
         outt -= (self.Ay @ self.DPhiY).ravel()
@@ -172,7 +172,7 @@ class ClassRelEntr(Cone):
         np.multiply(self.Ay, self.Hxy.T, out=work1)
 
         # Hessian product of barrier function
-        # D2_x F(t, x, y)[Ht, Hx, Hy] 
+        # D2_x F(t, x, y)[Ht, Hx, Hy]
         #         = -D2_t F(t, x, y)[Ht, Hx, Hy] * D_x H(x||y)
         #           + (D2_xx H(x||y)[Hx] + D2_xy H(x||y)[Hy]) / z
         #           + Hx / x^2
@@ -192,7 +192,7 @@ class ClassRelEntr(Cone):
         np.multiply(self.Ay, self.Hyy.T, out=work1)
 
         # Hessian product of barrier function
-        # D2_y F(t, x, y)[Ht, Hx, Hy] 
+        # D2_y F(t, x, y)[Ht, Hx, Hy]
         #         = -D2_t F(t, x, y)[Ht, Hx, Hy] * D_y H(x||y)
         #           + (D2_yx H(x||y)[Hx] + D2_yy H(x||y)[Hy]) / z
         #           + Hy / y^2

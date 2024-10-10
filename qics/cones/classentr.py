@@ -18,7 +18,7 @@ class ClassEntr(Cone):
 
         H(x) = -\sum_{i=1}^n x_i \log(x_i),
 
-    is the classical (Shannon) entropy function. 
+    is the classical (Shannon) entropy function.
 
     Parameters
     ----------
@@ -34,8 +34,8 @@ class ClassEntr(Cone):
     Notes
     -----
     The epigraph of the classical entropy can be obtained by enforcing the
-    linear constraint :math:`u=1`. 
-    
+    linear constraint :math:`u=1`.
+
     Additionally, the exponential cone
 
     .. math::
@@ -168,7 +168,7 @@ class ClassEntr(Cone):
         # ======================================================================
         # Hessian products with respect to t
         # ======================================================================
-        # D2_t F(t, u, x)[Ht, Hu, Hx] 
+        # D2_t F(t, u, x)[Ht, Hu, Hx]
         #         = (Ht - D_u H(u, x)[Hu] - D_x H(u, x)[Hx]) / z^2
         out_t = self.At - self.Au * self.DPhiu[0, 0]
         out_t -= (self.Ax @ self.DPhiX).ravel()
@@ -186,7 +186,7 @@ class ClassEntr(Cone):
         D2PhiuH += self.Hux * np.sum(self.Ax, axis=1)
 
         # Hessian product of barrier function
-        # D2_u F(t, u, x)[Ht, Hu, Hx] 
+        # D2_u F(t, u, x)[Ht, Hu, Hx]
         #         = -D2_t F(t, u, x)[Ht, Hu, Hx] * D_u H(u, x)
         #           + (D2_uu H(u, x)[Hu] + D2_ux H(u, x)[Hx]) / z
         #           + Hu / u^2
@@ -205,7 +205,7 @@ class ClassEntr(Cone):
         work1 += self.Hux * self.Au.reshape(-1, 1)
 
         # Hessian product of barrier function
-        # D2_x F(t, u, x)[Ht, Hu, Hx] 
+        # D2_x F(t, u, x)[Ht, Hu, Hx]
         #         = -D2_t F(t, u, x)[Ht, Hu, Hx] * D_x H(u, x)
         #           + (D2_xu H(u, x)[Hu] + D2_xx H(u, x)[Hx]) / z
         #           + Hx / x^2

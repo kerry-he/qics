@@ -216,7 +216,7 @@ class SecondOrder(SymCone):
 
         # Scaled variable
         # lambda0_bar = gamma
-        # lambda1_bar = ((gamma + z0_bar)*s1_bar + (gamma + s0_bar)*z1_bar) 
+        # lambda1_bar = ((gamma + z0_bar)*s1_bar + (gamma + s0_bar)*z1_bar)
         #              -----------------------------------------------------
         #                          (s0_bar + z0_bar + 2*gamma)
         temp = (gamma + z_bar[0]) * x_bar[1] + (gamma + x_bar[0]) * z_bar[1]
@@ -305,7 +305,7 @@ class SecondOrder(SymCone):
         # Compute (W^-T ds_a) o (W dz_a)
         rtw_ds = 2 * (self.rt_w_bar[0] * ds[0] - self.rt_w_bar[1].T @ ds[1])
         W_ds = [
-            ( rtw_ds * self.rt_w_bar[0] - ds[0]) / self.rt_w_res,
+            (rtw_ds * self.rt_w_bar[0] - ds[0]) / self.rt_w_res,
             (-rtw_ds * self.rt_w_bar[1] + ds[1]) / self.rt_w_res,
         ]
 
@@ -348,7 +348,7 @@ class SecondOrder(SymCone):
         # Compute (W^-T ds_a) and (W dz_a)
         rtw_ds = 2 * (self.rt_w_bar[0] * ds[0] - self.rt_w_bar[1].T @ ds[1])
         W_ds = [
-            ( rtw_ds * self.rt_w_bar[0] - ds[0]) / self.rt_w_res,
+            (rtw_ds * self.rt_w_bar[0] - ds[0]) / self.rt_w_res,
             (-rtw_ds * self.rt_w_bar[1] + ds[1]) / self.rt_w_res,
         ]
 

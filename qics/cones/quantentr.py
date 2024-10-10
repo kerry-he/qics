@@ -38,7 +38,7 @@ class QuantEntr(Cone):
     Notes
     -----
     The epigraph of the quantum entropy can be obtained by enforcing the
-    linear constraint :math:`u=1`.  
+    linear constraint :math:`u=1`.
     """
 
     def __init__(self, n, iscomplex=False):
@@ -46,7 +46,7 @@ class QuantEntr(Cone):
         self.n = n
         self.iscomplex = iscomplex
 
-        self.nu = 2 + self.n   # Barrier parameter
+        self.nu = 2 + self.n  # Barrier parameter
 
         if iscomplex:
             self.dim = [1, 1, 2 * n * n]
@@ -168,7 +168,7 @@ class QuantEntr(Cone):
         # ======================================================================
         # Hessian products with respect to t
         # ======================================================================
-        # D2_t F(t, u, X)[Ht, Hu, Hx] 
+        # D2_t F(t, u, X)[Ht, Hu, Hx]
         #         = (Ht - D_u S(u, X)[Hu] - D_X S(u, X)[Hx]) / z^2
         out[0][:] = (Ht - self.DPhiu * Hu - lin.inp(self.DPhiX, Hx)) * self.zi2
 
@@ -176,7 +176,7 @@ class QuantEntr(Cone):
         # Hessian products with respect to u
         # ======================================================================
         # Hessian product of barrier function
-        # D2_u F(t, u, X)[Ht, Hu, Hx] 
+        # D2_u F(t, u, X)[Ht, Hu, Hx]
         #         = -D2_t F(t, u, X)[Ht, Hu, Hx] * D_u S(u, X)
         #           + (D2_uu S(u, X)[Hu] + D2_uX S(u, X)[Hx]) / z
         #           + Hu / u^2
@@ -188,7 +188,7 @@ class QuantEntr(Cone):
         # ======================================================================
         # Hessian products with respect to X
         # ======================================================================
-        # D2_X F(t, u, X)[Ht, Hu, Hx] 
+        # D2_X F(t, u, X)[Ht, Hu, Hx]
         #         = -D2_t F(t, u, X)[Ht, Hu, Hx] * D_X S(u, X)
         #           + (D2_Xu S(u, X)[Hu] + D2_XX S(u, X)[Hx]) / z
         #           + X^-1 Hx X^-1
@@ -215,7 +215,7 @@ class QuantEntr(Cone):
         # ======================================================================
         # Hessian products with respect to t
         # ======================================================================
-        # D2_t F(t, u, X)[Ht, Hu, Hx] 
+        # D2_t F(t, u, X)[Ht, Hu, Hx]
         #         = (Ht - D_u S(u, X)[Hu] - D_X S(u, X)[Hx]) / z^2
         DPhiX_vec = self.DPhiX.view(np.float64).reshape((-1, 1))
         out_t = self.At - (self.Ax_vec @ DPhiX_vec).ravel()
@@ -234,7 +234,7 @@ class QuantEntr(Cone):
         D2PhiuXH = np.trace(self.Ax, axis1=1, axis2=2).real * self.ui
 
         # Hessian product of barrier function
-        # D2_u F(t, u, X)[Ht, Hu, Hx] 
+        # D2_u F(t, u, X)[Ht, Hu, Hx]
         #         = -D2_t F(t, u, X)[Ht, Hu, Hx] * D_u S(u, X)
         #           + (D2_uu S(u, X)[Hu] + D2_uX S(u, X)[Hx]) / z
         #           + Hu / u^2
@@ -257,7 +257,7 @@ class QuantEntr(Cone):
         work3[:, range(self.n), range(self.n)] -= work
 
         # Hessian product of barrier function
-        # D2_X F(t, u, X)[Ht, Hu, Hx] 
+        # D2_X F(t, u, X)[Ht, Hu, Hx]
         #         = -D2_t F(t, u, X)[Ht, Hu, Hx] * D_X S(u, X)
         #           + (D2_Xu S(u, X)[Hu] + D2_XX S(u, X)[Hx]) / z
         #           + X^-1 Hx X^-1
@@ -442,6 +442,7 @@ class QuantEntr(Cone):
         assert not self.congr_aux_updated
 
         from qics.vectorize import vec_to_mat
+
         iscomplex = self.iscomplex
 
         # Get slices and views of A matrix to be used in congruence computations

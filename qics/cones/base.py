@@ -493,5 +493,5 @@ def get_perspective_derivatives(func):
         "g": (g, dg, d2g, d3g),
         "h": (h, dh, d2h, d3h),
         "xg": (xg, dxg, d2xg, d3xg),
-        "xh": (xh, dxh, d2xh, d3xh)
+        "xh": (xh, dxh, d2xh, d3xh),
     }
