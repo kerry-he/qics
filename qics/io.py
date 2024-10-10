@@ -1,6 +1,6 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
 import os
@@ -79,9 +79,9 @@ def read_sdpa(filename):
 
     Two types of SDPA sparse file formats are supported.
 
-    - ``*.dat-s``: Standard SDPA sparse file, where 
+    - ``*.dat-s``: Standard SDPA sparse file, where
       :math:`F_i\in\mathbb{S}^n` for :math:`i=0,\ldots,p`.
-    - ``*.dat-c``: Complex-valued SDPA sparse file, where 
+    - ``*.dat-c``: Complex-valued SDPA sparse file, where
       :math:`F_i\in\mathbb{H}^n` for :math:`i=0,\ldots,p`.
 
     Parameters
@@ -92,7 +92,7 @@ def read_sdpa(filename):
     Returns
     -------
     :class:`~qics.Model`
-        Model representing the semidefinite program from the specified 
+        Model representing the semidefinite program from the specified
         file.
 
     See Also
@@ -353,17 +353,8 @@ def write_sdpa(model, filename):
         for i, j, v in zip(Cl.row, Cl.col, Cl.data):
             if i <= j:
                 v_str = str(-v).replace("(", "").replace(")", "")
-                f.write(
-                    "0 "
-                    + str(blk + 1)
-                    + " "
-                    + str(i + 1)
-                    + " "
-                    + str(j + 1)
-                    + " "
-                    + v_str
-                    + "\n"
-                )
+                f.write("0 " + str(blk + 1) + " " + str(i + 1) + " " + str(j + 1)
+                        + " " + v_str + "\n")  # fmt: skip
 
     # Write A
     # Write in format (k, blk, i, j, v), where k=0, blk=block, (i, j)=index, v=value
@@ -383,18 +374,8 @@ def write_sdpa(model, filename):
 
                 if i <= j:
                     v_str = str(v).replace("(", "").replace(")", "")
-                    f.write(
-                        str(k + 1)
-                        + " "
-                        + str(blk + 1)
-                        + " "
-                        + str(i + 1)
-                        + " "
-                        + str(j + 1)
-                        + " "
-                        + v_str
-                        + "\n"
-                    )
+                    f.write(str(k + 1) + " " + str(blk + 1) + " " + str(i + 1)
+                        + " " + str(j + 1) + " " + v_str + "\n")  # fmt: skip
 
     f.close()
 
@@ -714,7 +695,7 @@ def write_cbf(model, filename):
     Parameters
     ----------
     model : :class:`~qics.Model`
-        Model representing the conic program we want to write to a CBF 
+        Model representing the conic program we want to write to a CBF
         file.
     filename : :obj:`string`
         Name of the CBF file we want to write to.
@@ -785,15 +766,11 @@ def write_cbf(model, filename):
                 (cone_name, cone_size) = ("SVECQRE", 1 + cone_k.n * (cone_k.n + 1))
         if isinstance(cone_k, qics.cones.QuantCondEntr):
             if cone_k.get_iscomplex():
-                (cone_name, cone_size) = (
-                    "@" + str(len(lookup["qce"])) + ":HVECQCE",
-                    1 + cone_k.N * cone_k.N,
-                )
+                cone_name = "@" + str(len(lookup["qce"])) + ":HVECQCE"
+                cone_size = 1 + cone_k.N * cone_k.N
             else:
-                (cone_name, cone_size) = (
-                    "@" + str(len(lookup["qce"])) + ":SVECQCE",
-                    1 + cone_k.N * (cone_k.N + 1) // 2,
-                )
+                cone_name = "@" + str(len(lookup["qce"])) + ":SVECQCE"
+                cone_size = 1 + cone_k.N * (cone_k.N + 1) // 2
             lookup["qce"] += [(cone_k.dims, cone_k.sys)]
         if isinstance(cone_k, qics.cones.QuantKeyDist):
             if cone_k.get_iscomplex():
@@ -863,7 +840,7 @@ def write_cbf(model, filename):
             iscomplex_k = any([np.iscomplexobj(Ki) for Ki in qkd_k[0]])
             dtype = np.complex128 if iscomplex_k else np.float64
             f.write(str(totalnnz_k) + " " + str(len(qkd_k[0])) + " "
-                + str(qkd_k[0][0].shape[0]) + " " + str(qkd_k[0][0].shape[1])
+                + str(qkd_k[0][0].shape[0]) + " " + str(qkd_k[0][0].shape[1])  # fmt: skip
                 + " " + str(int(iscomplex_k)) + "\n")
             for t, Kt in enumerate(qkd_k[0]):
                 # Write Ki
@@ -871,23 +848,15 @@ def write_cbf(model, filename):
                 for it, jt, vt in zip(Kt.row, Kt.col, Kt.data):
                     if iscomplex_k:
                         f.write(str(t) + " " + str(it) + " " + str(jt) + " "
-                            + str(vt.real) + " " + str(vt.imag) + "\n")
+                            + str(vt.real) + " " + str(vt.imag) + "\n")  # fmt: skip
                     else:
                         f.write(str(t) + " " + str(it) + " " + str(jt) + " "
-                            + str(vt) + "\n")
+                            + str(vt) + "\n")  # fmt: skip
 
             # How many Zlist, and size of Zlist, and if complex or not
             totalnnz_k = sum([np.count_nonzero(Zi) for Zi in qkd_k[1]])
-            f.write(
-                str(totalnnz_k)
-                + " "
-                + str(len(qkd_k[1]))
-                + " "
-                + str(qkd_k[1][0].shape[0])
-                + " "
-                + str(qkd_k[1][0].shape[1])
-                + " 0\n"
-            )
+            f.write(str(totalnnz_k) + " " + str(len(qkd_k[1])) + " "
+                + str(qkd_k[1][0].shape[0]) + " " + str(qkd_k[1][0].shape[1]) + " 0\n")  # fmt: skip
             for t, Zt in enumerate(qkd_k[1]):
                 # Write Zi
                 Zt = sp.sparse.coo_matrix(Zt, dtype=np.float64)
@@ -942,7 +911,7 @@ def write_cbf(model, filename):
         if not sp.sparse.issparse(G):
             G = sp.sparse.coo_matrix(G)
         if not sp.sparse.issparse(A):
-            A = sp.sparse.coo_matrix(A)        
+            A = sp.sparse.coo_matrix(A)
         A = sp.sparse.coo_matrix(sp.sparse.vstack([-G, A]))
     else:
         A = sp.sparse.coo_matrix(A)

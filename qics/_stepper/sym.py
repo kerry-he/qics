@@ -1,6 +1,6 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
 from qics.point import Point, VecProduct
@@ -12,7 +12,7 @@ class SymStepper:
         if not toa:
             self.dir_dummy = VecProduct(model.cones)
 
-        self.kktsolver = kktsolver 
+        self.kktsolver = kktsolver
 
         self.rhs = Point(model)
         self.dir_a = Point(model)
@@ -95,8 +95,9 @@ class SymStepper:
             for k, cone_k in enumerate(model.cones):
                 cone_k.comb_dir(self.rhs.s[k], dir_a.s[k], dir_a.z[k], sigma * mu)
         else:
+            dir_dummy = self.dir_dummy  # Represents the zero vector to avoid TOA
             for k, cone_k in enumerate(model.cones):
-                cone_k.comb_dir(self.rhs.s[k], self.dir_dummy[k], self.dir_dummy[k], sigma * mu)
+                cone_k.comb_dir(self.rhs.s[k], dir_dummy[k], dir_dummy[k], sigma * mu)
 
         self.rhs.tau[:] = res["tau"] * (1 - sigma)
         self.rhs.kap[:] = -point.kap + (-dir_a.kap * dir_a.tau + sigma * mu) / point.tau

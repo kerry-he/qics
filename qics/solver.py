@@ -1,6 +1,6 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
 import itertools
@@ -41,10 +41,10 @@ class Solver:
         Stopping tolerance for (relative) primal and dual feasibility. The
         default is ``1e-8``.
     tol_infeas : :obj:`float`, optional
-        Tolerance for detecting infeasible problem. The default is 
+        Tolerance for detecting infeasible problem. The default is
         ``1e-12``.
     tol_ip : :obj:`float`, optional
-        Tolerance for detecting ill-posed problem. The default is 
+        Tolerance for detecting ill-posed problem. The default is
         ``1e-13``.
     tol_near : :obj:`float`, optional
         Allowable margin for certifying near optimality when solver is
@@ -112,19 +112,27 @@ class Solver:
         cones = model.cones
         if use_invhess is None:
             # Default decision tree for whether to avoid inverse Hessian oracles
-            SLOW_CONES = (qics.cones.QuantRelEntr, qics.cones.OpPerspecEpi, 
-                          qics.cones.OpPerspecTr)
+            SLOW_CONES = (
+                qics.cones.QuantRelEntr,
+                qics.cones.OpPerspecEpi,
+                qics.cones.OpPerspecTr,
+            )
 
-            q_slow_cones = sum([sum(cone.dim) for cone in cones 
-                                if isinstance(cone, SLOW_CONES)])
+            q_slow_cones = sum([sum(K.dim) for K in cones if isinstance(K, SLOW_CONES)])
 
             use_invhess = model.issymmetric or q_slow_cones / model.q <= 0.55 \
-                or not model.use_G or not lin.is_full_col_rank(model.G)
+                          or not model.use_G or not lin.is_full_col_rank(model.G)  # fmt: skip
         elif not use_invhess:
-            assert model.use_G, "Avoiding inverse Hessian oracles is " \
-                "not supported nor recommended if G is easily invertible."
-            assert lin.is_full_col_rank(model.G), "Avoiding inverse Hessian " \
-                "oracles is not supported when G is not full column rank."
+            if not model.use_G:
+                raise Exception(
+                    "Avoiding inverse Hessian oracles is not supported nor recommended "
+                    "if G is easily invertible."
+                )
+            if not lin.is_full_col_rank(model.G):
+                raise Exception(
+                    "Avoiding inverse Hessian oracles is not supported when G is not "
+                    "full column rank."
+                )
         self.use_invhess = use_invhess
 
         # Preprocess model
@@ -155,18 +163,18 @@ class Solver:
         return
 
     def solve(self):
-        r"""Run the primal-dual interior point solver for a given problem 
+        r"""Run the primal-dual interior point solver for a given problem
         model.
 
         Returns
         -------
         :obj:`dict`
-            Dictionary which summarizes the solution of a conic program. 
+            Dictionary which summarizes the solution of a conic program.
             Contains the following keys.
 
-            - x_opt (:obj:`~numpy.ndarray`) : Optimal primal variable 
+            - x_opt (:obj:`~numpy.ndarray`) : Optimal primal variable
               :math:`x^*`.
-            - y_opt (:obj:`~numpy.ndarray`) : Optimal dual variable 
+            - y_opt (:obj:`~numpy.ndarray`) : Optimal dual variable
               :math:`y^*`.
             - z_opt (:obj:`~qics.point.VecProduct`) : Optimal dual variable
               :math:`z^*`.
@@ -194,7 +202,7 @@ class Solver:
 
             - num_iter (:obj:`int`) : Number of solver iterations.
             - solve_time (:obj:`float`) : Total time elapsed (in seconds).
-            - p_obj (:obj:`float`) : Optimal primal objective 
+            - p_obj (:obj:`float`) : Optimal primal objective
               :math:`c^\top x^*`.
             - d_obj (:obj:`float`) : Optimal dual objective
               :math:`-b^\top y^* - h^\top z^*`.
@@ -222,7 +230,7 @@ class Solver:
         while True:
             if self.step_and_check():
                 break
-        
+
         # Solver has termianted, perform final clean up
         self.solve_time = time.time() - self.start_time
 
@@ -255,8 +263,8 @@ class Solver:
         x_opt = self.point.x / self.model.c_scale / self.point.tau
         y_opt = self.point.y / self.model.b_scale / self.point.tau
         if not self.use_invhess:
-            x_opt = (x_opt + self.model.x_offset)[:self.model.n_orig]
-            y_opt = y_opt[:self.model.p_orig]
+            x_opt = (x_opt + self.model.x_offset)[: self.model.n_orig]
+            y_opt = y_opt[: self.model.p_orig]
         z_opt = self.point.z
         z_opt.vec[:] = z_opt.vec / self.model.h_scale / self.point.tau
         s_opt = self.point.s
@@ -286,8 +294,9 @@ class Solver:
         self.copy_solver_data()
 
         # Take a step
-        self.point, success, alpha = self.stepper.step(self.model, self.point,
-            self.res, self.mu, self.verbose)
+        self.point, success, alpha = self.stepper.step(
+            self.model, self.point, self.res, self.mu, self.verbose
+        )
         self.iter += 1
         self.elapsed_time = time.time() - self.start_time
 
@@ -397,14 +406,15 @@ class Solver:
                 cone_k.get_init_point(self.point.s[k])
             else:
                 cone_k.set_point(self.point.s[k])
-            assert cone_k.get_feas(), "Initial primal variable s is infeasible."
+            if not cone_k.get_feas():
+                raise ValueError("Initial primal variable s is infeasible.")
 
             if any(np.isnan(self.point.z.vecs[k])):
                 cone_k.grad_ip(self.point.z[k])
                 self.point.z.vecs[k] *= -1
             cone_k.set_dual(self.point.z[k])
-            assert cone_k.get_dual_feas(), "Initial dual variable z is" \
-                "infeasible."
+            if not cone_k.get_dual_feas():
+                raise ValueError("Initial dual variable z is infeasible.")
 
         if any(np.isnan(self.point.tau)):
             self.point.tau.fill(1.0)
@@ -444,7 +454,7 @@ class Solver:
 
         self.p_obj = p_obj_tau / tau + self.model.offset
         self.d_obj = d_obj_tau / tau + self.model.offset
-        
+
         gap1 = self.point.z.inp(self.point.s) / tau
         gap2 = abs(p_obj_tau - d_obj_tau)
         self.gap = min(gap1, gap2)
@@ -468,7 +478,7 @@ class Solver:
 
         # Get ill posedness certificates
         norm_xyzs = max(lin.norm_inf(x), lin.norm_inf(y), lin.norm_inf(z), 
-                        lin.norm_inf(s))
+                        lin.norm_inf(s))  # fmt: skip
         if norm_xyzs > 0:
             norm_xyz_res = max(norm_x_res, norm_y_res, norm_z_res)
             self.illposed_res = norm_xyz_res / norm_xyzs
@@ -487,8 +497,12 @@ class Solver:
         self.y_feas = lin.norm_inf(self.y_res) / (1.0 + self.b_max) / tau
         self.z_feas = lin.norm_inf(self.z_res) / (1.0 + self.h_max) / tau
 
-        self.res = {"x": self.x_res, "y": self.y_res, "z": self.z_res, 
-                    "tau": self.tau_res,}
+        self.res = {
+            "x": self.x_res,
+            "y": self.y_res,
+            "z": self.z_res,
+            "tau": self.tau_res,
+        }
 
         return
 
@@ -499,8 +513,8 @@ class Solver:
             gap_feas_best = np.inf
         else:
             gap_feas_best = max(self.x_feas_best, self.y_feas_best,
-                                self.z_feas_best, self.gap_best)
-        
+                                self.z_feas_best, self.gap_best)  # fmt: skip
+
         if gap_feas_best > gap_feas:
             self.point_best.vec[:] = self.point.vec
             self.best_iter = self.iter

@@ -1,6 +1,6 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
 import numpy as np
@@ -228,7 +228,7 @@ def thrd_frechet(D, D2, d3f_D, U, H1, H2, H3=None):
 
                 for b in range(n):
                     for a in range(n):
-                        temp  = H1[i, b] * H2[b, a] * H2[a, j]
+                        temp = H1[i, b] * H2[b, a] * H2[a, j]
                         temp += H2[i, b] * (H1[b, a] * H2[a, j] + H2[b, a] * H1[a, j])
                         out[i, j] = out[i, j] + D3_ij[b, a] * temp
 
@@ -245,7 +245,7 @@ def thrd_frechet(D, D2, d3f_D, U, H1, H2, H3=None):
                     for a in range(n):
                         work = H2[b, a] * H3[a, j]
                         work += H3[b, a] * H2[a, j]
-                        temp  = H1[i, b] * work
+                        temp = H1[i, b] * work
 
                         work = H1[b, a] * H3[a, j]
                         work += H3[b, a] * H1[a, j]

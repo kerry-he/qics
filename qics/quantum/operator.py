@@ -1,6 +1,6 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
 import numpy as np
@@ -26,7 +26,7 @@ def p_tr(mat, dims, sys):
     Parameters
     ----------
     mat : :class:`~numpy.ndarray`
-        Array of size ``(n0*n1*...*nk-1, n0*n1*...*nk-1)`` represnting a 
+        Array of size ``(n0*n1*...*nk-1, n0*n1*...*nk-1)`` represnting a
         matrix defined on :math:`k` subsystems which we want to take the
         partial trace of.
     dims : :obj:`tuple` of :obj:`int`
@@ -49,8 +49,8 @@ def p_tr(mat, dims, sys):
 
     Notes
     -----
-    This is the adjoint operator of the Kronecker product with the 
-    identity matrix.    
+    This is the adjoint operator of the Kronecker product with the
+    identity matrix.
     """
 
     if isinstance(sys, int):
@@ -141,12 +141,12 @@ def i_kr(mat, dims, sys):
     mat : :class:`~numpy.ndarray`
         Array of size ``(n0*n1*...*nk-1 / nx, n0*n1*...*nk-1 / nx)`` to
         apply the Kronecker product to, where ``nx`` is the product of the
-        dimensions of the subsystems specified by ``sys``. 
+        dimensions of the subsystems specified by ``sys``.
     dims : :obj:`tuple` of :obj:`int`
         The dimensions ``(n0, n1, ..., nk-1)`` of the :math:`k` subsystems
         which the output is defined on.
     sys : :obj:`int` or :obj:`tuple` of :obj:`int`
-        Which of the :math:`k` subsystems to apply the Kronecker product 
+        Which of the :math:`k` subsystems to apply the Kronecker product
         to. Can define multiple subsystems.
 
     Returns
@@ -197,7 +197,7 @@ def i_kr_multi(out, mat, dims, sys):
     Parameters
     ----------
     out : :class:`~numpy.ndarray`
-        Preallocated ``(p, n0*n1*...*nk-1, n0*n1*...*nk-1)`` list of 
+        Preallocated ``(p, n0*n1*...*nk-1, n0*n1*...*nk-1)`` list of
         matrices to store the output.
     mat : :class:`~numpy.ndarray`
         Input matrix to perform the partial trace on. Has dimension
@@ -256,7 +256,7 @@ def partial_transpose(mat, dims, sys):
     Parameters
     ----------
     mat : :class:`~numpy.ndarray`
-        Array of size ``(n0*n1*...*nk-1, n0*n1*...*nk-1)`` represnting a 
+        Array of size ``(n0*n1*...*nk-1, n0*n1*...*nk-1)`` represnting a
         matrix defined on :math:`k` subsystems which we want to take the
         partial transpose of.
     dims : :obj:`tuple` of :obj:`int`
@@ -292,7 +292,7 @@ def swap(mat, dims, sys1, sys2):
     Parameters
     ----------
     mat : :class:`~numpy.ndarray`
-        Array of size ``(n0*n1*...*nk-1, n0*n1*...*nk-1)`` represnting a 
+        Array of size ``(n0*n1*...*nk-1, n0*n1*...*nk-1)`` represnting a
         matrix defined on :math:`k` subsystems which we want to swap the
         subsystems of.
     dims : :obj:`tuple` of :obj:`int`

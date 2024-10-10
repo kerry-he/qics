@@ -1,6 +1,6 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
 import numpy as np
@@ -26,17 +26,17 @@ class Model:
 
     .. math::
 
-        \max_{y \in \mathbb{R}^p, z \in \mathbb{R}^q} &&& 
+        \max_{y \in \mathbb{R}^p, z \in \mathbb{R}^q} &&&
         -b^\top y - h^\top z
 
         \text{s.t.} &&& c + A^\top y + G^\top z = 0
 
          &&& z \in \mathcal{K}_*,
 
-    conic programs, where :math:`c\in\mathbb{R}^n`, 
-    :math:`b\in\mathbb{R}^p`, :math:`h\in\mathbb{R}^q`, 
+    conic programs, where :math:`c\in\mathbb{R}^n`,
+    :math:`b\in\mathbb{R}^p`, :math:`h\in\mathbb{R}^q`,
     :math:`A\in\mathbb{R}^{p\times n}`, :math:`G\in\mathbb{R}^{q\times n}`,
-    and :math:`\mathcal{K}\subset\mathbb{R}^{q}` is a convex, proper cone 
+    and :math:`\mathcal{K}\subset\mathbb{R}^{q}` is a convex, proper cone
     with dual cone :math:`\mathcal{K}_*\subset\mathbb{R}^{q}`.
 
 
@@ -46,7 +46,7 @@ class Model:
         2D :obj:`~numpy.float64` array of size ``(n, 1)`` representing the
         linear objective :math:`c`.
     A : :class:`~numpy.ndarray` or :class:`~scipy.sparse.sparray`, optional
-        2D :obj:`~numpy.float64` array of size ``(p, 1)`` representing 
+        2D :obj:`~numpy.float64` array of size ``(p, 1)`` representing
         linear equality constraint matrix :math:`A`. The default is
         ``numpy.empty((0, n))``, i.e., there are no linear equalitiy
         constraints.
@@ -56,12 +56,12 @@ class Model:
         ``numpy.zeros((p, 1))``, i.e., :math:`b=0`.
     G : :class:`~numpy.ndarray` or :class:`~scipy.sparse.sparray`, optional
         2D :obj:`~numpy.float64` array of size ``(q, n)`` representing
-        linear cone constraint matrix :math:`G`. The default is 
+        linear cone constraint matrix :math:`G`. The default is
         ``-scipy.sparse.eye(n)``, i.e., cone constraints are of the
         simplified form :math:`x+h\in\mathcal{K}`.
     h : :class:`~numpy.ndarray`, optional
         2D :obj:`~numpy.float64` array of size ``(q, 1)`` representing
-        linear cone constraint vector :math:`h`. The default is 
+        linear cone constraint vector :math:`h`. The default is
         ``numpy.zeros((q, 1))``, i.e., :math:`h=0`.
     cones : :class:`list` of :mod:`~qics.cones`, optional
         Cartesian product of cones :math:`\mathcal{K}`. Default is ``[]``
@@ -71,16 +71,7 @@ class Model:
         ``0``.
     """
 
-    def __init__(
-        self,
-        c,
-        A=None,
-        b=None,
-        G=None,
-        h=None,
-        cones=None,
-        offset=0.0
-    ):
+    def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0):
         # Intiialize model parameters and default values for missing data
         self.n_orig = self.n = np.size(c)
         self.p_orig = self.p = np.size(b) if (b is not None) else 0
@@ -95,12 +86,35 @@ class Model:
         self.cones = cones
         self.offset = offset
 
+        # Make sure dimensions of matrices all make sense
+        if self.c.shape[1] != 1 or self.b.shape[1] != 1 or self.h.shape[1] != 1:
+            raise ValueError(
+                "The arrays c, b, and h should all have a dimension (-1, 1), but have "
+                "dimensions", self.c.shape, ",", self.b.shape, ", and", self.h.shape
+            )  # fmt: skip
+        if self.A.shape[1] != self.n or self.G.shape[1] != self.n:
+            raise ValueError(
+                "The length of c should match the number of columns in A and G, but "
+                "have dimensions", self.c.shape, ",", self.A.shape, ", and", 
+                self.G.shape
+            )  # fmt: skip
+        if self.A.shape[0] != self.p:
+            raise ValueError(
+                "The length of b should match the number of rows in A, but have "
+                "dimensions", self.b.shape, "and", self.A.shape
+            )  # fmt: skip
+        if self.G.shape[0] != self.q:
+            raise ValueError(
+                "The length of h should match the number of rows in G, but have "
+                "dimensions", self.b.shape, "and", self.A.shape
+            )  # fmt: skip
+
         # Barrier parameter
         self.nu = 1 + sum([cone.nu for cone in cones])
 
         # Get properties of the problem
         self.issymmetric = all([cone.get_issymmetric() for cone in self.cones])
-        self.iscomplex = any([cone.get_iscomplex() for cone in self.cones])        
+        self.iscomplex = any([cone.get_iscomplex() for cone in self.cones])
 
         # Check if model uses A or G matrices
         self.use_G = not _is_like_eye(self.G)
@@ -166,7 +180,7 @@ class Model:
         #     min  <c,x1>
         #     s.t  A*x1 = b,  x2 = 0,  x3 = 1
         #          h1*x2 + h2*x3 - G*x1 ∈ K
-        # where h1 is an interior point of K and h2 = h. This allows us to 
+        # where h1 is an interior point of K and h2 = h. This allows us to
         # solve problems using the cone K'={x : G*x ∈ K}.
 
         n = self.n
@@ -189,13 +203,13 @@ class Model:
         G_temp = _hstack((self.G, -s_init.vec / s_norm))
         if la.is_full_col_rank(G_temp):
             A_new_col = sp.sparse.coo_matrix((self.p, 1))
-            A_new_row = sp.sparse.coo_matrix(([1.], ([0], [n])), (1, n+1))
-            self.c = np.vstack((self.c, np.array([[0.]])))
+            A_new_row = sp.sparse.coo_matrix(([1.0], ([0], [n])), (1, n + 1))
+            self.c = np.vstack((self.c, np.array([[0.0]])))
             self.A = _vstack((_hstack((self.A, A_new_col)), A_new_row))
-            self.b = np.vstack((self.b, np.array([[0.]])))
+            self.b = np.vstack((self.b, np.array([[0.0]])))
             self.G = G_temp
 
-            self.x_offset = np.vstack((self.x_offset, np.array([[0.]])))
+            self.x_offset = np.vstack((self.x_offset, np.array([[0.0]])))
 
             self.use_A = True
             (n, _) = (self.n, self.p) = (self.n + 1, self.p + 1)
@@ -206,14 +220,14 @@ class Model:
             G_temp = _hstack((self.G, -self.h / h_norm))
             if la.is_full_col_rank(G_temp):
                 A_new_col = sp.sparse.coo_matrix((self.p, 1))
-                A_new_row = sp.sparse.coo_matrix(([1.], ([0], [n])), (1, n+1))
-                self.c = np.vstack((self.c, np.array([[0.]])))
+                A_new_row = sp.sparse.coo_matrix(([1.0], ([0], [n])), (1, n + 1))
+                self.c = np.vstack((self.c, np.array([[0.0]])))
                 self.A = _vstack((_hstack((self.A, A_new_col)), A_new_row))
                 self.b = np.vstack((self.b, np.array([[h_norm]])))
                 self.G = G_temp
                 self.h = np.zeros((self.q, 1))
 
-                self.x_offset = np.vstack((self.x_offset, np.array([[0.]])))
+                self.x_offset = np.vstack((self.x_offset, np.array([[0.0]])))
 
                 self.use_A = True
                 (n, _) = (self.n, self.p) = (self.n + 1, self.p + 1)
@@ -223,7 +237,7 @@ class Model:
                 self.offset += (self.c.T @ self.x_offset)[0, 0]
                 self.b = self.b - self.A @ self.x_offset
                 self.h = np.zeros((self.q, 1))
-        
+
         if self.x_offset is None:
             self.x_offset = np.zeros((n, 1))
 
@@ -231,12 +245,12 @@ class Model:
         # Rescale c
         self.c_scale = np.maximum.reduce([np.abs(self.c.ravel()), 
                                           la.abs_max(self.A, axis=0), 
-                                          la.abs_max(self.G, axis=0)])
+                                          la.abs_max(self.G, axis=0)])  # fmt: skip
         self.c_scale = np.sqrt(self.c_scale).reshape((-1, 1))
 
         # Rescale b
         self.b_scale = np.maximum.reduce([np.abs(self.b.ravel()), 
-                                          la.abs_max(self.A, axis=1)])
+                                          la.abs_max(self.A, axis=1)])  # fmt: skip
         self.b_scale = np.sqrt(self.b_scale).reshape((-1, 1))
 
         # Rescale h
@@ -250,7 +264,7 @@ class Model:
             idxs = self.cone_idxs[k]
             if isinstance(cone_k, qics.cones.NonNegOrthant):
                 self.h_scale[idxs, 0] = np.maximum.reduce([h_absmax[idxs], 
-                                                           G_absmax[idxs]])
+                                                           G_absmax[idxs]])  # fmt: skip
             else:
                 self.h_scale[idxs, 0] = np.max([h_absmax[idxs], G_absmax[idxs]])
         self.h_scale = np.sqrt(self.h_scale)
@@ -267,10 +281,10 @@ class Model:
         self.h /= self.h_scale
         self.A = la.scale_axis(self.A,
                                scale_rows=np.reciprocal(self.b_scale),
-                               scale_cols=np.reciprocal(self.c_scale))
+                               scale_cols=np.reciprocal(self.c_scale))  # fmt: skip
         self.G = la.scale_axis(self.G,
                                scale_rows=np.reciprocal(self.h_scale),
-                               scale_cols=np.reciprocal(self.c_scale))
+                               scale_cols=np.reciprocal(self.c_scale))  # fmt: skip
 
         return
 
@@ -317,14 +331,20 @@ def _hstack(tup):
         return np.hstack(tup)
 
 
-def _build_cone_idxs(n, cones):
+def _build_cone_idxs(q, cones):
     cone_idxs = []
     prev_idx = 0
     for cone in cones:
         dim_k = np.sum(cone.dim)
         cone_idxs.append(slice(prev_idx, prev_idx + dim_k))
         prev_idx += dim_k
-    assert prev_idx == n
+
+    if prev_idx != q:
+        raise ValueError(
+            "The dimensions of h and the cone K should be match, but are instead have ",
+            "the dimensions", q, "and", prev_idx
+        )  # fmt: skip
+
     return cone_idxs
 
 

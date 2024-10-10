@@ -1,6 +1,6 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
 import numpy as np
@@ -76,7 +76,7 @@ class KKTSolver:
                 self.GHG_fact = lin.cho_fact(GHG, increment_diag=(not model.use_A))
 
             if model.use_A:
-                self.GHG_issingular = (self.GHG_fact is None)
+                self.GHG_issingular = self.GHG_fact is None
                 if self.GHG_issingular:
                     # GHG is singular, Cholesky factor GHG + AA instead
                     GHG += model.A.T @ model.A
@@ -350,26 +350,12 @@ class KKTSolver:
         return r
 
     def solve_sys_6_ir(self, d, r):
-        return solve_sys_ir(
-            d,
-            r,
-            self.apply_sys_6,
-            self.solve_sys_6,
-            self.res_pnt,
-            self.ir_pnt,
-            self.ir_settings,
-        )
+        return solve_sys_ir(d, r, self.apply_sys_6, self.solve_sys_6, self.res_pnt,
+                            self.ir_pnt, self.ir_settings)  # fmt: skip
 
     def solve_sys_3_ir(self, d, r):
-        return solve_sys_ir(
-            d,
-            r,
-            self.apply_sys_3,
-            self.solve_sys_3,
-            self.res_xyz,
-            self.ir_xyz,
-            self.ir_settings,
-        )
+        return solve_sys_ir(d, r, self.apply_sys_3, self.solve_sys_3, self.res_xyz,
+                            self.ir_xyz, self.ir_settings)  # fmt: skip
 
 
 def solve_sys_ir(x, b, A, A_inv, res, cor, settings):

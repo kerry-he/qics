@@ -1,6 +1,6 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
 import numpy as np
@@ -53,7 +53,7 @@ class NonSymStepper:
             self.update_rhs_cent_toa(model, point, mu, self.dir_c)
             temp_res_norm = self.kktsolver.solve_sys(self.dir_c_toa, self.rhs)
             res_norm = max(temp_res_norm, res_norm)
-        
+
         success = False
 
         if self.toa:
@@ -96,7 +96,7 @@ class NonSymStepper:
 
             if alpha_iter >= len(alpha_sched):
                 return point, alpha, False
-            
+
             alpha = alpha_sched[alpha_iter]
 
             # Step point in direction and step size
