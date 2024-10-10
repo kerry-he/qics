@@ -119,9 +119,9 @@ def scale_axis(A, scale_rows=None, scale_cols=None):
     if sp.sparse.issparse(A):
         A_coo = A.tocoo()
         if scale_rows is not None:
-            A_coo.data *= np.take(scale_rows, A_coo.row)
+            A_coo.data *= np.take(scale_rows.ravel(), A_coo.row)
         if scale_cols is not None:
-            A_coo.data *= np.take(scale_cols, A_coo.col)
+            A_coo.data *= np.take(scale_cols.ravel(), A_coo.col)
         return A_coo
     else:
         if scale_rows is not None:
@@ -138,6 +138,15 @@ def abs_max(A, axis):
         return A.max(axis=axis).toarray().reshape(-1)
     else:
         return np.maximum(A.max(axis=axis, initial=0.0), -A.min(axis=axis, initial=0.0))
+    
+def is_full_col_rank(A, tol=1e-8):
+    if A.size == 0:
+        return True
+    AA =  A.T @ A
+    if sp.sparse.issparse(AA):
+        AA = AA.toarray()
+    eigs = np.linalg.eigvalsh(AA)
+    return all(eigs > tol)
 
 
 def dense_dot_x(A, B):
@@ -145,9 +154,12 @@ def dense_dot_x(A, B):
         return dense_dot_sparse(A, B.col, B.row, B.data, B.shape)
     else:
         return A @ B
+    
+def x_dot_dense(A, B):
+    return dense_dot_x(B.T, A.T).T
 
 
-@nb.njit(parallel=True)
+@nb.njit(cache=True, parallel=True)
 def dense_dot_sparse(A, B_col, B_row, B_val, B_shape):
     A_dot_B = np.zeros((A.shape[0], B_shape[1]))
     for j in nb.prange(A.shape[0]):

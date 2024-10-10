@@ -19,23 +19,22 @@ class SecondOrder(SymCone):
     """
 
     def __init__(self, n):
-        # Dimension properties
         self.n = n
-        self.nu = 1
+
+        self.nu = 1  # Barrier parameter
 
         self.dim = [1, n]
         self.type = ["r", "r"]
 
+        # Update flags
         self.grad_updated = False
         self.congr_aux_updated = False
         self.nt_aux_updated = False
+
         return
 
     def get_init_point(self, out):
-        point = [
-            np.array([[1.0]]),
-            np.zeros((self.n, 1)),
-        ]
+        point = [np.array([[1.0]]), np.zeros((self.n, 1))]
 
         self.set_point(point, point)
 
@@ -47,22 +46,25 @@ class SecondOrder(SymCone):
     def get_feas(self):
         self.feas_updated = True
 
-        self.x = self.primal
-        self.z = self.dual
+        self.x, self.z = self.primal, self.dual
 
-        if self.x[0] <= np.sqrt(self.x[1].T @ self.x[1]):
+        # Check that x0 > ||x1||_2
+        if _soc_res(self.x) <= 0:
             self.feas = False
             return self.feas
 
-        if self.z[0] <= np.sqrt(self.z[1].T @ self.z[1]):
-            self.feas = False
-            return self.feas
+        # Check that z0 > ||z1||_2
+        if self.z is not None:
+            if _soc_res(self.z) <= 0:
+                self.feas = False
+                return self.feas
 
         self.feas = True
         return self.feas
 
     def get_dual_feas(self):
-        return self.z[0] > np.sqrt(self.z[1].T @ self.z[1])
+        self.z = self.dual
+        return _soc_res(self.z) > 0
 
     def get_val(self):
         return -0.5 * np.log(_soc_res(self.x))
@@ -96,12 +98,12 @@ class SecondOrder(SymCone):
         if not self.congr_aux_updated:
             self.congr_aux(A)
 
-        # First term
+        # First term, i.e., 2/(x'Jx)^2 * AJxx'JA
         lhs = self.x[0] * self.At.T - self.x[1].T @ self.Ax.T
         lhs *= np.sqrt(2.0) * self.x_res_inv
         out = lhs.T @ lhs
 
-        # Second term
+        # Second term, i.e., -1/(x'Jx) * AJA
         out -= (self.At @ self.At.T) * self.x_res_inv
         out += (self.Ax @ self.Ax.T) * self.x_res_inv
 
@@ -124,12 +126,12 @@ class SecondOrder(SymCone):
         if not self.congr_aux_updated:
             self.congr_aux(A)
 
-        # First term
+        # First term, i.e., 2 * Axx'A
         lhs = self.x[0] * self.At.T + self.x[1].T @ self.Ax.T
         lhs *= np.sqrt(2.0)
         out = lhs.T @ lhs
 
-        # Second term
+        # Second term, i.e., -(x'Jx) * AJA
         out -= (self.At @ self.At.T) * self.x_res
         out += (self.Ax @ self.Ax.T) * self.x_res
 
@@ -143,14 +145,14 @@ class SecondOrder(SymCone):
         x_res_inv2 = self.x_res_inv * self.x_res_inv
         x_res_inv3 = self.x_res_inv * x_res_inv2
 
-        # Gradients of (t, x) -> t*t - <x, x>
+        # Gradients of f(t, x) = t^2 - x'x
         DPhit = 2 * self.x[0]
         DPhix = -2 * self.x[1]
 
         DPhitH = Ht * DPhit
         DPhixH = Hx.T @ DPhix
 
-        # Hessians of (t, x) -> t*t - <x, x>
+        # Hessians of f(t, x) = t^2 - x'x
         D2PhittH = 2 * Ht
         D2PhixxH = -2 * Hx
 
@@ -174,18 +176,12 @@ class SecondOrder(SymCone):
 
         return out
 
-    # ========================================================================
+    # ==========================================================================
     # Functions specific to symmetric cones for NT scaling
-    # ========================================================================
+    # ==========================================================================
     # We want the NT scaling point w and scaled variable lambda such that
     #     H(w) s = z  <==> lambda := W^-T s = W z
-    # where H(w) = W^T W. For the nonnegative orthant, we have
-    #     w      = s.^1/2 ./ z.^1/2
-    #     lambda = z.^1/2 .* s.^1/2
-    # Also, we have the linear transformations given by
-    #     H(w) ds = ds .* s ./ z
-    #     W^-T ds = ds .* z.^1/2 ./ s.^1/2
-    #     W    dz = dz .* s.^1/2 ./ z.^1/2
+    # where H(w) = W^T W.
     # See: [Section 4.1]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf
 
     def nt_aux(self):
@@ -203,21 +199,29 @@ class SecondOrder(SymCone):
         gamma = np.sqrt((1.0 + xz_bar) / 2.0)
 
         # Scaling point
+        # w_bar = (s_bar + J z_bar) / 2*gamma
         self.w_res = self.rt_x_res / self.rt_z_res
         self.rt_w_res = np.sqrt(self.w_res)
         self.w_bar = [
             (x_bar[0] + z_bar[0]) / (2 * gamma),
             (x_bar[1] - z_bar[1]) / (2 * gamma),
         ]
+        # w_bar^1/2 = (w_bar + e) / (2 * (w0_bar + 1))^1/2
         self.rt_w_bar = [
             (1 + self.w_bar[0]) / np.sqrt(2 * (self.w_bar[0] + 1)),
             self.w_bar[1] / np.sqrt(2 * (self.w_bar[0] + 1)),
         ]
+        # w = (x'Jx / z'Jz)^1/4 * w_bar
         self.w = [self.w_bar[0] * self.rt_w_res, self.w_bar[1] * self.rt_w_res]
 
         # Scaled variable
+        # lambda0_bar = gamma
+        # lambda1_bar = ((gamma + z0_bar)*s1_bar + (gamma + s0_bar)*z1_bar)
+        #              -----------------------------------------------------
+        #                          (s0_bar + z0_bar + 2*gamma)
         temp = (gamma + z_bar[0]) * x_bar[1] + (gamma + x_bar[0]) * z_bar[1]
         self.lmbda_bar = [gamma, temp / (x_bar[0] + z_bar[0] + 2 * gamma)]
+        # lambda = ((x'Jx)(z'Jz))^1/4 * lambda_bar
         self.lmbda = [
             self.lmbda_bar[0] * np.sqrt(self.rt_x_res * self.rt_z_res),
             self.lmbda_bar[1] * np.sqrt(self.rt_x_res * self.rt_z_res),
@@ -247,12 +251,12 @@ class SecondOrder(SymCone):
         if not self.congr_aux_updated:
             self.congr_aux(A)
 
-        # First term
+        # First term, i.e., 2/(w'Jw)^2 * AJww'JA
         lhs = self.w[0] * self.At.T - self.w[1].T @ self.Ax.T
         lhs *= np.sqrt(2.0) / self.w_res
         out = lhs.T @ lhs
 
-        # Second term
+        # Second term, i.e., -(w'Jw) * AJA
         out -= (self.At @ self.At.T) / self.w_res
         out += (self.Ax @ self.Ax.T) / self.w_res
 
@@ -277,12 +281,12 @@ class SecondOrder(SymCone):
         if not self.congr_aux_updated:
             self.congr_aux(A)
 
-        # First term
+        # First term, i.e., 2 * Aww'A
         lhs = self.w[0] * self.At.T + self.w[1].T @ self.Ax.T
         lhs *= np.sqrt(2.0)
         out = lhs.T @ lhs
 
-        # Second term
+        # Second term, i.e., -(w'Jw) * AJA
         out -= (self.At @ self.At.T) * self.w_res
         out += (self.Ax @ self.Ax.T) * self.w_res
 
@@ -341,6 +345,7 @@ class SecondOrder(SymCone):
         if not self.nt_aux_updated:
             self.nt_aux()
 
+        # Compute (W^-T ds_a) and (W dz_a)
         rtw_ds = 2 * (self.rt_w_bar[0] * ds[0] - self.rt_w_bar[1].T @ ds[1])
         W_ds = [
             (rtw_ds * self.rt_w_bar[0] - ds[0]) / self.rt_w_res,
@@ -353,14 +358,19 @@ class SecondOrder(SymCone):
             (rtw_dz * self.rt_w_bar[1] + dz[1]) * self.rt_w_res,
         ]
 
+        # Compute rho = H(lambda)^1/2 W^-T ds_a
         temp = self.lmbda_bar[0] * W_ds[0] - self.lmbda_bar[1].T @ W_ds[1]
         temp2 = (temp + W_ds[0]) / (1 + self.lmbda_bar[0]) * self.lmbda_bar[1]
         rho = [temp / self.rt_lmbda_res, (W_ds[1] - temp2) / self.rt_lmbda_res]
 
+        # Compute sig = H(lambda)^1/2 W dz_a
         temp = self.lmbda_bar[0] * W_dz[0] - self.lmbda_bar[1].T @ W_dz[1]
         temp2 = (temp + W_dz[0]) / (1 + self.lmbda_bar[0]) * self.lmbda_bar[1]
         sig = [temp / self.rt_lmbda_res, (W_dz[1] - temp2) / self.rt_lmbda_res]
 
+        # Maximum step is given by
+        #     alpha := 1 / max(0, ||rho1||_2 - rho0, ||sig1||_2 - sig0)
+        # Clamp this step between 0 and 1
         rho_step = (rho[0] - np.sqrt(rho[1].T @ rho[1]))[0, 0]
         sig_step = (sig[0] - np.sqrt(sig[1].T @ sig[1]))[0, 0]
 
@@ -369,9 +379,9 @@ class SecondOrder(SymCone):
         else:
             return 1.0 / max(-rho_step, -sig_step)
 
-    # ========================================================================
+    # ==========================================================================
     # Auxilliary functions
-    # ========================================================================
+    # ==========================================================================
     def congr_aux(self, A):
         assert not self.congr_aux_updated
 

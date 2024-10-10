@@ -2,7 +2,8 @@ import numpy as np
 import scipy as sp
 
 import qics.cones
-from qics._utils import linalg
+import qics.point
+from qics._utils import linalg as la
 
 
 class Model:
@@ -65,150 +66,253 @@ class Model:
         ``0``.
     """
 
-    def __init__(self, c, A=None, b=None, G=None, h=None, cones=None, offset=0.0):
-        SPARSE_THRESHOLD = 0.01
-
+    def __init__(
+        self,
+        c,
+        A=None,
+        b=None,
+        G=None,
+        h=None,
+        cones=None,
+        offset=0.0
+    ):
         # Intiialize model parameters and default values for missing data
-        self.n = np.size(c)
-        self.p = np.size(b) if (b is not None) else 0
-        self.q = np.size(h) if (h is not None) else self.n
+        self.n_orig = self.n = np.size(c)
+        self.p_orig = self.p = np.size(b) if (b is not None) else 0
+        self.q_orig = self.q = np.size(h) if (h is not None) else self.n
 
-        self.c_raw = c
-        self.A_raw = A if (A is not None) else np.empty((0, self.n))
-        self.b_raw = b if (b is not None) else np.empty((0, 1))
-        self.G_raw = G if (G is not None) else -sp.sparse.eye(self.n).tocsr()
-        self.h_raw = h if (h is not None) else np.zeros((self.n, 1))
-
+        # Make copies of everything so we don't overwrite data matrices
         self.c = c.copy()
         self.A = A.copy() if (A is not None) else np.empty((0, self.n))
         self.b = b.copy() if (b is not None) else np.empty((0, 1))
         self.G = G.copy() if (G is not None) else -sp.sparse.eye(self.n).tocsr()
         self.h = h.copy() if (h is not None) else np.zeros((self.n, 1))
         self.cones = cones
+        self.offset = offset
 
-        def _is_like_eye(A, tol=1e-10):
-            if A.shape[0] != A.shape[1]:
-                return False
-            if sp.sparse.issparse(A):
-                A_minus_eye = sp.sparse.eye(self.n) - abs(self.G)
-                return sp.sparse.linalg.norm(A_minus_eye) < tol
-            else:
-                A_minus_eye = np.eye(self.n) - abs(self.G)
-                return np.linalg.norm(A_minus_eye) < tol
+        # Barrier parameter
+        self.nu = 1 + sum([cone.nu for cone in cones])
 
-        # Use G if G is not like the identity matrix
+        # Get properties of the problem
+        self.issymmetric = all([cone.get_issymmetric() for cone in self.cones])
+        self.iscomplex = any([cone.get_iscomplex() for cone in self.cones])        
+
+        # Check if model uses A or G matrices
         self.use_G = not _is_like_eye(self.G)
         self.use_A = (A is not None) and (np.prod(A.shape) > 0)
 
-        self.A = sparsify(self.A, SPARSE_THRESHOLD, "csr")
-        self.G = sparsify(self.G, SPARSE_THRESHOLD, "csr") if self.use_G else self.G
+    def _preprocess(self, use_invhess=False, init_pnt=None):
+        SPARSE_THRESHOLD = 0.01
+        cone_idxs = self.cone_idxs = _build_cone_idxs(self.q, self.cones)
 
-        self.cone_idxs = build_cone_idxs(self.q, cones)
-        self.nu = 1 + sum([cone.nu for cone in cones])
+        # Sparsify A and G if they are sufficiently sparse
+        self.A = _sparsify(self.A, SPARSE_THRESHOLD, "csr")
+        if self.use_G:
+            self.G = _sparsify(self.G, SPARSE_THRESHOLD, "csr")
 
-        self.offset = offset
+        # Restructure to allow for avoiding inverse Hessian oracles
+        if self.use_G and not use_invhess:
+            self._restructure(init_pnt)
 
         # Rescale model
-        self.rescale_model()
+        self._rescale()
 
+        # Precompute transposes of A and G for faster sparse operations
         self.A_T = self.A.T.tocsr() if sp.sparse.issparse(self.A) else self.A.T
         self.G_T = self.G.T.tocsr() if sp.sparse.issparse(self.G) else self.G.T
 
         # Get slices of A or G matrices correpsonding to each cone
+        # and some other handy precomputations
         if self.use_G:
-            self.G_T_views = sparsify(
-                [self.G_T[:, idxs_k] for idxs_k in self.cone_idxs], SPARSE_THRESHOLD
-            )
-            self.A_T_dense = (
-                self.A_T.toarray() if sp.sparse.issparse(self.A_T) else self.A_T
-            )
-            self.A_coo = self.A.tocoo() if sp.sparse.issparse(self.A) else self.A
-            self.issparse = any([sp.sparse.issparse(G_T_k) for G_T_k in self.G_T_views])
+            self.G_T_views = [self.G_T[:, idxs_k] for idxs_k in cone_idxs]
+            self.G_T_views = _sparsify(self.G_T_views, SPARSE_THRESHOLD)
+
+            # Need a dense A' to do Cholesky solves on
+            if sp.sparse.issparse(self.A):
+                self.A_T_dense = self.A_T.toarray()
+            else:
+                self.A_T_dense = self.A_T
+
+            issparse_list = [sp.sparse.issparse(Gk) for Gk in self.G_T_views]
+            self.issparse = any(issparse_list)
+
         elif self.use_A:
-            # After rescaling, G is some easily invertible square diagonal matrix
+            # After rescaling, G is an easily invertible square diagonal matrix
             self.G_inv = np.reciprocal(self.G.diagonal()).reshape((-1, 1))
-            self.A_invG = linalg.scale_axis(self.A.copy(), scale_cols=self.G_inv)
-            self.A_invG = (
-                self.A_invG.tocsr() if sp.sparse.issparse(self.A_invG) else self.A_invG
-            )
-            self.A_invG_views = sparsify(
-                [self.A_invG[:, idxs_k] for idxs_k in self.cone_idxs], SPARSE_THRESHOLD
-            )
-            self.issparse = any(
-                [sp.sparse.issparse(A_invG_k) for A_invG_k in self.A_invG_views]
-            )
+
+            self.A_invG = la.scale_axis(self.A.copy(), scale_cols=self.G_inv)
+            if sp.sparse.issparse(self.A_invG):
+                self.A_invG = self.A_invG.tocsr()
+
+            self.A_invG_views = [self.A_invG[:, idxs_k] for idxs_k in cone_idxs]
+            self.A_invG_views = _sparsify(self.A_invG_views, SPARSE_THRESHOLD)
+
+            issparse_list = [sp.sparse.issparse(Ak) for Ak in self.A_invG_views]
+            self.issparse = any(issparse_list)
+
         else:
             self.G_inv = np.reciprocal(self.G.diagonal()).reshape((-1, 1))
             self.issparse = True
 
-        self.issymmetric = all([cone_k.get_issymmetric() for cone_k in cones])
-        self.iscomplex = any([cone_k.get_iscomplex() for cone_k in cones])
-
         return
 
-    def rescale_model(self):
+    def _restructure(self, init_pnt=None):
+        # Restructures the conic program into
+        #     min  <c,x1>
+        #     s.t  A*x1 = b,  x2 = 0,  x3 = 1
+        #          h1*x2 + h2*x3 - G*x1 ∈ K
+        # where h1 is an interior point of K and h2 = h. This allows us to 
+        # solve problems using the cone K'={x : G*x ∈ K}.
+
+        n = self.n
+        self.x_offset = np.zeros((n, 1))
+
+        # Add variable x2 and constraint x2 = 0 if necessary
+        # Find an interior point of K and normalize it
+        if init_pnt is None:
+            s_init = qics.point.VecProduct(self.cones)
+            s_init.vec.fill(np.nan)
+        else:
+            # If user gives us an inital s, then use this instead
+            s_init = init_pnt.s
+
+        for k, cone_k in enumerate(self.cones):
+            if any(np.isnan(s_init.vecs[k])):
+                cone_k.get_init_point(s_init[k])
+        s_norm = np.sum(np.abs(s_init.vec))
+
+        G_temp = _hstack((self.G, -s_init.vec / s_norm))
+        if la.is_full_col_rank(G_temp):
+            A_new_col = sp.sparse.coo_matrix((self.p, 1))
+            A_new_row = sp.sparse.coo_matrix(([1.], ([0], [n])), (1, n+1))
+            self.c = np.vstack((self.c, np.array([[0.]])))
+            self.A = _vstack((_hstack((self.A, A_new_col)), A_new_row))
+            self.b = np.vstack((self.b, np.array([[0.]])))
+            self.G = G_temp
+
+            self.x_offset = np.vstack((self.x_offset, np.array([[0.]])))
+
+            self.use_A = True
+            (n, _) = (self.n, self.p) = (self.n + 1, self.p + 1)
+
+        # Add variable x3 and constraint x3 = 1 if necessary
+        if np.any(self.h):
+            h_norm = np.sum(np.abs(self.h))
+            G_temp = _hstack((self.G, -self.h / h_norm))
+            if la.is_full_col_rank(G_temp):
+                A_new_col = sp.sparse.coo_matrix((self.p, 1))
+                A_new_row = sp.sparse.coo_matrix(([1.], ([0], [n])), (1, n+1))
+                self.c = np.vstack((self.c, np.array([[0.]])))
+                self.A = _vstack((_hstack((self.A, A_new_col)), A_new_row))
+                self.b = np.vstack((self.b, np.array([[h_norm]])))
+                self.G = G_temp
+                self.h = np.zeros((self.q, 1))
+
+                self.x_offset = np.vstack((self.x_offset, np.array([[0.]])))
+
+                self.use_A = True
+                (n, _) = (self.n, self.p) = (self.n + 1, self.p + 1)
+            else:
+                self.x_offset = sp.sparse.linalg.lsqr(self.G, self.h)[0]
+                self.x_offset = self.x_offset.reshape((-1, 1))
+                self.offset += (self.c.T @ self.x_offset)[0, 0]
+                self.b = self.b - self.A @ self.x_offset
+                self.h = np.zeros((self.q, 1))
+        
+        if self.x_offset is None:
+            self.x_offset = np.zeros((n, 1))
+
+    def _rescale(self):
         # Rescale c
-        self.c_scale = np.sqrt(
-            np.maximum.reduce(
-                [
-                    np.abs(self.c.reshape(-1)),
-                    linalg.abs_max(self.A, axis=0),
-                    linalg.abs_max(self.G, axis=0),
-                ]
-            )
-        )
+        self.c_scale = np.maximum.reduce([np.abs(self.c.ravel()), 
+                                          la.abs_max(self.A, axis=0), 
+                                          la.abs_max(self.G, axis=0)])
+        self.c_scale = np.sqrt(self.c_scale).reshape((-1, 1))
 
         # Rescale b
-        self.b_scale = np.sqrt(
-            np.maximum.reduce(
-                [np.abs(self.b.reshape(-1)), linalg.abs_max(self.A, axis=1)]
-            )
-        )
+        self.b_scale = np.maximum.reduce([np.abs(self.b.ravel()), 
+                                          la.abs_max(self.A, axis=1)])
+        self.b_scale = np.sqrt(self.b_scale).reshape((-1, 1))
 
         # Rescale h
         # Note we can only scale each cone by a positive factor, and
         # we can't scale each individual variable by a different factor
         # (except for the nonnegative orthant)
-        self.h_scale = np.zeros(self.q)
-        h_absmax = np.abs(self.h.reshape(-1))
-        G_absmax_row = linalg.abs_max(self.G, axis=1)
+        self.h_scale = np.zeros((self.q, 1))
+        h_absmax = np.abs(self.h.ravel())
+        G_absmax = la.abs_max(self.G, axis=1)
         for k, cone_k in enumerate(self.cones):
             idxs = self.cone_idxs[k]
             if isinstance(cone_k, qics.cones.NonNegOrthant):
-                self.h_scale[idxs] = np.sqrt(
-                    np.maximum.reduce([h_absmax[idxs], G_absmax_row[idxs]])
-                )
+                self.h_scale[idxs, 0] = np.maximum.reduce([h_absmax[idxs], 
+                                                           G_absmax[idxs]])
             else:
-                self.h_scale[idxs] = np.sqrt(
-                    np.max([h_absmax[idxs], G_absmax_row[idxs]])
-                )
+                self.h_scale[idxs, 0] = np.max([h_absmax[idxs], G_absmax[idxs]])
+        self.h_scale = np.sqrt(self.h_scale)
 
         # Ensure there are no divide by zeros
-        self.c_scale[self.c_scale < np.finfo(self.c_scale.dtype).eps] = 1.0
-        self.b_scale[self.b_scale < np.finfo(self.b_scale.dtype).eps] = 1.0
-        self.h_scale[self.h_scale < np.finfo(self.h_scale.dtype).eps] = 1.0
+        EPS = np.finfo(self.b_scale.dtype).eps
+        self.c_scale[self.c_scale < EPS] = 1.0
+        self.b_scale[self.b_scale < EPS] = 1.0
+        self.h_scale[self.h_scale < EPS] = 1.0
 
         # Rescale data
-        self.c /= self.c_scale.reshape((-1, 1))
-        self.b /= self.b_scale.reshape((-1, 1))
-        self.h /= self.h_scale.reshape((-1, 1))
-
-        self.A = linalg.scale_axis(
-            self.A,
-            scale_rows=np.reciprocal(self.b_scale),
-            scale_cols=np.reciprocal(self.c_scale),
-        )
-
-        self.G = linalg.scale_axis(
-            self.G,
-            scale_rows=np.reciprocal(self.h_scale),
-            scale_cols=np.reciprocal(self.c_scale),
-        )
+        self.c /= self.c_scale
+        self.b /= self.b_scale
+        self.h /= self.h_scale
+        self.A = la.scale_axis(self.A,
+                               scale_rows=np.reciprocal(self.b_scale),
+                               scale_cols=np.reciprocal(self.c_scale))
+        self.G = la.scale_axis(self.G,
+                               scale_rows=np.reciprocal(self.h_scale),
+                               scale_cols=np.reciprocal(self.c_scale))
 
         return
 
 
-def build_cone_idxs(n, cones):
+def _is_like_eye(A, tol=1e-10):
+    if A.shape[0] != A.shape[1]:
+        return False
+    n = A.shape[0]
+    if sp.sparse.issparse(A):
+        A_minus_eye = sp.sparse.eye(n) - abs(A)
+        return sp.sparse.linalg.norm(A_minus_eye) < tol
+    else:
+        A_minus_eye = np.eye(n) - abs(A)
+        return np.linalg.norm(A_minus_eye) < tol
+
+
+def _vstack(tup):
+    if isinstance(tup, tuple):
+        tup = list(tup)
+
+    if sp.sparse.issparse(tup[0]):
+        for k in range(1, len(tup)):
+            tup[k] = sp.sparse.coo_matrix(tup[k])
+        return sp.sparse.vstack(tup)
+    else:
+        for k in range(1, len(tup)):
+            if sp.sparse.issparse(tup[k]):
+                tup[k] = tup[k].toarray()
+        return np.vstack(tup)
+
+
+def _hstack(tup):
+    if isinstance(tup, tuple):
+        tup = list(tup)
+
+    if sp.sparse.issparse(tup[0]):
+        for k in range(1, len(tup)):
+            tup[k] = sp.sparse.coo_matrix(tup[k])
+        return sp.sparse.hstack(tup)
+    else:
+        for k in range(1, len(tup)):
+            if sp.sparse.issparse(tup[k]):
+                tup[k] = tup[k].toarray()
+        return np.hstack(tup)
+
+
+def _build_cone_idxs(n, cones):
     cone_idxs = []
     prev_idx = 0
     for cone in cones:
@@ -219,7 +323,7 @@ def build_cone_idxs(n, cones):
     return cone_idxs
 
 
-def sparsify(A, threshold, format="coo"):
+def _sparsify(A, threshold, format="coo"):
     def sparsify_single(A, threshold, format):
         if A.size == 0:
             if sp.sparse.issparse(A):
@@ -246,95 +350,3 @@ def sparsify(A, threshold, format="coo"):
         return [sparsify_single(A_k, threshold, format) for A_k in A]
     else:
         return sparsify_single(A, threshold, format)
-
-
-def complex_to_real(model):
-    if not model.iscomplex:
-        return model
-
-    from qics.vectorize import mat_to_vec, vec_to_mat
-
-    def _c2r_matrix(G, model, factor=1.0):
-        # Loop through columns
-        Gc = []
-        for i in range(G.shape[1]):
-            # Loop through cones
-            Gc_i = []
-            for j, cone_j in enumerate(model.cones):
-                G_ij = G[model.cone_idxs[j], [i]]
-                # Loop through subvectors (if necessary)
-                if isinstance(cone_j.dim, list):
-                    Gc_ij = []
-                    idxs = np.insert(np.cumsum(cone_j.dim), 0, 0)
-                    for k in range(len(cone_j.dim)):
-                        Gc_ijk = G_ij[idxs[k] : idxs[k + 1]]
-                        if cone_j.type[k] == "h":
-                            Gc_ijk_mtx = vec_to_mat(Gc_ijk, iscomplex=True)
-                            Gc_ijk_mtx_real = np.block(
-                                [
-                                    [Gc_ijk_mtx.real, -Gc_ijk_mtx.imag],
-                                    [Gc_ijk_mtx.imag, Gc_ijk_mtx.real],
-                                ]
-                            )
-                            Gc_ijk = mat_to_vec(Gc_ijk_mtx_real)
-                        Gc_ij += [Gc_ijk]
-
-                    Gc_ij = np.vstack(Gc_ij)
-
-                else:
-                    Gc_ij = G_ij
-                    if cone_j.type == "h":
-                        Gc_ij_mtx = vec_to_mat(Gc_ij, iscomplex=True)
-                        Gc_ij_mtx_real = np.block(
-                            [
-                                [Gc_ij_mtx.real, -Gc_ij_mtx.imag],
-                                [Gc_ij_mtx.imag, Gc_ij_mtx.real],
-                            ]
-                        )
-                        Gc_ij = mat_to_vec(Gc_ij_mtx_real)
-
-                Gc_i += [Gc_ij]
-            Gc += [np.vstack(Gc_i)]
-        Gc = np.hstack(Gc)
-
-        return Gc
-
-    cones = []
-    for cone_k in model.cones:
-        if isinstance(cone_k, qics.cones.NonNegOrthant):
-            cones += [qics.cones.NonNegOrthant(cone_k.n)]
-        if isinstance(cone_k, qics.cones.PosSemidefinite):
-            if cone_k.get_iscomplex():
-                cones += [qics.cones.PosSemidefinite(2 * cone_k.n)]
-            else:
-                cones += [qics.cones.PosSemidefinite(cone_k.n)]
-        if isinstance(cone_k, qics.cones.QuantEntr):
-            if cone_k.get_iscomplex():
-                cones += [qics.cones.QuantEntr(2 * cone_k.n)]
-            else:
-                cones += [qics.cones.QuantEntr(cone_k.n)]
-        if isinstance(cone_k, qics.cones.QuantRelEntr):
-            if cone_k.get_iscomplex():
-                cones += [qics.cones.QuantRelEntr(2 * cone_k.n)]
-            else:
-                cones += [qics.cones.QuantRelEntr(cone_k.n)]
-
-    if model.use_G:
-        # Need to split A into [-G; -A] and b into [-h; -b]
-        # and uncompact G, h
-        G = _c2r_matrix(model.G_raw, model)
-        h = _c2r_matrix(model.h_raw, model)
-        return Model(
-            c=model.c_raw / 2,
-            A=model.A_raw,
-            b=model.b_raw,
-            G=G,
-            h=h,
-            cones=cones,
-            offset=model.offset,
-        )
-    else:
-        # No G, just need to uncompact c and A
-        c = _c2r_matrix(model.c_raw, model, factor=0.5)
-        A = _c2r_matrix(model.A_raw.T, model, factor=0.5).T
-        return Model(c=c, A=A, b=model.b_raw, cones=cones, offset=model.offset)

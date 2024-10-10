@@ -293,9 +293,9 @@ def write_sdpa(model, filename):
 
     # Get SDP data from model
     assert (model.use_A) != (model.use_G)
-    c = model.c_raw if model.use_A else model.h_raw
-    A = model.A_raw if model.use_A else model.G_raw.T
-    b = model.b_raw if model.use_A else -model.c_raw
+    c = model.c if model.use_A else model.h
+    A = model.A if model.use_A else model.G.T
+    b = model.b if model.use_A else -model.c
     cones = model.cones
     iscomplex = model.iscomplex
     if not sp.sparse.issparse(A):
@@ -721,17 +721,17 @@ def write_cbf(model, filename):
     if model.use_G:
         T = _get_expand_compact_matrices(model.cones)
 
-        c = model.c_raw.copy()
-        A = model.A_raw.copy()
-        b = model.b_raw.copy()
-        G = T @ model.G_raw
-        h = T @ model.h_raw
+        c = model.c.copy()
+        A = model.A.copy()
+        b = model.b.copy()
+        G = T @ model.G
+        h = T @ model.h
     else:
         T = _get_expand_compact_matrices(model.cones)
 
-        c = T @ model.c_raw
-        A = model.A_raw @ T.T
-        b = model.b_raw.copy()
+        c = T @ model.c
+        A = model.A @ T.T
+        b = model.b.copy()
     cones = model.cones
 
     f = open(filename, "w")

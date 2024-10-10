@@ -32,14 +32,32 @@ class PosSemidefinite(SymCone):
     """
 
     def __init__(self, n, iscomplex=False):
-        # Dimension properties
-        self.n = n  # Side length of matrix
-        self.nu = n  # Barrier parameter
-        self.iscomplex = iscomplex  # Hermitian or symmetric vector space
+        self.n = n
+        self.iscomplex = iscomplex
 
-        self.dim = [n * n] if (not iscomplex) else [2 * n * n]
-        self.type = ["s"] if (not iscomplex) else ["h"]
-        self.dtype = np.float64 if (not iscomplex) else np.complex128
+        self.nu = n  # Barrier parameter
+
+        if iscomplex:
+            self.dim = [2 * n * n]
+            self.type = ["h"]
+            self.dtype = np.complex128
+        else:
+            self.dim = [n * n]
+            self.type = ["s"]
+            self.dtype = np.float64
+
+        # Get LAPACK operators
+        from scipy.linalg.lapack import get_lapack_funcs
+
+        X = np.eye(self.n, dtype=self.dtype)
+        self.cho_fact = get_lapack_funcs("potrf", (X,))
+        self.cho_inv = get_lapack_funcs("trtri", (X,))
+        self.svd = get_lapack_funcs("gesdd", (X,))
+        self.svd_lwork = get_lapack_funcs("gesdd_lwork", (X,))(n, n)
+        if iscomplex:
+            self.eigvalsh = get_lapack_funcs("heevr", (X,))
+        else:
+            self.eigvalsh = get_lapack_funcs("syevr", (X,))
 
         # Update flags
         self.feas_updated = False
@@ -47,30 +65,15 @@ class PosSemidefinite(SymCone):
         self.nt_aux_updated = False
         self.congr_aux_updated = False
 
-        # Get LAPACK operators
-        self.X = np.eye(self.n, dtype=self.dtype)
-
-        self.cho_fact = sp.linalg.lapack.get_lapack_funcs("potrf", (self.X,))
-        self.cho_inv = sp.linalg.lapack.get_lapack_funcs("trtri", (self.X,))
-        self.svd = sp.linalg.lapack.get_lapack_funcs("gesdd", (self.X,))
-        self.eigvalsh = (
-            sp.linalg.lapack.get_lapack_funcs("heevr", (self.X,))
-            if self.iscomplex
-            else sp.linalg.lapack.get_lapack_funcs("syevr", (self.X,))
-        )
-        self.svd_lwork = sp.linalg.lapack.get_lapack_funcs("gesdd_lwork", (self.X,))(
-            n, n
-        )
-
         return
 
     def get_iscomplex(self):
         return self.iscomplex
 
     def get_init_point(self, out):
-        self.set_point(
-            [np.eye(self.n, dtype=self.dtype)], [np.eye(self.n, dtype=self.dtype)]
-        )
+        point = [np.eye(self.n, dtype=self.dtype)]
+
+        self.set_point(point, point)
 
         out[0][:] = self.X
         return out
@@ -83,8 +86,6 @@ class PosSemidefinite(SymCone):
         self.grad_updated = False
         self.nt_aux_updated = False
 
-        return
-
     def set_dual(self, dual, a=True):
         self.Z = dual[0] * a
 
@@ -94,12 +95,13 @@ class PosSemidefinite(SymCone):
 
         self.feas_updated = True
 
-        # Try to perform Cholesky factorizations to check PSD
+        # Check that X is PSD by trying to Cholesky factor it
         self.X_chol, info = self.cho_fact(self.X, lower=True)
         if info != 0:
             self.feas = False
             return self.feas
 
+        # Check that Z is PSD by trying to Cholesky factor it
         if self.Z is not None:
             self.Z_chol, info = self.cho_fact(self.Z, lower=True)
             if info != 0:
@@ -149,78 +151,48 @@ class PosSemidefinite(SymCone):
         return self.base_congr(A, self.X, self.X_chol)
 
     def base_congr(self, A, X, X_rt2):
+        # Generalized function to compute the matrix [<Ai, X Aj X>]_ij for a
+        # a given matrix X
         if not self.congr_aux_updated:
             self.congr_aux(A)
 
-        p = A.shape[0]
+        (n, p, p_ds) = (self.n, A.shape[0], len(self.A_ds_idxs))
         out = np.zeros((p, p))
 
-        # Compute sparse-sparse component
         if len(self.A_sp_idxs) > 0:
-            # Use fast Numba compiled functions when A is extremely sparse
+            # Compute sparse-sparse component using Numba compiled functions
             if self.iscomplex:
-                AHA_complex(
-                    out,
-                    self.A_sp_rows,
-                    self.A_sp_cols,
-                    self.A_sp_data,
-                    self.A_sp_nnzs,
-                    X,
-                    self.A_sp_idxs,
-                )
+                _sparse_congr_complex(out, self.A_sp_rows, self.A_sp_cols, 
+                    self.A_sp_data, self.A_sp_nnzs, X, self.A_sp_idxs)
             else:
-                AHA(
-                    out,
-                    self.A_sp_rows,
-                    self.A_sp_cols,
-                    self.A_sp_data,
-                    self.A_sp_nnzs,
-                    X,
-                    self.A_sp_idxs,
-                )
+                _sparse_congr(out, self.A_sp_rows, self.A_sp_cols, 
+                    self.A_sp_data, self.A_sp_nnzs, X, self.A_sp_idxs)
 
-            if len(self.A_ds_idxs) > 0:
-                lhs = np.zeros((len(self.A_ds_idxs), self.dim[0]))
-                if self.iscomplex:
-                    lin.congr_multi(
-                        lhs.reshape((len(self.A_ds_idxs), self.n, 2 * self.n)).view(
-                            dtype=np.complex128
-                        ),
-                        X,
-                        self.Ai_ds,
-                        work=self.work,
-                    )
-                else:
-                    lin.congr_multi(
-                        lhs.reshape((len(self.A_ds_idxs), self.n, self.n)),
-                        X,
-                        self.Ai_ds,
-                        work=self.work,
-                    )
+            # Compute sparse-dense and dense-dense components
+            if p_ds > 0:
+                work = self.work
+                
+                # Compute X Aj X for all dense Aj
+                lhs = np.zeros((p_ds, self.dim[0]))
+                lhs_view = lhs.reshape((p_ds, n, -1)).view(self.dtype)
+                lin.congr_multi(lhs_view, X, self.Ai_ds, work=work)
 
-                # Compute inner products between all <Ai, X Aj X>
-                out[:, self.A_ds_idxs] = self.A_triu @ lhs[:, self.triu_idxs].T
-                out[self.A_ds_idxs, :] = out[:, self.A_ds_idxs].T
+                # Compute inner products <Ai, X Aj X> for all dense Aj
+                temp = lin.x_dot_dense(self.A_triu, lhs[:, self.triu_idxs].T)
+                out[:, self.A_ds_idxs] = temp
+                out[self.A_ds_idxs, :] = temp.T
         else:
-            # Compute symmetric matrix multiplication [A (L kr L)] [A (L kr L)]'
-            lhs = np.zeros((len(self.A_ds_idxs), self.dim[0]))
-            if self.iscomplex:
-                lin.congr_multi(
-                    lhs.reshape((len(self.A_ds_idxs), self.n, 2 * self.n)).view(
-                        dtype=np.complex128
-                    ),
-                    X_rt2.conj().T,
-                    self.Ai_ds,
-                    work=self.work,
-                )
-            else:
-                lin.congr_multi(
-                    lhs.reshape((len(self.A_ds_idxs), self.n, self.n)),
-                    X_rt2.conj().T,
-                    self.Ai_ds,
-                    work=self.work,
-                )
-            out[self.A_ds_ds_idxs] = lhs @ lhs.conj().T
+            # If there are no (nonzero) sparse Aj, then compute congruence using
+            # the symmetric multiplication [A (L' kr L)] [A (L' kr L)]'
+            work = self.work
+
+            # Compute L' Aj L
+            lhs = np.zeros((p_ds, self.dim[0]))
+            lhs_view = lhs.reshape((p_ds, n, -1)).view(self.dtype)
+            lin.congr_multi(lhs_view, X_rt2.conj().T, self.Ai_ds, work=work)
+
+            # Compute inner products <L' Ai L, L' Aj L>
+            out[self.A_ds_ds_idxs] = lhs @ lhs.T
 
         return out
 
@@ -238,12 +210,13 @@ class PosSemidefinite(SymCone):
         XZX_I.flat[:: self.n + 1] -= 1
         return np.linalg.norm(XZX_I) ** 2
 
-    # ========================================================================
+    # ==========================================================================
     # Functions specific to symmetric cones for NT scaling
-    # ========================================================================
+    # ==========================================================================
     # Computes the NT scaling point W and scaled variable Lambda such that
     #     H(W)[S] = Z  <==> Lambda := P^-T(S) = P(Z)
-    # where H(W) = V^T V. To obtain for for the PSD cone, first let compute the SVD
+    # where H(W) = V^T V. To obtain for for the PSD cone, first let compute the
+    # SVD
     #     U D V^T = Z_chol^T S_chol
     # Then compute
     #     R    := S_chol V D^-1/2     = Z_chol^-T U D^1/2
@@ -251,7 +224,7 @@ class PosSemidefinite(SymCone):
     # Then we can find the scaling point as
     #     W    := R R^T
     #           = S^1/2 (S^1/2 Z S^1/2)^-1/2 S^1/2
-    #           = Z^-1/2 (Z^1/2 S Z^1/2)^1/2 Z^1/2 (i.e., geometric mean of Z and S)
+    #           = Z^-1/2 (Z^1/2 S Z^1/2)^1/2 Z^1/2 (i.e., geo. mean of Z and S)
     #     W^-1 := R^-T R^-1
     # and the scaled point as
     #     Lambda := D
@@ -275,8 +248,8 @@ class PosSemidefinite(SymCone):
         self.W = self.R @ self.R.conj().T
 
         # Compute the inverse scaling point as
-        #     R^-1 := D^1/2 V^T S_chol^-1, and
-        #     W^-1 := R^-T R^-1
+        #    R^-1 := D^1/2 V^T S_chol^-1, and
+        #    W^-1 := R^-T R^-1
         self.X_chol_inv, _ = self.cho_inv(self.X_chol, lower=True)
         self.R_inv = (self.X_chol_inv.conj().T @ (Vt.conj().T * D_rt2)).conj().T
         self.W_inv = self.R_inv.conj().T @ self.R_inv
@@ -319,7 +292,7 @@ class PosSemidefinite(SymCone):
             self.nt_aux()
 
         # Compute (W^-T ds_a) o (W dz_a) = (R^-1 dS R^-T) o (R^T dZ R)
-        #                                = 0.5 * ([R^-1 dS dZ R] + [R^T dZ dS R^-T])
+        #               = 0.5 * ([R^-1 dS dZ R] + [R^T dZ dS R^-T])
         temp1 = self.R_inv @ dS[0]
         temp2 = dZ[0] @ self.R
         temp3 = temp1 @ temp2
@@ -377,45 +350,31 @@ class PosSemidefinite(SymCone):
         else:
             return 1.0 / max(-min_eig_rho, -min_eig_sig)
 
-    # ========================================================================
+    # ==========================================================================
     # Auxilliary functions
-    # ========================================================================
+    # ==========================================================================
     def congr_aux(self, A):
         assert not self.congr_aux_updated
+
+        n = self.n
 
         if sp.sparse.issparse(A):
             A = A.tocsr()
 
             # Split A into sparse and dense groups
             A_nnz = A.getnnz(1)
-            self.A_sp_idxs = np.where((A_nnz > 0) & (A_nnz < self.n))[0]
-            self.A_ds_idxs = np.where((A_nnz >= self.n))[0]
+            self.A_sp_idxs = np.where((A_nnz > 0) & (A_nnz < n))[0]
+            self.A_ds_idxs = np.where((A_nnz >= n))[0]
 
             self.A_sp_idxs = self.A_sp_idxs[np.argsort(A_nnz[self.A_sp_idxs])]
             self.A_ds_ds_idxs = np.ix_(self.A_ds_idxs, self.A_ds_idxs)
 
-            def lil_to_array(ragged):
-                # Converts a list of lists (with possibly different lengths)
-                # into a numpy array padded with zeros
-                return np.array(list(itertools.zip_longest(*ragged, fillvalue=0))).T
-
-            def triu_idx_to_ij(idx):
-                # Converts upper triangular indices to (i,j) coordinates
-                #     [ 0  1  3       ]         [ (0,0)  (0,1)  (0,2)       ]
-                #     [    2  4  ...  ]   -->   [        (1,1)  (1,2)  ...  ]
-                #     [       5       ]         [               (2,2)       ]
-                # https://stackoverflow.com/questions/40950460/how-to-convert-triangular-matrix-indexes-in-to-row-column-coordinates
-                j = (np.ceil(np.sqrt(2 * (idx + 1) + 0.25) - 0.5) - 1).astype("int32")
-                i = (idx - (j + 1) * j / 2).astype("int32")
-                return i, j
-
-            # Prepare things we need for Strategy 1:
+            # Prepare things we need for Strategy 1, i.e., sparse-sparse 
+            # congruence using Numba functions
             if len(self.A_sp_idxs) > 0:
                 A_sp = A[self.A_sp_idxs]
 
-                triu_idxs = np.array(
-                    [j + i * self.n for j in range(self.n) for i in range(j + 1)]
-                )
+                triu_idxs = _get_triu_idxs(n)
 
                 if self.iscomplex:
                     A_sp_real = A_sp[:, ::2][:, triu_idxs]
@@ -424,19 +383,22 @@ class PosSemidefinite(SymCone):
                 else:
                     A_sp_lil = A_sp[:, triu_idxs].tolil()
 
-                # Get number of nonzeros for each Ai (to account for ragged arrays)
+                # Get number of nonzeros for each sparse Ai (to account for
+                # ragged arrays)
                 self.A_sp_nnzs = A_sp_lil.getnnz(1)
 
-                # Get rows and columns of nonzeros of Ai
-                rowcols = lil_to_array(A_sp_lil.rows)
-                self.A_sp_rows, self.A_sp_cols = triu_idx_to_ij(rowcols)
+                # Get rows and columns of nonzeros of sparse Ai
+                rowcols = _lil_to_array(A_sp_lil.rows)
+                self.A_sp_rows, self.A_sp_cols = _triu_idx_to_ij(rowcols)
 
-                # Get values of nonzeros of Ai, and scale off-diagonal elements to account
-                # for us only using upper triangular nonzeros
-                self.A_sp_data = lil_to_array(A_sp_lil.data)
+                # Get values of nonzeros of sparse Ai, and scale off-diagonal 
+                # elements to account for only using upper triangular nonzeros
+                self.A_sp_data = _lil_to_array(A_sp_lil.data)
                 self.A_sp_data[self.A_sp_cols != self.A_sp_rows] *= 2
 
-            # Prepare things we need for Strategy 2:
+            # Prepare things we need for Strategy 2, i.e., sparse-dense and
+            # dense-dense congruence by computing X Aj X for all dense Aj, then
+            # <Ai, X Aj X> for all Ai and dense Aj
             if len(self.A_ds_idxs) > 0:
                 A_ds = A[self.A_ds_idxs, :]
 
@@ -445,102 +407,91 @@ class PosSemidefinite(SymCone):
                     A_ds = A_ds[:, ::2] + A_ds[:, 1::2] * 1j
                 A_ds = A_ds.toarray()
 
-                if self.iscomplex:
-                    self.Ai_ds = np.array(
-                        [
-                            Ai.reshape((-1, 2))
-                            .view(dtype=np.complex128)
-                            .reshape(self.n, self.n)
-                            for Ai in A_ds
-                        ]
-                    )
-                else:
-                    self.Ai_ds = np.array([Ai.reshape((self.n, self.n)) for Ai in A_ds])
-                self.work = np.zeros_like(self.Ai_ds, dtype=self.dtype)
+                self.Ai_ds = np.array([Ai.reshape((n, n)) for Ai in A_ds])
+                self.work = np.zeros_like(self.Ai_ds)
 
-                # Extract and scale all off-diagonal blocks by 2
+                # Get upper triangular slices of A so we can more efficiently
+                # do the inner product <Ai, X Aj X> as a matrix multiplication
                 if len(self.A_sp_idxs) > 0:
+                    # Scale upper triangular elements by 2 to account for only
+                    # using upper triangular elements
+                    scale = 2 * np.ones(self.dim[0])
                     if self.iscomplex:
-                        self.triu_idxs = np.array(
-                            [2 * (i + i * self.n) for i in range(self.n)]
-                            + [
-                                2 * (j + i * self.n)
-                                for j in range(self.n)
-                                for i in range(j)
-                            ]
-                            + [
-                                2 * (j + i * self.n) + 1
-                                for j in range(self.n)
-                                for i in range(j)
-                            ]
-                        )
-                        scale = 2 * np.ones(2 * self.n * self.n)
-                        scale[:: 2 * self.n + 2] = 1
+                        scale[:: 2 * n + 2] = 1
                     else:
-                        self.triu_idxs = np.array(
-                            [
-                                j + i * self.n
-                                for j in range(self.n)
-                                for i in range(j + 1)
-                            ]
-                        )
-                        scale = 2 * np.ones(self.n * self.n)
-                        scale[:: self.n + 1] = 1
+                        scale[:: n + 1] = 1
+                    self.triu_idxs = _get_triu_idxs(n, self.iscomplex)
                     self.A_triu = lin.scale_axis(A, scale_cols=scale).tocsr()
-                    self.A_triu = self.A_triu[:, self.triu_idxs]
+                    self.A_triu = self.A_triu[:, self.triu_idxs].tocoo()
 
         else:
             # A and all Ai are dense matrices
             # Just need to convert the rows of A into dense matrices
+            from qics.vectorize import vec_to_mat
+            A = np.ascontiguousarray(A)
+
             self.A_sp_idxs = np.array([])
             self.A_ds_idxs = np.arange(A.shape[0])
             self.A_ds_ds_idxs = np.ix_(self.A_ds_idxs, self.A_ds_idxs)
-            A = np.ascontiguousarray(A)
-            if self.iscomplex:
-                self.Ai_ds = np.array(
-                    [
-                        Ai.reshape((-1, 2))
-                        .view(dtype=np.complex128)
-                        .reshape(self.n, self.n)
-                        for Ai in A
-                    ]
-                )
-            else:
-                self.Ai_ds = np.array([Ai.reshape((self.n, self.n)) for Ai in A])
-            self.work = np.zeros_like(self.Ai_ds, dtype=self.dtype)
+
+            self.Ai_ds = np.array([vec_to_mat(Ak, self.iscomplex) for Ak in A])    
+            self.work = np.zeros_like(self.Ai_ds)
 
         self.congr_aux_updated = True
+
+
+def _lil_to_array(ragged):
+    # Converts a list of lists (with possibly different lengths) into a numpy
+    # array padded with zeros
+    padded_list = list(itertools.zip_longest(*ragged, fillvalue=0))
+    return np.array(padded_list).T
+
+
+def _triu_idx_to_ij(idx):
+    # Converts upper triangular indices to (i,j) coordinates
+    #     [ 0  1  3       ]         [ (0,0)  (0,1)  (0,2)       ]
+    #     [    2  4  ...  ]   -->   [        (1,1)  (1,2)  ...  ]
+    #     [       5       ]         [               (2,2)       ]
+    # See: https://stackoverflow.com/questions/40950460/
+    j = np.ceil(np.sqrt(2 * (idx + 1) + 0.25) - 0.5) - 1
+    i = idx - (j + 1) * j / 2
+    return i.astype("int32"), j.astype("int32")
+
+
+def _get_triu_idxs(n, iscomplex=False):
+    # Gets indices of a vectorized matrix corresponding to the upper triangular
+    # elements of the matrix
+    if iscomplex:
+        diag = [2 * (i + i * n) for i in range(n)]
+        triu_real = [2 * (j + i * n) for j in range(n) for i in range(j)]
+        triu_imag = [2 * (j + i * n) + 1 for j in range(n) for i in range(j)]
+        return np.array(diag + triu_real + triu_imag)
+    else:
+        return np.array([j + i * n for j in range(n) for i in range(j + 1)])    
 
 
 # ============================================================================
 # Numba functions for computing Schur complement matrix when A is very sparse
 # ============================================================================
 
-
-@nb.njit(parallel=True, fastmath=True)
-def AHA(
-    out,
-    A_rows,
-    A_cols,
-    A_vals,
-    A_nnz,
-    X,
-    indices,
-):
+@nb.njit(cache=True, parallel=True, fastmath=True)
+def _sparse_congr(out, A_rows, A_cols, A_vals, A_nnz, X, indices):
     # Computes the congruence transform A (X kron X) A' when A is very sparse
     # See https://link.springer.com/article/10.1007/BF02614319
 
-    # We can cut the amount of operations in half by exploiting symetry of A and X as follows
-    # (AHA)_ij = SUM_a,b (Ai)_ab (SUM_c,d (Aj)_cd X_ac X_db)
-    #          = SUM_a,b (Ai)_ab (  [SUM_c=d (Aj)_cd X_ac X_db]
-    #                             + [SUM_c<d (Aj)_cd X_ac X_db]
-    #                             + [SUM_c>d (Aj)_cd X_ac X_db]  )
-    #          = SUM_a,b (Ai)_ab (  [SUM_c=d (Aj)_cd X_ac X_db]
-    #                             + [SUM_c<d (Aj)_cd (X_ac X_db + X_ad X_cb)]  )
-    #          = [SUM_a=b (Ai)_ab ( ... )] + [SUM_a<b (Ai)_ab ( ... )] + [SUM_a>b (Ai)_ab ( ... )]
-    #          = [SUM_a=b (Ai)_ab ( ... )] + 2 [SUM_a<b (Ai)_ab ( ... )]
-    # Note that we assume off-diagonal entries of Ai have been scaled by 2
-    # Also note that we assume only upper triangular elements are given to us so c < d
+    # We can cut the amount of operations in half by exploiting symetry of A and
+    # X as follows
+    # (AHA)_ij = Σ_a,b (Ai)_ab (Σ_c,d (Aj)_cd X_ac X_db)
+    #          = Σ_a,b (Ai)_ab (  [Σ_c=d (Aj)_cd X_ac X_db]
+    #                             + [Σ_c<d (Aj)_cd X_ac X_db]
+    #                             + [Σ_c>d (Aj)_cd X_ac X_db]  )
+    #          = Σ_a,b (Ai)_ab (  [Σ_c=d (Aj)_cd X_ac X_db]
+    #                             + [Σ_c<d (Aj)_cd (X_ac X_db + X_ad X_cb)]  )
+    #          = [Σ_a=b (Ai)_ab ( ... )] + [Σ_a<b (Ai)_ab ( ... )] + [Σ_a>b (Ai)_ab ( ... )]
+    #          = [Σ_a=b (Ai)_ab ( ... )] + 2 [Σ_a<b (Ai)_ab ( ... )]
+    # Note that we assume off-diagonal entries of Ai have been scaled by 2.
+    # Also note that we assume only upper triangular elements are given to us so
+    # c < d.
 
     n = A_rows.shape[0]
 
@@ -580,28 +531,21 @@ def AHA(
                 out[j_AHA, i_AHA] = tmp1
 
 
-@nb.njit(parallel=True, fastmath=True)
-def AHA_complex(
-    out,
-    A_rows,
-    A_cols,
-    A_vals,
-    A_nnz,
-    X,
-    indices,
-):
+@nb.njit(cache=True, parallel=True, fastmath=True)
+def _sparse_congr_complex(out, A_rows, A_cols, A_vals, A_nnz, X, indices):
     # Computes the congruence transform A (X kron X) A' when A is very sparse
     # See https://link.springer.com/article/10.1007/BF02614319
 
-    # We can cut the amount of operations in half by exploiting symetry of A and X as follows
-    # (AHA)_ij = SUM_a,b (Ai)_ab* (SUM_c,d (Aj)_cd X_ac X_db)
-    #          = SUM_a,b (Ai)_ab* (  [SUM_c=d (Aj)_cd X_ac X_db]
-    #                              + [SUM_c>d (Aj)_cd X_ac X_db]
-    #                              + [SUM_c<d (Aj)_cd X_ac X_db]  )
-    #          = SUM_a,b (Ai)_ab* (  [SUM_c=d (Aj)_cd X_ac X_db]
-    #                              + [SUM_c<d (Aj)_cd X_ac X_db + (Aj)_cd* X_ad X_cb]  )
-    #          = [SUM_a=b (Ai)_ab ( ... )] + [SUM_a<b (Ai)_ab ( ... )] + [SUM_a>b (Ai)_ab ( ... )]
-    #          = [SUM_a=b (Ai)_ab ( ... )] + [SUM_a>b (Ai)_ab ( ... ) + (Ai)_ab* ( ... )]
+    # We can cut the amount of operations in half by exploiting symetry of A and
+    # X as follows
+    # (AHA)_ij = Σ_a,b (Ai)_ab* (Σ_c,d (Aj)_cd X_ac X_db)
+    #          = Σ_a,b (Ai)_ab* (  [Σ_c=d (Aj)_cd X_ac X_db]
+    #                              + [Σ_c>d (Aj)_cd X_ac X_db]
+    #                              + [Σ_c<d (Aj)_cd X_ac X_db]  )
+    #          = Σ_a,b (Ai)_ab* (  [Σ_c=d (Aj)_cd X_ac X_db]
+    #                              + [Σ_c<d (Aj)_cd X_ac X_db + (Aj)_cd* X_ad X_cb]  )
+    #          = [Σ_a=b (Ai)_ab ( ... )] + [Σ_a<b (Ai)_ab ( ... )] + [Σ_a>b (Ai)_ab ( ... )]
+    #          = [Σ_a=b (Ai)_ab ( ... )] + [Σ_a>b (Ai)_ab ( ... ) + (Ai)_ab* ( ... )]
     # Also note that off-diagonal entries of Ai have been scaled by 2
 
     n = A_rows.shape[0]
@@ -631,7 +575,7 @@ def AHA_complex(
 
                 # Do addition slightly differently to guarantee a real number
                 # i.e., just take the inner product between Ai and X Aj X by
-                #     SUM_ab Re[(X Aj X)_ab] * Re[(Ai)_ab] + 2 Im[(X Aj X)_ab] * Im[(Ai)_ab]
+                #     Σ_ab Re[(X Aj X)_ab] * Re[(Ai)_ab] + 2 Im[(X Aj X)_ab] * Im[(Ai)_ab]
                 tmp3 += 0.5 * tmp2
                 tmp1 += A_vals[i, alpha].real * tmp3.real
                 tmp1 += A_vals[i, alpha].imag * tmp3.imag

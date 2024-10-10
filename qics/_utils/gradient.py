@@ -4,7 +4,7 @@ import numba as nb
 from qics._utils.linalg import congr_multi
 
 
-@nb.njit
+@nb.njit(cache=True)
 def D1_f(D, f_D, df_D):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -26,7 +26,7 @@ def D1_f(D, f_D, df_D):
     return D1
 
 
-@nb.njit
+@nb.njit(cache=True)
 def D1_log(D, log_D):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -51,7 +51,7 @@ def D1_log(D, log_D):
     return D1
 
 
-@nb.njit
+@nb.njit(cache=True)
 def D2_f(D, D1, d2f_D):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -82,7 +82,7 @@ def D2_f(D, D1, d2f_D):
     return D2
 
 
-@nb.njit
+@nb.njit(cache=True)
 def D2_log(D, D1):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -113,7 +113,7 @@ def D2_log(D, D1):
     return D2
 
 
-@nb.njit
+@nb.njit(cache=True)
 def D3_f_ij(i, j, D, D2, d3f_D):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -148,7 +148,7 @@ def D3_f_ij(i, j, D, D2, d3f_D):
     return D3_ij
 
 
-@nb.njit
+@nb.njit(cache=True)
 def D3_log_ij(i, j, D2, D, f):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -210,7 +210,7 @@ def scnd_frechet_multi(
     return out
 
 
-@nb.njit(parallel=True)
+@nb.njit(cache=True, parallel=True)
 def thrd_frechet(D, D2, d3f_D, U, H1, H2, H3=None):
     n = D.size
     out = np.zeros_like(H1)
@@ -263,7 +263,7 @@ def get_S_matrix(D2_UXU, rt2, iscomplex=False):
         return get_S_matrix_symmetric(D2_UXU, rt2)
 
 
-@nb.njit
+@nb.njit(cache=True)
 def get_S_matrix_symmetric(D2_UXU, rt2):
     n = D2_UXU.shape[0]
     vn = n * (n + 1) // 2
@@ -310,7 +310,7 @@ def get_S_matrix_symmetric(D2_UXU, rt2):
     return S
 
 
-@nb.njit
+@nb.njit(cache=True)
 def get_S_matrix_hermitian(D2_UXU, rt2):
     n = D2_UXU.shape[0]
     vn = n * n
