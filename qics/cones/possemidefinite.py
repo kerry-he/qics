@@ -1,6 +1,6 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
 import numpy as np
@@ -115,7 +115,7 @@ class PosSemidefinite(SymCone):
 
         self.feas = True
         return self.feas
-    
+
     def get_dual_feas(self):
         self.Z_chol, info = self.cho_fact(self.Z, lower=True)
         return info == 0
@@ -168,15 +168,15 @@ class PosSemidefinite(SymCone):
             # Compute sparse-sparse component using Numba compiled functions
             if self.iscomplex:
                 _sparse_congr_complex(out, self.A_sp_rows, self.A_sp_cols, 
-                    self.A_sp_data, self.A_sp_nnzs, X, self.A_sp_idxs)
+                                      self.A_sp_data, self.A_sp_nnzs, X, self.A_sp_idxs)  # fmt: skip
             else:
                 _sparse_congr(out, self.A_sp_rows, self.A_sp_cols, 
-                    self.A_sp_data, self.A_sp_nnzs, X, self.A_sp_idxs)
+                              self.A_sp_data, self.A_sp_nnzs, X, self.A_sp_idxs)  # fmt: skip
 
             # Compute sparse-dense and dense-dense components
             if p_ds > 0:
                 work = self.work
-                
+
                 # Compute X Aj X for all dense Aj
                 lhs = np.zeros((p_ds, self.dim[0]))
                 lhs_view = lhs.reshape((p_ds, n, -1)).view(self.dtype)
@@ -374,7 +374,7 @@ class PosSemidefinite(SymCone):
             self.A_sp_idxs = self.A_sp_idxs[np.argsort(A_nnz[self.A_sp_idxs])]
             self.A_ds_ds_idxs = np.ix_(self.A_ds_idxs, self.A_ds_idxs)
 
-            # Prepare things we need for Strategy 1, i.e., sparse-sparse 
+            # Prepare things we need for Strategy 1, i.e., sparse-sparse
             # congruence using Numba functions
             if len(self.A_sp_idxs) > 0:
                 A_sp = A[self.A_sp_idxs]
@@ -396,7 +396,7 @@ class PosSemidefinite(SymCone):
                 rowcols = _lil_to_array(A_sp_lil.rows)
                 self.A_sp_rows, self.A_sp_cols = _triu_idx_to_ij(rowcols)
 
-                # Get values of nonzeros of sparse Ai, and scale off-diagonal 
+                # Get values of nonzeros of sparse Ai, and scale off-diagonal
                 # elements to account for only using upper triangular nonzeros
                 self.A_sp_data = _lil_to_array(A_sp_lil.data)
                 self.A_sp_data[self.A_sp_cols != self.A_sp_rows] *= 2
@@ -433,13 +433,14 @@ class PosSemidefinite(SymCone):
             # A and all Ai are dense matrices
             # Just need to convert the rows of A into dense matrices
             from qics.vectorize import vec_to_mat
+
             A = np.ascontiguousarray(A)
 
             self.A_sp_idxs = np.array([])
             self.A_ds_idxs = np.arange(A.shape[0])
             self.A_ds_ds_idxs = np.ix_(self.A_ds_idxs, self.A_ds_idxs)
 
-            self.Ai_ds = np.array([vec_to_mat(Ak, self.iscomplex) for Ak in A])    
+            self.Ai_ds = np.array([vec_to_mat(Ak, self.iscomplex) for Ak in A])
             self.work = np.zeros_like(self.Ai_ds)
 
         self.congr_aux_updated = True
@@ -472,12 +473,13 @@ def _get_triu_idxs(n, iscomplex=False):
         triu_imag = [2 * (j + i * n) + 1 for j in range(n) for i in range(j)]
         return np.array(diag + triu_real + triu_imag)
     else:
-        return np.array([j + i * n for j in range(n) for i in range(j + 1)])    
+        return np.array([j + i * n for j in range(n) for i in range(j + 1)])
 
 
 # ============================================================================
 # Numba functions for computing Schur complement matrix when A is very sparse
 # ============================================================================
+
 
 @nb.njit(cache=True, parallel=True, fastmath=True)
 def _sparse_congr(out, A_rows, A_cols, A_vals, A_nnz, X, indices):

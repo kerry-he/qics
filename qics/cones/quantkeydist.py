@@ -1,6 +1,6 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
 import numpy as np
@@ -16,7 +16,7 @@ class QuantKeyDist(Cone):
 
     .. math::
 
-        \mathcal{QKD}_{\mathcal{G},\mathcal{Z}} = 
+        \mathcal{QKD}_{\mathcal{G},\mathcal{Z}} =
         \text{cl}\{ (t, X) \in \mathbb{R} \times \mathbb{H}^n_{++} :
         t \geq -S(\mathcal{G}(X)) +  S(\mathcal{Z}(\mathcal{G}(X))) \},
 
@@ -28,7 +28,7 @@ class QuantKeyDist(Cone):
 
     is the quantum (von Neumann) entropy function,
     :math:`\mathcal{G}:\mathbb{H}^n\rightarrow\mathbb{H}^{mr}` is a
-    positive linear map, and 
+    positive linear map, and
     :math:`\mathcal{Z}:\mathbb{H}^{mr}\rightarrow\mathbb{H}^{mr}` is a
     pinching map that maps off-diagonal blocks to zero.
 
@@ -39,28 +39,28 @@ class QuantKeyDist(Cone):
         specify this linear map.
 
         - If ``G_info`` is an :obj:`int`, then :math:`\mathcal{G}` is the
-          identity map, i.e., :math:`\mathcal{G}(X)=X`, and ``G_info`` 
+          identity map, i.e., :math:`\mathcal{G}(X)=X`, and ``G_info``
           specifies the dimension of :math:`X`.
         - If ``G_info`` is a :obj:`list` of :class:`~numpy.ndarray`, then
-          ``G_info`` specifies the Kraus operators 
+          ``G_info`` specifies the Kraus operators
           :math:`K_i \in \mathbb{C}^{mr \times n }` corresponding to
           :math:`\mathcal{G}` such that
 
           .. math::
 
               \mathcal{G}(X) = \sum_{i} K_i X K_i^\dagger.
-        
+
     Z_info : :obj:`int` or :obj:`tuple` or :obj:`list` of :class:`~numpy.ndarray`
-    
+
         Defines the pinching map :math:`\mathcal{Z}`, which is of the form
-        
+
         .. math::
 
             \mathcal{Z}(Y) = \sum_{i} Z_i Y Z_i^\dagger.
 
-        There are three ways to specify this linear map. 
+        There are three ways to specify this linear map.
 
-        - If ``Z_info`` is an :obj:`int`, then 
+        - If ``Z_info`` is an :obj:`int`, then
           :math:`Z_i=|i \rangle\langle i| \otimes\mathbb{I}` for
           :math:`i=1,\ldots,r`, where ``r=Z_info``.
 
@@ -70,18 +70,18 @@ class QuantKeyDist(Cone):
 
           - :math:`Z_i=|i \rangle\langle i| \otimes\mathbb{I}_{n_1}`
             for :math:`i=1,\ldots,n_0` if ``sys=0``, and
-          - :math:`Z_i=\mathbb{I}_{n_0}\otimes |i \rangle\langle i|` for 
-            :math:`i=1,\ldots,n_1` if ``sys=1``. 
-          
-          We generalize this definition to the case where ``dims`` and ``sys`` 
+          - :math:`Z_i=\mathbb{I}_{n_0}\otimes |i \rangle\langle i|` for
+            :math:`i=1,\ldots,n_1` if ``sys=1``.
+
+          We generalize this definition to the case where ``dims`` and ``sys``
           are lists of any length.
 
         - If ``Z_info`` is a :obj:`list` of :class:`~numpy.ndarray`, then
-          ``Z_info`` directly specifies the Kraus operators 
+          ``Z_info`` directly specifies the Kraus operators
           :math:`Z_i \in \mathbb{C}^{mr \times mr}`.
 
-          .. warning:: 
-          
+          .. warning::
+
               If ``Z_info`` is specified in this way, the user themselves
               must ensure that the Kraus operators they provide correpsond
               to a valid pinching map.
@@ -102,11 +102,11 @@ class QuantKeyDist(Cone):
 
     .. math::
 
-        S(\mathcal{G}(X) \| \mathcal{Z}(\mathcal{G}(X))) 
+        S(\mathcal{G}(X) \| \mathcal{Z}(\mathcal{G}(X)))
         = -S(\mathcal{G}(X)) +  S(\mathcal{Z}(\mathcal{G}(X))).
 
     However, the cone oracles for the quantum key distribution cone are
-    more efficient than those for the quantum relative entropy cone 
+    more efficient than those for the quantum relative entropy cone
     (especially when :math:`\mathcal{G}` is the idenity map), so it is
     recommended to use the quantum key distribution cone where possible.
     """
@@ -138,7 +138,7 @@ class QuantKeyDist(Cone):
 
         self.Nk = [K_list[0].shape[0] for K_list in self.K_list_blk]
         self.Nzk = [ZK_list[0].shape[0] for ZK_list in self.ZK_list_blk]
-        
+
         # Update flags
         self.feas_updated = False
         self.grad_updated = False
@@ -158,7 +158,7 @@ class QuantKeyDist(Cone):
             self.F2C_op = get_full_to_compact_op(self.n, iscomplex)
 
         return
-    
+
     def _process_G_info(self, G_info):
         if isinstance(G_info, int):
             # Define G(X) as the identity map
@@ -173,11 +173,11 @@ class QuantKeyDist(Cone):
             self.n = n = G_info[0].shape[1]  # Input dimension of X
             self.N = N = G_info[0].shape[0]  # Output dimension of G(X)
             assert all([Ki.shape == (N, n) for Ki in G_info]), "Kraus " \
-                "operators specified by G_info must have the same dimensions."
+                "operators specified by G_info must have the same dimensions."  # fmt: skip
 
             self.K_list_raw = G_info
             self.G_is_Id = len(G_info) == 1 and n == N \
-                           and np.linalg.norm(G_info[0] - np.eye(n)) < 1e-10
+                           and np.linalg.norm(G_info[0] - np.eye(n)) < 1e-10  # fmt: skip
 
     def _process_Z_info(self, Z_info):
         N = self.N
@@ -187,7 +187,7 @@ class QuantKeyDist(Cone):
             self.r = r = Z_info
             self.m = m = N // r
             assert m * r == N, "Number of blocks r specified by Z_info " \
-                "must be an integer factor of the dimension of G(X)."
+                "must be an integer factor of the dimension of G(X)."  # fmt: skip
 
             self.Z_list_raw = [np.zeros((N, N)) for _ in range(r)]
             for k in range(r):
@@ -202,12 +202,11 @@ class QuantKeyDist(Cone):
                 sys = [sys]
             if isinstance(sys, tuple) or isinstance(sys, set):
                 sys = list(sys)
-            assert np.prod(dims) == N, "Total dimension of subsystems must " \
-                "equal the dimension of G(X)."
-            assert all([sys_k < len(dims) for sys_k in sys]), "Invalid " \
-                "subsystems specified, exceeds total number of dimensions " \
-                "provided."
-            
+            assert np.prod(dims) == N, "Total dimension of subsystems must equal " \
+                "the dimension of G(X)."  # fmt: skip
+            assert all([sys_k < len(dims) for sys_k in sys]), "Invalid subsystems " \
+                "specified, exceeds total number of dimensions provided."  # fmt: skip
+
             self.r = np.prod([dims[k] for k in sys])
             self.m = N // self.r
 
@@ -231,8 +230,8 @@ class QuantKeyDist(Cone):
             # Define Z(X) using given Kraus operators
             self.r = len(Z_info)
             self.m = self.N // self.r
-            assert all([Zi.shape == (N, N) for Zi in Z_info]), "Kraus " \
-                "operators specified by Z_info must have the same dimensions."
+            assert all([Zi.shape == (N, N) for Zi in Z_info]), "Kraus operators " \
+                "specified by Z_info must have the same dimensions."  # fmt: skip
 
             self.Z_list_raw = Z_info
             self.Z_idxs = [np.where(Z)[0] for Z in Z_info]
@@ -277,12 +276,12 @@ class QuantKeyDist(Cone):
             return self.feas
 
         # Check that G(X) is positive definite
-        #   Note that G(X) should be positive definite if X is, but check 
+        #   Note that G(X) should be positive definite if X is, but check
         #   just to be sure that we can safely take logarithms of G(X).
         GX_blk = [apply_kraus(X, K_list) for K_list in self.K_list_blk]
 
         DUgx_blk = [np.linalg.eigh(GX) for GX in GX_blk]
-        self.Dgx_blk = [DUgx[0] for DUgx in DUgx_blk]
+        self.Dgx_blk = Dgx_blk = [DUgx[0] for DUgx in DUgx_blk]
         self.Ugx_blk = [DUgx[1] for DUgx in DUgx_blk]
 
         if any([any(Dgx <= 0) for Dgx in self.Dgx_blk]):
@@ -290,12 +289,12 @@ class QuantKeyDist(Cone):
             return self.feas
 
         # Check that Z(G(X)) is positive definite
-        #   Note that Z(G(X)) should be positive definite if X is, but check 
+        #   Note that Z(G(X)) should be positive definite if X is, but check
         #   just to be sure that we can safely take logarithms of Z(G(X)).
         ZGX_blk = [apply_kraus(X, ZG_list) for ZG_list in self.ZK_list_blk]
 
         DUzgx_blk = [np.linalg.eigh(ZGX) for ZGX in ZGX_blk]
-        self.Dzgx_blk = [DUzkx[0] for DUzkx in DUzgx_blk]
+        self.Dzgx_blk = Dzgx_blk = [DUzkx[0] for DUzkx in DUzgx_blk]
         self.Uzgx_blk = [DUzkx[1] for DUzkx in DUzgx_blk]
 
         if any([any(Dzkx <= 0) for Dzkx in self.Dzgx_blk]):
@@ -303,13 +302,11 @@ class QuantKeyDist(Cone):
             return self.feas
 
         # Check that t > -S(G(X)) + S(Z(G(X)))
-        self.log_Dgx_blk = [np.log(D) for D in self.Dgx_blk]
-        self.log_Dzgx_blk = [np.log(D) for D in self.Dzgx_blk]
+        self.log_Dgx_blk = log_Dgx_blk = [np.log(D) for D in self.Dgx_blk]
+        self.log_Dzgx_blk = log_Dzgx_blk = [np.log(D) for D in self.Dzgx_blk]
 
-        entr_GX = [lin.inp(D, log_D) 
-                   for (D, log_D) in zip(self.Dgx_blk, self.log_Dgx_blk)]
-        entr_ZGX = [lin.inp(D, log_D) 
-                    for (D, log_D) in zip(self.Dzgx_blk, self.log_Dzgx_blk)]
+        entr_GX = [lin.inp(D, log_D) for (D, log_D) in zip(Dgx_blk, log_Dgx_blk)]
+        entr_ZGX = [lin.inp(D, log_D) for (D, log_D) in zip(Dzgx_blk, log_Dzgx_blk)]
         self.z = t[0, 0] - (sum(entr_GX) - sum(entr_ZGX))
 
         self.feas = self.z > 0
@@ -326,16 +323,28 @@ class QuantKeyDist(Cone):
 
         # Compute gradients of quantum relative entropy
         # DPhi(X) = G'[log(G(X)) + I] - G'Z'[log(G(Z(X))) + I]
-        log_GX_blk = [(U * logD) @ U.conj().T + np.eye(n)
-            for (U, logD, n) in zip(self.Ugx_blk, self.log_Dgx_blk, self.Nk)]
-        log_ZGX_blk = [(U * logD) @ U.conj().T + np.eye(n)
-            for (U, logD, n) in zip(self.Uzgx_blk, self.log_Dzgx_blk, self.Nzk)]
+        log_GX_blk = [
+            (U * logD) @ U.conj().T + np.eye(n)
+            for (U, logD, n) in zip(self.Ugx_blk, self.log_Dgx_blk, self.Nk)
+        ]
+        log_ZGX_blk = [
+            (U * logD) @ U.conj().T + np.eye(n)
+            for (U, logD, n) in zip(self.Uzgx_blk, self.log_Dzgx_blk, self.Nzk)
+        ]
 
-        G_log_GX = sum([apply_kraus(logX, K_list, adjoint=True)
-            for (logX, K_list) in zip(log_GX_blk, self.K_list_blk)])
-        ZG_log_ZGX = sum([apply_kraus(logX, ZK_list, adjoint=True)
-            for (logX, ZK_list) in zip(log_ZGX_blk, self.ZK_list_blk)])
-        
+        G_log_GX = sum(
+            [
+                apply_kraus(logX, K_list, adjoint=True)
+                for (logX, K_list) in zip(log_GX_blk, self.K_list_blk)
+            ]
+        )
+        ZG_log_ZGX = sum(
+            [
+                apply_kraus(logX, ZK_list, adjoint=True)
+                for (logX, ZK_list) in zip(log_ZGX_blk, self.ZK_list_blk)
+            ]
+        )
+
         self.DPhi = G_log_GX - ZG_log_ZGX
 
         # Compute X^-1
@@ -355,10 +364,13 @@ class QuantKeyDist(Cone):
 
         self.zi2 = self.zi * self.zi
 
-        self.D1gx_log_blk = [grad.D1_log(D, log_D) 
-            for (D, log_D) in zip(self.Dgx_blk, self.log_Dgx_blk)]
-        self.D1zgx_log_blk = [grad.D1_log(D, log_D)
-            for (D, log_D) in zip(self.Dzgx_blk, self.log_Dzgx_blk)]
+        self.D1gx_log_blk = [
+            grad.D1_log(D, log_D) for (D, log_D) in zip(self.Dgx_blk, self.log_Dgx_blk)
+        ]
+        self.D1zgx_log_blk = [
+            grad.D1_log(D, log_D)
+            for (D, log_D) in zip(self.Dzgx_blk, self.log_Dzgx_blk)
+        ]
 
         if self.G_is_Id:
             D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
@@ -386,16 +398,16 @@ class QuantKeyDist(Cone):
         UZGHU_blk = [U.conj().T @ H @ U for (H, U) in zip(ZGH_blk, Uzgx_blk)]
 
         # Hessian products for quantum key distribution
-        # D2Phi(X)[H] 
+        # D2Phi(X)[H]
         #     = G'(Ugx [log^[1](Dgx) .* (Ugx' G(H) Ugx)] Ugx')
         #       - G'(Z'(Uzgx [log^[1](Dzgx) .* (Uzgx' Z(G(H)) Uzgx)] Uzgx'))
         D2PhiH = np.zeros_like(self.X)
         # First term, i.e., G'(Ugx [log^[1](Dgx) .* (Ugx' G(H) Ugx)] Ugx')
-        for (k, (U_k, D1_k)) in enumerate(zip(Ugx_blk, D1gx_log_blk)):
+        for k, (U_k, D1_k) in enumerate(zip(Ugx_blk, D1gx_log_blk)):
             temp = U_k @ (D1_k * UGHU_blk[k]) @ U_k.conj().T
             D2PhiH += apply_kraus(temp, K_list_blk[k], adjoint=True)
         # Second term, i.e., -G'(Z'(Uzgx [ ... ] Uzgx'))
-        for (k, (U_k, D1_k)) in enumerate(zip(Uzgx_blk, D1zgx_log_blk)):
+        for k, (U_k, D1_k) in enumerate(zip(Uzgx_blk, D1zgx_log_blk)):
             temp = U_k @ (D1_k * UZGHU_blk[k]) @ U_k.conj().T
             D2PhiH -= apply_kraus(temp, ZK_list_blk[k], adjoint=True)
 
@@ -452,7 +464,7 @@ class QuantKeyDist(Cone):
         # Hessian products with respect to X
         # ======================================================================
         # Hessian products for quantum key distribution
-        # D2Phi(X)[H] 
+        # D2Phi(X)[H]
         #     = G'(Ugx [log^[1](Dgx) .* (Ugx' G(H) Ugx)] Ugx')
         #       - G'(Z'(Uzgx [log^[1](Dzgx) .* (Uzgx' Z(G(H)) Uzgx)] Uzgx'))
         if self.G_is_Id:
@@ -472,7 +484,7 @@ class QuantKeyDist(Cone):
                 Work0[np.ix_(np.arange(p), Z_idxs_k, Z_idxs_k)] = work1
 
             # Compute first term, i.e., Ux [log^[1](Dx) .* (Ux' G(H) Ux)] Ux'
-            # Also combine this with 1/z ( ... ) + X^-1 Ax X^-1 
+            # Also combine this with 1/z ( ... ) + X^-1 Ax X^-1
             lin.congr_multi(Work2, self.Ux.conj().T, self.Ax, Work3)
             self.Work2 *= self.D1x_comb
             lin.congr_multi(Work1, self.Ux, Work2, Work3)
@@ -556,7 +568,7 @@ class QuantKeyDist(Cone):
             temp = self.Ux.conj().T @ Wx @ self.Ux
             out_X = self.Ux @ (self.D1x_comb_inv * temp) @ self.Ux.conj().T
             # Apply Z( ... ), i.e., extract k-th submatrix then get compact
-            # vectorization of this submatrix            
+            # vectorization of this submatrix
             for k, Z_idxs_k in enumerate(self.Z_idxs):
                 temp_k = out_X[np.ix_(Z_idxs_k, Z_idxs_k)]
                 temp_vec = temp_k.view(np.float64).reshape(-1)
@@ -564,7 +576,7 @@ class QuantKeyDist(Cone):
             work *= -1
             # Solve linear system N \ ( ... )
             work = lin.cho_solve(self.schur_fact, work)
-            # Apply Z'( ... ), i.e., recover submatrix from compact 
+            # Apply Z'( ... ), i.e., recover submatrix from compact
             # vectorization then place in k-th submatrix
             Work3 = np.zeros((self.n, self.n), dtype=self.dtype)
             for k, Z_idxs_k in enumerate(self.Z_idxs):
@@ -608,7 +620,7 @@ class QuantKeyDist(Cone):
         if not self.congr_aux_updated:
             self.congr_aux(A)
         if not self.invhess_congr_aux_updated:
-            self.update_invhess_congr_aux(A)            
+            self.update_invhess_congr_aux(A)
 
         # The inverse Hessian product applied on (Ht, Hx, Hy) for the OPT
         # barrier is
@@ -659,7 +671,7 @@ class QuantKeyDist(Cone):
             work *= -1
             # Solve linear system N \ ( ... )
             work = lin.cho_solve(self.schur_fact, work)
-            # Apply Z'( ... ), i.e., recover submatrix from compact 
+            # Apply Z'( ... ), i.e., recover submatrix from compact
             # vectorization then place in k-th submatrix
             Work1.fill(0.0)
             for k, Z_idxs_k in enumerate(self.Z_idxs):
@@ -692,7 +704,7 @@ class QuantKeyDist(Cone):
             return lin.dense_dot_x(lhs, A.T)
 
         else:
-            # Otherwise, we will directly build M and Cholesky factor it to 
+            # Otherwise, we will directly build M and Cholesky factor it to
             # solve X = M \ Wx
 
             # ==================================================================
@@ -740,22 +752,22 @@ class QuantKeyDist(Cone):
         # Quantum key distribution Hessians
         D2PhiH = np.zeros_like(self.X)
         # Hessians of S(G(X))
-        for (k, (U_k, D1_k)) in enumerate(zip(Ugx_blk, D1gx_log_blk)):
+        for k, (U_k, D1_k) in enumerate(zip(Ugx_blk, D1gx_log_blk)):
             temp = U_k @ (D1_k * UGHU_blk[k]) @ U_k.conj().T
             D2PhiH += apply_kraus(temp, K_list_blk[k], adjoint=True)
         # Hessians of S(Z(G(X)))
-        for (k, (U_k, D1_k)) in enumerate(zip(Uzgx_blk, D1zgx_log_blk)):
+        for k, (U_k, D1_k) in enumerate(zip(Uzgx_blk, D1zgx_log_blk)):
             temp = U_k @ (D1_k * UZGHU_blk[k]) @ U_k.conj().T
             D2PhiH -= apply_kraus(temp, ZK_list_blk[k], adjoint=True)
 
         # Quantum key distribution third order derivatives
         D3PhiHH = np.zeros_like(self.X)
         # Third order derivatives of S(G(X))
-        for (k, (U_k, D2_k)) in enumerate(zip(Ugx_blk, D2gx_log_blk)):
+        for k, (U_k, D2_k) in enumerate(zip(Ugx_blk, D2gx_log_blk)):
             temp = grad.scnd_frechet(D2_k * UGHU_blk[k], UGHU_blk[k], U=U_k)
             D3PhiHH += apply_kraus(temp, K_list_blk[k], adjoint=True)
         # Third order derivatives of S(Z(G(X)))
-        for (k, (U_k, D2_k)) in enumerate(zip(Uzgx_blk, D2zgx_log_blk)):
+        for k, (U_k, D2_k) in enumerate(zip(Uzgx_blk, D2zgx_log_blk)):
             temp = grad.scnd_frechet(D2_k * UZGHU_blk[k], UZGHU_blk[k], U=U_k)
             D3PhiHH -= apply_kraus(temp, ZK_list_blk[k], adjoint=True)
 
@@ -785,6 +797,7 @@ class QuantKeyDist(Cone):
         assert not self.congr_aux_updated
 
         from qics.vectorize import vec_to_mat
+
         iscomplex = self.iscomplex
 
         # Get slices and views of A matrix to be used in congruence computations
@@ -935,7 +948,7 @@ class QuantKeyDist(Cone):
 
                 work = work6.view(np.float64).reshape((vm, -1))
                 work = lin.x_dot_dense(self.F2C_op, work.T)
-                
+
                 self.schur[k * vm : (k + 1) * vm, k * vm : (k + 1) * vm] = work
 
             # ==================================================================
@@ -1034,10 +1047,12 @@ class QuantKeyDist(Cone):
 
         self.zi3 = self.zi2 * self.zi
 
-        self.D2gx_log_blk = [grad.D2_log(D, D1) 
-            for (D, D1) in zip(self.Dgx_blk, self.D1gx_log_blk)]
-        self.D2zgx_log_blk = [grad.D2_log(D, D1) 
-            for (D, D1) in zip(self.Dzgx_blk, self.D1zgx_log_blk)]
+        self.D2gx_log_blk = [
+            grad.D2_log(D, D1) for (D, D1) in zip(self.Dgx_blk, self.D1gx_log_blk)
+        ]
+        self.D2zgx_log_blk = [
+            grad.D2_log(D, D1) for (D, D1) in zip(self.Dzgx_blk, self.D1zgx_log_blk)
+        ]
 
         self.dder3_aux_updated = True
 

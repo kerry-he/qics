@@ -1,6 +1,6 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
 import numpy as np
@@ -14,12 +14,12 @@ from qics.vectorize import get_full_to_compact_op
 
 class QuantCondEntr(Cone):
     r"""A class representing a quantum conditional entropy cone defined on
-    :math:`k` subsystems, where the :math:`i`-th subsystem has dimension 
+    :math:`k` subsystems, where the :math:`i`-th subsystem has dimension
     :math:`n_i`, and the :math:`i`-th subsystem is being traced out, i.e.,
 
     .. math::
 
-        \mathcal{QCE}_{\{n_i\}, j} = \text{cl}\{ (t, X) \in \mathbb{R} 
+        \mathcal{QCE}_{\{n_i\}, j} = \text{cl}\{ (t, X) \in \mathbb{R}
         \times \mathbb{H}^{\Pi_in_i}_{++} : t \geq -S(X) + S(\text{tr}_i(X)) \},
 
     where
@@ -28,7 +28,7 @@ class QuantCondEntr(Cone):
 
         S(X) = -\text{tr}[X \log(X)],
 
-    is the quantum (von Neumann) entropy, and :math:`\text{tr}_i` is the 
+    is the quantum (von Neumann) entropy, and :math:`\text{tr}_i` is the
     partial trace on the :math:`i`-th subsystem.
 
     Parameters
@@ -55,7 +55,7 @@ class QuantCondEntr(Cone):
 
     .. math::
 
-        S(X \| \mathbb{I} \otimes \text{tr}_1(X)) 
+        S(X \| \mathbb{I} \otimes \text{tr}_1(X))
         = -S(X) + S(\text{tr}_1(X)).
 
     However, the cone oracles for the quantum conditional entropy cone are
@@ -69,17 +69,18 @@ class QuantCondEntr(Cone):
             sys = [sys]
         if isinstance(sys, tuple) or isinstance(sys, set):
             sys = list(sys)
-        
-        assert all([sys_k < len(dims) for sys_k in sys]), "Invalid " \
-            "subsystems specified, exceeds total number of dimensions provided."
+
+        assert all(
+            [sys_k < len(dims) for sys_k in sys]
+        ), "Invalid subsystems specified, exceeds total number of dimensions provided."
 
         self.dims = dims
         self.sys = sys
         self.iscomplex = iscomplex
 
-        self.N = np.prod(dims)   # Total dim. of multipartite system
+        self.N = np.prod(dims)  # Total dim. of multipartite system
         self.m = np.prod([dims[k] for k in sys])  # Dim. of system traced out
-        self.n = self.N // self.m   # Dim. of system after partial trace
+        self.n = self.N // self.m  # Dim. of system after partial trace
 
         self.nu = 1 + self.N  # Barrier parameter
 
@@ -134,7 +135,7 @@ class QuantCondEntr(Cone):
         self.Y = p_tr(self.X, self.dims, self.sys)
 
         # Check that X and Y are positive definite
-        #   Note that Y = pTr(X) should be positive definite if X is, 
+        #   Note that Y = pTr(X) should be positive definite if X is,
         #   but check just to be sure that we can safely take logarithms of Y.
         self.Dx, self.Ux = np.linalg.eigh(self.X)
         self.Dy, self.Uy = np.linalg.eigh(self.Y)
@@ -174,7 +175,7 @@ class QuantCondEntr(Cone):
         inv_X_rt2 = self.Ux * np.sqrt(inv_Dx)
         self.inv_X = inv_X_rt2 @ inv_X_rt2.conj().T
 
-         # Compute gradient of barrier function
+        # Compute gradient of barrier function
         self.zi = np.reciprocal(self.z)
         self.grad = [-self.zi, self.zi * self.DPhi - self.inv_X]
 
@@ -193,7 +194,7 @@ class QuantCondEntr(Cone):
 
         # Hessian products for quantum conditional entropy
         # D2Phi(X)[Hx] = Ux [log^[1](Dx) .* (Ux' Hx Ux)] Ux'
-        #                - I ⊗ [Uy [log^[1](Dy) .* (Uy' pTr(Hx) Uy)] Uy']  
+        #                - I ⊗ [Uy [log^[1](Dy) .* (Uy' pTr(Hx) Uy)] Uy']
         D2PhiH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
         work = self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T
         D2PhiH -= i_kr(work, self.dims, self.sys)
@@ -243,7 +244,7 @@ class QuantCondEntr(Cone):
         # ======================================================================
         # Hessian products for quantum conditional entropy
         # D2Phi(X)[Hx] = Ux [log^[1](Dx) .* (Ux' Hx Ux)] Ux'
-        #                - I ⊗ [Uy [log^[1](Dy) .* (Uy' pTr(Hx) Uy)] Uy']  
+        #                - I ⊗ [Uy [log^[1](Dy) .* (Uy' pTr(Hx) Uy)] Uy']
         # Compute first term, i.e., Ux [log^[1](Dx) .* (Ux' Hx Ux)] Ux'
         lin.congr_multi(Work2, self.Ux.conj().T, self.Ax, Work3)
         Work2 *= self.D1x_comb
@@ -332,7 +333,7 @@ class QuantCondEntr(Cone):
         #       = (Ux ⊗ Ux) (1/z log + inv)^[1](Dx) (Ux' ⊗ Ux')
         #         - 1/z pTr' (Uy ⊗ Uy) log^[1](Dy) (Uy' ⊗ Uy') pTr
         #
-        # Treating [pTr' D2S(pTr(X)) pTr] as a low-rank perturbation of D2S(X), 
+        # Treating [pTr' D2S(pTr(X)) pTr] as a low-rank perturbation of D2S(X),
         # we can solve linear systems with M by using the matrix inversion lemma
         #     X = [D2S(X)^-1 - D2S(X)^-1 pTr' N^-1 pTr D2S(X)^-1] Wx
         # where
@@ -443,6 +444,7 @@ class QuantCondEntr(Cone):
         assert not self.congr_aux_updated
 
         from qics.vectorize import vec_to_mat
+
         iscomplex = self.iscomplex
 
         # Get slices and views of A matrix to be used in congruence computations
@@ -515,7 +517,7 @@ class QuantCondEntr(Cone):
 
         # ======================================================================
         # Get first term, i.e., [z (Uy ⊗ Uy) [log^[1](Dy)]^-1 (Uy' ⊗ Uy')]
-        # ======================================================================        
+        # ======================================================================
         # Begin with (Uy' ⊗ Uy')
         lin.congr_multi(work8, self.Uy.conj().T, self.E, work=work7)
         # Apply z [log^[1](Dy)]^-1
@@ -530,7 +532,7 @@ class QuantCondEntr(Cone):
         # Permute columns of Ux' so subsystems we are tracing out are in front
         temp = self.Ux.T.reshape(self.N, *self.dims)
         temp = np.transpose(temp, self.reordered_dims)
-        # Obtain groups of columns of Ux' corresponding to 
+        # Obtain groups of columns of Ux' corresponding to
         #   Ux' (I ⊗ Eij) Ux = (Ux' [I ⊗ ei]) ([I ⊗ ej'] Ux)
         temp = temp.reshape(self.N, self.m, self.n)
         lhs = np.copy(temp.conj().transpose(2, 0, 1))
@@ -548,13 +550,13 @@ class QuantCondEntr(Cone):
             if self.iscomplex:
                 # Get symmetric and skew-symmetric matrices corresponding to
                 # real and complex basis vectors
-                np.add(Work9[:j], Work9_T, out=Work8[t : t+2*j : 2])
-                np.subtract(Work9[:j], Work9_T, out=Work8[t+1 : t+2*j+1 : 2])
+                np.add(Work9[:j], Work9_T, out=Work8[t : t + 2 * j : 2])
+                np.subtract(Work9[:j], Work9_T, out=Work8[t + 1 : t + 2 * j + 1 : 2])
                 Work8[t + 1 : t + 2 * j + 1 : 2] *= -1j
                 t += 2 * j + 1
             else:
                 # Symmeterize matrix
-                np.add(Work9[:j], Work9_T, out=Work8[t : t+j])
+                np.add(Work9[:j], Work9_T, out=Work8[t : t + j])
                 t += j + 1
 
         # Apply [(1/z log + inv)^[1](Dx)]^-1/2

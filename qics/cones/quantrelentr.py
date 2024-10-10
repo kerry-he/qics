@@ -1,6 +1,6 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
 import numpy as np
@@ -33,7 +33,7 @@ class QuantRelEntr(Cone):
         Dimension of the matrices :math:`X` and :math:`Y`.
     iscomplex : :obj:`bool`
         Whether the matrices :math:`X` and :math:`Y` are defined over
-        :math:`\mathbb{H}^n` (``True``), or restricted to 
+        :math:`\mathbb{H}^n` (``True``), or restricted to
         :math:`\mathbb{S}^n` (``False``). The default is ``False``.
 
     See also
@@ -41,7 +41,7 @@ class QuantRelEntr(Cone):
     ClassRelEntr : Classical relative entropy
     QuantEntr : (Homogenized) quantum entropy cone
     QuantCondEntr : Quantum conditional entropy cone
-    QuantKeyDist : Quantum key distribution cone 
+    QuantKeyDist : Quantum key distribution cone
     """
 
     def __init__(self, n, iscomplex=False):
@@ -187,16 +187,16 @@ class QuantRelEntr(Cone):
         # ======================================================================
         # Hessian products with respect to t
         # ======================================================================
-        # D2_t F(t, X, Y)[Ht, Hx, Hy] 
+        # D2_t F(t, X, Y)[Ht, Hx, Hy]
         #         = (Ht - D_X S(X||Y)[Hx] - D_Y S(X||Y)[Hy]) / z^2
-        out_t = (Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy))
+        out_t = Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)
         out_t *= self.zi2
         out[0][:] = out_t
 
         # ======================================================================
         # Hessian products with respect to X
         # ======================================================================
-        # D2_X F(t, X, Y)[Ht, Hx, Hy] 
+        # D2_X F(t, X, Y)[Ht, Hx, Hy]
         #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X S(X||Y)
         #           + (D2_XX S(X||Y)[Hx] + D2_XY S(X||Y)[Hy]) / z
         #           + X^-1 Hx X^-1
@@ -208,7 +208,7 @@ class QuantRelEntr(Cone):
         # ======================================================================
         # Hessian products with respect to Y
         # ======================================================================
-        # D2_Y F(t, X, Y)[Ht, Hx, Hy] 
+        # D2_Y F(t, X, Y)[Ht, Hx, Hy]
         #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_Y S(X||Y)
         #           + (D2_YX S(X||Y)[Hx] + D2_YY S(X||Y)[Hy]) / z
         #           + Y^-1 Hy Y^-1
@@ -218,7 +218,7 @@ class QuantRelEntr(Cone):
         out[2][:] = (out_Y + out_Y.conj().T) * 0.5
 
         return out
-         
+
     def hess_congr(self, A):
         assert self.grad_updated
         if not self.hess_aux_updated:
@@ -235,7 +235,7 @@ class QuantRelEntr(Cone):
         # ======================================================================
         # Hessian products with respect to t
         # ======================================================================
-        # D2_t F(t, X, Y)[Ht, Hx, Hy] 
+        # D2_t F(t, X, Y)[Ht, Hx, Hy]
         #         = (Ht - D_X S(X||Y)[Hx] - D_Y S(X||Y)[Hy]) / z^2
         DPhiX_vec = self.DPhiX.view(np.float64).reshape((-1, 1))
         DPhiY_vec = self.DPhiY.view(np.float64).reshape((-1, 1))
@@ -256,10 +256,10 @@ class QuantRelEntr(Cone):
         # D2_YY S(X||Y)[Hy] = -Uy [Σ_k log_k^[2](Dy) .* ... ] Uy'
         lin.congr_multi(work1, self.Uy.conj().T, self.Ay, work2)
         grad.scnd_frechet_multi(work4, self.D2y_comb, work1, U=self.Uy, 
-                                work1=work2, work2=work3, work3=work5)
+                                work1=work2, work2=work3, work3=work5)  # fmt: skip
 
         # Hessian product of barrier function
-        # D2_Y F(t, X, Y)[Ht, Hx, Hy] 
+        # D2_Y F(t, X, Y)[Ht, Hx, Hy]
         #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_Y S(X||Y)
         #           + (D2_YX S(X||Y)[Hx] + D2_YY S(X||Y)[Hy]) / z
         #           + Y^-1 Hy Y^-1
@@ -282,7 +282,7 @@ class QuantRelEntr(Cone):
         lin.congr_multi(work3, self.Ux, work1, work2)
 
         # Hessian product of barrier function
-        # D2_X F(t, X, Y)[Ht, Hx, Hy] 
+        # D2_X F(t, X, Y)[Ht, Hx, Hy]
         #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X S(X||Y)
         #           + (D2_XX S(X||Y)[Hx] + D2_XY S(X||Y)[Hy]) / z
         #           + X^-1 Hx X^-1
@@ -316,13 +316,13 @@ class QuantRelEntr(Cone):
         # Compute RHS of S \ ( ... ) expression
         # Compute Ux' Wx Ux
         temp = self.Ux.conj().T @ Wx @ self.Ux
-         # Apply (Uy'Ux ⊗ Uy'Ux) (1/z log^[1](Dx) + Dx^-1 ⊗ Dx^-1)^-1
+        # Apply (Uy'Ux ⊗ Uy'Ux) (1/z log^[1](Dx) + Dx^-1 ⊗ Dx^-1)^-1
         temp = self.UyUx @ (self.D1x_comb_inv * temp) @ self.UyUx.conj().T
         # Apply -1/z log^[1](Dy)
         temp = -self.zi * self.D1y_log * temp
         # Compute Uy' Wy Uy and subtract previous expression
         temp = self.Uy.conj().T @ Wy @ self.Uy - temp
-        
+
         # Solve the linear system S \ ( ... ) to obtain Uy' Y Uy
         # Convert matrices to compact real vectors
         temp_vec = temp.view(np.float64).reshape((-1, 1))
@@ -495,7 +495,7 @@ class QuantRelEntr(Cone):
         D3PhiYYX = -grad.scnd_frechet(self.D2y_log, UyHyUy, UyHxUy, self.Uy)
         D3PhiYXY = D3PhiYYX
         D3PhiYYY = -grad.thrd_frechet(self.Dy, self.D2y_log, D3_log_Y, self.Uy,
-                                      self.UyXUy, UyHyUy)
+                                      self.UyXUy, UyHyUy)  # fmt: skip
 
         # Third derivatives of barrier
         dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhiXHH + D2PhiYHH)
@@ -525,6 +525,7 @@ class QuantRelEntr(Cone):
         assert not self.congr_aux_updated
 
         from qics.vectorize import vec_to_mat
+
         iscomplex = self.iscomplex
 
         # Get slices and views of A matrix to be used in congruence computations
@@ -616,7 +617,7 @@ class QuantRelEntr(Cone):
         # Subtract the two terms to obtain Schur complement then Cholesky factor
         hess_schur -= work
         self.hess_schur_fact = lin.cho_fact(hess_schur)
-        
+
         self.invhess_aux_updated = True
 
     def update_invhessprod_aux_aux(self):
@@ -627,7 +628,7 @@ class QuantRelEntr(Cone):
         self.Ek, self.Ei, self.Ej = np.where(self.E)
 
         self.F2C_op = get_full_to_compact_op(self.n, self.iscomplex)
-        
+
         self.work6 = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
         self.work7 = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
         self.work8 = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
