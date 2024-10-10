@@ -1,3 +1,8 @@
+# Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
+
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
+# file in the root directory or at https://github.com/kerry-he/qics
+
 import numpy as np
 import scipy as sp
 
@@ -46,22 +51,22 @@ class Vector:
 
 
 class Point(Vector):
-    r"""A class for a vector containing the variables involved in a 
+    r"""A class for a vector containing the variables involved in a
     homogeneous self-dual embedding of a primal-dual conic program
     :math:`(x, y, z, s, \tau, \kappa)\in\mathbb{R}^n\times\mathbb{R}^p
     \times\mathbb{R}^q\times\mathbb{R}^q\times\mathbb{R}\times\mathbb{R}`.
-    
+
     Parameters
     ----------
     model : :class:`~qics.Model`
         Model which specifies the conic program which this vector
         corresponds to.
-  
+
     Attributes
     ----------
     vec : :class:`~numpy.ndarray`
-        2D :obj:`~numpy.float64` array of size ``(n+p+2q+2, 1)`` 
-        representing the full concatenated vector :math:`(x, y, z, s, \tau, 
+        2D :obj:`~numpy.float64` array of size ``(n+p+2q+2, 1)``
+        representing the full concatenated vector :math:`(x, y, z, s, \tau,
         \kappa)`.
     x : :class:`~numpy.ndarray`
         A :obj:`~numpy.ndarray.view` of ``vec`` of size ``(n, 1)``

@@ -1,3 +1,8 @@
+# Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
+
+# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# file in the root directory or at https://github.com/kerry-he/qics
+
 # __init__.py
 from qics.cones.nonnegorthant import NonNegOrthant  # noqa
 from qics.cones.possemidefinite import PosSemidefinite  # noqa
