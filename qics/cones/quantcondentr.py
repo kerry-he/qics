@@ -66,7 +66,7 @@ class QuantCondEntr(Cone):
             sys = list(sys)
         
         assert all([sys_k < len(dims) for sys_k in sys]), "Invalid " \
-            "subsystems specified, exceeds total number of dimensions probided."
+            "subsystems specified, exceeds total number of dimensions provided."
 
         self.dims = dims
         self.sys = sys
@@ -496,7 +496,7 @@ class QuantCondEntr(Cone):
             self.update_invhessprod_aux_aux()
 
         # Precompute and factorize the matrix
-        #     N = 1/z (Uy ⊗ Uy) [log^[1](Dy)]^-1 (Uy' ⊗ Uy')
+        #     N = z (Uy ⊗ Uy) [log^[1](Dy)]^-1 (Uy' ⊗ Uy')
         #         - pTr (Ux ⊗ Ux) [(1/z log + inv)^[1](Dx)]^-1  (Ux' ⊗ Ux') pTr'
         # which we will need to solve linear systems with the Hessian of our
         # barrier function
@@ -509,7 +509,7 @@ class QuantCondEntr(Cone):
         Work8, Work9 = self.Work8, self.Work9
 
         # ======================================================================
-        # Get first term, i.e., [1/z (Uy ⊗ Uy) [log^[1](Dy)]^-1 (Uy' ⊗ Uy')]
+        # Get first term, i.e., [z (Uy ⊗ Uy) [log^[1](Dy)]^-1 (Uy' ⊗ Uy')]
         # ======================================================================        
         # Begin with (Uy' ⊗ Uy')
         lin.congr_multi(work8, self.Uy.conj().T, self.E, work=work7)
