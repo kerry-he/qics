@@ -144,13 +144,14 @@ def abs_max(A, axis):
     else:
         return np.maximum(A.max(axis=axis, initial=0.0), -A.min(axis=axis, initial=0.0))
     
-def is_full_col_rank(A):
+def is_full_col_rank(A, tol=1e-8):
     if A.size == 0:
         return True
     AA =  A.T @ A
     if sp.sparse.issparse(AA):
-        AA = AA.toarray()    
-    return np.linalg.matrix_rank(AA) < min(A.shape)
+        AA = AA.toarray()
+    eigs = np.linalg.eigvalsh(AA)
+    return all(eigs > tol)
 
 
 def dense_dot_x(A, B):
@@ -158,9 +159,12 @@ def dense_dot_x(A, B):
         return dense_dot_sparse(A, B.col, B.row, B.data, B.shape)
     else:
         return A @ B
+    
+def x_dot_dense(A, B):
+    return dense_dot_x(B.T, A.T).T
 
 
-@nb.njit(parallel=True)
+@nb.njit(cache=True, parallel=True)
 def dense_dot_sparse(A, B_col, B_row, B_val, B_shape):
     A_dot_B = np.zeros((A.shape[0], B_shape[1]))
     for j in nb.prange(A.shape[0]):
