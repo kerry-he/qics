@@ -1,38 +1,30 @@
-import numpy as np
+import numpy
 
 import qics
+from qics.vectorize import mat_to_vec
 
-## Quantum key rate
-#   min  S( G(X) || Z(G(X)) )
-#   s.t. <Ai, X> = bi
-#        X >= 0
+qx = 0.25
+qz = 0.75
 
-qx = qz = 0.5
+X0 = numpy.array([[0.5, 0.5], [0.5, 0.5]])
+X1 = numpy.array([[0.5, -0.5], [-0.5, 0.5]])
+Z0 = numpy.array([[1.0, 0.0], [0.0, 0.0]])
+Z1 = numpy.array([[0.0, 0.0], [0.0, 1.0]])
 
+# Model problem using primal variables (t, X)
 # Define objective function
-c = np.vstack((np.array([[1.0]]), np.zeros((16, 1))))
+c = numpy.vstack((numpy.array([[1.0]]), numpy.zeros((16, 1))))
 
-# Build linear constraints
-X0 = np.array([[0.5, 0.5], [0.5, 0.5]])
-X1 = np.array([[0.5, -0.5], [-0.5, 0.5]])
-Z0 = np.array([[1.0, 0.0], [0.0, 0.0]])
-Z1 = np.array([[0.0, 0.0], [0.0, 1.0]])
+# Build linear constraints <Ai, X> = bi for all i
+Ax = numpy.kron(X0, X1) + numpy.kron(X1, X0)
+Az = numpy.kron(Z0, Z1) + numpy.kron(Z1, Z0)
+A_mats = [numpy.eye(4), Ax, Az]
 
-Ax = np.kron(X0, X1) + np.kron(X1, X0)
-Az = np.kron(Z0, Z1) + np.kron(Z1, Z0)
+A = numpy.block([[0., mat_to_vec(Ak).T] for Ak in A_mats])
+b = numpy.array([[1.0], [qx], [qz]])
 
-A = np.vstack(
-    (
-        np.hstack((np.array([[0.0]]), np.eye(4).reshape(1, -1))),
-        np.hstack((np.array([[0.0]]), Ax.reshape(1, -1))),
-        np.hstack((np.array([[0.0]]), Az.reshape(1, -1))),
-    )
-)
-
-b = np.array([[1.0, qx, qz]]).T
-
-# Input into model and solve
-cones = [qics.cones.QuantKeyDist([np.eye(4)], 2)]
+# Inumpyut into model and solve
+cones = [qics.cones.QuantKeyDist(4, 2)]
 
 # Initialize model and solver objects
 model = qics.Model(c=c, A=A, b=b, cones=cones)

@@ -1,8 +1,9 @@
 import numpy as np
 
 import qics
-import qics.quantum as qu
-import qics.vectorize as vec
+from qics.quantum import partial_transpose
+from qics.quantum.random import density_matrix
+from qics.vectorize import eye, lin_to_mat, mat_to_vec, vec_dim
 
 ## Relative entropy of entanglement
 #   min  S(X||Y)
@@ -15,59 +16,33 @@ n1 = 2
 n2 = 3
 N = n1 * n2
 
-# Generate random (complex) quantum state
-C = qu.random.density_matrix(N, iscomplex=True)
+vN = vec_dim(N, iscomplex=True)
+cN = vec_dim(N, iscomplex=True, compact=True)
 
+# Generate random quantum state
+C = density_matrix(N, iscomplex=True)
+C_cvec = mat_to_vec(C, compact=True)
+
+# Model problem using primal variables (t, X, Y, Z)
 # Define objective function
-ct = np.array(([[1.0]]))
-cX = np.zeros((2 * N * N, 1))
-cY = np.zeros((2 * N * N, 1))
-cZ = np.zeros((2 * N * N, 1))
-c = np.vstack((ct, cX, cY, cZ))
+c = np.block([[1.0], [np.zeros((vN, 1))], [np.zeros((vN, 1))], [np.zeros((vN, 1))]])
 
 # Build linear constraints
-# X = C
-sN = vec.vec_dim(N, iscomplex=True, compact=True)
-A1 = np.hstack(
-    (
-        np.zeros((sN, 1)),
-        vec.eye(N, iscomplex=True),
-        np.zeros((sN, 2 * N * N)),
-        np.zeros((sN, 2 * N * N)),
-    )
-)
-b1 = vec.mat_to_vec(C, compact=True)
-# tr[Y] = 1
-A2 = np.hstack(
-    (
-        np.zeros((1, 1)),
-        np.zeros((1, 2 * N * N)),
-        vec.mat_to_vec(np.eye(N, dtype=np.complex128)).T,
-        np.zeros((1, 2 * N * N)),
-    )
-)
-b2 = np.array([[1.0]])
-# T2(Y) = Z
-p_transpose = vec.lin_to_mat(
-    lambda X: qu.partial_transpose(X, (n1, n2), 1), (N, N), iscomplex=True
-)
-A3 = np.hstack(
-    (
-        np.zeros((sN, 1)),
-        np.zeros((sN, 2 * N * N)),
-        p_transpose,
-        -vec.eye(N, iscomplex=True),
-    )
-)
-b3 = np.zeros((sN, 1))
+trace = lin_to_mat(lambda X: np.trace(X), (N, 1), True)
+ptranspose = lin_to_mat(lambda X: partial_transpose(X, (n1, n2), 1), (N, N), True)
 
-A = np.vstack((A1, A2, A3))
-b = np.vstack((b1, b2, b3))
+A = np.block([
+    [np.zeros((cN, 1)), eye(N, True),       np.zeros((cN, vN)), np.zeros((cN, vN))],  # X = C
+    [np.zeros((1, 1)),  np.zeros((1, vN)),  trace,              np.zeros((1, vN)) ],  # tr[Y] = 1
+    [np.zeros((cN, 1)), np.zeros((cN, vN)), ptranspose,         -eye(N, True)     ]   # T2(Y) = Z
+])  # fmt: skip
+
+b = np.block([[C_cvec], [1.0], [np.zeros((cN, 1))]])
 
 # Input into model and solve
 cones = [
-    qics.cones.QuantRelEntr(N, iscomplex=True),
-    qics.cones.PosSemidefinite(N, iscomplex=True),
+    qics.cones.QuantRelEntr(N, iscomplex=True),     # (t, X, Y) ∈ QRE
+    qics.cones.PosSemidefinite(N, iscomplex=True),  # Z = T2(Y) ⪰ 0
 ]
 
 # Initialize model and solver objects

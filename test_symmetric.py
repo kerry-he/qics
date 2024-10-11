@@ -21,12 +21,7 @@ class TestExamples(unittest.TestCase):
             exec(code, gdict)
         return gdict
 
-    def assertAlmostEqualLists(self, L1, L2, places=7):
-        self.assertEqual(len(L1), len(L2))
-        for u, v in zip(L1, L2):
-            self.assertAlmostEqual(u, v, places)
-
-    ## SDPS
+    # Semidefinite programs
     def test_sdp_max_cut(self):
         gdict = self.exec_example("sdp/max_cut.py")
         self.assertEqual(gdict["info"]["sol_status"], "optimal")
@@ -57,6 +52,35 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(gdict["info"]["exit_status"], "solved")
         self.assertAlmostEqual(gdict["info"]["p_obj"], 0.3777573, places=6)
 
+    def test_sdp_dps_heirarchy(self):
+        gdict = self.exec_example("sdp/dps_heirarchy.py")
+        self.assertEqual(gdict["info"]["sol_status"], "pinfeas")
+        self.assertEqual(gdict["info"]["exit_status"], "solved")
+
+    # Quantum relative entropy programs
+    def test_qrep_qkd_ebBB84(self):
+        gdict = self.exec_example("qrep/qkd_ebBB84.py")
+        self.assertEqual(gdict["info"]["sol_status"], "optimal")
+        self.assertEqual(gdict["info"]["exit_status"], "solved")
+        self.assertAlmostEqual(gdict["info"]["p_obj"], 0.1308120, places=6)
+
+    def test_qrep_nearest_correlation(self):
+        gdict = self.exec_example("qrep/nearest_correlation.py")
+        self.assertEqual(gdict["info"]["sol_status"], "optimal")
+        self.assertEqual(gdict["info"]["exit_status"], "solved")
+        self.assertAlmostEqual(gdict["info"]["p_obj"], 1.5837876, places=6)
+
+    def test_qrep_rel_entr_entanglement(self):
+        gdict = self.exec_example("qrep/rel_entr_entanglement.py")
+        self.assertEqual(gdict["info"]["sol_status"], "optimal")
+        self.assertEqual(gdict["info"]["exit_status"], "solved")
+        self.assertAlmostEqual(gdict["info"]["p_obj"], 0.0048387, places=6)
+
+    def test_qrep_bregman_projection(self):
+        gdict = self.exec_example("qrep/bregman_projection.py")
+        self.assertEqual(gdict["info"]["sol_status"], "optimal")
+        self.assertEqual(gdict["info"]["exit_status"], "solved")
+        self.assertAlmostEqual(gdict["info"]["p_obj"], 47.0377192, places=6)
 
 if __name__ == "__main__":
     unittest.main()
