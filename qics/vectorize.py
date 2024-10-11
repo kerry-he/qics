@@ -135,6 +135,9 @@ def mat_to_vec(mat, compact=False):
     assert mat.dtype == np.float64 or mat.dtype == np.complex128
     iscomplex = mat.dtype == np.complex128
 
+    if np.isscalar(mat):
+        mat = np.array([[mat]])
+
     n = mat.shape[0]
     vn = vec_dim(n, iscomplex=iscomplex, compact=compact)
 
