@@ -1,8 +1,8 @@
+import sys
+import time
+
 import numpy as np
 import scipy as sp
-
-import time
-import sys
 
 
 def read_sdpa(filename):
@@ -182,7 +182,7 @@ def cvxopt_solve_sdp(C, b, A, blockStruct):
 
 
 def mosek_solve_sdp(C, b, A, blockStruct):
-    from mosek.fusion import Model, Matrix, Domain, Expr, ObjectiveSense
+    from mosek.fusion import Domain, Expr, Matrix, Model, ObjectiveSense
 
     # Solve problem
     #   min c'x s.t. Ax == b, x >= 0
@@ -264,16 +264,16 @@ def solve_sdpap(A, b, c, K, J, option={}):
       sdpapinfo, timeinfo, sdpainfo: Result information
     """
 
-    from sdpap import convert
-    from sdpap import fileio
+    import copy
+    import time
+
+    import numpy as np
+    from scipy import sparse
+    from sdpap import convert, fileio
+    from sdpap.fvelim import fvelim
     from sdpap.param import param
     from sdpap.sdpacall import sdpacall
     from sdpap.spcolo import spcolo
-    from sdpap.fvelim import fvelim
-    from scipy import sparse
-    import numpy as np
-    import copy
-    import time
 
     timeinfo = dict()
     timeinfo["total"] = time.time()
@@ -618,8 +618,8 @@ def solve_sdpap(A, b, c, K, J, option={}):
 
 
 if __name__ == "__main__":
-    import os
     import csv
+    import os
 
     folder = "./sdps/"
     # Run all instances in folder

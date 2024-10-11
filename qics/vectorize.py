@@ -1,6 +1,6 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
 import math
@@ -16,7 +16,7 @@ def vec_dim(side, iscomplex=False, compact=False):
     side : :obj:`int`
         The dimension of the matrix.
     iscomplex : :obj:`bool`, optional
-        Whether the matrix is Hermitian (``True``) or symmetric 
+        Whether the matrix is Hermitian (``True``) or symmetric
         (``False``). The default is ``False``.
     compact : :obj:`bool`, optional
         Whether to assume a compact vector representation or not. The
@@ -47,7 +47,7 @@ def mat_dim(len, iscomplex=False, compact=False):
     len : :obj:`int`
         The dimension of the vector.
     iscomplex : :obj:`bool`, optional
-        Whether the matrix is Hermitian (``True``) or symmetric 
+        Whether the matrix is Hermitian (``True``) or symmetric
         (``False``). The default is ``False``.
     compact : :obj:`bool`, optional
         Whether to assume a compact vector representation or not. The
@@ -75,7 +75,7 @@ def mat_to_vec(mat, compact=False):
 
     If ``mat`` is of type :obj:`~numpy.float64` and ``compact=False``, then
     this performs the vectorization
-    
+
     .. math::
 
         \begin{bmatrix}a & b & d \\ b & c & e \\ d & e & f\end{bmatrix}
@@ -101,7 +101,7 @@ def mat_to_vec(mat, compact=False):
             a & b+ci & e+fi \\ b-ci & d & g+hi \\ e-fi & g-hi & k
         \end{bmatrix}\mapsto
         \begin{bmatrix}
-            a & 0 & b & c & e & f & b & -c & d & 0 
+            a & 0 & b & c & e & f & b & -c & d & 0
             & g & h & e & -f & g & -h & k & 0
         \end{bmatrix}^{\top}.
 
@@ -114,7 +114,7 @@ def mat_to_vec(mat, compact=False):
             a & b+ci & e+fi \\ b-ci & d & g+hi \\ e-fi & g-hi & k
         \end{bmatrix}\mapsto
         \begin{bmatrix}
-            a & \sqrt{2} b & \sqrt{2} c & d & \sqrt{2} e & \sqrt{2} f & 
+            a & \sqrt{2} b & \sqrt{2} c & d & \sqrt{2} e & \sqrt{2} f &
             \sqrt{2} g & \sqrt{2} h & k
         \end{bmatrix}^{\top}.
 
@@ -156,7 +156,7 @@ def mat_to_vec(mat, compact=False):
         return vec
     else:
         mat = np.ascontiguousarray(mat)
-        return mat.view(dtype=np.float64).reshape(-1, 1).copy()
+        return mat.view(np.float64).reshape(-1, 1).copy()
 
 
 def vec_to_mat(vec, iscomplex=False, compact=False):
@@ -164,14 +164,14 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
 
     If ``iscomplex=False`` and ``compact=False``, then this returns the
     matrix
-    
+
     .. math::
 
         \begin{bmatrix}a & b & d & b & c & e & d & e & f\end{bmatrix}^\top
         \mapsto
         \begin{bmatrix}a & b & d \\ b & c & e \\ d & e & f\end{bmatrix}.
 
-    If ``iscomplex=False`` and ``compact=True``, then this performs the 
+    If ``iscomplex=False`` and ``compact=True``, then this performs the
     matrix
 
     .. math::
@@ -187,7 +187,7 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
     .. math::
 
         \begin{bmatrix}
-            a & 0 & b & c & e & f & b & -c & d & 0 
+            a & 0 & b & c & e & f & b & -c & d & 0
             & g & h & e & -f & g & -h & k & 0
         \end{bmatrix}^{\top}\mapsto
         \begin{bmatrix}
@@ -200,7 +200,7 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
     .. math::
 
         \begin{bmatrix}
-            a & \sqrt{2} b & \sqrt{2} c & d & \sqrt{2} e & \sqrt{2} f & 
+            a & \sqrt{2} b & \sqrt{2} c & d & \sqrt{2} e & \sqrt{2} f &
             \sqrt{2} g & \sqrt{2} h & k
         \end{bmatrix}^{\top}\mapsto
         \begin{bmatrix}
@@ -216,7 +216,7 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
         Whether the resulting matrix is Hermitian (``True``) or symmetric
         (``False``). The default is ``False``.
     compact : :obj:`bool`, optional
-        Whether to convert from a compact vector representation or not. 
+        Whether to convert from a compact vector representation or not.
         The default is ``False``.
 
     Returns
@@ -250,7 +250,7 @@ def vec_to_mat(vec, iscomplex=False, compact=False):
     else:
         if iscomplex:
             n = math.isqrt(vn // 2)
-            mat = vec.reshape((-1, 2)).view(dtype=np.complex128).reshape(n, n)
+            mat = vec.reshape((-1, 2)).view(np.complex128).reshape(n, n)
             return (mat + mat.conj().T) * 0.5
         else:
             n = math.isqrt(vn)
@@ -266,11 +266,11 @@ def lin_to_mat(lin, dims, iscomplex=False, compact=(False, True)):
     ----------
     lin : :obj:`callable`
         Linear operator sending symmetric matrices to symmetric matrices.
-    dims : :obj:`tuple` of :obj:`int` 
+    dims : :obj:`tuple` of :obj:`int`
         The dimensions ``(ni, no)`` of the input and output matrices of the
         linear operator.
     iscomplex : :obj:`bool`, optional
-        Whether the matrix to vectorize is Hermitian (``True``) or 
+        Whether the matrix to vectorize is Hermitian (``True``) or
         symmetric (``False``). Default is ``False``.
     compact : :obj:`tuple` of :obj:`bool`, optional
         Whether to use a compact vector representation or not for the input
@@ -305,7 +305,7 @@ def eye(n, iscomplex=False, compact=(False, True)):
     n : :obj:`int`
         The dimensions of the ``(n, n)`` matrix the identity is acting on.
     iscomplex : :obj:`bool`, optional
-        Whether the matrix to vectorize is Hermitian (``True``) or 
+        Whether the matrix to vectorize is Hermitian (``True``) or
         symmetric (``False``). Default is ``False``.
     compact : :obj:`tuple` of :obj:`bool`, optional
         Whether to use a compact vector representation or not for the input

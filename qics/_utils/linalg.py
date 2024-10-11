@@ -1,11 +1,11 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
+import numba as nb
 import numpy as np
 import scipy as sp
-import numba as nb
 
 
 def norm_inf(x):
@@ -143,11 +143,12 @@ def abs_max(A, axis):
         return A.max(axis=axis).toarray().reshape(-1)
     else:
         return np.maximum(A.max(axis=axis, initial=0.0), -A.min(axis=axis, initial=0.0))
-    
+
+
 def is_full_col_rank(A, tol=1e-8):
     if A.size == 0:
         return True
-    AA =  A.T @ A
+    AA = A.T @ A
     if sp.sparse.issparse(AA):
         AA = AA.toarray()
     eigs = np.linalg.eigvalsh(AA)
@@ -159,7 +160,8 @@ def dense_dot_x(A, B):
         return dense_dot_sparse(A, B.col, B.row, B.data, B.shape)
     else:
         return A @ B
-    
+
+
 def x_dot_dense(A, B):
     return dense_dot_x(B.T, A.T).T
 

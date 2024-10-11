@@ -1,7 +1,8 @@
 import numpy as np
+
 import qics
-import qics.vectorize as vec
 import qics.quantum as qu
+import qics.vectorize as vec
 
 ## Classical-quantum channel capacity
 #   max  S(Σ_i pi N(Xi)) - Σ_i pi S(N(Xi))

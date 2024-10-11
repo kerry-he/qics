@@ -1,11 +1,12 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
 import numpy as np
 import scipy as sp
-import qics.quantum
+
+from qics.quantum import i_kr, p_tr
 
 
 def density_matrix(n, iscomplex=False):
@@ -18,7 +19,7 @@ def density_matrix(n, iscomplex=False):
     n : :obj:`int`
         Dimension of random density matrix :math:`X`.
     iscomplex : :obj:`bool`, optional
-        Whether the matrix is real (``False``) or complex (``True``). 
+        Whether the matrix is real (``False``) or complex (``True``).
         The default is ``False``.
 
     Returns
@@ -35,7 +36,7 @@ def density_matrix(n, iscomplex=False):
 
 
 def pure_density_matrix(n, iscomplex=False):
-    r"""Generate a random pure density matrix i.e., rank 1 positive 
+    r"""Generate a random pure density matrix i.e., rank 1 positive
     semidefinite matrix :math:`X\in\mathbb{H}^n` satisfying
     :math:`\text{tr}[X] = 1`.
 
@@ -44,7 +45,7 @@ def pure_density_matrix(n, iscomplex=False):
     n : :obj:`int`
         Dimension of random pure density matrix :math:`X`.
     iscomplex : :obj:`bool`, optional
-        Whether the matrix is real (``False``) or complex (``True``). 
+        Whether the matrix is real (``False``) or complex (``True``).
         The default is ``False``.
 
     Returns
@@ -79,7 +80,7 @@ def unitary(n, iscomplex=False):
     n : :obj:`int`
         Dimension of random unitary matrix :math:`U`.
     iscomplex : :obj:`bool`, optional
-        Whether the unitary matrix is real (``False``) or complex  
+        Whether the unitary matrix is real (``False``) or complex
         (``True``). The default is ``False``.
 
     Returns
@@ -118,7 +119,7 @@ def stinespring_operator(nin, nout=None, nenv=None, iscomplex=False):
     nenv : :obj:`int`, optional
         Dimension of the environment system. The default is ``nout``.
     iscomplex : :obj:`bool`, optional
-        Whether the Stinespring operator is real (``False``) or complex  
+        Whether the Stinespring operator is real (``False``) or complex
         (``True``). The default is ``False``.
 
     Returns
@@ -164,7 +165,7 @@ def degradable_channel(nin, nout=None, nenv=None, iscomplex=False):
     nenv : :obj:`int`, optional
         Dimension of the environment system. The default is ``nout``.
     iscomplex : :obj:`bool`, optional
-        Whether the Stinespring operators are real (``False``) or complex  
+        Whether the Stinespring operators are real (``False``) or complex
         (``True``). The default is ``False``.
 
     Returns
@@ -173,7 +174,7 @@ def degradable_channel(nin, nout=None, nenv=None, iscomplex=False):
         Stinespring operator :math:`V` of dimension ``(nout*nenv, nin)``
         corresponding to :math:`\mathcal{N}(X)=\text{tr}_2[V X V^\dagger]`.
     :class:`~numpy.ndarray`
-        Stinespring operator :math:`W` of dimension ``(nin*nenv, nout)`` 
+        Stinespring operator :math:`W` of dimension ``(nin*nenv, nout)``
         corresponding to :math:`\mathcal{N}_\text{c}(X)=
         \text{tr}_2[W \mathcal{N}(X) W^\dagger]`.
 
@@ -183,7 +184,7 @@ def degradable_channel(nin, nout=None, nenv=None, iscomplex=False):
 
     .. [1] Cubitt, Toby S., Mary Beth Ruskai, and Graeme Smith.
            "The structure of degradable quantum channels."
-           Journal of Mathematical Physics 49.10 (2008).    
+           Journal of Mathematical Physics 49.10 (2008).
     """
     nout = nout if (nout is not None) else nin
     nenv = nenv if (nenv is not None) else nout
@@ -219,9 +220,9 @@ def choi_operator(nin, nout=None, M=None, iscomplex=False):
 
     .. math::
 
-        \mathcal{J}_\mathcal{N} = \sum_{i,j}^n 
+        \mathcal{J}_\mathcal{N} = \sum_{i,j}^n
         \mathcal{N}(| i \rangle\langle j |) \otimes | i \rangle\langle j |,
-     
+
     uniformly distributed on the Hilbert-Schmidt measure.
 
     Parameters
@@ -231,16 +232,16 @@ def choi_operator(nin, nout=None, M=None, iscomplex=False):
     nout : :obj:`int`, optional
         Dimension of the output system. The default is ``nin``.
     M : :obj:`int`, optional
-        Dimension used to determine the rank of the random Choi operator.         
+        Dimension used to determine the rank of the random Choi operator.
         The default is ``nout*nin``.
     iscomplex : :obj:`bool`, optional
-        Whether the Choi operator is real (``False``) or complex  
+        Whether the Choi operator is real (``False``) or complex
         (``True``). The default is ``False``.
 
     Returns
     -------
     :class:`~numpy.ndarray`
-        Random Choi operator corresponding to matrix of size 
+        Random Choi operator corresponding to matrix of size
         ``(nout*nin, nout*nin)``.
 
     Notes
@@ -255,19 +256,17 @@ def choi_operator(nin, nout=None, M=None, iscomplex=False):
     M = M if (M is not None) else nout * nin
 
     # Sample random Wishart ensemble
+    nio = nin * nout
     if iscomplex:
-        G = (
-            np.random.normal(size=(nin * nout, M))
-            + np.random.normal(size=(nin * nout, M)) * 1j
-        )
+        G = np.random.normal(size=(nio, M)) + np.random.normal(size=(nio, M)) * 1j
         G *= np.sqrt(2.0)
     else:
-        G = np.random.normal(size=(nin * nout, M))
+        G = np.random.normal(size=(nio, M))
     W = G @ G.conj().T
 
     # Obtain normalization required for trace preserving property
-    H = qics.quantum.p_tr(W, (nout, nin), 0)
-    I_H_irt2 = qics.quantum.i_kr(sp.linalg.sqrtm(np.linalg.inv(H)), (nout, nin), 0)
+    H = p_tr(W, (nout, nin), 0)
+    I_H_irt2 = i_kr(sp.linalg.sqrtm(np.linalg.inv(H)), (nout, nin), 0)
 
     # Return normalized Choi matrix
     J = I_H_irt2 @ W @ I_H_irt2

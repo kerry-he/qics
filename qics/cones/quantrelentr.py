@@ -5,10 +5,25 @@
 
 import numpy as np
 import scipy as sp
-import qics._utils.linalg as lin
-import qics._utils.gradient as grad
+
+from qics._utils.gradient import (
+    D1_log,
+    D2_log,
+    get_S_matrix,
+    scnd_frechet,
+    scnd_frechet_multi,
+    thrd_frechet,
+)
+from qics._utils.linalg import (
+    cho_fact,
+    cho_solve,
+    congr_multi,
+    dense_dot_x,
+    inp,
+    x_dot_dense,
+)
 from qics.cones.base import Cone, get_central_ray_relentr
-from qics.vectorize import get_full_to_compact_op
+from qics.vectorize import get_full_to_compact_op, vec_to_mat
 
 
 class QuantRelEntr(Cone):
@@ -121,7 +136,7 @@ class QuantRelEntr(Cone):
         self.log_Y = (self.log_Y + self.log_Y.conj().T) * 0.5
 
         self.log_XY = self.log_X - self.log_Y
-        self.z = self.t[0, 0] - lin.inp(self.X, self.log_XY)
+        self.z = self.t[0, 0] - inp(self.X, self.log_XY)
 
         self.feas = self.z > 0
         return self.feas
@@ -138,7 +153,7 @@ class QuantRelEntr(Cone):
         # D_X S(X||Y) = log(X) - log(Y) + I
         self.DPhiX = self.log_XY + np.eye(self.n)
         # D_Y S(X||Y) = -Uy * [log^[1](Dy) .* (Uy' X Uy)] Uy'
-        self.D1y_log = grad.D1_log(self.Dy, self.log_Dy)
+        self.D1y_log = D1_log(self.Dy, self.log_Dy)
         self.UyXUy = self.Uy.conj().T @ self.X @ self.Uy
         self.DPhiY = -self.Uy @ (self.D1y_log * self.UyXUy) @ self.Uy.conj().T
         self.DPhiY = (self.DPhiY + self.DPhiY.conj().T) * 0.5
@@ -182,14 +197,14 @@ class QuantRelEntr(Cone):
         # D2_XY S(X||Y)[Hy] = -Uy [log^[1](Dy) .* (Uy' Hy Uy)] Uy'
         D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.conj().T
         # D2_YY S(X||Y)[Hy] = -Uy [Σ_k log_k^[2](Dy) .* ... ] Uy'
-        D2PhiYYH = -grad.scnd_frechet(self.D2y_log_UXU, UyHyUy, U=self.Uy)
+        D2PhiYYH = -scnd_frechet(self.D2y_log_UXU, UyHyUy, U=self.Uy)
 
         # ======================================================================
         # Hessian products with respect to t
         # ======================================================================
         # D2_t F(t, X, Y)[Ht, Hx, Hy]
         #         = (Ht - D_X S(X||Y)[Hx] - D_Y S(X||Y)[Hy]) / z^2
-        out_t = Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)
+        out_t = Ht - inp(self.DPhiX, Hx) - inp(self.DPhiY, Hy)
         out_t *= self.zi2
         out[0][:] = out_t
 
@@ -250,13 +265,13 @@ class QuantRelEntr(Cone):
         # ======================================================================
         # Hessian products of quantum relative entropy
         # D2_YX S(X||Y)[Hx] = -Uy [log^[1](Dy) .* (Uy' Hx Uy)] Uy'
-        lin.congr_multi(work1, self.Uy.conj().T, self.Ax, work2)
+        congr_multi(work1, self.Uy.conj().T, self.Ax, work2)
         work1 *= -self.zi * self.D1y_log
-        lin.congr_multi(work0, self.Uy, work1, work2)
+        congr_multi(work0, self.Uy, work1, work2)
         # D2_YY S(X||Y)[Hy] = -Uy [Σ_k log_k^[2](Dy) .* ... ] Uy'
-        lin.congr_multi(work1, self.Uy.conj().T, self.Ay, work2)
-        grad.scnd_frechet_multi(work4, self.D2y_comb, work1, U=self.Uy, 
-                                work1=work2, work2=work3, work3=work5)  # fmt: skip
+        congr_multi(work1, self.Uy.conj().T, self.Ay, work2)
+        scnd_frechet_multi(work4, self.D2y_comb, work1, U=self.Uy, 
+                           work1=work2, work2=work3, work3=work5)  # fmt: skip
 
         # Hessian product of barrier function
         # D2_Y F(t, X, Y)[Ht, Hx, Hy]
@@ -275,11 +290,11 @@ class QuantRelEntr(Cone):
         # Hessian products of quantum relative entropy
         # D2_XY S(X||Y)[Hy] = -Uy [log^[1](Dy) .* (Uy' Hy Uy)] Uy'
         work1 *= self.D1y_log * self.zi
-        lin.congr_multi(work0, self.Uy, work1, work2)
+        congr_multi(work0, self.Uy, work1, work2)
         # D2_XX S(X||Y)[Hx] =  Ux [log^[1](Dx) .* (Ux' Hx Ux)] Ux'
-        lin.congr_multi(work1, self.Ux.conj().T, self.Ax, work2)
+        congr_multi(work1, self.Ux.conj().T, self.Ax, work2)
         work1 *= self.D1x_comb
-        lin.congr_multi(work3, self.Ux, work1, work2)
+        congr_multi(work3, self.Ux, work1, work2)
 
         # Hessian product of barrier function
         # D2_X F(t, X, Y)[Ht, Hx, Hy]
@@ -293,7 +308,7 @@ class QuantRelEntr(Cone):
         lhs[:, self.idx_X] = work3.reshape((p, -1)).view(np.float64)
 
         # Multiply A (H A')
-        return lin.dense_dot_x(lhs, A.T)
+        return dense_dot_x(lhs, A.T)
 
     def invhess_prod_ip(self, out, H):
         assert self.grad_updated
@@ -328,7 +343,7 @@ class QuantRelEntr(Cone):
         temp_vec = temp.view(np.float64).reshape((-1, 1))
         temp_vec = self.F2C_op @ temp_vec
         # Solve system
-        temp_vec = lin.cho_solve(self.hess_schur_fact, temp_vec)
+        temp_vec = cho_solve(self.hess_schur_fact, temp_vec)
         # Expand compact real vectors back into full matrices
         temp_vec = self.F2C_op.T @ temp_vec
         temp = temp_vec.T.view(self.dtype).reshape((self.n, self.n))
@@ -355,8 +370,8 @@ class QuantRelEntr(Cone):
         # ======================================================================
         # t = z^2 Ht + <DPhi(X, Y), (X, Y)>
         out_t = self.z2 * Ht
-        out_t += lin.inp(self.DPhiX, out_X)
-        out_t += lin.inp(self.DPhiY, out_Y)
+        out_t += inp(self.DPhiX, out_X)
+        out_t += inp(self.DPhiY, out_Y)
         out[0][:] = out_t
 
         return out
@@ -400,31 +415,31 @@ class QuantRelEntr(Cone):
         # Compute Ux' Wx Ux
         np.outer(self.At, self.DPhiX, out=work2.reshape((p, -1)))
         np.add(self.Ax, work2, out=work0)
-        lin.congr_multi(work2, self.Ux.conj().T, work0, work3)
+        congr_multi(work2, self.Ux.conj().T, work0, work3)
         # Apply (1/z log^[1](Dx) + Dx^-1 ⊗ Dx^-1)^-1
         work2 *= self.D1x_comb_inv
         # Apply (Uy'Ux ⊗ Uy'Ux)
-        lin.congr_multi(work1, self.UyUx, work2, work3)
+        congr_multi(work1, self.UyUx, work2, work3)
         # Apply -1/z log^[1](Dy)
         work1 *= -self.zi * self.D1y_log
         # Compute Uy' Wy Uy and subtract previous expression
         np.outer(self.At, self.DPhiY, out=work2.reshape((p, -1)))
         np.add(self.Ay, work2, out=work3)
-        lin.congr_multi(work2, self.Uy.conj().T, work3, work4)
+        congr_multi(work2, self.Uy.conj().T, work3, work4)
         work2 -= work1
 
         # Solve the linear system S \ ( ... ) to obtain Uy' Y Uy
         # Convert matrices to compact real vectors
         work = work2.view(np.float64).reshape((p, -1)).T
-        work = lin.x_dot_dense(self.F2C_op, work)
+        work = x_dot_dense(self.F2C_op, work)
         # Solve system
-        work = lin.cho_solve(self.hess_schur_fact, work)
+        work = cho_solve(self.hess_schur_fact, work)
         # Expand compact real vectors back into full matrices
-        work = lin.x_dot_dense(self.F2C_op.T, work)
+        work = x_dot_dense(self.F2C_op.T, work)
         work1.view(np.float64).reshape((p, -1))[:] = work.T
 
         # Recover Y from Uy' Y Uy
-        lin.congr_multi(work4, self.Uy, work1, work2)
+        congr_multi(work4, self.Uy, work1, work2)
         out_Y = work4.reshape((p, -1)).view(np.float64)
         lhs[:, self.idx_Y] = out_Y
 
@@ -434,16 +449,16 @@ class QuantRelEntr(Cone):
         # Apply -1/z log^[1](Dy)
         work1 *= -self.zi * self.D1y_log
         # Apply (Uy ⊗ Uy)
-        lin.congr_multi(work2, self.Uy, work1, work3)
+        congr_multi(work2, self.Uy, work1, work3)
         # Subtract Wx from previous expression
         work0 -= work2
         # Apply (Ux ⊗ Ux)
-        lin.congr_multi(work1, self.Ux.conj().T, work0, work3)
+        congr_multi(work1, self.Ux.conj().T, work0, work3)
         # Apply (1/z log^[1](Dx) + Dx^-1 ⊗ Dx^-1)^-1 to obtian Ux' X Ux
         work1 *= self.D1x_comb_inv
 
         # Recover X from Ux' X Ux
-        lin.congr_multi(work2, self.Ux, work1, work3)
+        congr_multi(work2, self.Ux, work1, work3)
         out_X = work2.reshape((p, -1)).view(np.float64)
         lhs[:, self.idx_X] = out_X
 
@@ -460,7 +475,7 @@ class QuantRelEntr(Cone):
         lhs[:, 0] = outt
 
         # Multiply A (H A')
-        return lin.dense_dot_x(lhs, A.T)
+        return dense_dot_x(lhs, A.T)
 
     def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
@@ -471,7 +486,7 @@ class QuantRelEntr(Cone):
 
         (Ht, Hx, Hy) = H
 
-        chi = Ht[0, 0] - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)
+        chi = Ht[0, 0] - inp(self.DPhiX, Hx) - inp(self.DPhiY, Hy)
         chi2 = chi * chi
 
         UxHxUx = self.Ux.conj().T @ Hx @ self.Ux
@@ -483,19 +498,19 @@ class QuantRelEntr(Cone):
         D2PhiXXH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
         D2PhiXYH = -self.Uy @ (self.D1y_log * UyHyUy) @ self.Uy.conj().T
         D2PhiYXH = -self.Uy @ (self.D1y_log * UyHxUy) @ self.Uy.conj().T
-        D2PhiYYH = -grad.scnd_frechet(self.D2y_log_UXU, UyHyUy, U=self.Uy)
+        D2PhiYYH = -scnd_frechet(self.D2y_log_UXU, UyHyUy, U=self.Uy)
 
-        D2PhiXHH = lin.inp(Hx, D2PhiXXH + D2PhiXYH)
-        D2PhiYHH = lin.inp(Hy, D2PhiYXH + D2PhiYYH)
+        D2PhiXHH = inp(Hx, D2PhiXXH + D2PhiXYH)
+        D2PhiYHH = inp(Hy, D2PhiYXH + D2PhiYYH)
 
         # Quantum relative entropy third order derivatives
-        D3PhiXXX = grad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
-        D3PhiXYY = -grad.scnd_frechet(self.D2y_log, UyHyUy, UyHyUy, self.Uy)
+        D3PhiXXX = scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
+        D3PhiXYY = -scnd_frechet(self.D2y_log, UyHyUy, UyHyUy, self.Uy)
 
-        D3PhiYYX = -grad.scnd_frechet(self.D2y_log, UyHyUy, UyHxUy, self.Uy)
+        D3PhiYYX = -scnd_frechet(self.D2y_log, UyHyUy, UyHxUy, self.Uy)
         D3PhiYXY = D3PhiYYX
-        D3PhiYYY = -grad.thrd_frechet(self.Dy, self.D2y_log, D3_log_Y, self.Uy,
-                                      self.UyXUy, UyHyUy)  # fmt: skip
+        D3PhiYYY = -thrd_frechet(self.Dy, self.D2y_log, D3_log_Y, self.Uy, self.UyXUy,
+                                 UyHyUy)  # fmt: skip
 
         # Third derivatives of barrier
         dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhiXHH + D2PhiYHH)
@@ -523,8 +538,6 @@ class QuantRelEntr(Cone):
     # ==========================================================================
     def update_congr_aux(self, A):
         assert not self.congr_aux_updated
-
-        from qics.vectorize import vec_to_mat
 
         iscomplex = self.iscomplex
 
@@ -557,10 +570,10 @@ class QuantRelEntr(Cone):
         assert self.grad_updated
 
         D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
-        self.D1x_log = grad.D1_log(self.Dx, self.log_Dx)
+        self.D1x_log = D1_log(self.Dx, self.log_Dx)
         self.D1x_comb = self.zi * self.D1x_log + D1x_inv
 
-        self.D2y_log = grad.D2_log(self.Dy, self.D1y_log)
+        self.D2y_log = D2_log(self.Dy, self.D1y_log)
         self.D2y_log_UXU = self.D2y_log * self.UyXUy
         self.D2y_comb = -self.D2y_log * (self.zi * self.UyXUy + np.eye(self.n))
 
@@ -594,7 +607,7 @@ class QuantRelEntr(Cone):
         # Get first term in S matrix, i.e., [-1/z Sy + Dy^-1 ⊗ Dy^-1]
         # ======================================================================
         rt2 = np.sqrt(2.0)
-        hess_schur = grad.get_S_matrix(self.D2y_comb, rt2, self.iscomplex)
+        hess_schur = get_S_matrix(self.D2y_comb, rt2, self.iscomplex)
 
         # ======================================================================
         # Get second term in S matrix, i.e., [1/z^2 log^[1](Dy) ... ]
@@ -603,20 +616,20 @@ class QuantRelEntr(Cone):
         work6[:] = self.E
         work6[self.Ek, self.Ei, self.Ej] *= self.D1y_log[self.Ei, self.Ej]
         # Apply (Ux'Uy ⊗ Ux'Uy)
-        lin.congr_multi(work8, self.UyUx.conj().T, work6, work=work7)
+        congr_multi(work8, self.UyUx.conj().T, work6, work=work7)
         # Apply [(1/z log + inv)^[1](Dx)]^-1
         work8 *= self.D1x_comb_inv
         # Apply (Uy'Ux ⊗ Uy'Ux)
-        lin.congr_multi(work6, self.UyUx, work8, work=work7)
+        congr_multi(work6, self.UyUx, work8, work=work7)
         # Apply (1/z^2 log^[1](Dy)) and reshape into square symmetric matrix
         work6 *= self.D1y_log
         work = work6.view(np.float64).reshape((self.vn, -1))
-        work = lin.x_dot_dense(self.F2C_op, work.T)
+        work = x_dot_dense(self.F2C_op, work.T)
         work *= self.zi2
 
         # Subtract the two terms to obtain Schur complement then Cholesky factor
         hess_schur -= work
-        self.hess_schur_fact = lin.cho_fact(hess_schur)
+        self.hess_schur_fact = cho_fact(hess_schur)
 
         self.invhess_aux_updated = True
 
@@ -640,6 +653,6 @@ class QuantRelEntr(Cone):
         assert self.hess_aux_updated
 
         self.zi3 = self.zi2 * self.zi
-        self.D2x_log = grad.D2_log(self.Dx, self.D1x_log)
+        self.D2x_log = D2_log(self.Dx, self.D1x_log)
 
         self.dder3_aux_updated = True

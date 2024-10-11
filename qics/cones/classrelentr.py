@@ -5,7 +5,8 @@
 
 import numpy as np
 import scipy as sp
-import qics._utils.linalg as lin
+
+from qics._utils.linalg import dense_dot_x
 from qics.cones.base import Cone, get_central_ray_relentr
 
 
@@ -208,7 +209,7 @@ class ClassRelEntr(Cone):
         lhs[:, self.idx_Y] = work0
 
         # Multiply A (H A')
-        return lin.dense_dot_x(lhs, A.T)
+        return dense_dot_x(lhs, A.T)
 
     def invhess_prod_ip(self, out, H):
         assert self.grad_updated
@@ -296,7 +297,7 @@ class ClassRelEntr(Cone):
         outt += (work1 @ self.DPhiY).ravel()
         lhs[:, 0] = outt
 
-        return lin.dense_dot_x(lhs, A.T)
+        return dense_dot_x(lhs, A.T)
 
     def third_dir_deriv_axpy(self, out, H, a=True):
         if not self.hess_aux_updated:

@@ -1,4 +1,5 @@
 import os
+
 import qics.io
 
 # To be used with SDP problems stored in the SDPA sparse format

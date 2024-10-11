@@ -1,6 +1,6 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-# This Python package QICS is licensed under the MIT license; see LICENSE.md 
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
 import numpy as np
@@ -41,6 +41,7 @@ def entropy(x):
     x = x[x > 0]
     return -sum(x * np.log(x))
 
+
 def purify(X):
     r"""Returns a purification of a quantum state :math:`X`. If :math:`X`
     has spectral decomposition
@@ -53,7 +54,7 @@ def purify(X):
 
     .. math::
 
-        | \psi \rangle = \sum_{i=1}^n \sqrt{\lambda_i} (| v_i \rangle 
+        | \psi \rangle = \sum_{i=1}^n \sqrt{\lambda_i} (| v_i \rangle
         \otimes | v_i \rangle).
 
     Parameters

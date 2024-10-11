@@ -1,7 +1,8 @@
 import numpy as np
+
 import qics
-import qics.vectorize as vec
 import qics.quantum as qu
+import qics.vectorize as vec
 
 n = 2
 n2 = n * n

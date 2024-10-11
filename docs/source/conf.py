@@ -31,7 +31,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_design",
     "sphinx_tabs.tabs",
-    "numpydoc"
+    "numpydoc",
 ]
 
 numpydoc_show_class_members = False
