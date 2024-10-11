@@ -5,10 +5,25 @@
 
 import numpy as np
 import scipy as sp
-import qics._utils.linalg as lin
-import qics._utils.gradient as grad
+
+from qics._utils.gradient import (
+    D1_f,
+    D1_log,
+    D2_f,
+    scnd_frechet,
+    scnd_frechet_multi,
+    thrd_frechet,
+)
+from qics._utils.linalg import (
+    cho_fact,
+    cho_solve,
+    congr_multi,
+    dense_dot_x,
+    inp,
+    x_dot_dense,
+)
 from qics.cones.base import Cone, get_perspective_derivatives
-from qics.vectorize import get_full_to_compact_op
+from qics.vectorize import get_full_to_compact_op, vec_to_mat
 
 
 class OpPerspecTr(Cone):
@@ -177,7 +192,7 @@ class OpPerspecTr(Cone):
         self.g_Dxyx = self.g(self.Dxyx)
         self.h_Dyxy = self.h(self.Dyxy)
         g_XYX = (self.Uxyx * self.g_Dxyx) @ self.Uxyx.conj().T
-        self.z = self.t[0, 0] - lin.inp(self.X, g_XYX)
+        self.z = self.t[0, 0] - inp(self.X, g_XYX)
 
         self.feas = self.z > 0
         return self.feas
@@ -211,11 +226,11 @@ class OpPerspecTr(Cone):
         self.rt2X_Uxyx = self.rt2_X @ self.Uxyx
 
         # Compute derivatives of trace operator perspective
-        self.D1yxy_h = grad.D1_f(self.Dyxy, self.h_Dyxy, self.dh(self.Dyxy))
+        self.D1yxy_h = D1_f(self.Dyxy, self.h_Dyxy, self.dh(self.Dyxy))
         if self.func == "log":
-            self.D1xyx_g = -grad.D1_log(self.Dxyx, -self.g_Dxyx)
+            self.D1xyx_g = -D1_log(self.Dxyx, -self.g_Dxyx)
         else:
-            self.D1xyx_g = grad.D1_f(self.Dxyx, self.g_Dxyx, self.dg(self.Dxyx))
+            self.D1xyx_g = D1_f(self.Dxyx, self.g_Dxyx, self.dg(self.Dxyx))
         # D_X trPg(X, Y) = Y^-½ Dh(Y^-½ X Y^-½)[Y] Y^-½
         work = irt2Y_Uyxy @ (self.D1yxy_h * UyxyYUyxy) @ irt2Y_Uyxy.conj().T
         self.DPhiX = (work + work.conj().T) * 0.5
@@ -261,7 +276,7 @@ class OpPerspecTr(Cone):
 
         # Hessian product of trace operator perspective
         # D2_XX trPg(X, Y)[Hx] = Y^-½ D2h(Y^-½ X Y^½)[Y, Y^-½ Hx Y^-½] Y^-½
-        D2PhiXXH = grad.scnd_frechet(D2yxy_h, UyxyYUyxy, UyxyYHxYUyxy, U=irt2Y_Uyxy)
+        D2PhiXXH = scnd_frechet(D2yxy_h, UyxyYUyxy, UyxyYHxYUyxy, U=irt2Y_Uyxy)
         # D2_XY trPg(X, Y)[Hy]
         #     = -X^-½ D2xg(X^-½ Y X^-½)[X, X^-½ Hy X^-½] X^-½
         #       + X^½ Dg(X^-½ Y X-^½)[X^-½ Hy X^-½] X^-½
@@ -269,7 +284,7 @@ class OpPerspecTr(Cone):
         work = self.D1xyx_g * UxyxXHyXUxyx
         D2PhiXYH = irt2X_Uxyx @ work @ rt2X_Uxyx.conj().T
         D2PhiXYH += D2PhiXYH.conj().T
-        D2PhiXYH -= grad.scnd_frechet(D2xyx_xg, UxyxXUxyx, UxyxXHyXUxyx, U=irt2X_Uxyx)
+        D2PhiXYH -= scnd_frechet(D2xyx_xg, UxyxXUxyx, UxyxXHyXUxyx, U=irt2X_Uxyx)
         # D2_YX trPg(X, Y)[Hx]
         #     = -Y^-½ D2xh(Y^-½ X Y^-½)[Y, Y^-½ Hx Y^-½] Y^-½
         #       + Y^½ Dh(Y^-½ X Y-^½)[Y^-½ Hx Y^-½] Y^-½
@@ -277,16 +292,16 @@ class OpPerspecTr(Cone):
         work = self.D1yxy_h * UyxyYHxYUyxy
         D2PhiYXH = irt2Y_Uyxy @ work @ rt2Y_Uyxy.conj().T
         D2PhiYXH += D2PhiYXH.conj().T
-        D2PhiYXH -= grad.scnd_frechet(D2yxy_xh, UyxyYUyxy, UyxyYHxYUyxy, U=irt2Y_Uyxy)
+        D2PhiYXH -= scnd_frechet(D2yxy_xh, UyxyYUyxy, UyxyYHxYUyxy, U=irt2Y_Uyxy)
         # D2_YY trPg(X, Y)[Hy] = X^-½ D2g(X^-½ Y X^½)[X, X^-½ Hy X^-½] X^-½
-        D2PhiYYH = grad.scnd_frechet(D2xyx_g, UxyxXUxyx, UxyxXHyXUxyx, U=irt2X_Uxyx)
+        D2PhiYYH = scnd_frechet(D2xyx_g, UxyxXUxyx, UxyxXHyXUxyx, U=irt2X_Uxyx)
 
         # ======================================================================
         # Hessian products with respect to t
         # ======================================================================
         # D2_t F(t, X, Y)[Ht, Hx, Hy]
         #         = (Ht - D_X S(X||Y)[Hx] - D_Y S(X||Y)[Hy]) / z^2
-        out_t = Ht - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)
+        out_t = Ht - inp(self.DPhiX, Hx) - inp(self.DPhiY, Hy)
         out_t *= self.zi2
         out[0][:] = out_t
 
@@ -358,22 +373,22 @@ class OpPerspecTr(Cone):
         # ======================================================================
         # Hessian products of trace operator perspective
         # D2_XX trPg(X, Y)[Hx] = Y^-½ D2h(Y^-½ X Y^½)[Y, Y^-½ Hx Y^-½] Y^-½
-        lin.congr_multi(work0, irt2Y_Uyxy.conj().T, self.Ax, work=work3)
-        grad.scnd_frechet_multi(work5, D2yxy_h, work0, UyxyYUyxy, U=irt2Y_Uyxy,
-                                work1=work3, work2=work4, work3=work6)  # fmt: skip
+        congr_multi(work0, irt2Y_Uyxy.conj().T, self.Ax, work=work3)
+        scnd_frechet_multi(work5, D2yxy_h, work0, UyxyYUyxy, U=irt2Y_Uyxy,
+                           work1=work3, work2=work4, work3=work6)  # fmt: skip
         # D2_XY trPg(X, Y)[Hy]
         #     = -X^-½ D2xg(X^-½ Y X^-½)[X, X^-½ Hy X^-½] X^-½
         #       + X^½ Dg(X^-½ Y X-^½)[X^-½ Hy X^-½] X^-½
         #       + X^-½ Dg(X^-½ Y X-^½)[X^-½ Hy X^-½] X^½
         # Second and third terms, i.e., X^½ [ ... ] X^-½ + X^-½ [ ... ] X^½
-        lin.congr_multi(work1, irt2X_Uxyx.conj().T, self.Ay, work=work3)
+        congr_multi(work1, irt2X_Uxyx.conj().T, self.Ay, work=work3)
         np.multiply(work1, self.D1xyx_g, out=work2)
-        lin.congr_multi(work3, irt2X_Uxyx, work2, work=work4, B=rt2X_Uxyx)
+        congr_multi(work3, irt2X_Uxyx, work2, work=work4, B=rt2X_Uxyx)
         np.add(work3, work3.conj().transpose(0, 2, 1), out=work2)
         work5 += work2
         # First term, i.e., -X^-½ D2xg(X^-½ Y X^-½)[X, X^-½ Hy X^-½] X^-½
-        grad.scnd_frechet_multi(work2, D2xyx_xg, work1, UxyxXUxyx, U=irt2X_Uxyx,
-                                work1=work3, work2=work4, work3=work6)  # fmt: skip
+        scnd_frechet_multi(work2, D2xyx_xg, work1, UxyxXUxyx, U=irt2X_Uxyx,
+                           work1=work3, work2=work4, work3=work6)  # fmt: skip
         work5 -= work2
 
         # Hessian product of barrier function
@@ -384,7 +399,7 @@ class OpPerspecTr(Cone):
         work5 *= self.zi
         np.outer(out_t, self.DPhiX, out=work2.reshape((p, -1)))
         work5 -= work2
-        lin.congr_multi(work2, self.inv_X, self.Ax, work=work3)
+        congr_multi(work2, self.inv_X, self.Ax, work=work3)
         work5 += work2
 
         lhs[:, self.idx_X] = work5.reshape((p, -1)).view(np.float64)
@@ -394,23 +409,23 @@ class OpPerspecTr(Cone):
         # ==================================================================
         # Hessian products of trace operator perspective
         # D2_YY trPg(X, Y)[Hy] = X^-½ D2g(X^-½ Y X^½)[X, X^-½ Hy X^-½] X^-½
-        lin.congr_multi(work1, irt2X_Uxyx.conj().T, self.Ay, work=work3)
-        grad.scnd_frechet_multi(work5, D2xyx_g, work1, UxyxXUxyx, U=irt2X_Uxyx, 
-                                work1=work3, work2=work4, work3=work6)  # fmt: skip
+        congr_multi(work1, irt2X_Uxyx.conj().T, self.Ay, work=work3)
+        scnd_frechet_multi(work5, D2xyx_g, work1, UxyxXUxyx, U=irt2X_Uxyx, 
+                           work1=work3, work2=work4, work3=work6)  # fmt: skip
 
         # D2_YX trPg(X, Y)[Hx]
         #     = -Y^-½ D2xh(Y^-½ X Y^-½)[Y, Y^-½ Hx Y^-½] Y^-½
         #       + Y^½ Dh(Y^-½ X Y-^½)[Y^-½ Hx Y^-½] Y^-½
         #       + Y^-½ Dh(Y^-½ X Y-^½)[Y^-½ Hx Y^-½] Y^½
         # Second and third terms, i.e., Y^½ [ ... ] Y^-½ + Y^-½ [ ... ] Y^½
-        lin.congr_multi(work0, irt2Y_Uyxy.conj().T, self.Ax, work=work3)
+        congr_multi(work0, irt2Y_Uyxy.conj().T, self.Ax, work=work3)
         np.multiply(work0, self.D1yxy_h, out=work2)
-        lin.congr_multi(work3, irt2Y_Uyxy, work2, work=work4, B=rt2Y_Uyxy)
+        congr_multi(work3, irt2Y_Uyxy, work2, work=work4, B=rt2Y_Uyxy)
         np.add(work3, work3.conj().transpose(0, 2, 1), out=work2)
         work5 += work2
         # First term, i.e., -Y^-½ D2xh(Y^-½ X Y^-½)[Y, Y^-½ Hx Y^-½] Y^-½
-        grad.scnd_frechet_multi(work2, D2yxy_xh, work0, UyxyYUyxy, U=irt2Y_Uyxy,
-                                work1=work3, work2=work4, work3=work6)  # fmt: skip
+        scnd_frechet_multi(work2, D2yxy_xh, work0, UyxyYUyxy, U=irt2Y_Uyxy,
+                           work1=work3, work2=work4, work3=work6)  # fmt: skip
         work5 -= work2
 
         # Hessian product of barrier function
@@ -421,13 +436,13 @@ class OpPerspecTr(Cone):
         work5 *= self.zi
         np.outer(out_t, self.DPhiY, out=work2.reshape((p, -1)))
         work5 -= work2
-        lin.congr_multi(work2, self.inv_Y, self.Ay, work=work3)
+        congr_multi(work2, self.inv_Y, self.Ay, work=work3)
         work5 += work2
 
         lhs[:, self.idx_Y] = work5.reshape((p, -1)).view(np.float64)
 
         # Multiply A (H A')
-        return lin.dense_dot_x(lhs, A.T)
+        return dense_dot_x(lhs, A.T)
 
     def invhess_prod_ip(self, out, H):
         assert self.grad_updated
@@ -450,7 +465,7 @@ class OpPerspecTr(Cone):
 
         # Solve for (X, Y) =  M \ (Wx, Wy)
         Wxy_cvec = np.vstack((Wx_cvec, Wy_cvec))
-        out_XY = lin.cho_solve(self.hess_fact, Wxy_cvec)
+        out_XY = cho_solve(self.hess_fact, Wxy_cvec)
         out_XY = out_XY.reshape(2, -1)
 
         out_X = self.F2C_op.T @ out_XY[0]
@@ -463,8 +478,8 @@ class OpPerspecTr(Cone):
 
         # Solve for t = z^2 Ht + <DPhi(X, Y), (X, Y)>
         out_t = self.z2 * Ht
-        out_t += lin.inp(out_X, self.DPhiX)
-        out_t += lin.inp(out_Y, self.DPhiY)
+        out_t += inp(out_X, self.DPhiX)
+        out_t += inp(out_Y, self.DPhiY)
         out[0][:] = out_t
 
         return out
@@ -491,13 +506,13 @@ class OpPerspecTr(Cone):
         self.work += self.Axy_cvec.T
 
         # Solve for (X, Y) =  M \ (Wx, Wy)
-        out_xy = lin.cho_solve(self.hess_fact, self.work)
+        out_xy = cho_solve(self.hess_fact, self.work)
 
         # Solve for t = z^2 Ht + <DPhi(X, Y), (X, Y)>
         out_t = self.z2 * self.At.reshape(-1, 1) + out_xy.T @ self.DPhi_cvec
 
         # Multiply A (H A')
-        return lin.x_dot_dense(self.Axy_cvec, out_xy) + np.outer(self.At, out_t)
+        return x_dot_dense(self.Axy_cvec, out_xy) + np.outer(self.At, out_t)
 
     def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
@@ -515,7 +530,7 @@ class OpPerspecTr(Cone):
         rt2Y_Uyxy, irt2Y_Uyxy = self.rt2Y_Uyxy, self.irt2Y_Uyxy
         rt2X_Uxyx, irt2X_Uxyx = self.rt2X_Uxyx, self.irt2X_Uxyx
 
-        chi = Ht[0, 0] - lin.inp(self.DPhiX, Hx) - lin.inp(self.DPhiY, Hy)
+        chi = Ht[0, 0] - inp(self.DPhiX, Hx) - inp(self.DPhiY, Hy)
         chi2 = chi * chi
 
         UyxyYHxYUyxy = irt2Y_Uyxy.conj().T @ Hx @ irt2Y_Uyxy
@@ -524,57 +539,57 @@ class OpPerspecTr(Cone):
         UyxyYHyYUyxy = irt2Y_Uyxy.conj().T @ Hy @ irt2Y_Uyxy
 
         # Trace noncommutative perspective Hessians
-        D2PhiXXH = grad.scnd_frechet(D2yxy_h, UyxyYUyxy, UyxyYHxYUyxy, U=irt2Y_Uyxy)
+        D2PhiXXH = scnd_frechet(D2yxy_h, UyxyYUyxy, UyxyYHxYUyxy, U=irt2Y_Uyxy)
 
         work = self.D1xyx_g * UxyxXHyXUxyx
         D2PhiXYH = irt2X_Uxyx @ work @ rt2X_Uxyx.conj().T
         D2PhiXYH += D2PhiXYH.conj().T
-        D2PhiXYH -= grad.scnd_frechet(D2xyx_xg, UxyxXUxyx, UxyxXHyXUxyx, U=irt2X_Uxyx)
+        D2PhiXYH -= scnd_frechet(D2xyx_xg, UxyxXUxyx, UxyxXHyXUxyx, U=irt2X_Uxyx)
 
         work = self.D1yxy_h * UyxyYHxYUyxy
         D2PhiYXH = irt2Y_Uyxy @ work @ rt2Y_Uyxy.conj().T
         D2PhiYXH += D2PhiYXH.conj().T
-        D2PhiYXH -= grad.scnd_frechet(D2yxy_xh, UyxyYUyxy, UyxyYHxYUyxy, U=irt2Y_Uyxy)
+        D2PhiYXH -= scnd_frechet(D2yxy_xh, UyxyYUyxy, UyxyYHxYUyxy, U=irt2Y_Uyxy)
 
-        D2PhiYYH = grad.scnd_frechet(D2xyx_g, UxyxXUxyx, UxyxXHyXUxyx, U=irt2X_Uxyx)
+        D2PhiYYH = scnd_frechet(D2xyx_g, UxyxXUxyx, UxyxXHyXUxyx, U=irt2X_Uxyx)
 
-        D2PhiXHH = lin.inp(Hx, D2PhiXXH + D2PhiXYH)
-        D2PhiYHH = lin.inp(Hy, D2PhiYXH + D2PhiYYH)
+        D2PhiXHH = inp(Hx, D2PhiXXH + D2PhiXYH)
+        D2PhiYHH = inp(Hy, D2PhiYXH + D2PhiYYH)
 
         # Trace noncommutative perspective third order derivatives
         # Second derivatives of D_X trPg(X, Y)
-        D3PhiXXX = grad.thrd_frechet(Dyxy, D2yxy_h, self.d3h(Dyxy), irt2Y_Uyxy,
-                                     UyxyYUyxy, UyxyYHxYUyxy)  # fmt: skip
+        D3PhiXXX = thrd_frechet(Dyxy, D2yxy_h, self.d3h(Dyxy), irt2Y_Uyxy,
+                                UyxyYUyxy, UyxyYHxYUyxy)  # fmt: skip
 
         work = rt2Y_Uyxy.conj().T @ Hy @ irt2Y_Uyxy
         work = work + work.conj().T
-        D3PhiXXY = grad.scnd_frechet(D2yxy_h, work, UyxyYHxYUyxy, U=irt2Y_Uyxy)
-        D3PhiXXY -= grad.thrd_frechet(Dyxy, D2yxy_xh, self.d3xh(Dyxy), irt2Y_Uyxy,
-                                      UyxyYUyxy, UyxyYHxYUyxy, UyxyYHyYUyxy)  # fmt: skip
+        D3PhiXXY = scnd_frechet(D2yxy_h, work, UyxyYHxYUyxy, U=irt2Y_Uyxy)
+        D3PhiXXY -= thrd_frechet(Dyxy, D2yxy_xh, self.d3xh(Dyxy), irt2Y_Uyxy,
+                                 UyxyYUyxy, UyxyYHxYUyxy, UyxyYHyYUyxy)  # fmt: skip
         D3PhiXYX = D3PhiXXY
 
-        work = grad.scnd_frechet(D2xyx_g, UxyxXHyXUxyx, UxyxXHyXUxyx, U=Uxyx)
+        work = scnd_frechet(D2xyx_g, UxyxXHyXUxyx, UxyxXHyXUxyx, U=Uxyx)
         D3PhiXYY = self.irt2_X @ work @ self.rt2_X
         D3PhiXYY += D3PhiXYY.conj().T
-        D3PhiXYY -= grad.thrd_frechet(Dxyx, D2xyx_xg, self.d3xg(Dxyx), irt2X_Uxyx,
-                                      UxyxXUxyx, UxyxXHyXUxyx)  # fmt: skip
+        D3PhiXYY -= thrd_frechet(Dxyx, D2xyx_xg, self.d3xg(Dxyx), irt2X_Uxyx,
+                                 UxyxXUxyx, UxyxXHyXUxyx)  # fmt: skip
 
         # Second derivatives of D_Y trPg(X, Y)
-        D3PhiYYY = grad.thrd_frechet(Dxyx, D2xyx_g, self.d3g(Dxyx), irt2X_Uxyx,
-                                     UxyxXUxyx, UxyxXHyXUxyx)  # fmt: skip
+        D3PhiYYY = thrd_frechet(Dxyx, D2xyx_g, self.d3g(Dxyx), irt2X_Uxyx,
+                                UxyxXUxyx, UxyxXHyXUxyx)  # fmt: skip
 
         work = rt2X_Uxyx.conj().T @ Hx @ irt2X_Uxyx
         work = work + work.conj().T
-        D3PhiYYX = grad.scnd_frechet(D2xyx_g, work, UxyxXHyXUxyx, U=irt2X_Uxyx)
-        D3PhiYYX -= grad.thrd_frechet(Dxyx, D2xyx_xg, self.d3xg(Dxyx), irt2X_Uxyx,
-                                      UxyxXUxyx, UxyxXHyXUxyx, UxyxXHxXUxyx)  # fmt: skip
+        D3PhiYYX = scnd_frechet(D2xyx_g, work, UxyxXHyXUxyx, U=irt2X_Uxyx)
+        D3PhiYYX -= thrd_frechet(Dxyx, D2xyx_xg, self.d3xg(Dxyx), irt2X_Uxyx,
+                                 UxyxXUxyx, UxyxXHyXUxyx, UxyxXHxXUxyx)  # fmt: skip
         D3PhiYXY = D3PhiYYX
 
-        work = grad.scnd_frechet(D2yxy_h, UyxyYHxYUyxy, UyxyYHxYUyxy, U=Uyxy)
+        work = scnd_frechet(D2yxy_h, UyxyYHxYUyxy, UyxyYHxYUyxy, U=Uyxy)
         D3PhiYXX = self.irt2_Y @ work @ self.rt2_Y
         D3PhiYXX += D3PhiYXX.conj().T
-        D3PhiYXX -= grad.thrd_frechet(Dyxy, D2yxy_xh, self.d3xh(Dyxy), irt2Y_Uyxy,
-                                      UyxyYUyxy, UyxyYHxYUyxy)  # fmt: skip
+        D3PhiYXX -= thrd_frechet(Dyxy, D2yxy_xh, self.d3xh(Dyxy), irt2Y_Uyxy,
+                                 UyxyYUyxy, UyxyYHxYUyxy)  # fmt: skip
 
         # Third derivatives of barrier
         dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhiXHH + D2PhiYHH)
@@ -602,8 +617,6 @@ class OpPerspecTr(Cone):
     # ========================================================================
     def congr_aux(self, A):
         assert not self.congr_aux_updated
-
-        from qics.vectorize import vec_to_mat
 
         iscomplex = self.iscomplex
 
@@ -647,13 +660,13 @@ class OpPerspecTr(Cone):
 
         Dyxy, Dxyx = self.Dyxy, self.Dxyx
 
-        self.D1yxy_xh = grad.D1_f(Dyxy, self.xh(Dyxy), self.dxh(Dyxy))
-        self.D1xyx_xg = grad.D1_f(Dxyx, self.xg(Dxyx), self.dxg(Dxyx))
+        self.D1yxy_xh = D1_f(Dyxy, self.xh(Dyxy), self.dxh(Dyxy))
+        self.D1xyx_xg = D1_f(Dxyx, self.xg(Dxyx), self.dxg(Dxyx))
 
-        self.D2yxy_h = grad.D2_f(Dyxy, self.D1yxy_h, self.d2h(Dyxy))
-        self.D2xyx_g = grad.D2_f(Dxyx, self.D1xyx_g, self.d2g(Dxyx))
-        self.D2yxy_xh = grad.D2_f(Dyxy, self.D1yxy_xh, self.d2xh(Dyxy))
-        self.D2xyx_xg = grad.D2_f(Dxyx, self.D1xyx_xg, self.d2xg(Dxyx))
+        self.D2yxy_h = D2_f(Dyxy, self.D1yxy_h, self.d2h(Dyxy))
+        self.D2xyx_g = D2_f(Dxyx, self.D1xyx_g, self.d2g(Dxyx))
+        self.D2yxy_xh = D2_f(Dyxy, self.D1yxy_xh, self.d2xh(Dyxy))
+        self.D2xyx_xg = D2_f(Dxyx, self.D1xyx_xg, self.d2xg(Dxyx))
 
         # Preparing other required variables
         self.zi2 = self.zi * self.zi
@@ -685,31 +698,31 @@ class OpPerspecTr(Cone):
         # Construct XX block of Hessian, i.e., (D2xxPhi + X^1 ⊗ X^-1)
         # ======================================================================
         # D2_XX trPg(X, Y)[Hx] = Y^-½ D2h(Y^-½ X Y^½)[Y, Y^-½ Hx Y^-½] Y^-½
-        lin.congr_multi(work14, irt2Y_Uyxy.conj().T, self.E, work=work13)
-        grad.scnd_frechet_multi(work11, D2yxy_h, work14, UyxyYUyxy, U=irt2Y_Uyxy,
-                                work1=work12, work2=work13, work3=work10)  # fmt: skip
+        congr_multi(work14, irt2Y_Uyxy.conj().T, self.E, work=work13)
+        scnd_frechet_multi(work11, D2yxy_h, work14, UyxyYUyxy, U=irt2Y_Uyxy,
+                           work1=work12, work2=work13, work3=work10)  # fmt: skip
         work11 *= self.zi
         # X^1 Eij X^-1
-        lin.congr_multi(work14, self.inv_X, self.E, work=work13)
+        congr_multi(work14, self.inv_X, self.E, work=work13)
         work14 += work11
         # Vectorize matrices as compact vectors to get square matrix
         work = work14.view(np.float64).reshape((self.vn, -1))
-        Hxx = lin.x_dot_dense(self.F2C_op, work.T)
+        Hxx = x_dot_dense(self.F2C_op, work.T)
 
         # ======================================================================
         # Construct YY block of Hessian, i.e., (D2yyPhi + Y^1 ⊗ Y^-1)
         # ======================================================================
         # D2_YY trPg(X, Y)[Hy] = X^-½ D2g(X^-½ Y X^½)[X, X^-½ Hy X^-½] X^-½
-        lin.congr_multi(work14, irt2X_Uxyx.conj().T, self.E, work=work13)
-        grad.scnd_frechet_multi(work11, D2xyx_g, work14, UxyxXUxyx, U=irt2X_Uxyx,
-                                work1=work12, work2=work13, work3=work10)  # fmt: skip
+        congr_multi(work14, irt2X_Uxyx.conj().T, self.E, work=work13)
+        scnd_frechet_multi(work11, D2xyx_g, work14, UxyxXUxyx, U=irt2X_Uxyx,
+                           work1=work12, work2=work13, work3=work10)  # fmt: skip
         work11 *= self.zi
         # Y^1 Eij Y^-1
-        lin.congr_multi(work12, self.inv_Y, self.E, work=work13)
+        congr_multi(work12, self.inv_Y, self.E, work=work13)
         work12 += work11
         # Vectorize matrices as compact vectors to get square matrix
         work = work12.view(np.float64).reshape((self.vn, -1))
-        Hyy = lin.x_dot_dense(self.F2C_op, work.T)
+        Hyy = x_dot_dense(self.F2C_op, work.T)
 
         # ======================================================================
         # Construct XY block of Hessian, i.e., D2yxPhi
@@ -719,17 +732,17 @@ class OpPerspecTr(Cone):
         #       + X^½ Dg(X^-½ Y X-^½)[X^-½ Hy X^-½] X^-½
         #       + X^-½ Dg(X^-½ Y X-^½)[X^-½ Hy X^-½] X^½
         # First term, i.e., -X^-½ D2xg(X^-½ Y X^-½)[X, X^-½ Hy X^-½] X^-½
-        grad.scnd_frechet_multi(work11, D2xyx_xg, work14, UxyxXUxyx, U=irt2X_Uxyx,
-                                work1=work12, work2=work13, work3=work10)  # fmt: skip
+        scnd_frechet_multi(work11, D2xyx_xg, work14, UxyxXUxyx, U=irt2X_Uxyx,
+                           work1=work12, work2=work13, work3=work10)  # fmt: skip
         # Second and third terms, i.e., X^½ [ ... ] X^-½ + X^-½ [ ... ] X^½
         work14 *= self.D1xyx_g
-        lin.congr_multi(work12, irt2X_Uxyx, work14, work=work13, B=rt2X_Uxyx)
+        congr_multi(work12, irt2X_Uxyx, work14, work=work13, B=rt2X_Uxyx)
         np.add(work12, work12.conj().transpose(0, 2, 1), out=work13)
         work13 -= work11
         work13 *= self.zi
         # Vectorize matrices as compact vectors to get square matrix
         work = work13.view(np.float64).reshape((self.vn, -1))
-        Hxy = lin.x_dot_dense(self.F2C_op, work.T)
+        Hxy = x_dot_dense(self.F2C_op, work.T)
 
         # Construct Hessian and factorize
         Hxx = (Hxx + Hxx.conj().T) * 0.5
@@ -740,7 +753,7 @@ class OpPerspecTr(Cone):
         self.hess[self.vn :, : self.vn] = Hxy.T
         self.hess[: self.vn, self.vn :] = Hxy
 
-        self.hess_fact = lin.cho_fact(self.hess)
+        self.hess_fact = cho_fact(self.hess)
         self.invhess_aux_updated = True
 
         return

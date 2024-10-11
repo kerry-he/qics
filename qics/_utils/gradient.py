@@ -3,8 +3,8 @@
 # This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
-import numpy as np
 import numba as nb
+import numpy as np
 
 from qics._utils.linalg import congr_multi
 

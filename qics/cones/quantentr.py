@@ -5,9 +5,11 @@
 
 import numpy as np
 import scipy as sp
-import qics._utils.linalg as lin
-import qics._utils.gradient as grad
+
+from qics._utils.gradient import D1_log, D2_log, scnd_frechet
+from qics._utils.linalg import congr_multi, dense_dot_x, inp
 from qics.cones.base import Cone, get_central_ray_entr
+from qics.vectorize import vec_to_mat
 
 
 class QuantEntr(Cone):
@@ -112,7 +114,7 @@ class QuantEntr(Cone):
         self.log_Dx = np.log(self.Dx)
         self.log_u = np.log(self.u[0, 0])
 
-        entr_X = lin.inp(self.Dx, self.log_Dx)
+        entr_X = inp(self.Dx, self.log_Dx)
         entr_Xu = self.trX * self.log_u
         self.z = self.t[0, 0] - (entr_X - entr_Xu)
 
@@ -175,7 +177,7 @@ class QuantEntr(Cone):
         # ======================================================================
         # D2_t F(t, u, X)[Ht, Hu, Hx]
         #         = (Ht - D_u S(u, X)[Hu] - D_X S(u, X)[Hx]) / z^2
-        out[0][:] = (Ht - self.DPhiu * Hu - lin.inp(self.DPhiX, Hx)) * self.zi2
+        out[0][:] = (Ht - self.DPhiu * Hu - inp(self.DPhiX, Hx)) * self.zi2
 
         # ======================================================================
         # Hessian products with respect to u
@@ -254,9 +256,9 @@ class QuantEntr(Cone):
         # ====================================================================
         # Hessian products for quantum entropy
         # D2_XX S(u, X) [Hx] =  Ux [log^[1](Dx) .* (Ux' Hx Ux)] Ux'
-        lin.congr_multi(self.work1, self.Ux.conj().T, self.Ax, work2)
+        congr_multi(self.work1, self.Ux.conj().T, self.Ax, work2)
         work1 *= self.D1x_comb
-        lin.congr_multi(work3, self.Ux, work1, work2)
+        congr_multi(work3, self.Ux, work1, work2)
         # D2_Xu S(u, X) [Hu] = -I Hu / u
         work = (self.zi * self.ui[0, 0]) * self.Au.reshape(-1, 1)
         work3[:, range(self.n), range(self.n)] -= work
@@ -272,7 +274,7 @@ class QuantEntr(Cone):
         lhs[:, 2:] = work3.reshape((p, -1)).view(np.float64)
 
         # Multiply A (H A')
-        return lin.dense_dot_x(lhs, A.T)
+        return dense_dot_x(lhs, A.T)
 
     def invhess_prod_ip(self, out, H):
         assert self.grad_updated
@@ -309,7 +311,7 @@ class QuantEntr(Cone):
         # Inverse Hessian products with respect to t
         # ======================================================================
         # t = z^2 Ht + <DS(u, X), (u, X)>
-        out_t = self.z2 * Ht + self.DPhiu * out_u + lin.inp(self.DPhiX, out_X)
+        out_t = self.z2 * Ht + self.DPhiu * out_u + inp(self.DPhiX, out_X)
         out[0][:] = out_t
 
         return out
@@ -350,9 +352,9 @@ class QuantEntr(Cone):
         np.add(self.Ax, work2, out=work1)
 
         # Compute N \ Wx
-        lin.congr_multi(work2, self.Ux.conj().T, work1, work3)
+        congr_multi(work2, self.Ux.conj().T, work1, work3)
         work2 *= self.D1x_comb_inv
-        lin.congr_multi(work1, self.Ux, work2, work3)
+        congr_multi(work1, self.Ux, work2, work3)
 
         # ======================================================================
         # Inverse Hessian products with respect to u
@@ -384,7 +386,7 @@ class QuantEntr(Cone):
         lhs[:, 0] = out_t
 
         # Multiply A (H A')
-        return lin.dense_dot_x(lhs, A.T)
+        return dense_dot_x(lhs, A.T)
 
     def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
@@ -398,7 +400,7 @@ class QuantEntr(Cone):
         Hu2 = Hu * Hu
         trHx = np.trace(Hx).real
 
-        chi = (Ht - self.DPhiu * Hu)[0, 0] - lin.inp(self.DPhiX, Hx)
+        chi = (Ht - self.DPhiu * Hu)[0, 0] - inp(self.DPhiX, Hx)
         chi2 = chi * chi
 
         UxHxUx = self.Ux.conj().T @ Hx @ self.Ux
@@ -409,15 +411,15 @@ class QuantEntr(Cone):
         D2PhiXuH = -np.eye(self.n) * Hu * self.ui
         D2PhiXXH = self.Ux @ (self.D1x_log * UxHxUx) @ self.Ux.conj().T
 
-        D2PhiuHH = lin.inp(Hu, D2PhiuXH + D2PhiuuH)
-        D2PhiXHH = lin.inp(Hx, D2PhiXXH + D2PhiXuH)
+        D2PhiuHH = inp(Hu, D2PhiuXH + D2PhiuuH)
+        D2PhiXHH = inp(Hx, D2PhiXXH + D2PhiXuH)
 
         # Quantum entropy third order derivatives
         D3Phiuuu = -2 * Hu2 * self.trX * self.ui3
         D3PhiuXu = Hu * trHx * self.ui2
         D3PhiuuX = D3PhiuXu
 
-        D3PhiXXX = grad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
+        D3PhiXXX = scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
         D3PhiXuu = (Hu2 * self.ui2) * np.eye(self.n)
 
         # Third derivatives of barrier
@@ -445,8 +447,6 @@ class QuantEntr(Cone):
     # ==========================================================================
     def congr_aux(self, A):
         assert not self.congr_aux_updated
-
-        from qics.vectorize import vec_to_mat
 
         iscomplex = self.iscomplex
 
@@ -477,7 +477,7 @@ class QuantEntr(Cone):
         self.ui2 = self.ui * self.ui
 
         D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
-        self.D1x_log = grad.D1_log(self.Dx, self.log_Dx)
+        self.D1x_log = D1_log(self.Dx, self.log_Dx)
         self.D1x_comb = self.zi * self.D1x_log + D1x_inv
 
         self.hess_aux_updated = True
@@ -504,6 +504,6 @@ class QuantEntr(Cone):
 
         self.zi3 = self.zi * self.zi2
         self.ui3 = self.ui * self.ui2
-        self.D2x_log = grad.D2_log(self.Dx, self.D1x_log)
+        self.D2x_log = D2_log(self.Dx, self.D1x_log)
 
         self.dder3_aux_updated = True

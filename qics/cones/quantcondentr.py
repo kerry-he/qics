@@ -5,11 +5,19 @@
 
 import numpy as np
 import scipy as sp
-import qics._utils.linalg as lin
-import qics._utils.gradient as grad
-from qics.quantum import p_tr, p_tr_multi, i_kr, i_kr_multi
+
+from qics._utils.gradient import D1_log, D2_log, scnd_frechet
+from qics._utils.linalg import (
+    cho_fact,
+    cho_solve,
+    congr_multi,
+    dense_dot_x,
+    inp,
+    x_dot_dense,
+)
 from qics.cones.base import Cone
-from qics.vectorize import get_full_to_compact_op
+from qics.quantum import i_kr, i_kr_multi, p_tr, p_tr_multi
+from qics.vectorize import get_full_to_compact_op, vec_to_mat
 
 
 class QuantCondEntr(Cone):
@@ -154,7 +162,7 @@ class QuantCondEntr(Cone):
         log_Y = (log_Y + log_Y.conj().T) * 0.5
 
         self.log_XY = log_X - i_kr(log_Y, self.dims, self.sys)
-        self.z = self.t[0, 0] - lin.inp(self.X, self.log_XY)
+        self.z = self.t[0, 0] - inp(self.X, self.log_XY)
 
         self.feas = self.z > 0
         return self.feas
@@ -203,7 +211,7 @@ class QuantCondEntr(Cone):
         # Hessian products with respect to t
         # ======================================================================
         # D2_t F(t, X)[Ht, Hx] = (Ht - D_X Phi(X)[Hx]) / z^2
-        out[0][:] = (Ht - lin.inp(self.DPhi, Hx)) * self.zi2
+        out[0][:] = (Ht - inp(self.DPhi, Hx)) * self.zi2
 
         # ======================================================================
         # Hessian products with respect to X
@@ -246,14 +254,14 @@ class QuantCondEntr(Cone):
         # D2Phi(X)[Hx] = Ux [log^[1](Dx) .* (Ux' Hx Ux)] Ux'
         #                - I ⊗ [Uy [log^[1](Dy) .* (Uy' pTr(Hx) Uy)] Uy']
         # Compute first term, i.e., Ux [log^[1](Dx) .* (Ux' Hx Ux)] Ux'
-        lin.congr_multi(Work2, self.Ux.conj().T, self.Ax, Work3)
+        congr_multi(Work2, self.Ux.conj().T, self.Ax, Work3)
         Work2 *= self.D1x_comb
-        lin.congr_multi(Work1, self.Ux, Work2, Work3)
+        congr_multi(Work1, self.Ux, Work2, Work3)
         # Compute second term, i.e., I ⊗ [Uy [log^[1](Dy) .* (Uy' Hy Uy)] Uy']
         p_tr_multi(self.work1, self.Ax, self.dims, self.sys)  # Compute pTr(Ax)
-        lin.congr_multi(self.work2, self.Uy.conj().T, self.work1, self.work3)
+        congr_multi(self.work2, self.Uy.conj().T, self.work1, self.work3)
         self.work2 *= self.D1y_log * self.zi
-        lin.congr_multi(self.work1, self.Uy, self.work2, self.work3)
+        congr_multi(self.work1, self.Uy, self.work2, self.work3)
         i_kr_multi(Work0, self.work1, self.dims, self.sys)
         # Subtract the two terms to obtain D2Phi(X)[Hx]
         Work1 -= Work0
@@ -267,7 +275,7 @@ class QuantCondEntr(Cone):
         lhs[:, 1:] = out_X
 
         # Multiply A (H A')
-        return lin.dense_dot_x(lhs, A.T)
+        return dense_dot_x(lhs, A.T)
 
     def invhess_prod_ip(self, out, H):
         assert self.grad_updated
@@ -296,7 +304,7 @@ class QuantCondEntr(Cone):
         temp_vec = work.view(np.float64).reshape((-1, 1))
         temp_vec = self.F2C_op @ temp_vec
         # Solve system
-        temp_vec = lin.cho_solve(self.hess_schur_fact, temp_vec)
+        temp_vec = cho_solve(self.hess_schur_fact, temp_vec)
         # Expand compact real vectors back into full matrices
         temp_vec = self.F2C_op.T @ temp_vec
         work = temp_vec.T.view(self.dtype).reshape((self.n, self.n))
@@ -312,7 +320,7 @@ class QuantCondEntr(Cone):
         # Inverse Hessian products with respect to t
         # ======================================================================
         # z^2 Ht + <DPhi(X), X>
-        out[0][:] = Ht * self.z2 + lin.inp(out_X, self.DPhi)
+        out[0][:] = Ht * self.z2 + inp(out_X, self.DPhi)
 
         return out
 
@@ -355,9 +363,9 @@ class QuantCondEntr(Cone):
         np.add(self.Ax, Work2, out=Work0)
 
         # Apply D2S(X)^-1 = (Ux ⊗ Ux) log^[1](Dx) (Ux' ⊗ Ux')
-        lin.congr_multi(Work2, self.Ux.conj().T, Work0, Work3)
+        congr_multi(Work2, self.Ux.conj().T, Work0, Work3)
         Work2 *= self.D1x_comb_inv
-        lin.congr_multi(Work0, self.Ux, Work2, Work3)
+        congr_multi(Work0, self.Ux, Work2, Work3)
         # Apply pTr
         p_tr_multi(work1, Work0, self.dims, self.sys)
         work1 *= -1
@@ -365,19 +373,19 @@ class QuantCondEntr(Cone):
         # Solve linear system N \ ( ... )
         # Convert matrices to compact real vectors
         work = work1.view(np.float64).reshape((p, -1)).T
-        work = lin.x_dot_dense(self.F2C_op, work)
+        work = x_dot_dense(self.F2C_op, work)
         # Solve system
-        work = lin.cho_solve(self.hess_schur_fact, work)
+        work = cho_solve(self.hess_schur_fact, work)
         # Expand compact real vectors back into full matrices
-        work = lin.x_dot_dense(self.F2C_op.T, work)
+        work = x_dot_dense(self.F2C_op.T, work)
         work1.view(np.float64).reshape((p, -1))[:] = work.T
 
         # Apply pTr' = iKr
         i_kr_multi(Work1, work1, self.dims, self.sys)
         # Apply D2S(X)^-1 = (Ux ⊗ Ux) log^[1](Dx) (Ux' ⊗ Ux')
-        lin.congr_multi(Work2, self.Ux.conj().T, Work1, Work3)
+        congr_multi(Work2, self.Ux.conj().T, Work1, Work3)
         Work2 *= self.D1x_comb_inv
-        lin.congr_multi(Work1, self.Ux, Work2, Work3)
+        congr_multi(Work1, self.Ux, Work2, Work3)
 
         # Subtract previous expression from D2S(X)^-1 Wx to get X
         Work0 -= Work1
@@ -394,7 +402,7 @@ class QuantCondEntr(Cone):
         lhs[:, 0] = out_t
 
         # Multiply A (H A')
-        return lin.dense_dot_x(lhs, A.T)
+        return dense_dot_x(lhs, A.T)
 
     def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
@@ -415,13 +423,13 @@ class QuantCondEntr(Cone):
         D2PhiH -= i_kr(work, self.dims, self.sys)
 
         # Quantum conditional entropy third order derivatives
-        D3PhiHH = grad.scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
-        work = grad.scnd_frechet(self.D2y_log, UyHyUy, UyHyUy, self.Uy)
+        D3PhiHH = scnd_frechet(self.D2x_log, UxHxUx, UxHxUx, self.Ux)
+        work = scnd_frechet(self.D2y_log, UyHyUy, UyHyUy, self.Uy)
         D3PhiHH -= i_kr(work, self.dims, self.sys)
 
         # Third derivative of barrier
-        DPhiH = lin.inp(self.DPhi, Hx)
-        D2PhiHH = lin.inp(D2PhiH, Hx)
+        DPhiH = inp(self.DPhi, Hx)
+        D2PhiHH = inp(D2PhiH, Hx)
         chi = Ht - DPhiH
 
         dder3_t = -2 * (self.zi**3) * (chi**2) - (self.zi**2) * D2PhiHH
@@ -442,8 +450,6 @@ class QuantCondEntr(Cone):
     # ==========================================================================
     def congr_aux(self, A):
         assert not self.congr_aux_updated
-
-        from qics.vectorize import vec_to_mat
 
         iscomplex = self.iscomplex
 
@@ -476,10 +482,10 @@ class QuantCondEntr(Cone):
         assert self.grad_updated
 
         D1x_inv = np.reciprocal(np.outer(self.Dx, self.Dx))
-        self.D1x_log = grad.D1_log(self.Dx, self.log_Dx)
+        self.D1x_log = D1_log(self.Dx, self.log_Dx)
         self.D1x_comb = self.zi * self.D1x_log + D1x_inv
 
-        self.D1y_log = grad.D1_log(self.Dy, self.log_Dy)
+        self.D1y_log = D1_log(self.Dy, self.log_Dy)
 
         # Preparing other required variables
         self.zi2 = self.zi * self.zi
@@ -490,8 +496,8 @@ class QuantCondEntr(Cone):
         assert not self.dder3_aux_updated
         assert self.hess_aux_updated
 
-        self.D2x_log = grad.D2_log(self.Dx, self.D1x_log)
-        self.D2y_log = grad.D2_log(self.Dy, self.D1y_log)
+        self.D2x_log = D2_log(self.Dx, self.D1x_log)
+        self.D2y_log = D2_log(self.Dy, self.D1y_log)
 
         self.dder3_aux_updated = True
 
@@ -519,11 +525,11 @@ class QuantCondEntr(Cone):
         # Get first term, i.e., [z (Uy ⊗ Uy) [log^[1](Dy)]^-1 (Uy' ⊗ Uy')]
         # ======================================================================
         # Begin with (Uy' ⊗ Uy')
-        lin.congr_multi(work8, self.Uy.conj().T, self.E, work=work7)
+        congr_multi(work8, self.Uy.conj().T, self.E, work=work7)
         # Apply z [log^[1](Dy)]^-1
         work8 *= self.z * np.reciprocal(self.D1y_log)
         # Apply (Uy ⊗ Uy)
-        lin.congr_multi(work6, self.Uy, work8, work=work7)
+        congr_multi(work6, self.Uy, work8, work=work7)
 
         # ======================================================================
         # Get second term, i.e., [pTr (Ux ⊗ Ux) ...]
@@ -562,14 +568,14 @@ class QuantCondEntr(Cone):
         # Apply [(1/z log + inv)^[1](Dx)]^-1/2
         Work8 *= self.D1x_comb_inv
         # Apply pTr (Ux ⊗ Ux)
-        lin.congr_multi(Work6, self.Ux, Work8, work=Work7)
+        congr_multi(Work6, self.Ux, Work8, work=Work7)
         p_tr_multi(work7, Work6, self.dims, self.sys)
 
         # Subtract the two terms to obtain Schur complement then Cholesky factor
         work6 -= work7
         work = work6.view(np.float64).reshape((self.vn, -1))
-        hess_schur = lin.x_dot_dense(self.F2C_op, work.T)
-        self.hess_schur_fact = lin.cho_fact(hess_schur)
+        hess_schur = x_dot_dense(self.F2C_op, work.T)
+        self.hess_schur_fact = cho_fact(hess_schur)
 
         self.invhess_aux_updated = True
 

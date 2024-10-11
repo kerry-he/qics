@@ -3,13 +3,15 @@
 # This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
 
-import numpy as np
-import scipy as sp
-import numba as nb
 import itertools
 
-import qics._utils.linalg as lin
+import numba as nb
+import numpy as np
+import scipy as sp
+
+from qics._utils.linalg import congr_multi, scale_axis, x_dot_dense
 from qics.cones.base import SymCone
+from qics.vectorize import vec_to_mat
 
 
 class PosSemidefinite(SymCone):
@@ -52,17 +54,15 @@ class PosSemidefinite(SymCone):
             self.dtype = np.float64
 
         # Get LAPACK operators
-        from scipy.linalg.lapack import get_lapack_funcs
-
         X = np.eye(self.n, dtype=self.dtype)
-        self.cho_fact = get_lapack_funcs("potrf", (X,))
-        self.cho_inv = get_lapack_funcs("trtri", (X,))
-        self.svd = get_lapack_funcs("gesdd", (X,))
-        self.svd_lwork = get_lapack_funcs("gesdd_lwork", (X,))(n, n)
+        self.cho_fact = sp.linalg.lapack.get_lapack_funcs("potrf", (X,))
+        self.cho_inv = sp.linalg.lapack.get_lapack_funcs("trtri", (X,))
+        self.svd = sp.linalg.lapack.get_lapack_funcs("gesdd", (X,))
+        self.svd_lwork = sp.linalg.lapack.get_lapack_funcs("gesdd_lwork", (X,))(n, n)
         if iscomplex:
-            self.eigvalsh = get_lapack_funcs("heevr", (X,))
+            self.eigvalsh = sp.linalg.lapack.get_lapack_funcs("heevr", (X,))
         else:
-            self.eigvalsh = get_lapack_funcs("syevr", (X,))
+            self.eigvalsh = sp.linalg.lapack.get_lapack_funcs("syevr", (X,))
 
         # Update flags
         self.feas_updated = False
@@ -180,10 +180,10 @@ class PosSemidefinite(SymCone):
                 # Compute X Aj X for all dense Aj
                 lhs = np.zeros((p_ds, self.dim[0]))
                 lhs_view = lhs.reshape((p_ds, n, -1)).view(self.dtype)
-                lin.congr_multi(lhs_view, X, self.Ai_ds, work=work)
+                congr_multi(lhs_view, X, self.Ai_ds, work=work)
 
                 # Compute inner products <Ai, X Aj X> for all dense Aj
-                temp = lin.x_dot_dense(self.A_triu, lhs[:, self.triu_idxs].T)
+                temp = x_dot_dense(self.A_triu, lhs[:, self.triu_idxs].T)
                 out[:, self.A_ds_idxs] = temp
                 out[self.A_ds_idxs, :] = temp.T
         else:
@@ -194,7 +194,7 @@ class PosSemidefinite(SymCone):
             # Compute L' Aj L
             lhs = np.zeros((p_ds, self.dim[0]))
             lhs_view = lhs.reshape((p_ds, n, -1)).view(self.dtype)
-            lin.congr_multi(lhs_view, X_rt2.conj().T, self.Ai_ds, work=work)
+            congr_multi(lhs_view, X_rt2.conj().T, self.Ai_ds, work=work)
 
             # Compute inner products <L' Ai L, L' Aj L>
             out[self.A_ds_ds_idxs] = lhs @ lhs.T
@@ -426,14 +426,12 @@ class PosSemidefinite(SymCone):
                     else:
                         scale[:: n + 1] = 1
                     self.triu_idxs = _get_triu_idxs(n, self.iscomplex)
-                    self.A_triu = lin.scale_axis(A, scale_cols=scale).tocsr()
+                    self.A_triu = scale_axis(A, scale_cols=scale).tocsr()
                     self.A_triu = self.A_triu[:, self.triu_idxs].tocoo()
 
         else:
             # A and all Ai are dense matrices
             # Just need to convert the rows of A into dense matrices
-            from qics.vectorize import vec_to_mat
-
             A = np.ascontiguousarray(A)
 
             self.A_sp_idxs = np.array([])

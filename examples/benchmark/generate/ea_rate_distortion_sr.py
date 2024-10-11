@@ -1,9 +1,10 @@
-import numpy as np
 import math
 
+import numpy as np
+
 import qics
-import qics.vectorize as vec
 import qics.quantum as qu
+import qics.vectorize as vec
 
 
 def purify(eig):

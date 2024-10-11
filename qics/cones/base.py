@@ -4,7 +4,8 @@
 # file in the root directory or at https://github.com/kerry-he/qics
 
 import numpy as np
-import qics._utils.linalg as lin
+
+from qics._utils.linalg import inp
 
 
 class Cone:
@@ -44,7 +45,7 @@ class Cone:
         H_psi = self.zeros()
         self.invhess_prod_ip(H_psi, psi)
 
-        return sum([lin.inp(H_psi_k, psi_k) for (H_psi_k, psi_k) in zip(H_psi, psi)])
+        return sum([inp(H_psi_k, psi_k) for (H_psi_k, psi_k) in zip(H_psi, psi)])
 
     def set_point(self, primal, dual=None, a=True):
         self.primal = [primal_k * a for primal_k in primal]

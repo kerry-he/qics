@@ -1,6 +1,7 @@
-import os
-import qics
 import csv
+import os
+
+import qics
 
 folder = "./qreps/"
 fnames = os.listdir(folder)

@@ -5,7 +5,8 @@
 
 import numpy as np
 import scipy as sp
-import qics.quantum
+
+from qics.quantum import i_kr, p_tr
 
 
 def density_matrix(n, iscomplex=False):
@@ -264,8 +265,8 @@ def choi_operator(nin, nout=None, M=None, iscomplex=False):
     W = G @ G.conj().T
 
     # Obtain normalization required for trace preserving property
-    H = qics.quantum.p_tr(W, (nout, nin), 0)
-    I_H_irt2 = qics.quantum.i_kr(sp.linalg.sqrtm(np.linalg.inv(H)), (nout, nin), 0)
+    H = p_tr(W, (nout, nin), 0)
+    I_H_irt2 = i_kr(sp.linalg.sqrtm(np.linalg.inv(H)), (nout, nin), 0)
 
     # Return normalized Choi matrix
     J = I_H_irt2 @ W @ I_H_irt2

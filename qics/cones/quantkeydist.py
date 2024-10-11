@@ -5,10 +5,18 @@
 
 import numpy as np
 import scipy as sp
-import qics._utils.linalg as lin
-import qics._utils.gradient as grad
+
+from qics._utils.gradient import D1_log, D2_log, scnd_frechet
+from qics._utils.linalg import (
+    cho_fact,
+    cho_solve,
+    congr_multi,
+    dense_dot_x,
+    inp,
+    x_dot_dense,
+)
 from qics.cones.base import Cone
-from qics.vectorize import get_full_to_compact_op
+from qics.vectorize import get_full_to_compact_op, vec_to_mat
 
 
 class QuantKeyDist(Cone):
@@ -305,8 +313,8 @@ class QuantKeyDist(Cone):
         self.log_Dgx_blk = log_Dgx_blk = [np.log(D) for D in self.Dgx_blk]
         self.log_Dzgx_blk = log_Dzgx_blk = [np.log(D) for D in self.Dzgx_blk]
 
-        entr_GX = [lin.inp(D, log_D) for (D, log_D) in zip(Dgx_blk, log_Dgx_blk)]
-        entr_ZGX = [lin.inp(D, log_D) for (D, log_D) in zip(Dzgx_blk, log_Dzgx_blk)]
+        entr_GX = [inp(D, log_D) for (D, log_D) in zip(Dgx_blk, log_Dgx_blk)]
+        entr_ZGX = [inp(D, log_D) for (D, log_D) in zip(Dzgx_blk, log_Dzgx_blk)]
         self.z = t[0, 0] - (sum(entr_GX) - sum(entr_ZGX))
 
         self.feas = self.z > 0
@@ -365,11 +373,10 @@ class QuantKeyDist(Cone):
         self.zi2 = self.zi * self.zi
 
         self.D1gx_log_blk = [
-            grad.D1_log(D, log_D) for (D, log_D) in zip(self.Dgx_blk, self.log_Dgx_blk)
+            D1_log(D, log_D) for (D, log_D) in zip(self.Dgx_blk, self.log_Dgx_blk)
         ]
         self.D1zgx_log_blk = [
-            grad.D1_log(D, log_D)
-            for (D, log_D) in zip(self.Dzgx_blk, self.log_Dzgx_blk)
+            D1_log(D, log_D) for (D, log_D) in zip(self.Dzgx_blk, self.log_Dzgx_blk)
         ]
 
         if self.G_is_Id:
@@ -415,7 +422,7 @@ class QuantKeyDist(Cone):
         # Hessian products with respect to t
         # ======================================================================
         # D2_t F(t, X)[Ht, Hx] = (Ht - D_X Phi(X)[Hx]) / z^2
-        out[0][:] = (Ht - lin.inp(self.DPhi, Hx)) * self.zi2
+        out[0][:] = (Ht - inp(self.DPhi, Hx)) * self.zi2
 
         # ======================================================================
         # Hessian products with respect to X
@@ -477,17 +484,17 @@ class QuantKeyDist(Cone):
                 # Apply Z(Ax), i.e., extract k-th submatrix from Ax
                 temp = self.Ax[np.ix_(np.arange(p), Z_idxs_k, Z_idxs_k)]
                 # Compute Uzx [log^[1](Dzx) .* (Uzgx' Z(Ax) Uzx)] Uzx'
-                lin.congr_multi(work2, U_k.conj().T, temp, work3)
+                congr_multi(work2, U_k.conj().T, temp, work3)
                 work2 *= D1_log_k * self.zi
-                lin.congr_multi(work1, U_k, work2, work3)
+                congr_multi(work1, U_k, work2, work3)
                 # Apply Z'( ... ), i.e., place result in k-th submatrix
                 Work0[np.ix_(np.arange(p), Z_idxs_k, Z_idxs_k)] = work1
 
             # Compute first term, i.e., Ux [log^[1](Dx) .* (Ux' G(H) Ux)] Ux'
             # Also combine this with 1/z ( ... ) + X^-1 Ax X^-1
-            lin.congr_multi(Work2, self.Ux.conj().T, self.Ax, Work3)
+            congr_multi(Work2, self.Ux.conj().T, self.Ax, Work3)
             self.Work2 *= self.D1x_comb
-            lin.congr_multi(Work1, self.Ux, Work2, Work3)
+            congr_multi(Work1, self.Ux, Work2, Work3)
 
             # Subtract two terms to get D2Phi(X)[H]
             Work1 -= Work0
@@ -503,13 +510,13 @@ class QuantKeyDist(Cone):
                 KU_list = [K.conj().T @ Ugx_blk[k] for K in K_list_blk[k]]
                 # Apply Ugx' G(Ax) Ugx
                 for KU in KU_list:
-                    lin.congr_multi(workd, KU.conj().T, self.Ax, work=workb)
+                    congr_multi(workd, KU.conj().T, self.Ax, work=workb)
                     workc += workd
                 # Apply log^[1](Dgx) .* ( ... )
                 workc *= D1gx_log_blk[k] * self.zi
                 # Apply G'(Ugx [ ... ] Ugx')
                 for KU in KU_list:
-                    lin.congr_multi(Work0, KU, workc, work=worka)
+                    congr_multi(Work0, KU, workc, work=worka)
                     Work1 += Work0
 
             # Get second term, i.e., G'(Z'(Uzgx [log^[1](Dzgx) .* ... ] Uzgx'))
@@ -521,17 +528,17 @@ class QuantKeyDist(Cone):
                 KU_list = [K.conj().T @ Uzgx_blk[k] for K in ZK_list_blk[k]]
                 # Apply Uzgx' Z(G(H)) Uzgx
                 for KU in KU_list:
-                    lin.congr_multi(workd, KU.conj().T, self.Ax, work=workb)
+                    congr_multi(workd, KU.conj().T, self.Ax, work=workb)
                     workc += workd
                 # Apply log^[1](Dzgx) .* ( ... )
                 workc *= D1zgx_log_blk[k] * self.zi
                 # Apply G'(Z'(Uzgx [ ... ] Uzgx'))
                 for KU in KU_list:
-                    lin.congr_multi(Work0, KU, workc, work=worka)
+                    congr_multi(Work0, KU, workc, work=worka)
                     Work1 -= Work0
 
             # Compute X^-1 Ax X^-1
-            lin.congr_multi(Work0, self.inv_X, self.Ax, Work2)
+            congr_multi(Work0, self.inv_X, self.Ax, Work2)
             Work1 += Work0
 
         # Hessian product of barrier function
@@ -543,7 +550,7 @@ class QuantKeyDist(Cone):
         lhs[:, 1:] = Work1.reshape((p, -1)).view(np.float64)
 
         # Multiply A (H A')
-        return lin.dense_dot_x(lhs, A.T)
+        return dense_dot_x(lhs, A.T)
 
     def invhess_prod_ip(self, out, H):
         assert self.grad_updated
@@ -575,7 +582,7 @@ class QuantKeyDist(Cone):
                 work[k * self.vm : (k + 1) * self.vm] = self.F2C_op @ temp_vec
             work *= -1
             # Solve linear system N \ ( ... )
-            work = lin.cho_solve(self.schur_fact, work)
+            work = cho_solve(self.schur_fact, work)
             # Apply Z'( ... ), i.e., recover submatrix from compact
             # vectorization then place in k-th submatrix
             Work3 = np.zeros((self.n, self.n), dtype=self.dtype)
@@ -596,7 +603,7 @@ class QuantKeyDist(Cone):
             temp_vec = Wx.view(np.float64).reshape((-1, 1))
             temp_vec = self.F2C_op @ temp_vec
             # Solve system
-            temp_vec = lin.cho_solve(self.hess_fact, temp_vec)
+            temp_vec = cho_solve(self.hess_fact, temp_vec)
             # Expand compact real vectors back into full matrices
             temp_vec = self.F2C_op.T @ temp_vec
             out_X = temp_vec.T.view(self.dtype).reshape((self.n, self.n))
@@ -607,7 +614,7 @@ class QuantKeyDist(Cone):
         # Inverse Hessian products with respect to t
         # ======================================================================
         # Compute t = z^2 Ht + <DPhi(X), X>
-        out[0][:] = self.z2 * Ht + lin.inp(self.DPhi, out[1])
+        out[0][:] = self.z2 * Ht + inp(self.DPhi, out[1])
 
         return out
 
@@ -657,33 +664,33 @@ class QuantKeyDist(Cone):
             np.add(self.Ax, Work2, out=Work0)
 
             # Apply D2S(X)^-1 = (Ux⊗Ux) (1/z log + inv)^[1](Dx)^-1 (Ux'⊗Ux')
-            lin.congr_multi(Work2, self.Ux.conj().T, Work0, Work3)
+            congr_multi(Work2, self.Ux.conj().T, Work0, Work3)
             Work2 *= self.D1x_comb_inv
-            lin.congr_multi(Work0, self.Ux, Work2, Work3)
+            congr_multi(Work0, self.Ux, Work2, Work3)
 
             # Apply Z( ... ), i.e., extract k-th submatrix then get compact
             # vectorization of this submatrix
             for k, Z_idxs_k in enumerate(self.Z_idxs):
                 temp = Work0[np.ix_(np.arange(p), Z_idxs_k, Z_idxs_k)]
                 temp = temp.view(np.float64).reshape((p, -1)).T
-                temp = lin.x_dot_dense(self.F2C_op, temp)
+                temp = x_dot_dense(self.F2C_op, temp)
                 work[k * self.vm : (k + 1) * self.vm] = temp
             work *= -1
             # Solve linear system N \ ( ... )
-            work = lin.cho_solve(self.schur_fact, work)
+            work = cho_solve(self.schur_fact, work)
             # Apply Z'( ... ), i.e., recover submatrix from compact
             # vectorization then place in k-th submatrix
             Work1.fill(0.0)
             for k, Z_idxs_k in enumerate(self.Z_idxs):
                 work_k = work[k * self.vm : (k + 1) * self.vm]
-                work_k = lin.x_dot_dense(self.F2C_op.T, work_k)
+                work_k = x_dot_dense(self.F2C_op.T, work_k)
                 work_k = work_k.T.view(self.dtype).reshape(p, self.m, self.m)
                 Work1[np.ix_(np.arange(p), Z_idxs_k, Z_idxs_k)] = work_k
 
             # Apply D2S(X)^-1 = (Ux⊗Ux) (1/z log + inv)^[1](Dx)^-1 (Ux'⊗Ux')
-            lin.congr_multi(Work2, self.Ux.conj().T, Work1, Work3)
+            congr_multi(Work2, self.Ux.conj().T, Work1, Work3)
             Work2 *= self.D1x_comb_inv
-            lin.congr_multi(Work1, self.Ux, Work2, Work3)
+            congr_multi(Work1, self.Ux, Work2, Work3)
 
             # Subtract previous expression from (D2S(X)^-1 Wx) to get X
             Work0 -= Work1
@@ -701,7 +708,7 @@ class QuantKeyDist(Cone):
             lhs[:, 0] = out_t
 
             # Multiply A (H A')
-            return lin.dense_dot_x(lhs, A.T)
+            return dense_dot_x(lhs, A.T)
 
         else:
             # Otherwise, we will directly build M and Cholesky factor it to
@@ -715,7 +722,7 @@ class QuantKeyDist(Cone):
             self.work0 += self.Ax_cvec
 
             # Solve system X = M \ Wx
-            out_X = lin.cho_solve(self.hess_fact, self.work0.T)
+            out_X = cho_solve(self.hess_fact, self.work0.T)
 
             # ==================================================================
             # Inverse Hessian products with respect to t
@@ -726,7 +733,7 @@ class QuantKeyDist(Cone):
 
             # Multiply A (H A')
             out = np.outer(out_t, self.At)
-            out += lin.x_dot_dense(self.Ax_cvec, out_X)
+            out += x_dot_dense(self.Ax_cvec, out_X)
             return out
 
     def third_dir_deriv_axpy(self, out, H, a=True):
@@ -764,16 +771,16 @@ class QuantKeyDist(Cone):
         D3PhiHH = np.zeros_like(self.X)
         # Third order derivatives of S(G(X))
         for k, (U_k, D2_k) in enumerate(zip(Ugx_blk, D2gx_log_blk)):
-            temp = grad.scnd_frechet(D2_k * UGHU_blk[k], UGHU_blk[k], U=U_k)
+            temp = scnd_frechet(D2_k * UGHU_blk[k], UGHU_blk[k], U=U_k)
             D3PhiHH += apply_kraus(temp, K_list_blk[k], adjoint=True)
         # Third order derivatives of S(Z(G(X)))
         for k, (U_k, D2_k) in enumerate(zip(Uzgx_blk, D2zgx_log_blk)):
-            temp = grad.scnd_frechet(D2_k * UZGHU_blk[k], UZGHU_blk[k], U=U_k)
+            temp = scnd_frechet(D2_k * UZGHU_blk[k], UZGHU_blk[k], U=U_k)
             D3PhiHH -= apply_kraus(temp, ZK_list_blk[k], adjoint=True)
 
         # Third derivative of barrier
-        DPhiH = lin.inp(self.DPhi, Hx)
-        D2PhiHH = lin.inp(D2PhiH, Hx)
+        DPhiH = inp(self.DPhi, Hx)
+        D2PhiHH = inp(D2PhiH, Hx)
         chi = Ht - DPhiH
         chi2 = chi * chi
 
@@ -795,8 +802,6 @@ class QuantKeyDist(Cone):
     # ========================================================================
     def congr_aux(self, A):
         assert not self.congr_aux_updated
-
-        from qics.vectorize import vec_to_mat
 
         iscomplex = self.iscomplex
 
@@ -940,14 +945,14 @@ class QuantKeyDist(Cone):
             # ==================================================================
             for k, (U, D1_log) in enumerate(zip(Uzgx_blk, D1zgx_log_blk)):
                 # Begin with (Uzx' ⊗ Uzx')
-                lin.congr_multi(work8, U.conj().T, self.E, work=work7)
+                congr_multi(work8, U.conj().T, self.E, work=work7)
                 # Apply z [log^[1](Dzx)]^-1
                 work8 *= self.z * np.reciprocal(D1_log)
                 # Apply (Uzx ⊗ Uzx)
-                lin.congr_multi(work6, U, work8, work=work7)
+                congr_multi(work6, U, work8, work=work7)
 
                 work = work6.view(np.float64).reshape((vm, -1))
-                work = lin.x_dot_dense(self.F2C_op, work.T)
+                work = x_dot_dense(self.F2C_op, work.T)
 
                 self.schur[k * vm : (k + 1) * vm, k * vm : (k + 1) * vm] = work
 
@@ -955,21 +960,21 @@ class QuantKeyDist(Cone):
             # Get second term, i.e., Z (Ux ⊗ Ux) ...  (Ux' ⊗ Ux') Z'
             # ==================================================================
             # Begin with (Ux' ⊗ Ux') Z'
-            lin.congr_multi(Work8, self.Ux.conj().T, self.E_blk, work=Work7)
+            congr_multi(Work8, self.Ux.conj().T, self.E_blk, work=Work7)
             # Apply [(1/z log + inv)^[1](Dx)]^-1
             Work8 *= self.D1x_comb_inv
             # Apply (Ux ⊗ Ux)
-            lin.congr_multi(Work6, self.Ux, Work8, work=Work7)
+            congr_multi(Work6, self.Ux, Work8, work=Work7)
             # Apply Z, i.e., extract submatrices
             for k, Z_idxs_k in enumerate(self.Z_idxs):
                 temp = Work6[np.ix_(np.arange(r * vm), Z_idxs_k, Z_idxs_k)]
                 temp = temp.view(np.float64).reshape((r * vm, -1))
-                temp = lin.x_dot_dense(self.F2C_op, temp.T).T
+                temp = x_dot_dense(self.F2C_op, temp.T).T
 
                 self.schur[:, k * vm : (k + 1) * vm] -= temp
 
             # Subtract terms to obtain N then Cholesky factor
-            self.schur_fact = lin.cho_fact(self.schur)
+            self.schur_fact = cho_fact(self.schur)
 
         else:
             # Precompute and factorize the matrix
@@ -991,7 +996,7 @@ class QuantKeyDist(Cone):
             # ==================================================================
             # Get third term, i.e., X^-1 ⊗ X^-1
             # ==================================================================
-            lin.congr_multi(work8, self.inv_X, self.E, work=work7)
+            congr_multi(work8, self.inv_X, self.E, work=work7)
 
             # ==================================================================
             # Get first term, i.e., 1/z G' (Ugx ⊗ Ugx) ... (Ugx' ⊗ Ugx') G
@@ -1004,13 +1009,13 @@ class QuantKeyDist(Cone):
                 KU_list = [K.conj().T @ Ugx_blk[k] for K in K_list_blk[k]]
                 # Apply Ugx' G(Ax) Ugx
                 for KU in KU_list:
-                    lin.congr_multi(workd, KU.conj().T, self.E, work=workb)
+                    congr_multi(workd, KU.conj().T, self.E, work=workb)
                     workc += workd
                 # Apply log^[1](Dgx) .* ( ... )
                 workc *= D1gx_log_blk[k] * self.zi
                 # Apply G'(Ugx [ ... ] Ugx')
                 for KU in KU_list:
-                    lin.congr_multi(work7, KU, workc, work=worka)
+                    congr_multi(work7, KU, workc, work=worka)
                     work8 += work7
 
             # ==================================================================
@@ -1024,20 +1029,20 @@ class QuantKeyDist(Cone):
                 KU_list = [K.conj().T @ Uzgx_blk[k] for K in ZK_list_blk[k]]
                 # Apply Uzgx' Z(G(Ax)) Uzgx
                 for KU in KU_list:
-                    lin.congr_multi(workd, KU.conj().T, self.E, work=workb)
+                    congr_multi(workd, KU.conj().T, self.E, work=workb)
                     workc += workd
                 # Apply log^[1](Dzgx) .* ( ... )
                 workc *= D1zgx_log_blk[k] * self.zi
                 # Apply G'Z'((Uzgx [ ... ] Uzgx'))
                 for KU in KU_list:
-                    lin.congr_multi(work7, KU, workc, work=worka)
+                    congr_multi(work7, KU, workc, work=worka)
                     work8 -= work7
 
             # Get Hessian and factorize
             work = work8.view(np.float64).reshape((self.vn, -1))
-            self.hess = lin.x_dot_dense(self.F2C_op, work.T)
+            self.hess = x_dot_dense(self.F2C_op, work.T)
             self.hess = (self.hess + self.hess.T) * 0.5
-            self.hess_fact = lin.cho_fact(self.hess)
+            self.hess_fact = cho_fact(self.hess)
 
         self.invhess_aux_updated = True
 
@@ -1048,10 +1053,10 @@ class QuantKeyDist(Cone):
         self.zi3 = self.zi2 * self.zi
 
         self.D2gx_log_blk = [
-            grad.D2_log(D, D1) for (D, D1) in zip(self.Dgx_blk, self.D1gx_log_blk)
+            D2_log(D, D1) for (D, D1) in zip(self.Dgx_blk, self.D1gx_log_blk)
         ]
         self.D2zgx_log_blk = [
-            grad.D2_log(D, D1) for (D, D1) in zip(self.Dzgx_blk, self.D1zgx_log_blk)
+            D2_log(D, D1) for (D, D1) in zip(self.Dzgx_blk, self.D1zgx_log_blk)
         ]
 
         self.dder3_aux_updated = True

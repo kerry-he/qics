@@ -11,11 +11,11 @@ import time
 import numpy as np
 import scipy as sp
 
-import qics._utils.linalg as lin
-import qics.point as vec
 from qics import __version__
 from qics._stepper import KKTSolver, NonSymStepper, SymStepper
-import qics.cones
+from qics._utils.linalg import is_full_col_rank, norm_inf
+from qics.cones import OpPerspecEpi, OpPerspecTr, QuantRelEntr
+from qics.point import Point
 
 spinner = itertools.cycle(["-", "/", "|", "\\"])
 
@@ -112,23 +112,18 @@ class Solver:
         cones = model.cones
         if use_invhess is None:
             # Default decision tree for whether to avoid inverse Hessian oracles
-            SLOW_CONES = (
-                qics.cones.QuantRelEntr,
-                qics.cones.OpPerspecEpi,
-                qics.cones.OpPerspecTr,
-            )
-
+            SLOW_CONES = (QuantRelEntr, OpPerspecEpi, OpPerspecTr)
             q_slow_cones = sum([sum(K.dim) for K in cones if isinstance(K, SLOW_CONES)])
 
             use_invhess = model.issymmetric or q_slow_cones / model.q <= 0.55 \
-                          or not model.use_G or not lin.is_full_col_rank(model.G)  # fmt: skip
+                          or not model.use_G or not is_full_col_rank(model.G)  # fmt: skip
         elif not use_invhess:
             if not model.use_G:
                 raise Exception(
                     "Avoiding inverse Hessian oracles is not supported nor recommended "
                     "if G is easily invertible."
                 )
-            if not lin.is_full_col_rank(model.G):
+            if not is_full_col_rank(model.G):
                 raise Exception(
                     "Avoiding inverse Hessian oracles is not supported when G is not "
                     "full column rank."
@@ -147,8 +142,8 @@ class Solver:
             self.stepper = NonSymStepper(kktsolver, model, toa=toa)
 
         # Initialize points and process initial point
-        self.point = vec.Point(model)
-        self.point_best = vec.Point(model)
+        self.point = Point(model)
+        self.point_best = Point(model)
 
         self.point.vec.fill(np.nan)
         if init_pnt is not None:
@@ -379,9 +374,9 @@ class Solver:
 
         model = self.model
 
-        self.c_max = lin.norm_inf(model.c)
-        self.b_max = lin.norm_inf(model.b)
-        self.h_max = lin.norm_inf(model.h)
+        self.c_max = norm_inf(model.c)
+        self.b_max = norm_inf(model.b)
+        self.h_max = norm_inf(model.h)
 
         if self.verbose == 3:
             if self.model.issymmetric:
@@ -468,17 +463,16 @@ class Solver:
         self.z_res = model.G @ x
         self.z_res += s
 
-        norm_x_res = lin.norm_inf(self.x_res)
-        norm_y_res = lin.norm_inf(self.y_res)
-        norm_z_res = lin.norm_inf(self.z_res)
+        norm_x_res = norm_inf(self.x_res)
+        norm_y_res = norm_inf(self.y_res)
+        norm_z_res = norm_inf(self.z_res)
 
         self.x_infeas = norm_x_res / d_obj_tau if (d_obj_tau > 0) else np.inf
         self.y_infeas = -norm_y_res / p_obj_tau if (p_obj_tau < 0) else np.inf
         self.z_infeas = -norm_z_res / p_obj_tau if (p_obj_tau < 0) else np.inf
 
         # Get ill posedness certificates
-        norm_xyzs = max(lin.norm_inf(x), lin.norm_inf(y), lin.norm_inf(z), 
-                        lin.norm_inf(s))  # fmt: skip
+        norm_xyzs = max(norm_inf(x), norm_inf(y), norm_inf(z), norm_inf(s))
         if norm_xyzs > 0:
             norm_xyz_res = max(norm_x_res, norm_y_res, norm_z_res)
             self.illposed_res = norm_xyz_res / norm_xyzs
@@ -493,9 +487,9 @@ class Solver:
             self.z_res = sp.linalg.blas.daxpy(h, self.z_res, a=-tau)
         self.tau_res = p_obj_tau - d_obj_tau + kap
 
-        self.x_feas = lin.norm_inf(self.x_res) / (1.0 + self.c_max) / tau
-        self.y_feas = lin.norm_inf(self.y_res) / (1.0 + self.b_max) / tau
-        self.z_feas = lin.norm_inf(self.z_res) / (1.0 + self.h_max) / tau
+        self.x_feas = norm_inf(self.x_res) / (1.0 + self.c_max) / tau
+        self.y_feas = norm_inf(self.y_res) / (1.0 + self.b_max) / tau
+        self.z_feas = norm_inf(self.z_res) / (1.0 + self.h_max) / tau
 
         self.res = {
             "x": self.x_res,

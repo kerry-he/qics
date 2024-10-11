@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
-import qics
 
+import qics
 from qics.vectorize import mat_to_vec
 
 ## Bregman projection

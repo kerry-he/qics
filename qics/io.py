@@ -8,7 +8,20 @@ import os
 import numpy as np
 import scipy as sp
 
-import qics
+from qics import Model
+from qics.cones import (
+    ClassEntr,
+    ClassRelEntr,
+    NonNegOrthant,
+    OpPerspecEpi,
+    OpPerspecTr,
+    PosSemidefinite,
+    QuantCondEntr,
+    QuantEntr,
+    QuantKeyDist,
+    QuantRelEntr,
+    SecondOrder,
+)
 from qics.vectorize import mat_dim, vec_to_mat
 
 
@@ -252,11 +265,11 @@ def read_sdpa(filename):
     cones = []
     for bi in blockStruct:
         if bi >= 0:
-            cones.append(qics.cones.PosSemidefinite(bi, iscomplex=iscomplex))
+            cones.append(PosSemidefinite(bi, iscomplex=iscomplex))
         else:
-            cones.append(qics.cones.NonNegOrthant(-bi))
+            cones.append(NonNegOrthant(-bi))
 
-    return qics.Model(c=c, A=A, b=b, cones=cones)
+    return Model(c=c, A=A, b=b, cones=cones)
 
 
 def write_sdpa(model, filename):
@@ -320,9 +333,9 @@ def write_sdpa(model, filename):
     # Write blockStruct (structure of blocks in X variable)
     blockStruct = []
     for cone_k in cones:
-        if isinstance(cone_k, qics.cones.PosSemidefinite):
+        if isinstance(cone_k, PosSemidefinite):
             blockStruct.append(cone_k.n)
-        elif isinstance(cone_k, qics.cones.NonNegOrthant):
+        elif isinstance(cone_k, NonNegOrthant):
             blockStruct.append(-cone_k.n)
         else:
             raise Exception("Invalid SDP: model contains unsupported cones.")
@@ -343,9 +356,9 @@ def write_sdpa(model, filename):
     for blk in range(nBlock):
         # Turn vectorised Cl into matrix (make diagonal if corresponds to LP)
         Cl = c[idxs[blk] : idxs[blk + 1]]
-        if isinstance(cones[blk], qics.cones.PosSemidefinite):
+        if isinstance(cones[blk], PosSemidefinite):
             Cl = vec_to_mat(Cl, iscomplex=cones[blk].get_iscomplex(), compact=False)
-        elif isinstance(cones[blk], qics.cones.NonNegOrthant):
+        elif isinstance(cones[blk], NonNegOrthant):
             Cl = np.diag(Cl.ravel())
         Cl = sp.sparse.coo_matrix(Cl)
 
@@ -367,7 +380,7 @@ def write_sdpa(model, filename):
                 Akl = Akl[:, ::2] + Akl[:, 1::2] * 1j
 
             for idx, v in zip(Akl.indices, Akl.data):
-                if isinstance(cones[blk], qics.cones.PosSemidefinite):
+                if isinstance(cones[blk], PosSemidefinite):
                     (i, j) = (idx // cones[blk].n, idx % cones[blk].n)
                 else:
                     (i, j) = (idx, idx)
@@ -425,86 +438,86 @@ def read_cbf(filename):
 
     def _read_cones(cone_type, cone_dim, lookup):
         if cone_type == "L+":
-            return qics.cones.NonNegOrthant(cone_dim)
+            return NonNegOrthant(cone_dim)
         elif cone_type == "Q":
             n = 1 - cone_dim
-            return qics.cones.SecondOrder(n)
+            return SecondOrder(n)
         elif cone_type == "SVECPSD":
             n = mat_dim(cone_dim, compact=True)
-            return qics.cones.PosSemidefinite(n)
+            return PosSemidefinite(n)
         elif cone_type == "HVECPSD":
             n = mat_dim(cone_dim, iscomplex=True, compact=True)
-            return qics.cones.PosSemidefinite(n, iscomplex=True)
+            return PosSemidefinite(n, iscomplex=True)
         elif cone_type == "CE":
             n = cone_dim - 2
-            return qics.cones.ClassEntr(n)
+            return ClassEntr(n)
         elif cone_type == "CRE":
             n = (cone_dim - 1) // 2
-            return qics.cones.ClassRelEntr(n)
+            return ClassRelEntr(n)
         elif cone_type == "SVECQE":
             n = mat_dim(cone_dim - 2, compact=True)
-            return qics.cones.QuantEntr(n)
+            return QuantEntr(n)
         elif cone_type == "HVECQE":
             n = mat_dim(cone_dim - 2, iscomplex=True, compact=True)
-            return qics.cones.QuantEntr(n, iscomplex=True)
+            return QuantEntr(n, iscomplex=True)
         elif cone_type == "SVECQRE":
             n = mat_dim((cone_dim - 1) // 2, compact=True)
-            return qics.cones.QuantRelEntr(n)
+            return QuantRelEntr(n)
         elif cone_type == "HVECQRE":
             n = mat_dim((cone_dim - 1) // 2, iscomplex=True, compact=True)
-            return qics.cones.QuantRelEntr(n, iscomplex=True)
+            return QuantRelEntr(n, iscomplex=True)
         elif "SVECQCE" in cone_type:
             lookup_id = int(cone_type[1])
             dims = lookup["qce"][lookup_id][0]
             sys = lookup["qce"][lookup_id][1]
-            return qics.cones.QuantCondEntr(dims, sys)
+            return QuantCondEntr(dims, sys)
         elif "HVECQCE" in cone_type:
             lookup_id = int(cone_type[1])
             dims = lookup["qce"][lookup_id][0]
             sys = lookup["qce"][lookup_id][1]
-            return qics.cones.QuantCondEntr(dims, sys, iscomplex=True)
+            return QuantCondEntr(dims, sys, iscomplex=True)
         elif "SVECQKD" in cone_type:
             lookup_id = int(cone_type[1])
             G_info = lookup["qkd"][lookup_id][0]
             Z_info = lookup["qkd"][lookup_id][1]
-            return qics.cones.QuantKeyDist(G_info, Z_info)
+            return QuantKeyDist(G_info, Z_info)
         elif "HVECQKD" in cone_type:
             lookup_id = int(cone_type[1])
             G_info = lookup["qkd"][lookup_id][0]
             Z_info = lookup["qkd"][lookup_id][1]
-            return qics.cones.QuantKeyDist(G_info, Z_info, iscomplex=True)
+            return QuantKeyDist(G_info, Z_info, iscomplex=True)
         elif cone_type == "SVECORE":
             n = mat_dim(cone_dim // 3, compact=True)
-            return qics.cones.OpPerspecEpi(n, "log")
+            return OpPerspecEpi(n, "log")
         elif cone_type == "HVECORE":
             n = mat_dim(cone_dim // 3, iscomplex=True, compact=True)
-            return qics.cones.OpPerspecEpi(n, "log", iscomplex=True)
+            return OpPerspecEpi(n, "log", iscomplex=True)
         elif "SVECMGM" in cone_type:
             lookup_id = int(cone_type[1])
             power = lookup["mgm"][lookup_id]
             n = mat_dim(cone_dim // 3, compact=True)
-            return qics.cones.OpPerspecEpi(n, power)
+            return OpPerspecEpi(n, power)
         elif "HVECMGM" in cone_type:
             lookup_id = int(cone_type[1])
             power = lookup["mgm"][lookup_id]
             n = mat_dim(cone_dim // 3, iscomplex=True, compact=True)
-            return qics.cones.OpPerspecEpi(n, power, iscomplex=True)
+            return OpPerspecEpi(n, power, iscomplex=True)
         elif cone_type == "SVECTRE":
             n = mat_dim((cone_dim - 1) // 2, compact=True)
-            return qics.cones.OpPerspecTr(n, "log")
+            return OpPerspecTr(n, "log")
         elif cone_type == "HVECTRE":
             n = mat_dim((cone_dim - 1) // 2, iscomplex=True, compact=True)
-            return qics.cones.OpPerspecTr(n, "log", iscomplex=True)
+            return OpPerspecTr(n, "log", iscomplex=True)
         elif "SVECTGM" in cone_type:
             lookup_id = int(cone_type[1])
             power = lookup["mgm"][lookup_id]
             n = mat_dim((cone_dim - 1) // 2, compact=True)
-            return qics.cones.OpPerspecTr(n, power)
+            return OpPerspecTr(n, power)
         elif "HVECTGM" in cone_type:
             lookup_id = int(cone_type[1])
             power = lookup["mgm"][lookup_id]
             n = mat_dim((cone_dim - 1) // 2, iscomplex=True, compact=True)
-            return qics.cones.OpPerspecTr(n, power, iscomplex=True)
+            return OpPerspecTr(n, power, iscomplex=True)
 
     while True:
         line = f.readline()
@@ -675,7 +688,7 @@ def read_cbf(filename):
         G = None
         h = None
 
-    return qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones, offset=offset)
+    return Model(c=c, A=A, b=b, G=G, h=h, cones=cones, offset=offset)
 
 
 def write_cbf(model, filename):
@@ -741,30 +754,30 @@ def write_cbf(model, filename):
     cones_string = ""
     lookup = {"qce": [], "qkd": [], "mgm": []}
     for cone_k in cones:
-        if isinstance(cone_k, qics.cones.NonNegOrthant):
+        if isinstance(cone_k, NonNegOrthant):
             (cone_name, cone_size) = ("L+", cone_k.n)
-        if isinstance(cone_k, qics.cones.SecondOrder):
+        if isinstance(cone_k, SecondOrder):
             (cone_name, cone_size) = ("Q", 1 + cone_k.n)
-        if isinstance(cone_k, qics.cones.PosSemidefinite):
+        if isinstance(cone_k, PosSemidefinite):
             if cone_k.get_iscomplex():
                 (cone_name, cone_size) = ("HVECPSD", cone_k.n * cone_k.n)
             else:
                 (cone_name, cone_size) = ("SVECPSD", cone_k.n * (cone_k.n + 1) // 2)
-        if isinstance(cone_k, qics.cones.ClassEntr):
+        if isinstance(cone_k, ClassEntr):
             (cone_name, cone_size) = ("CE", 2 + cone_k.n)
-        if isinstance(cone_k, qics.cones.ClassRelEntr):
+        if isinstance(cone_k, ClassRelEntr):
             (cone_name, cone_size) = ("CRE", 1 + 2 * cone_k.n)
-        if isinstance(cone_k, qics.cones.QuantEntr):
+        if isinstance(cone_k, QuantEntr):
             if cone_k.get_iscomplex():
                 (cone_name, cone_size) = ("HVECQE", 2 + cone_k.n * cone_k.n)
             else:
                 (cone_name, cone_size) = ("SVECQE", 2 + cone_k.n * (cone_k.n + 1) // 2)
-        if isinstance(cone_k, qics.cones.QuantRelEntr):
+        if isinstance(cone_k, QuantRelEntr):
             if cone_k.get_iscomplex():
                 (cone_name, cone_size) = ("HVECQRE", 1 + 2 * cone_k.n * cone_k.n)
             else:
                 (cone_name, cone_size) = ("SVECQRE", 1 + cone_k.n * (cone_k.n + 1))
-        if isinstance(cone_k, qics.cones.QuantCondEntr):
+        if isinstance(cone_k, QuantCondEntr):
             if cone_k.get_iscomplex():
                 cone_name = "@" + str(len(lookup["qce"])) + ":HVECQCE"
                 cone_size = 1 + cone_k.N * cone_k.N
@@ -772,7 +785,7 @@ def write_cbf(model, filename):
                 cone_name = "@" + str(len(lookup["qce"])) + ":SVECQCE"
                 cone_size = 1 + cone_k.N * (cone_k.N + 1) // 2
             lookup["qce"] += [(cone_k.dims, cone_k.sys)]
-        if isinstance(cone_k, qics.cones.QuantKeyDist):
+        if isinstance(cone_k, QuantKeyDist):
             if cone_k.get_iscomplex():
                 cone_name = "@" + str(len(lookup["qkd"])) + ":HVECQKD"
                 cone_size = 1 + cone_k.n * cone_k.n
@@ -780,7 +793,7 @@ def write_cbf(model, filename):
                 cone_name = "@" + str(len(lookup["qkd"])) + ":SVECQKD"
                 cone_size = 1 + cone_k.n * (cone_k.n + 1) // 2
             lookup["qkd"] += [(cone_k.K_list_raw, cone_k.Z_list_raw)]
-        if isinstance(cone_k, qics.cones.OpPerspecTr):
+        if isinstance(cone_k, OpPerspecTr):
             if cone_k.get_iscomplex():
                 if cone_k.func == "log":
                     cone_name = "HVECTRE"
@@ -795,7 +808,7 @@ def write_cbf(model, filename):
                     cone_name = "@" + str(len(lookup["mgm"])) + ":SVECTGM"
                     lookup["mgm"] += [cone_k.func]
                 cone_size = 1 + 2 * cone_k.n * (cone_k.n + 1) // 2
-        if isinstance(cone_k, qics.cones.OpPerspecEpi):
+        if isinstance(cone_k, OpPerspecEpi):
             if cone_k.get_iscomplex():
                 if cone_k.func == "log":
                     cone_name = "HVECORE"
@@ -840,8 +853,8 @@ def write_cbf(model, filename):
             iscomplex_k = any([np.iscomplexobj(Ki) for Ki in qkd_k[0]])
             dtype = np.complex128 if iscomplex_k else np.float64
             f.write(str(totalnnz_k) + " " + str(len(qkd_k[0])) + " "
-                + str(qkd_k[0][0].shape[0]) + " " + str(qkd_k[0][0].shape[1])  # fmt: skip
-                + " " + str(int(iscomplex_k)) + "\n")
+                + str(qkd_k[0][0].shape[0]) + " " + str(qkd_k[0][0].shape[1])
+                + " " + str(int(iscomplex_k)) + "\n")  # fmt: skip
             for t, Kt in enumerate(qkd_k[0]):
                 # Write Ki
                 Kt = sp.sparse.coo_matrix(Kt, dtype=dtype)

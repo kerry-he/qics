@@ -6,9 +6,7 @@
 import numpy as np
 import scipy as sp
 
-import qics.cones
-import qics.point
-from qics._utils import linalg as la
+from qics._utils.linalg import abs_max, is_full_col_rank, scale_axis
 
 
 class Model:
@@ -159,7 +157,7 @@ class Model:
             # After rescaling, G is an easily invertible square diagonal matrix
             self.G_inv = np.reciprocal(self.G.diagonal()).reshape((-1, 1))
 
-            self.A_invG = la.scale_axis(self.A.copy(), scale_cols=self.G_inv)
+            self.A_invG = scale_axis(self.A.copy(), scale_cols=self.G_inv)
             if sp.sparse.issparse(self.A_invG):
                 self.A_invG = self.A_invG.tocsr()
 
@@ -182,6 +180,7 @@ class Model:
         #          h1*x2 + h2*x3 - G*x1 ∈ K
         # where h1 is an interior point of K and h2 = h. This allows us to
         # solve problems using the cone K'={x : G*x ∈ K}.
+        from qics.point import VecProduct
 
         n = self.n
         self.x_offset = np.zeros((n, 1))
@@ -189,7 +188,7 @@ class Model:
         # Add variable x2 and constraint x2 = 0 if necessary
         # Find an interior point of K and normalize it
         if init_pnt is None:
-            s_init = qics.point.VecProduct(self.cones)
+            s_init = VecProduct(self.cones)
             s_init.vec.fill(np.nan)
         else:
             # If user gives us an inital s, then use this instead
@@ -201,7 +200,7 @@ class Model:
         s_norm = np.sum(np.abs(s_init.vec))
 
         G_temp = _hstack((self.G, -s_init.vec / s_norm))
-        if la.is_full_col_rank(G_temp):
+        if is_full_col_rank(G_temp):
             A_new_col = sp.sparse.coo_matrix((self.p, 1))
             A_new_row = sp.sparse.coo_matrix(([1.0], ([0], [n])), (1, n + 1))
             self.c = np.vstack((self.c, np.array([[0.0]])))
@@ -218,7 +217,7 @@ class Model:
         if np.any(self.h):
             h_norm = np.sum(np.abs(self.h))
             G_temp = _hstack((self.G, -self.h / h_norm))
-            if la.is_full_col_rank(G_temp):
+            if is_full_col_rank(G_temp):
                 A_new_col = sp.sparse.coo_matrix((self.p, 1))
                 A_new_row = sp.sparse.coo_matrix(([1.0], ([0], [n])), (1, n + 1))
                 self.c = np.vstack((self.c, np.array([[0.0]])))
@@ -244,25 +243,27 @@ class Model:
     def _rescale(self):
         # Rescale c
         self.c_scale = np.maximum.reduce([np.abs(self.c.ravel()), 
-                                          la.abs_max(self.A, axis=0), 
-                                          la.abs_max(self.G, axis=0)])  # fmt: skip
+                                          abs_max(self.A, axis=0), 
+                                          abs_max(self.G, axis=0)])  # fmt: skip
         self.c_scale = np.sqrt(self.c_scale).reshape((-1, 1))
 
         # Rescale b
         self.b_scale = np.maximum.reduce([np.abs(self.b.ravel()), 
-                                          la.abs_max(self.A, axis=1)])  # fmt: skip
+                                          abs_max(self.A, axis=1)])  # fmt: skip
         self.b_scale = np.sqrt(self.b_scale).reshape((-1, 1))
 
         # Rescale h
         # Note we can only scale each cone by a positive factor, and
         # we can't scale each individual variable by a different factor
         # (except for the nonnegative orthant)
+        from qics.cones import NonNegOrthant
+
         self.h_scale = np.zeros((self.q, 1))
         h_absmax = np.abs(self.h.ravel())
-        G_absmax = la.abs_max(self.G, axis=1)
+        G_absmax = abs_max(self.G, axis=1)
         for k, cone_k in enumerate(self.cones):
             idxs = self.cone_idxs[k]
-            if isinstance(cone_k, qics.cones.NonNegOrthant):
+            if isinstance(cone_k, NonNegOrthant):
                 self.h_scale[idxs, 0] = np.maximum.reduce([h_absmax[idxs], 
                                                            G_absmax[idxs]])  # fmt: skip
             else:
@@ -279,12 +280,12 @@ class Model:
         self.c /= self.c_scale
         self.b /= self.b_scale
         self.h /= self.h_scale
-        self.A = la.scale_axis(self.A,
-                               scale_rows=np.reciprocal(self.b_scale),
-                               scale_cols=np.reciprocal(self.c_scale))  # fmt: skip
-        self.G = la.scale_axis(self.G,
-                               scale_rows=np.reciprocal(self.h_scale),
-                               scale_cols=np.reciprocal(self.c_scale))  # fmt: skip
+        self.A = scale_axis(self.A,
+                            scale_rows=np.reciprocal(self.b_scale),
+                            scale_cols=np.reciprocal(self.c_scale))  # fmt: skip
+        self.G = scale_axis(self.G,
+                            scale_rows=np.reciprocal(self.h_scale),
+                            scale_cols=np.reciprocal(self.c_scale))  # fmt: skip
 
         return
 

@@ -1,7 +1,8 @@
 # setup.py
-import setuptools
-import re
 import os
+import re
+
+import setuptools
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -28,7 +29,7 @@ setuptools.setup(
     project_urls={
         "Source": "https://github.com/kerry-he/qics",
         "Documentation": "https://qics.readthedocs.io/en/latest/",
-    },    
+    },
     packages=setuptools.find_packages(include=["qics", "qics.*"]),
     python_requires=">=3.8",
     install_requires=["numpy", "scipy", "numba"],
