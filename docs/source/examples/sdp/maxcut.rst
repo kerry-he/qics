@@ -20,7 +20,7 @@ corresponding to this graph is
 
     \max_{X \in \mathbb{S}^5} &&& \langle C, X \rangle
 
-    \text{s.t.} &&& X_{ii} = 1 \qquad i=1,\ldots,5
+    \text{subj. to} &&& X_{ii} = 1 \qquad i=1,\ldots,5
 
     &&& X \succeq 0,
 
@@ -38,9 +38,10 @@ where
 
 We show how we can solve this semidefinite program using QICS below.
 
-.. testcode::
+.. code-block:: python
     
-    import numpy
+    import numpy as np
+
     import qics
 
     # Define objective function
@@ -54,10 +55,10 @@ We show how we can solve this semidefinite program using QICS below.
     c = -qics.vectorize.mat_to_vec(C)
 
     # Build linear constraint
-    A = numpy.zeros((5, 25))
-    A[numpy.arange(5), numpy.arange(0, 25, 6)] = 1.
+    A = np.zeros((5, 25))
+    A[np.arange(5), np.arange(0, 25, 6)] = 1.
 
-    b = numpy.ones((5, 1))
+    b = np.ones((5, 1))
 
     # Define cones to optimize over
     cones = [qics.cones.PosSemidefinite(5)]
@@ -69,12 +70,12 @@ We show how we can solve this semidefinite program using QICS below.
     # Solve problem
     info = solver.solve()
 
+    X_opt = info["s_opt"][0][0]
     print("Optimal matrix variable X is:")
-    print(info["s_opt"][0][0])
-    print("which has rank:", numpy.linalg.matrix_rank(info["s_opt"][0][0], tol=1e-6))
+    print(X_opt)
+    print("which has rank:", np.linalg.matrix_rank(X_opt, tol=1e-6))
 
-.. testoutput::
-    :options: +NORMALIZE_WHITESPACE
+.. code-block:: none
 
     Optimal matrix variable X is:
     [[ 1.         -0.36684149 -0.3668415   0.12486877  0.12486877]
@@ -94,7 +95,7 @@ of the semidefinite relaxation of max cut arises
 
     \min_{X \in \mathbb{H}^n} &&& \langle C, X \rangle
 
-    \text{s.t.} &&& X_{ii} = 1 \qquad i=1,\ldots,5
+    \text{subj. to} &&& X_{ii} = 1 \qquad i=1,\ldots,5
 
     &&& X \succeq 0,
 
@@ -108,44 +109,46 @@ for some complex matrix :math:`U \in \mathbb{C}^{n \times m}` and real vector
 :math:`v \in \mathbb{R}^n`. We can solve this in **QICS** by making a few 
 adjustments to the previous code.
 
-.. testcode::
+.. code-block:: python
 
-    import numpy
+    import numpy as np
+
     import qics
 
-    numpy.random.seed(1)
+    np.random.seed(1)
 
     n = 5
     m = 4
+    vn = qics.vectorize.vec_dim(n, iscomplex=True)
 
     # Generate random linear objective function
-    U = numpy.random.randn(n, m) + numpy.random.randn(n, m)*1j
-    v = numpy.random.randn(n)
-    C = numpy.diag(v) @ (numpy.eye(n) - U @ U.conj().T) @ numpy.diag(v)
+    U = np.random.randn(n, m) + np.random.randn(n, m)*1j
+    v = np.random.randn(n)
+    C = np.diag(v) @ (np.eye(n) - U @ U.conj().T) @ np.diag(v)
     c = qics.vectorize.mat_to_vec(C)
 
-    # Build linear constraints A corresponding to Xii=1
-    A = numpy.zeros((5, 50))
-    A[numpy.arange(5), numpy.arange(0, 50, 12)] = 1.
+    # Build linear constraints  Xii = 1 for all i
+    A = np.zeros((n, vn))
+    A[np.arange(n), np.arange(0, vn, 2 * n + 2)] = 1.
 
-    b = numpy.ones((n, 1))
+    b = np.ones((n, 1))
 
     # Define cones to optimize over
     cones = [qics.cones.PosSemidefinite(n, iscomplex=True)]
 
     # Initialize model and solver objects
     model  = qics.Model(c=c, A=A, b=b, cones=cones)
-    solver = qics.Solver(model, verbose=0)
+    solver = qics.Solver(model)
 
     # Solve problem
     info = solver.solve()
 
+    X_opt = info["s_opt"][0][0]
     print("Optimal matrix variable X is: ")
-    print(numpy.round(info["s_opt"][0][0], 3))
-    print("which has rank:", numpy.linalg.matrix_rank(info["s_opt"][0][0], tol=1e-6))
+    print(np.round(X_opt, 3))
+    print("which has rank:", np.linalg.matrix_rank(X_opt, tol=1e-6))
 
-.. testoutput::
-    :options: +NORMALIZE_WHITESPACE
+.. code-block:: none
 
     Optimal matrix variable X is:
     [[ 1.   +0.j     0.209-0.978j  0.67 -0.743j -0.584+0.812j  0.866-0.499j]

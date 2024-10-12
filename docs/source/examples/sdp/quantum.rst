@@ -18,7 +18,7 @@ states. This can be done by solving the following semidefinite program.
 
     \min_{E_i \in \mathbb{H}^n} &&& \sum_{i=1}^p p_i \text{tr}[ E_i \rho_i ]
 
-    \text{s.t.} &&& \sum_{i=1}^p E_i = \mathbb{I}
+    \text{subj. to} &&& \sum_{i=1}^p E_i = \mathbb{I}
 
     &&& E_i \succeq 0, \quad \forall i=1,\ldots,p.
 
@@ -34,58 +34,51 @@ For any probabilities :math:`p_1` and :math:`p_2=1-p_1`, it is known that
 the solution to the semidefinite program is :math:`E_1=\rho_1` and 
 :math:`E_2=\rho_2`. We can confirm this using **QICS** as shown below.
 
-.. testcode::
+.. code-block:: python
 
-    import numpy
+    import numpy as np
+
     import qics
 
     n = 2
     p1 = p2 = 0.5
 
-    # Define standard basis for symmetric matrices
-    E11 = qics.vectorize.mat_to_vec(numpy.array([[1., 0.], [0., 0.]]))
-    E12 = qics.vectorize.mat_to_vec(numpy.array([[0., .5], [.5, 0.]]))
-    E22 = qics.vectorize.mat_to_vec(numpy.array([[0., 0.], [0., 1.]]))
+    eye_mtx = qics.vectorize.eye(n)
+    rho_1 = qics.vectorize.mat_to_vec(np.array([[1.0, 0.0], [0.0, 0.0]]))
+    rho_2 = qics.vectorize.mat_to_vec(np.array([[0.0, 0.0], [0.0, 1.0]]))
 
+    # Model problem using primal variables (E1, E2)
     # Define objective function
-    c = -numpy.vstack((p1 * E11, p2 * E22))
+    c = -np.block([[p1 * rho_1], [p2 * rho_2]])
 
-    # Build linear constraints
-    A = numpy.vstack((
-        numpy.hstack((E11.T, E11.T)),
-        numpy.hstack((E12.T, E12.T)),
-        numpy.hstack((E22.T, E22.T))
-    ))
-    b = numpy.array([[1.], [0.], [1.]])
+    # Build linear constraint E1 + E2 = I
+    A = np.block([eye_mtx, eye_mtx])
+    b = qics.vectorize.mat_to_vec(np.eye(n), compact=True)
 
     # Define cones to optimize over
-    cones = [
-        qics.cones.PosSemidefinite(n), 
-        qics.cones.PosSemidefinite(n)
-    ]
+    cones = [qics.cones.PosSemidefinite(n), qics.cones.PosSemidefinite(n)]
 
     # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones)
-    solver = qics.Solver(model, verbose=0)
+    model = qics.Model(c=c, A=A, b=b, cones=cones)
+    solver = qics.Solver(model)
 
     # Solve problem
     info = solver.solve()
 
-    print("Optimal POVMs are E1:")
-    print(info["s_opt"][0][0])
-    print("and E2:")
-    print(info["s_opt"][1][0])
+    E1_opt, E2_opt = info["s_opt"][0][0], info["s_opt"][1][0]
+    print("Optimal POVMs are:")
+    print(np.round(E1_opt, 4))
+    print("and:")
+    print(np.round(E2_opt, 4))
 
-.. testoutput::
-    :options: +NORMALIZE_WHITESPACE
+.. code-block:: none
 
-    Optimal POVMs are E1:
-    [[9.99999999e-01 0.00000000e+00]
-    [0.00000000e+00 2.71999999e-09]]
-    and E2:
-    [[2.71999999e-09 0.00000000e+00]
-    [0.00000000e+00 9.99999999e-01]]
-
+    Optimal POVMs are:
+    [[1. 0.]
+     [0. 0.]]
+    and:
+    [[0. 0.]
+     [0. 1.]]
 
 Quantum state fidelity
 ----------------------
@@ -103,63 +96,68 @@ could also be represented using the following semidefinite program
 .. math::
 
     \max_{X \in \mathbb{C}^{n\times n}} \quad \frac{1}{2} 
-    \text{tr}[X + X^\dagger] \quad \text{s.t.} \quad \begin{bmatrix} \rho & X
+    \text{tr}[X + X^\dagger] \quad \text{subj. to} \quad \begin{bmatrix} \rho & X
     \\ X^\dagger & \sigma \end{bmatrix} \succeq 0.
 
 We show how this can be solved using QICS below, which we verify against the
 analytic equation.
 
-.. testcode::
+.. code-block:: python
 
-    import numpy
-    import scipy
+    import numpy as np
+    import scipy as sp
+
     import qics
+    from qics.quantum.random import density_matrix
+    from qics.vectorize import lin_to_mat, mat_to_vec
 
-    numpy.random.seed(1)
+    np.random.seed(1)
 
     n = 2
 
-    rho = qics.quantum.random.density_matrix(n, iscomplex=True)
-    sig = qics.quantum.random.density_matrix(n, iscomplex=True)
+    # Generate random problem data
+    rho = density_matrix(n, iscomplex=True)
+    sig = density_matrix(n, iscomplex=True)
 
+    rho_cvec = mat_to_vec(rho, compact=True)
+    sig_cvec = mat_to_vec(sig, compact=True)
+
+    # Model problem using primal variable M
     # Define objective function
-    c = -0.5 * qics.vectorize.mat_to_vec(numpy.block([
-        [numpy.zeros((n, n)), numpy.eye(n)],
-        [numpy.eye(n), numpy.zeros((n, n))]
-    ]).astype(numpy.complex128))
+    eye_n = np.eye(n, dtype=np.complex128)
+    zero_n = np.zeros((n, n), dtype=np.complex128)
+    C = np.block([[zero_n, eye_n], [eye_n, zero_n]])
+    c = -0.5 * qics.vectorize.mat_to_vec(C)
 
-    # Build linear constraints
-    A = numpy.vstack((
-        qics.vectorize.lin_to_mat(lambda X : X[:n, :n], (2*n, n), iscomplex=True),
-        qics.vectorize.lin_to_mat(lambda X : X[n:, n:], (2*n, n), iscomplex=True)
-    ))
+    # Build linear constraints M11 = rho and M22 = sig
+    submat_11 = lin_to_mat(lambda X: X[:n, :n], (2 * n, n), iscomplex=True)
+    submat_22 = lin_to_mat(lambda X: X[n:, n:], (2 * n, n), iscomplex=True)
 
-    b = numpy.vstack((
-        qics.vectorize.mat_to_vec(rho, compact=True),
-        qics.vectorize.mat_to_vec(sig, compact=True)
-    ))
+    A = np.block([[submat_11], [submat_22]])
+    b = np.block([[rho_cvec], [sig_cvec]])
 
     # Define cones to optimize over
-    cones = [qics.cones.PosSemidefinite(2*n, iscomplex=True)]
+    cones = [qics.cones.PosSemidefinite(2 * n, iscomplex=True)]
 
     # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones)
-    solver = qics.Solver(model, verbose=0)
+    model = qics.Model(c=c, A=A, b=b, cones=cones)
+    solver = qics.Solver(model)
 
     # Solve problem
     info = solver.solve()
 
-    rt_rho = scipy.linalg.sqrtm(rho)
-    rt_sig = scipy.linalg.sqrtm(sig)
-    analytic = numpy.linalg.norm(rt_rho @ rt_sig, "nuc")
+    rt_rho = sp.linalg.sqrtm(rho)
+    rt_sig = sp.linalg.sqrtm(sig)
+    analytic_fidelity = np.linalg.norm(rt_rho @ rt_sig, "nuc")
+    numerical_fidelity = -info["p_obj"]
 
-    print("QICS fidelity:    ", -info["p_obj"])
-    print("Analytic fidelity:", analytic)
+    print("Analytic fidelity: ", analytic_fidelity)
+    print("Numerical fidelity:", numerical_fidelity)
 
-.. testoutput::
+.. code-block:: none
 
-    QICS fidelity:     0.7536085578284577
-    Analytic fidelity: 0.7536085481796011
+    Analytic fidelity:  0.7536085481796011
+    Numerical fidelity: 0.7536085578284577
 
 Diamond norm
 --------------
@@ -187,72 +185,65 @@ program
 
 We show how this can be computed in QICS below.
 
-.. testcode::
+.. code-block:: python
 
-    import numpy
+    import numpy as np
+
     import qics
+    from qics.quantum import i_kr
+    from qics.quantum.random import choi_operator
+    from qics.vectorize import lin_to_mat, mat_to_vec, vec_dim
 
-    numpy.random.seed(1)
+    np.random.seed(1)
 
-    n = 2
-    N = n*n
+    n = 4
+    N = n * n
+    vn = vec_dim(n, iscomplex=True)
+    vN = vec_dim(N, iscomplex=True)
+    cN = vec_dim(N, iscomplex=True, compact=True)
 
-    J1 = qics.quantum.random.choi_operator(n, iscomplex=True)
-    J2 = qics.quantum.random.choi_operator(n, iscomplex=True)
+    # Generate random problem data
+    J1 = choi_operator(n, iscomplex=True)
+    J2 = choi_operator(n, iscomplex=True)
     J = J1 - J2
 
+    # Model problem using primal variables (M, rho, sig)
     # Define objective function
-    c1 = -0.5 * qics.vectorize.mat_to_vec(numpy.block([
-        [numpy.zeros((N, N)), J],
-        [J.conj().T, numpy.zeros((N, N))]
-    ]))
-    c2 = numpy.zeros((2*n*n, 1))
-    c3 = numpy.zeros((2*n*n, 1))
-    c = numpy.vstack((c1, c2, c3))
+    C_M = np.block([[np.zeros((N, N)), J], [J.conj().T, np.zeros((N, N))]])
+
+    c_M = -0.5 * mat_to_vec(C_M)
+    c_rho = np.zeros((vn, 1))
+    c_sig = np.zeros((vn, 1))
+    c = np.block([[c_M], [c_rho], [c_sig]])
 
     # Build linear constraints
-    vN = qics.vectorize.vec_dim(N, iscomplex=True, compact=True)
-    submtx_11 = qics.vectorize.lin_to_mat(lambda X : X[:N, :N], (2*N, N), iscomplex=True)
-    submtx_22 = qics.vectorize.lin_to_mat(lambda X : X[N:, N:], (2*N, N), iscomplex=True)
-    i_kr = qics.vectorize.lin_to_mat(
-        lambda X : qics.quantum.i_kr(X, (n, n), 0), (n, N), iscomplex=True)
-    tr = qics.vectorize.mat_to_vec(numpy.eye(n, dtype=numpy.complex128)).T
-    # I ⊗ rho block
-    A1 = numpy.hstack((submtx_11, -i_kr, numpy.zeros((vN, 2*n*n))))
-    b1 = numpy.zeros((vN, 1))
-    # I ⊗ sig block
-    A2 = numpy.hstack((submtx_22, numpy.zeros((vN, 2*n*n)), -i_kr))
-    b2 = numpy.zeros((vN, 1))
-    # tr[rho] = 1
-    A3 = numpy.hstack((numpy.zeros((1, 8*N*N)), tr, numpy.zeros((1, 2*n*n))))
-    b3 = numpy.array([[1.]])
-    # tr[sig] = 1
-    A4 = numpy.hstack((numpy.zeros((1, 8*N*N)), numpy.zeros((1, 2*n*n)), tr))
-    b4 = numpy.array([[1.]])
+    trace = lin_to_mat(lambda X: np.trace(X), (n, 1), iscomplex=True)
+    ikr_1 = lin_to_mat(lambda X: i_kr(X, (n, n), 0), (n, N), iscomplex=True)
+    submat_11 = lin_to_mat(lambda X: X[:N, :N], (2 * N, N), iscomplex=True)
+    submat_22 = lin_to_mat(lambda X: X[N:, N:], (2 * N, N), iscomplex=True)
 
-    A = numpy.vstack((A1, A2, A3, A4))
-    b = numpy.vstack((b1, b2, b3, b4))
+    A = np.block([
+        [submat_11,             -ikr_1,             np.zeros((cN, vn))],  # M11 = I ⊗ rho
+        [submat_22,             np.zeros((cN, vn)), -ikr_1            ],  # M22 = I ⊗ sig
+        [np.zeros((1, 4 * vN)), trace,              np.zeros((1, vn)) ],  # tr[rho] = 1
+        [np.zeros((1, 4 * vN)), np.zeros((1, vn)),  trace             ]   # tr[sig] = 1
+    ])
+
+    b = np.block([[np.zeros((cN, 1))], [np.zeros((cN, 1))], [1.0], [1.0]])
 
     # Define cones to optimize over
     cones = [
-        qics.cones.PosSemidefinite(2*n*n, iscomplex=True),
-        qics.cones.PosSemidefinite(n, iscomplex=True),
-        qics.cones.PosSemidefinite(n, iscomplex=True),
+        qics.cones.PosSemidefinite(2 * N, iscomplex=True),  # M ⪰ 0
+        qics.cones.PosSemidefinite(n, iscomplex=True),      # rho ⪰ 0
+        qics.cones.PosSemidefinite(n, iscomplex=True),      # sig ⪰ 0
     ]
 
     # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones)
-    solver = qics.Solver(model, verbose=0)
+    model = qics.Model(c=c, A=A, b=b, cones=cones)
+    solver = qics.Solver(model)
 
     # Solve problem
     info = solver.solve()
-
-    print("Diamond norm:", -info["p_obj"])
-
-.. testoutput::
-
-    Diamond norm: 1.0697369635368625
-
 
 Quantum optimal transport
 ---------------------------
@@ -272,50 +263,47 @@ of this problem can be defined as follows :ref:`[3] <quantum_refs>`
 where partial traces are used analogously to marginal distributions. We show how
 this problem can be solved in QICS below.
 
-.. testcode::
+.. code-block:: python
 
-    import numpy
+    import numpy as np
+
     import qics
+    from qics.quantum import p_tr
+    from qics.quantum.random import density_matrix
+    from qics.vectorize import lin_to_mat, mat_to_vec
 
-    numpy.random.seed(1)
+    np.random.seed(1)
 
     n = m = 2
 
-    rhoA = qics.quantum.random.density_matrix(n, iscomplex=True)
-    rhoB = qics.quantum.random.density_matrix(m, iscomplex=True)
+    # Generate random problem data
+    rho_A = density_matrix(n, iscomplex=True)
+    rho_B = density_matrix(m, iscomplex=True)
 
+    rho_A_cvec = mat_to_vec(rho_A, compact=True)
+    rho_B_cvec = mat_to_vec(rho_B, compact=True)
+
+    # Model problem using primal variable X
     # Generate random objective function
-    C = numpy.random.randn(n*m, n*m) + numpy.random.randn(n*m, n*m)*1j
-    C = C + C.conj().T
-    c = qics.vectorize.mat_to_vec(C)
+    C = np.random.randn(n * m, n * m) + np.random.randn(n * m, n * m) * 1j
+    c = mat_to_vec(C + C.conj().T)
 
-    # Build linear constraints
-    trA = qics.vectorize.lin_to_mat(
-        lambda X : qics.quantum.p_tr(X, (n, m), 0), (n*m, m), iscomplex=True)
-    trB = qics.vectorize.lin_to_mat(
-        lambda X : qics.quantum.p_tr(X, (n, m), 1), (n*m, n), iscomplex=True)
+    # Build linear constraints tr_A(X) = rho_A and tr_B(X) = rho_B
+    ptr_A = lin_to_mat(lambda X: p_tr(X, (n, m), 1), (n * m, n), iscomplex=True)
+    ptr_B = lin_to_mat(lambda X: p_tr(X, (n, m), 0), (n * m, m), iscomplex=True)
 
-    A = numpy.vstack((trA, trB))
-    b = numpy.vstack((
-        qics.vectorize.mat_to_vec(rhoA, compact=True), 
-        qics.vectorize.mat_to_vec(rhoB, compact=True)
-    ))
+    A = np.block([[ptr_A], [ptr_B]])
+    b = np.block([[rho_A_cvec], [rho_B_cvec]])
 
     # Define cones to optimize over
-    cones = [qics.cones.PosSemidefinite(n*m, iscomplex=True)]
+    cones = [qics.cones.PosSemidefinite(n * m, iscomplex=True)]
 
     # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones)
-    solver = qics.Solver(model, verbose=0)
+    model = qics.Model(c=c, A=A, b=b, cones=cones)
+    solver = qics.Solver(model)
 
     # Solve problem
     info = solver.solve()
-
-    print("Optimal value:", -info["p_obj"])
-
-.. testoutput::
-
-    Optimal value: 1.9485265803931466
 
 Detecting entanglement
 ----------------------
@@ -340,7 +328,7 @@ feasibiltiy problem is (see :ref:`[1] <quantum_refs>`)
 
 .. math::
 
-    \text{find} \quad \rho_{aB} \quad \text{s.t.} 
+    \text{find} \quad \rho_{aB} \quad \text{subj. to} 
     \quad & \text{tr}_{b_2}(\rho_{aB}) \\
     & \rho_{aB} = \Pi_{b_1,b_2} \rho_{aB} \Pi_{b_1,b_2} \\
     & \text{tr}[\rho_{aB}] = 1 \\
@@ -364,76 +352,78 @@ state
 
 in **QICS** below.
 
-.. testcode::
+.. code-block:: python
 
-    import numpy
+    import numpy as np
+
     import qics
+    from qics.quantum import p_tr, partial_transpose, swap
+    from qics.vectorize import eye, lin_to_mat, mat_to_vec, vec_dim
 
-    n  = 2
+    n = 2
     n2 = n * n
     n3 = n * n * n
 
-    vn2 = qics.vectorize.vec_dim(n2, compact=True)
-    vn3 = qics.vectorize.vec_dim(n3, compact=True)
+    vn3 = vec_dim(n3)
+    cn2 = vec_dim(n2, compact=True)
+    cn3 = vec_dim(n3, compact=True)
 
-    rho_ab = 0.5 * numpy.array([
-        [1., 0., 0., 1.],
-        [0., 0., 0., 0.],
-        [0., 0., 0., 0.],
-        [1., 0., 0., 1.]
-    ])
+    # Define an entangled quantum state
+    rho = 0.5 * np.array([[1.0, 0.0, 0.0, 1.0],
+                          [0.0, 0.0, 0.0, 0.0],
+                          [0.0, 0.0, 0.0, 0.0],
+                          [1.0, 0.0, 0.0, 1.0]])  # fmt: skip
 
+    # Model problem using primal variables (rho_aB, sigma_aB, omega_aB)
     # Define objective function
-    c = numpy.zeros((3*n3*n3, 1))
+    c = np.zeros((3 * vn3, 1))
 
     # Build linear constraints
-    # rho_ab1 = tr_b2(rho_aB)
-    tr_b2 = qics.vectorize.lin_to_mat(
-        lambda X : qics.quantum.p_tr(X, (n, n, n), 2), (n3, n2))
-    A1 = numpy.hstack((tr_b2, numpy.zeros((vn2, 2*n3*n3))))
-    b1 = qics.vectorize.mat_to_vec(rho_ab, compact=True)
-    # rho_aB = swap_b1,b2(rho_aB)
-    swap = qics.vectorize.lin_to_mat(
-        lambda X : qics.quantum.swap(X, (n, n, n), 1, 2), (n3, n3))
-    A2 = numpy.hstack((swap - qics.vectorize.eye(n3), numpy.zeros((vn3, 2*n3*n3))))
-    b2 = numpy.zeros((vn3, 1))
-    # tr[rho_aB] = 1
-    tr = qics.vectorize.mat_to_vec(numpy.eye(n3)).T
-    A3 = numpy.hstack((tr, numpy.zeros((1, 2*n3*n3))))
-    b3 = numpy.array([[1.]])
-    # Y = T_b2(rho_aB)
-    T_b2 = qics.vectorize.lin_to_mat(
-        lambda X : qics.quantum.partial_transpose(X, (n2, n), 1), (n3, n3))
-    A4 = numpy.hstack((T_b2, -qics.vectorize.eye(n3), numpy.zeros((vn3, n3*n3))))
-    b4 = numpy.zeros((vn3, 1))
-    # Z = T_b1b2(rho_aB)
-    T_b1b2 = qics.vectorize.lin_to_mat(
-        lambda X : qics.quantum.partial_transpose(X, (n, n2), 1), (n3, n3))
-    A5 = numpy.hstack((T_b1b2, numpy.zeros((vn3, n3*n3)), -qics.vectorize.eye(n3)))
-    b5 = numpy.zeros((vn3, 1))
+    trace = lin_to_mat(lambda X: np.trace(X), (n3, 1))
+    ptr_b2 = lin_to_mat(lambda X: p_tr(X, (n, n, n), 2), (n3, n2))
+    swap_b1b2 = lin_to_mat(lambda X: swap(X, (n, n, n), 1, 2), (n3, n3))
+    T_b2 = lin_to_mat(lambda X: partial_transpose(X, (n2, n), 1), (n3, n3))
+    T_b1b2 = lin_to_mat(lambda X: partial_transpose(X, (n, n2), 1), (n3, n3))
 
-    A = numpy.vstack((A1, A2, A3, A4, A5))
-    b = numpy.vstack((b1, b2, b3, b4, b5))
+    A = np.block([
+        [ptr_b2,              np.zeros((cn2, vn3)), np.zeros((cn2, vn3))],  # tr_b2(rho_aB) = rho
+        [swap_b1b2 - eye(n3), np.zeros((cn3, vn3)), np.zeros((cn3, vn3))],  # swap_b1b2(rho_aB) = rho_aB
+        [trace,               np.zeros((1, vn3)),   np.zeros((1, vn3))  ],  # tr[rho_aB] = 1
+        [T_b2,                -eye(n3),             np.zeros((cn3, vn3))],  # sigma_aB = T_b2(rho_aB)
+        [T_b1b2,              np.zeros((cn3, vn3)), -eye(n3)            ]   # omega_aB = T_b1b2(rho_aB)
+    ])
+
+    b = np.block([
+        [mat_to_vec(rho, compact=True)], 
+        [np.zeros((cn3, 1))], 
+        [1.0], 
+        [np.zeros((cn3, 1))], 
+        [np.zeros((cn3, 1))]
+    ])
 
     # Define cones to optimize over
     cones = [
-        qics.cones.PosSemidefinite(n3),
-        qics.cones.PosSemidefinite(n3),
-        qics.cones.PosSemidefinite(n3)
+        qics.cones.PosSemidefinite(n3),  # rho_aB ⪰ 0
+        qics.cones.PosSemidefinite(n3),  # sigma_aB = T_b2(rho_aB) ⪰ 0
+        qics.cones.PosSemidefinite(n3),  # omega_aB = T_b1b2(rho_aB) ⪰ 0
     ]
 
     # Initialize model and solver objects
-    model  = qics.Model(c=c, A=A, b=b, cones=cones)
-    solver = qics.Solver(model, verbose=0)
+    model = qics.Model(c=c, A=A, b=b, cones=cones)
+    solver = qics.Solver(model)
 
     # Solve problem
     info = solver.solve()
 
-    print("Solution status:", info["sol_status"])
+QICS returns a solution summary which should look like
 
-.. testoutput::
+.. code-block:: none
 
-    Solution status: pinfeas
+    Solution summary
+            sol. status:  pinfeas                   num. iter:    8
+            exit status:  solved                    solve time:   0.430
+            primal obj:   0.000000000000e+00        primal feas:  4.79e-01
+            dual obj:     4.165819513474e+13        dual feas:    4.81e-01
 
 As the semidefinite program is infeasible, then :math:`\rho_{ab}` must be
 entangled, which we know is true for this quantum state.

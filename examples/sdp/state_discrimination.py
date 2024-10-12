@@ -4,6 +4,7 @@
 # file in the root directory or at https://github.com/kerry-he/qics
 
 import numpy as np
+
 import qics
 
 n = 2

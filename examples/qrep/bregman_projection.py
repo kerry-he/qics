@@ -31,7 +31,7 @@ A = np.block([
     [0.0, 0.0, trace            ]   # tr[X] = 1
 ])
 
-b = np.array([[1.0], [0.0]])
+b = np.array([[1.0], [1.0]])
 
 # Define cones to optimize over
 cones = [qics.cones.QuantEntr(n, iscomplex=True)]

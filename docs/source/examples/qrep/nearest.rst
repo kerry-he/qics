@@ -20,7 +20,7 @@ correlation matrix to :math:`C` can be found by solving the following problem
 
     \min_{Y \in \mathbb{S}^n} &&& S( C \| Y )
 
-    \text{s.t.} &&& Y_{ii} = 1 \qquad i=1,\ldots,n
+    \text{subj. to} &&& Y_{ii} = 1 \qquad i=1,\ldots,n
 
     &&& Y \succeq 0.
 
@@ -28,127 +28,100 @@ We show how this problem can be solved using QICS below.
 
 .. tabs::
 
-    .. group-tab:: Native
+    .. code-tab:: python Native
 
-        .. testcode:: nearest-native
+        import numpy as np
 
-            import numpy
-            import qics
+        import qics
+        from qics.vectorize import vec_dim, mat_to_vec, eye
 
-            numpy.random.seed(1)
+        np.random.seed(1)
 
-            n = 5
-            vn = qics.vectorize.vec_dim(n)
-            sn = qics.vectorize.vec_dim(n, compact=True)
+        n = 5
 
-            # Generate random matrix C
-            C = numpy.random.randn(n, n)
-            C = C @ C.T / n
+        vn = vec_dim(n)
+        cn = vec_dim(n, compact=True)
 
-            # Define objective function
-            c = numpy.zeros((1 + 2*vn, 1))
-            c[0] = 1.
+        # Generate random positive semidefinite matrix C
+        C = np.random.randn(n, n)
+        C = C @ C.T / n
+        C_cvec = mat_to_vec(C, compact=True)
 
-            # Build linear constraints
-            # X = C
-            A1 = numpy.hstack((
-                numpy.zeros((sn, 1)), 
-                qics.vectorize.eye(n), 
-                numpy.zeros((sn, vn))
-            ))
-            b1 = qics.vectorize.mat_to_vec(C, compact=True)
-            # Yii = 1
-            A2 = numpy.zeros((n, 1 + 2*vn))
-            A2[numpy.arange(n), numpy.arange(1 + vn, 1 + 2*vn, n+1)] = 1.
-            b2 = numpy.ones((n, 1))
+        # Model problem using primal variables (t, X, Y)
+        # Define objective function
+        c = np.block([[1.0], [np.zeros((vn, 1))], [np.zeros((vn, 1))]])
 
-            A = numpy.vstack((A1, A2))
-            b = numpy.vstack((b1, b2))
+        # Build linear constraints
+        diag = np.zeros((n, vn))
+        diag[np.arange(n), np.arange(0, vn, n + 1)] = 1.
 
-            # Define cones to optimize over
-            cones = [qics.cones.QuantRelEntr(n)]
+        A = np.block([
+            [np.zeros((cn, 1)), eye(n),            np.zeros((cn, vn))],  # X = C
+            [np.zeros((n, 1)),  np.zeros((n, vn)), diag              ]   # Yii = 1
+        ])  # fmt: skip
 
-            # Initialize model and solver objects
-            model = qics.Model(c=c, A=A, b=b, cones=cones)
-            solver = qics.Solver(model, verbose=0)
+        b = np.block([[C_cvec], [np.ones((n, 1))]])
 
-            # Solve problem
-            info = solver.solve()
+        # Define cones to optimize over
+        cones = [qics.cones.QuantRelEntr(n)]
 
-            print("The nearest correlation matrix to\n")
-            print(C)
-            print("\nis\n")
-            print(info["s_opt"][0][2])
+        # Initialize model and solver objects
+        model = qics.Model(c=c, A=A, b=b, cones=cones)
+        solver = qics.Solver(model)
 
-        |
+        # Solve problem
+        info = solver.solve()
 
-        .. testoutput:: nearest-native
+        Y_opt = info["s_opt"][0][2]
+        print("The nearest correlation matrix to")
+        print(C)
+        print("is")
+        print(Y_opt)        
 
-            The nearest correlation matrix to
+    .. code-tab:: python PICOS
 
-            [[ 1.03838024 -0.9923943   1.03976304 -0.1516761  -0.54476511]
-             [-0.9923943   1.81697119 -1.42389728  0.55339008  0.7559633 ]
-             [ 1.03976304 -1.42389728  1.58376462 -0.0650662  -0.6859653 ]
-             [-0.1516761   0.55339008 -0.0650662   0.47031665  0.1535909 ]
-             [-0.54476511  0.7559633  -0.6859653   0.1535909   0.87973255]]
+        import numpy as np
 
-            is
+        import picos
 
-            [[ 1.         -0.68153866  0.77530944 -0.15666279 -0.52667092]
-             [-0.68153866  1.         -0.7916631   0.5004458   0.54809203]
-             [ 0.77530944 -0.7916631   1.          0.05716203 -0.52919617]
-             [-0.15666279  0.5004458   0.05716203  1.          0.16929971]
-             [-0.52667092  0.54809203 -0.52919617  0.16929971  1.        ]]
+        np.random.seed(1)
 
-    .. group-tab:: PICOS
+        n = 5
 
-        .. testcode:: nearest-picos
+        # Generate random matrix C
+        C = np.random.randn(n, n)
+        C = C @ C.T / n
 
-            import numpy
-            import picos
+        # Define problem
+        P = picos.Problem()
+        Y = picos.SymmetricVariable("Y", n)
 
-            numpy.random.seed(1)
+        P.set_objective("min", picos.quantrelentr(C, Y))
+        P.add_constraint(picos.maindiag(Y) == 1)
 
-            n = 5
+        # Solve problem
+        P.solve(solver="qics")
 
-            # Generate random matrix C
-            C = numpy.random.randn(n, n)
-            C = C @ C.T / n
+        Y_opt = Y.np
+        print("The nearest correlation matrix to")
+        print(C)
+        print("is")
+        print(Y_opt)
 
-            # Define problem
-            P = picos.Problem()
-            Y = picos.SymmetricVariable("Y", n)
+.. code-block:: none
 
-            P.set_objective("min", picos.quantrelentr(C, Y))
-            P.add_constraint(picos.maindiag(Y) == 1)
-
-            # Solve problem
-            P.solve(solver="qics")
-
-            print("The nearest correlation matrix to\n")
-            print(C)
-            print("\nis\n")
-            print(Y.np)
-
-        |
-
-        .. testoutput:: nearest-picos
-
-            The nearest correlation matrix to
-
-            [[ 1.03838024 -0.9923943   1.03976304 -0.1516761  -0.54476511]
-             [-0.9923943   1.81697119 -1.42389728  0.55339008  0.7559633 ]
-             [ 1.03976304 -1.42389728  1.58376462 -0.0650662  -0.6859653 ]
-             [-0.1516761   0.55339008 -0.0650662   0.47031665  0.1535909 ]
-             [-0.54476511  0.7559633  -0.6859653   0.1535909   0.87973255]]
-
-            is
-
-            [[ 1.         -0.68153866  0.77530944 -0.15666279 -0.52667092]
-             [-0.68153866  1.         -0.7916631   0.5004458   0.54809203]
-             [ 0.77530944 -0.7916631   1.          0.05716203 -0.52919618]
-             [-0.15666279  0.5004458   0.05716203  1.          0.16929971]
-             [-0.52667092  0.54809203 -0.52919618  0.16929971  1.        ]]
+    The nearest correlation matrix to
+    [[ 1.03838024 -0.9923943   1.03976304 -0.1516761  -0.54476511]
+     [-0.9923943   1.81697119 -1.42389728  0.55339008  0.7559633 ]
+     [ 1.03976304 -1.42389728  1.58376462 -0.0650662  -0.6859653 ]
+     [-0.1516761   0.55339008 -0.0650662   0.47031665  0.1535909 ]
+     [-0.54476511  0.7559633  -0.6859653   0.1535909   0.87973255]]
+    is
+    [[ 1.         -0.68153866  0.77530944 -0.15666279 -0.52667092]
+     [-0.68153866  1.         -0.7916631   0.5004458   0.54809203]
+     [ 0.77530944 -0.7916631   1.          0.05716203 -0.52919618]
+     [-0.15666279  0.5004458   0.05716203  1.          0.16929971]
+     [-0.52667092  0.54809203 -0.52919618  0.16929971  1.        ]]
 
 Relative entropy of entanglement
 --------------------------------
@@ -181,7 +154,7 @@ Given this, the relative entropy of entanglement of a quantum state
 
     \min_{\sigma_{AB} \in \mathbb{H}^{n_An_B}} &&& S( \rho_{AB} \| \sigma_{AB} )
 
-    \text{s.t.} &&& \text{tr}[\sigma_{AB}] = 1
+    \text{subj. to} &&& \text{tr}[\sigma_{AB}] = 1
     
     &&& \mathcal{T}_B(\sigma_{AB}) \succeq 0 
 
@@ -191,119 +164,83 @@ We show how we can solve this problem in QICS below.
 
 .. tabs::
 
-    .. group-tab:: Native
+    .. code-tab:: python Native
 
-        .. testcode:: ree-native
+        import numpy as np
 
-            import numpy
-            import qics
+        import qics
+        from qics.quantum import partial_transpose
+        from qics.quantum.random import density_matrix
+        from qics.vectorize import eye, lin_to_mat, mat_to_vec, vec_dim
 
-            numpy.random.seed(1)
+        np.random.seed(1)
 
-            n1 = 2
-            n2 = 3
-            N  = n1 * n2
+        n1 = 2
+        n2 = 3
+        N = n1 * n2
 
-            # Generate random (complex) quantum state
-            C = qics.quantum.random.density_matrix(N, iscomplex=True)
+        vN = vec_dim(N, iscomplex=True)
+        cN = vec_dim(N, iscomplex=True, compact=True)
 
-            # Define objective function
-            ct = numpy.array(([[1.]]))
-            cX = numpy.zeros((2*N*N, 1))
-            cY = numpy.zeros((2*N*N, 1))
-            cZ = numpy.zeros((2*N*N, 1))
-            c  = numpy.vstack((ct, cX, cY, cZ))
+        # Generate random quantum state
+        C = density_matrix(N, iscomplex=True)
+        C_cvec = mat_to_vec(C, compact=True)
 
-            # Build linear constraints
-            # X = C
-            sN = qics.vectorize.vec_dim(N, iscomplex=True, compact=True)
-            A1 = numpy.hstack((
-                numpy.zeros((sN, 1)),
-                qics.vectorize.eye(N, iscomplex=True),
-                numpy.zeros((sN, 2*N*N)),
-                numpy.zeros((sN, 2*N*N)),
-            ))
-            b1 = qics.vectorize.mat_to_vec(C, compact=True)
-            # tr[Y] = 1
-            A2 = numpy.hstack((
-                numpy.zeros((1, 1)),
-                numpy.zeros((1, 2*N*N)),
-                qics.vectorize.mat_to_vec(numpy.eye(N, dtype=numpy.complex128)).T,
-                numpy.zeros((1, 2*N*N))
-            ))
-            b2 = numpy.array([[1.]])
-            # T2(Y) = Z
-            p_transpose = qics.vectorize.lin_to_mat(
-                lambda X : qics.quantum.partial_transpose(X, (n1, n2), 1),
-                (N, N), iscomplex=True
-            )
-            A3 = numpy.hstack((
-                numpy.zeros((sN, 1)),
-                numpy.zeros((sN, 2*N*N)),
-                p_transpose,
-                -qics.vectorize.eye(N, iscomplex=True)
-            ))
-            b3 = numpy.zeros((sN, 1))
+        # Model problem using primal variables (t, X, Y, Z)
+        # Define objective function
+        c = np.block([[1.0], [np.zeros((vN, 1))], [np.zeros((vN, 1))], [np.zeros((vN, 1))]])
 
-            A = numpy.vstack((A1, A2, A3))
-            b = numpy.vstack((b1, b2, b3))
+        # Build linear constraints
+        trace = lin_to_mat(lambda X: np.trace(X), (N, 1), True)
+        ptranspose = lin_to_mat(lambda X: partial_transpose(X, (n1, n2), 1), (N, N), True)
 
-            # Input into model and solve
-            cones = [
-                qics.cones.QuantRelEntr(N, iscomplex=True),
-                qics.cones.PosSemidefinite(N, iscomplex=True)
-            ]
+        A = np.block([
+            [np.zeros((cN, 1)), eye(N, True),       np.zeros((cN, vN)), np.zeros((cN, vN))],  # X = C
+            [np.zeros((1, 1)),  np.zeros((1, vN)),  trace,              np.zeros((1, vN)) ],  # tr[Y] = 1
+            [np.zeros((cN, 1)), np.zeros((cN, vN)), ptranspose,         -eye(N, True)     ]   # T2(Y) = Z
+        ])  # fmt: skip
 
-            # Initialize model and solver objects
-            model = qics.Model(c=c, A=A, b=b, cones=cones)
-            solver = qics.Solver(model, verbose=0)
+        b = np.block([[C_cvec], [1.0], [np.zeros((cN, 1))]])
 
-            # Solve problem
-            info = solver.solve()
+        # Input into model and solve
+        cones = [
+            qics.cones.QuantRelEntr(N, iscomplex=True),     # (t, X, Y) ∈ QRE
+            qics.cones.PosSemidefinite(N, iscomplex=True),  # Z = T2(Y) ⪰ 0
+        ]
 
-            print("Relative entropy of entanglement:", info["p_obj"])
+        # Initialize model and solver objects
+        model = qics.Model(c=c, A=A, b=b, cones=cones)
+        solver = qics.Solver(model)
 
-        |
+        # Solve problem
+        info = solver.solve()
 
-        .. testoutput:: ree-native
+    .. code-tab:: python PICOS
 
-            Relative entropy of entanglement: 0.004838696998726579
+        import numpy as np
 
-    .. group-tab:: PICOS
+        import picos
+        import qics
 
-        .. testcode:: ree-picos
+        np.random.seed(1)
 
-            import numpy
-            import picos
-            import qics
+        n1 = 2
+        n2 = 3
+        N  = n1 * n2
 
-            numpy.random.seed(1)
+        # Generate random quantum state
+        C = qics.quantum.random.density_matrix(N, iscomplex=True)
 
-            n1 = 2
-            n2 = 3
-            N  = n1 * n2
+        # Define problem
+        P = picos.Problem()
+        Y = picos.HermitianVariable("Y", N)
 
-            # Generate random (complex) quantum state
-            C = qics.quantum.random.density_matrix(N, iscomplex=True)
+        P.set_objective("min", picos.quantrelentr(C, Y))
+        P.add_constraint(picos.trace(Y) == 1.0)
+        P.add_constraint(picos.partial_transpose(Y, subsystems=1, dimensions=(n1, n2)) >> 0)
 
-            # Define problem
-            P = picos.Problem()
-            Y = picos.HermitianVariable("Y", N)
-            
-            P.set_objective("min", picos.quantrelentr(C, Y))
-            P.add_constraint(picos.trace(Y) == 1.0)
-            P.add_constraint(picos.partial_transpose(Y, subsystems=1, dimensions=(n1, n2)) >> 0)
-
-            # Solve problem
-            P.solve(solver="qics")
-
-            print("Relative entropy of entanglement:", P.value)
-
-        |
-
-        .. testoutput:: ree-picos
-
-            Relative entropy of entanglement: 0.004838698939471309
+        # Solve problem
+        P.solve(solver="qics", verbosity=1)
 
 Bregman projection
 ------------------
@@ -318,7 +255,7 @@ relative entropy (see, e.g., :ref:`[2] <nearest_refs>`) of a point
 
     \min_{X \in \mathbb{H}^n} &&& S( X \| Y ) - \text{tr}[X - Y]
 
-    \text{s.t.} &&& \text{tr}[X] = 1
+    \text{subj. to} &&& \text{tr}[X] = 1
 
     &&& X \succeq 0.
 
@@ -338,126 +275,106 @@ QICS.
 
 .. tabs::
 
-    .. group-tab:: Native
+    .. code-tab:: python Native
 
-        .. testcode:: bp-native
+        import numpy as np
+        import scipy as sp
 
-            import numpy
-            import scipy
-            import qics
+        import qics
+        from qics.vectorize import lin_to_mat, vec_dim, mat_to_vec
 
-            numpy.random.seed(1)
+        np.random.seed(1)
 
-            n = 5
+        n = 5
+        vn = vec_dim(n, iscomplex=True)
 
-            # Generate random matrix Y to project
-            Y = numpy.random.randn(n, n) + numpy.random.randn(n, n)*1j
-            Y = Y @ Y.conj().T
-            trY = numpy.trace(Y).real
+        # Generate random positive semidefinite matrix Y to project
+        Y = np.random.randn(n, n) + np.random.randn(n, n)*1j
+        Y = Y @ Y.conj().T
+        trY = np.trace(Y).real
 
-            # Define objective function
-            ct = numpy.array([[1.]])
-            cu = numpy.array([[0.]])
-            cX = -scipy.linalg.logm(Y) - numpy.eye(n)
-            c  = numpy.vstack((ct, cu, qics.vectorize.mat_to_vec(cX)))
+        # Model problem using primal variables (t, u, X)
+        # Define objective function
+        c = np.block([[1.0], [0.0], [mat_to_vec(-sp.linalg.logm(Y) - np.eye(n))]])
 
-            # Build linear constraints
-            # u = 1
-            A1 = numpy.hstack((numpy.array([[0., 1.]]), numpy.zeros((1, 2*n*n))))
-            b1 = numpy.array([[1.]])
-            # tr[X] = 1
-            A2 = numpy.hstack((
-                numpy.array([[0., 0.]]), 
-                qics.vectorize.mat_to_vec(numpy.eye(n, dtype=numpy.complex128)).T
-            ))
-            b2 = numpy.array([[1.]])
+        # Build linear constraints
+        trace = lin_to_mat(lambda X: np.trace(X), (n, 1), iscomplex=True)
 
-            A = numpy.vstack((A1, A2))
-            b = numpy.vstack((b1, b2))
+        A = np.block([
+            [0.0, 1.0, np.zeros((1, vn))],  # u = 1
+            [0.0, 0.0, trace            ]   # tr[X] = 1
+        ])
 
-            # Define cones to optimize over
-            cones = [qics.cones.QuantEntr(n, iscomplex=True)]
+        b = np.array([[1.0], [1.0]])
 
-            # Initialize model and solver objects
-            model = qics.Model(c=c, A=A, b=b, cones=cones, offset=trY)
-            solver = qics.Solver(model, verbose=0)
+        # Define cones to optimize over
+        cones = [qics.cones.QuantEntr(n, iscomplex=True)]
 
-            # Solve problem
-            info = solver.solve()
+        # Initialize model and solver objects
+        model = qics.Model(c=c, A=A, b=b, cones=cones, offset=trY)
+        solver = qics.Solver(model)
 
-            print("QICS solution:")
-            print(numpy.round(info["s_opt"][0][2], 3))
-            print("\nAnalytical solution:")
-            print(numpy.round(Y / trY, 3))
+        # Solve problem
+        info = solver.solve()
 
-        |
+        analytic_X_opt = Y / trY
+        numerical_X_opt = info["s_opt"][0][2]
 
-        .. testoutput:: bp-native
+        print("Analytic solution:")
+        print(np.round(analytic_X_opt, 3))
+        print("Numerical solution:")
+        print(np.round(numerical_X_opt, 3))
 
-            QICS solution:
-            [[ 0.147+0.j    -0.083+0.043j  0.108+0.018j -0.005+0.065j -0.085+0.042j]
-             [-0.083-0.043j  0.241+0.j    -0.186+0.029j  0.049+0.022j  0.046-0.03j ]
-             [ 0.108-0.018j -0.186-0.029j  0.266+0.j     0.071-0.015j -0.053+0.038j]
-             [-0.005-0.065j  0.049-0.022j  0.071+0.015j  0.14 +0.j    -0.013+0.005j]
-             [-0.085-0.042j  0.046+0.03j  -0.053-0.038j -0.013-0.005j  0.205+0.j   ]]
+    .. code-tab:: python PICOS
 
-            Analytical solution:
-            [[ 0.147+0.j    -0.083+0.043j  0.108+0.018j -0.005+0.065j -0.085+0.042j]
-             [-0.083-0.043j  0.241+0.j    -0.186+0.029j  0.049+0.022j  0.046-0.03j ]
-             [ 0.108-0.018j -0.186-0.029j  0.266+0.j     0.071-0.015j -0.053+0.038j]
-             [-0.005-0.065j  0.049-0.022j  0.071+0.015j  0.14 +0.j    -0.013+0.005j]
-             [-0.085-0.042j  0.046+0.03j  -0.053-0.038j -0.013-0.005j  0.205+0.j   ]]
+        import numpy as np
 
-    .. group-tab:: PICOS
+        import picos
+        import qics
 
-        .. testcode:: bp-picos
+        np.random.seed(1)
 
-            import numpy
-            import scipy
-            import picos
+        n1 = 2
+        n2 = 3
+        N  = n1 * n2
 
-            numpy.random.seed(1)
+        # Generate random (complex) quantum state
+        C = qics.quantum.random.density_matrix(N, iscomplex=True)
 
-            n = 5
+        # Define problem
+        P = picos.Problem()
+        Y = picos.HermitianVariable("Y", N)
 
-            # Generate random matrix Y to project
-            Y = numpy.random.randn(n, n) + numpy.random.randn(n, n)*1j
-            Y = Y @ Y.conj().T
-            trY = numpy.trace(Y).real
-            logY = scipy.linalg.logm(Y)
+        P.set_objective("min", picos.quantrelentr(C, Y))
+        P.add_constraint(picos.trace(Y) == 1.0)
+        P.add_constraint(picos.partial_transpose(Y, subsystems=1, dimensions=(n1, n2)) >> 0)
 
-            # Define problem
-            P = picos.Problem()
-            X = picos.HermitianVariable("X", n)
+        # Solve problem
+        P.solve(solver="qics")
 
-            P.set_objective("min", -picos.quantentr(X) - (X | logY + picos.I(n)).real + trY)
-            P.add_constraint(picos.trace(X) == 1)
+        analytic_X_opt = Y / trY
+        numerical_X_opt = X.np
 
-            # Solve problem
-            P.solve(solver="qics")
+        print("Analytic solution:")
+        print(np.round(analytic_X_opt, 3))
+        print("Numerical solution:")
+        print(np.round(numerical_X_opt, 3))
 
-            print("QICS solution:")
-            print(numpy.round(X.np, 3))
-            print("\nAnalytical solution:")
-            print(numpy.round(Y / trY, 3))
+.. code-block:: none
 
-        |
+    Analytic solution:
+    [[ 0.147+0.j    -0.083+0.043j  0.108+0.018j -0.005+0.065j -0.085+0.042j]
+     [-0.083-0.043j  0.241+0.j    -0.186+0.029j  0.049+0.022j  0.046-0.03j ]
+     [ 0.108-0.018j -0.186-0.029j  0.266+0.j     0.071-0.015j -0.053+0.038j]
+     [-0.005-0.065j  0.049-0.022j  0.071+0.015j  0.14 +0.j    -0.013+0.005j]
+     [-0.085-0.042j  0.046+0.03j  -0.053-0.038j -0.013-0.005j  0.205+0.j   ]]
+    Numerical solution:
+    [[ 0.147+0.j    -0.083+0.043j  0.108+0.018j -0.005+0.065j -0.085+0.042j]
+     [-0.083-0.043j  0.241+0.j    -0.186+0.029j  0.049+0.022j  0.046-0.03j ]
+     [ 0.108-0.018j -0.186-0.029j  0.266+0.j     0.071-0.015j -0.053+0.038j]
+     [-0.005-0.065j  0.049-0.022j  0.071+0.015j  0.14 +0.j    -0.013+0.005j]
+     [-0.085-0.042j  0.046+0.03j  -0.053-0.038j -0.013-0.005j  0.205+0.j   ]]
 
-        .. testoutput:: bp-picos
-
-            QICS solution:
-            [[ 0.147+0.j    -0.083+0.043j  0.108+0.018j -0.005+0.065j -0.085+0.042j]
-             [-0.083-0.043j  0.241+0.j    -0.186+0.029j  0.049+0.022j  0.046-0.03j ]
-             [ 0.108-0.018j -0.186-0.029j  0.266+0.j     0.071-0.015j -0.053+0.038j]
-             [-0.005-0.065j  0.049-0.022j  0.071+0.015j  0.14 +0.j    -0.013+0.005j]
-             [-0.085-0.042j  0.046+0.03j  -0.053-0.038j -0.013-0.005j  0.205+0.j   ]]
-
-            Analytical solution:
-            [[ 0.147+0.j    -0.083+0.043j  0.108+0.018j -0.005+0.065j -0.085+0.042j]
-             [-0.083-0.043j  0.241+0.j    -0.186+0.029j  0.049+0.022j  0.046-0.03j ]
-             [ 0.108-0.018j -0.186-0.029j  0.266+0.j     0.071-0.015j -0.053+0.038j]
-             [-0.005-0.065j  0.049-0.022j  0.071+0.015j  0.14 +0.j    -0.013+0.005j]
-             [-0.085-0.042j  0.046+0.03j  -0.053-0.038j -0.013-0.005j  0.205+0.j   ]]
 
 .. _nearest_refs:
 

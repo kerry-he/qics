@@ -28,6 +28,12 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(gdict["info"]["exit_status"], "solved")
         self.assertAlmostEqual(gdict["info"]["p_obj"], -53.4937692, places=6)
 
+    def test_sdp_product(self):
+        gdict = self.exec_example("sdp/product.py")
+        self.assertEqual(gdict["info"]["sol_status"], "optimal")
+        self.assertEqual(gdict["info"]["exit_status"], "solved")
+        self.assertAlmostEqual(gdict["info"]["p_obj"], 32.0626922, places=6)
+
     def test_sdp_diamond_norm(self):
         gdict = self.exec_example("sdp/diamond_norm.py")
         self.assertEqual(gdict["info"]["sol_status"], "optimal")
@@ -80,7 +86,7 @@ class TestExamples(unittest.TestCase):
         gdict = self.exec_example("qrep/bregman_projection.py")
         self.assertEqual(gdict["info"]["sol_status"], "optimal")
         self.assertEqual(gdict["info"]["exit_status"], "solved")
-        self.assertAlmostEqual(gdict["info"]["p_obj"], 47.0377192, places=6)
+        self.assertAlmostEqual(gdict["info"]["p_obj"], 42.1867694, places=6)
 
     def test_qrep_cq_channel_capacity(self):
         gdict = self.exec_example("qrep/cq_channel_capacity.py")

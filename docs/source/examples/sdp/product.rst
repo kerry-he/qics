@@ -10,7 +10,7 @@ Example 2 of :ref:`[1] <blockdiag_refs>`
 
     \min_{x \in \mathbb{R}^5} &&& 1.1x_1 - 10x_2 + 6.6x_3 + 19x_4 + 4.1x_5
 
-    \text{s.t.} &&& \sum_{i=1}^5 F_ix_i - F_0 \succeq_{\mathbb{S}^7_+} 0,
+    \text{subj. to} &&& \sum_{i=1}^5 F_ix_i - F_0 \succeq_{\mathbb{S}^7_+} 0,
 
 where
 
@@ -58,7 +58,7 @@ semidefinite program is equivalent to
 
     \min_{x \in \mathbb{R}^5} &&& 1.1x_1 - 10x_2 + 6.6x_3 + 19x_4 + 4.1x_5
 
-    \text{s.t.} &&& \sum_{i=1}^5 F_{i0}x_i - F_{00} \succeq_{\mathbb{S}^2_+} 0,
+    \text{subj. to} &&& \sum_{i=1}^5 F_{i0}x_i - F_{00} \succeq_{\mathbb{S}^2_+} 0,
 
     &&& \sum_{i=1}^5 F_{i1}x_i - F_{01} \succeq_{\mathbb{S}^3_+} 0,
 
@@ -90,9 +90,10 @@ We can easily solve this problem involving a Cartesian product of positive
 semidefinite cones and nonnegative orthants in **QICS** by defining an
 appropriate :class:`list` of :mod:`qics.cones`.
 
-.. testcode::
+.. code-block:: python
 
     import numpy as np
+
     import qics
 
     # Define objective function
@@ -145,7 +146,7 @@ appropriate :class:`list` of :mod:`qics.cones`.
 
     # Initialize model and solver objects
     model  = qics.Model(c=c, G=G, h=h, cones=cones)
-    solver = qics.Solver(model, verbose=0)
+    solver = qics.Solver(model)
 
     # Solve problem
     info = solver.solve()
@@ -153,12 +154,10 @@ appropriate :class:`list` of :mod:`qics.cones`.
     print("Optimal variable x is: ")
     print(info["x_opt"].ravel())
 
-.. testoutput::
-    :options: +NORMALIZE_WHITESPACE
+.. code-block:: none
 
     Optimal variable x is:
     [1.55164255 0.67096851 0.98149139 1.40657036 0.94216841]
-
 
 .. _blockdiag_refs:
 

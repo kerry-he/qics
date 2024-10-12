@@ -37,10 +37,10 @@ trace = lin_to_mat(lambda X: np.trace(X), (n, 1), compact=(True, False))
 AdiagA = np.hstack([mat_to_vec(A_dat[:, [i]] @ A_dat[:, [i]].T) for i in range(m)])
 
 G = np.block([
-    [0.0,               np.zeros((1, m)),  trace            ],  # tr[Y] <= k
-    [np.zeros((m, 1)),  -np.eye(m),        np.zeros((m, cn))],  # 0 <= z
-    [np.zeros((m, 1)),  np.eye(m),         np.zeros((m, cn))],  # z <= 1
-    [np.zeros((vn, 1)), np.zeros((vn, m)), eye(n).T         ],  # Y <= I
+    [0.0,               np.zeros((1, m)),  trace            ],  # x_nn1 = k - tr[Y]
+    [np.zeros((m, 1)),  -np.eye(m),        np.zeros((m, cn))],  # x_nn2 = z
+    [np.zeros((m, 1)),  np.eye(m),         np.zeros((m, cn))],  # x_nn3 = 1 - z
+    [np.zeros((vn, 1)), np.zeros((vn, m)), eye(n).T         ],  # X_psd = I - Y
     [-1.0,              np.zeros((1, m)),  np.zeros((1, cn))],  # t_ore = t
     [np.zeros((vn, 1)), np.zeros((vn, m)), -eye(n).T        ],  # X_ore = Y
     [np.zeros((vn, 1)), -AdiagA,           -eye(n).T * eps  ]   # Y_ore = Adiag(z)A' + eY
@@ -58,8 +58,8 @@ h = np.block([
 
 # Define cones to optimize over
 cones = [
-    qics.cones.NonNegOrthant(1 + m + m),  # (tr[Y], -z, z - 1) >= 0
-    qics.cones.PosSemidefinite(n),  # Y ⪰ 0
+    qics.cones.NonNegOrthant(1 + m + m),  # (k - tr[Y], -z, z - 1) >= 0
+    qics.cones.PosSemidefinite(n),  # I - Y ⪰ 0
     qics.cones.OpPerspecTr(n, "log"),  # (t, Y, Adiag(z)A' + eY) ∈ ORE
 ]
 

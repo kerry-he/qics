@@ -10,11 +10,6 @@ from qics.quantum import partial_transpose
 from qics.quantum.random import density_matrix
 from qics.vectorize import eye, lin_to_mat, mat_to_vec, vec_dim
 
-## Relative entropy of entanglement
-#   min  S(X||Y)
-#   s.t. tr[Y] = 1
-#        T2(Y) >= 0
-
 np.random.seed(1)
 
 n1 = 2

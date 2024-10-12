@@ -74,100 +74,88 @@ which we use to confirm that **QICS** gives the correct solution.
 
 .. tabs::
 
-    .. group-tab:: Native
+    .. code-tab:: python Native
 
-        .. testcode:: native
+        import numpy as np
 
-            import numpy
-            import qics
+        import qics
+        from qics.vectorize import mat_to_vec
 
-            qx = 0.25
-            qz = 0.75
+        qx = 0.25
+        qz = 0.75
 
-            # Define objective function
-            c = numpy.vstack((numpy.array([[1.]]), numpy.zeros((16, 1))))
+        X0 = np.array([[0.5, 0.5], [0.5, 0.5]])
+        X1 = np.array([[0.5, -0.5], [-0.5, 0.5]])
+        Z0 = np.array([[1.0, 0.0], [0.0, 0.0]])
+        Z1 = np.array([[0.0, 0.0], [0.0, 1.0]])
 
-            # Build linear constraints
-            X0 = numpy.array([[.5,  .5], [ .5, .5]])
-            X1 = numpy.array([[.5, -.5], [-.5, .5]])
-            Z0 = numpy.array([[1.,  0.], [ 0., 0.]])
-            Z1 = numpy.array([[0.,  0.], [ 0., 1.]])
+        # Model problem using primal variables (t, X)
+        # Define objective function
+        c = np.vstack((np.array([[1.0]]), np.zeros((16, 1))))
 
-            A0 = numpy.eye(4)
-            Ax = numpy.kron(X0, X1) + numpy.kron(X1, X0)
-            Az = numpy.kron(Z0, Z1) + numpy.kron(Z1, Z0)
+        # Build linear constraints <Ai, X> = bi for all i
+        Ax = np.kron(X0, X1) + np.kron(X1, X0)
+        Az = np.kron(Z0, Z1) + np.kron(Z1, Z0)
+        A_mats = [np.eye(4), Ax, Az]
 
-            A = numpy.vstack((
-                numpy.hstack((numpy.array([[0.]]), qics.vectorize.mat_to_vec(A0).T)),
-                numpy.hstack((numpy.array([[0.]]), qics.vectorize.mat_to_vec(Ax).T)),
-                numpy.hstack((numpy.array([[0.]]), qics.vectorize.mat_to_vec(Az).T))
-            ))
+        A = np.block([[0., mat_to_vec(Ak).T] for Ak in A_mats])
+        b = np.array([[1.0], [qx], [qz]])
 
-            b = numpy.array([[1., qx, qz]]).T
+        # Input into model and solve
+        cones = [qics.cones.QuantKeyDist(4, 2)]
 
-            # Input into model and solve
-            cones = [qics.cones.QuantKeyDist(4, 2)]
+        # Initialize model and solver objects
+        model = qics.Model(c=c, A=A, b=b, cones=cones)
+        solver = qics.Solver(model)
 
-            # Initialize model and solver objects
-            model  = qics.Model(c=c, A=A, b=b, cones=cones)
-            solver = qics.Solver(model, verbose=0)
+        # Solve problem
+        info = solver.solve()
 
-            # Solve problem
-            info = solver.solve()
+        analytic_rate = np.log(2) + (qx*np.log(qx) + qz*np.log(qz))
+        numerical_rate = info["opt_val"]
 
-            sol_analytic = numpy.log(2) + (qx*numpy.log(qx) + (1 - qx)*numpy.log(1 - qx))
+        print("Analytic key rate: ", analytic_rate)
+        print("Numerical key rate:", numerical_rate)
 
-            print("QICS key rate:", info['p_obj'])
-            print("Analytic key rate:", sol_analytic)
+    .. code-tab:: python PICOS
+
+        import numpy as np
+
+        import picos
+
+        qx = 0.25
+        qz = 0.75
+
+        X0 = np.array([[.5,  .5], [ .5, .5]])
+        X1 = np.array([[.5, -.5], [-.5, .5]])
+        Z0 = np.array([[1.,  0.], [ 0., 0.]])
+        Z1 = np.array([[0.,  0.], [ 0., 1.]])
+
+        Ax = np.kron(X0, X1) + np.kron(X1, X0)
+        Az = np.kron(Z0, Z1) + np.kron(Z1, Z0)
+
+        # Define problem
+        P = picos.Problem()
+        X = picos.SymmetricVariable("X", 4) 
         
-        |
+        P.set_objective("min", picos.quantkeydist(X))
+        P.add_constraint(picos.trace(X) == 1)
+        P.add_constraint((X | Ax) == qx)
+        P.add_constraint((X | Az) == qz)        
 
-        .. testoutput:: native
+        # Solve problem
+        P.solve(solver="qics")
 
-            QICS key rate: 0.1308120333864809
-            Analytic key rate: 0.130812035941137
+        analytic_rate = np.log(2) + (qx*np.log(qx) + qz*np.log(qz))
+        numerical_rate = P.value
 
-    .. group-tab:: PICOS
+        print("Analytic key rate: ", analytic_rate)
+        print("Numerical key rate:", numerical_rate)
 
-        .. testcode:: picos
+.. code-block:: none
 
-            import numpy
-            import picos
-
-            qx = 0.25
-            qz = 0.75
-
-            X0 = numpy.array([[.5,  .5], [ .5, .5]])
-            X1 = numpy.array([[.5, -.5], [-.5, .5]])
-            Z0 = numpy.array([[1.,  0.], [ 0., 0.]])
-            Z1 = numpy.array([[0.,  0.], [ 0., 1.]])
-
-            Ax = numpy.kron(X0, X1) + numpy.kron(X1, X0)
-            Az = numpy.kron(Z0, Z1) + numpy.kron(Z1, Z0)
-
-            # Define problem
-            P = picos.Problem()
-            X = picos.SymmetricVariable("X", 4) 
-            
-            P.set_objective("min", picos.quantkeydist(X))
-            P.add_constraint(picos.trace(X) == 1)
-            P.add_constraint((X | Ax) == qx)
-            P.add_constraint((X | Az) == qz)        
-
-            # Solve problem
-            P.solve(solver="qics")
-
-            sol_analytic = numpy.log(2) + (qx*numpy.log(qx) + (1 - qx)*numpy.log(1 - qx))
-
-            print("QICS key rate:    ", P.value)
-            print("Analytic key rate:", sol_analytic)
-
-        |
-
-        .. testoutput:: picos
-
-            QICS key rate:     0.13081203553305265
-            Analytic key rate: 0.130812035941137
+    Analytic key rate:  0.130812035941137
+    Numerical key rate: 0.1308120333864307
 
 Reading protocols from files
 --------------------------------
@@ -180,29 +168,30 @@ We supply some sample code for how to do this below.
 .. code-block:: python
     :caption: read_qkd_file.py
 
-    import numpy
-    import scipy
+    import numpy as np
+    import scipy as sp
+
     import qics
 
     # Read file
-    data   = scipy.io.loadmat('filename.mat')
+    data   = sp.io.loadmat('filename.mat')
     gamma  = data['gamma']
     Gamma  = list(data['Gamma'].ravel())
     K_list = list(data['Klist'].ravel())
     Z_list = list(data['Zlist'].ravel())
 
-    iscomplex = numpy.iscomplexobj(Gamma) or numpy.iscomplexobj(K_list)
-    dtype = numpy.complex128 if iscomplex else numpy.float64
+    iscomplex = np.iscomplexobj(Gamma) or np.iscomplexobj(K_list)
+    dtype = np.complex128 if iscomplex else np.float64
 
-    no, ni = numpy.shape(K_list[0])
-    nc     = numpy.size(gamma)
+    no, ni = np.shape(K_list[0])
+    nc     = np.size(gamma)
     vni    = qics.vectorize.vec_dim(ni, iscomplex=iscomplex)
 
     # Define objective function
-    c = numpy.vstack((numpy.array([[1.]]), numpy.zeros((vni, 1))))
+    c = np.vstack((np.array([[1.]]), np.zeros((vni, 1))))
 
     # Build linear constraints
-    A = numpy.zeros((nc, 1 + vni))
+    A = np.zeros((nc, 1 + vni))
     for i in range(nc):
         A[i, 1:] = qics.vectorize.mat_to_vec(Gamma[i].astype(dtype)).ravel()
     b = gamma
