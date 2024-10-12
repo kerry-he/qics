@@ -10,9 +10,9 @@ from qics.vectorize import eye, lin_to_mat, mat_to_vec, vec_dim
 
 np.random.seed(1)
 
-n = 10
-m = 20
-k = 5
+n = 5
+m = 10
+k = 2
 eps = 1e-6
 
 vn = vec_dim(n)
@@ -30,7 +30,7 @@ c = np.block([[c_t], [c_z], [c_Y]])
 
 # Build linear constraint Σ_i zi = k
 A = np.block([0.0, np.ones((1, m)), np.zeros((1, cn))])
-b = np.array([[k]])
+b = np.array([[k]], dtype=np.float64)
 
 # Build linear cone constraints
 trace = lin_to_mat(lambda X: np.trace(X), (n, 1), compact=(True, False))

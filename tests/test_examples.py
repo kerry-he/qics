@@ -117,7 +117,7 @@ class TestExamples(unittest.TestCase):
         gdict = self.exec_example("ncp/d_opt_design.py")
         self.assertEqual(gdict["info"]["sol_status"], "optimal")
         self.assertEqual(gdict["info"]["exit_status"], "solved")
-        self.assertAlmostEqual(gdict["info"]["p_obj"], 62.7534834, places=6)
+        self.assertAlmostEqual(gdict["info"]["p_obj"], 39.1674844, places=6)
 
 
 if __name__ == "__main__":
