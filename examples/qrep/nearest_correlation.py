@@ -1,21 +1,22 @@
 import numpy as np
 
 import qics
+from qics.vectorize import vec_dim, mat_to_vec, eye
 
 np.random.seed(1)
 
 n = 5
 
-vn = qics.vectorize.vec_dim(n)
-cn = qics.vectorize.vec_dim(n, compact=True)
+vn = vec_dim(n)
+cn = vec_dim(n, compact=True)
 
 # Generate random positive semidefinite matrix C
 C = np.random.randn(n, n)
 C = C @ C.T / n
-C_cvec = qics.vectorize.mat_to_vec(C, compact=True)
+C_cvec = mat_to_vec(C, compact=True)
 
 # Model problem using primal variables (t, X, Y)
-# Define objective function with
+# Define objective function
 c = np.block([[1.0], [np.zeros((vn, 1))], [np.zeros((vn, 1))]])
 
 # Build linear constraints
@@ -23,8 +24,8 @@ diag = np.zeros((n, vn))
 diag[np.arange(n), np.arange(0, vn, n + 1)] = 1.
 
 A = np.block([
-    [np.zeros((cn, 1)), qics.vectorize.eye(n), np.zeros((cn, vn))],  # X = C
-    [np.zeros((n, 1)),  np.zeros((n, vn)),     diag              ]   # Yii = 1
+    [np.zeros((cn, 1)), eye(n),            np.zeros((cn, vn))],  # X = C
+    [np.zeros((n, 1)),  np.zeros((n, vn)), diag              ]   # Yii = 1
 ])  # fmt: skip
 
 b = np.block([[C_cvec], [np.ones((n, 1))]])

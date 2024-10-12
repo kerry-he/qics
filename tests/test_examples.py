@@ -82,5 +82,43 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(gdict["info"]["exit_status"], "solved")
         self.assertAlmostEqual(gdict["info"]["p_obj"], 47.0377192, places=6)
 
+    def test_qrep_cq_channel_capacity(self):
+        gdict = self.exec_example("qrep/cq_channel_capacity.py")
+        self.assertEqual(gdict["info"]["sol_status"], "optimal")
+        self.assertEqual(gdict["info"]["exit_status"], "solved")
+        self.assertAlmostEqual(gdict["info"]["p_obj"], -5.0308689, places=6)
+
+    def test_qrep_ea_channel_capacity(self):
+        gdict = self.exec_example("qrep/ea_channel_capacity.py")
+        self.assertEqual(gdict["info"]["sol_status"], "optimal")
+        self.assertEqual(gdict["info"]["exit_status"], "solved")
+        self.assertAlmostEqual(gdict["info"]["p_obj"], -0.6931472, places=6)
+
+    def test_qrep_qq_channel_capacity(self):
+        gdict = self.exec_example("qrep/qq_channel_capacity.py")
+        self.assertEqual(gdict["info"]["sol_status"], "optimal")
+        self.assertEqual(gdict["info"]["exit_status"], "solved")
+        self.assertAlmostEqual(gdict["info"]["p_obj"], -0.2754992, places=6)
+
+    def test_qrep_ea_rate_distortion(self):
+        gdict = self.exec_example("qrep/ea_rate_distortion.py")
+        self.assertEqual(gdict["info"]["sol_status"], "optimal")
+        self.assertEqual(gdict["info"]["exit_status"], "solved")
+        self.assertAlmostEqual(gdict["info"]["p_obj"], 0.5248915, places=6)
+
+    # Noncommutative perspective programs
+    def test_ncp_measured_rel_entr(self):
+        gdict = self.exec_example("ncp/measured_rel_entr.py")
+        self.assertEqual(gdict["info"]["sol_status"], "optimal")
+        self.assertEqual(gdict["info"]["exit_status"], "solved")
+        self.assertAlmostEqual(gdict["info"]["p_obj"], 0.8299380, places=6)
+
+    def test_ncp_d_opt_design(self):
+        gdict = self.exec_example("ncp/d_opt_design.py")
+        self.assertEqual(gdict["info"]["sol_status"], "optimal")
+        self.assertEqual(gdict["info"]["exit_status"], "solved")
+        self.assertAlmostEqual(gdict["info"]["p_obj"], 62.7534834, places=6)
+
+
 if __name__ == "__main__":
     unittest.main()
