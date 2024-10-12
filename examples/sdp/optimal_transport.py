@@ -1,11 +1,16 @@
-import numpy
+# Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
+
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
+# file in the root directory or at https://github.com/kerry-he/qics
+
+import numpy as np
 
 import qics
 from qics.quantum import p_tr
 from qics.quantum.random import density_matrix
 from qics.vectorize import lin_to_mat, mat_to_vec
 
-numpy.random.seed(1)
+np.random.seed(1)
 
 n = m = 2
 
@@ -18,15 +23,15 @@ rho_B_cvec = mat_to_vec(rho_B, compact=True)
 
 # Model problem using primal variable X
 # Generate random objective function
-C = numpy.random.randn(n * m, n * m) + numpy.random.randn(n * m, n * m) * 1j
+C = np.random.randn(n * m, n * m) + np.random.randn(n * m, n * m) * 1j
 c = mat_to_vec(C + C.conj().T)
 
 # Build linear constraints tr_A(X) = rho_A and tr_B(X) = rho_B
 ptr_A = lin_to_mat(lambda X: p_tr(X, (n, m), 1), (n * m, n), iscomplex=True)
 ptr_B = lin_to_mat(lambda X: p_tr(X, (n, m), 0), (n * m, m), iscomplex=True)
 
-A = numpy.block([[ptr_A], [ptr_B]])
-b = numpy.block([[rho_A_cvec], [rho_B_cvec]])
+A = np.block([[ptr_A], [ptr_B]])
+b = np.block([[rho_A_cvec], [rho_B_cvec]])
 
 # Define cones to optimize over
 cones = [qics.cones.PosSemidefinite(n * m, iscomplex=True)]
