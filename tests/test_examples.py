@@ -11,7 +11,7 @@ import unittest
 class TestExamples(unittest.TestCase):
     def setUp(self):
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        self.expath = os.path.normpath(dir_path + "/examples")
+        self.expath = os.path.normpath(dir_path + "/../examples")
 
     def exec_example(self, example):
         fname = os.path.join(self.expath, example)
