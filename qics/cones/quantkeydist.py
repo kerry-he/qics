@@ -86,13 +86,10 @@ class QuantKeyDist(Cone):
 
         - If ``Z_info`` is a :obj:`list` of :class:`~numpy.ndarray`, then
           ``Z_info`` directly specifies the Kraus operators
-          :math:`Z_i \in \mathbb{C}^{mr \times mr}`.
-
-          .. warning::
-
-              If ``Z_info`` is specified in this way, the user themselves
-              must ensure that the Kraus operators they provide correpsond
-              to a valid pinching map.
+          :math:`Z_i \in \mathbb{C}^{mr \times mr}`. Note that these Kraus
+          operators must have a similar structure to those defined using
+          the other options, i.e., must be diagonal matrices consisting of
+          either ones or zeros, and :math:`Z_iZ_j=0` for all :math:`i\neq j`.
 
     iscomplex : :obj:`bool`
         Whether the matrix :math:`X` is defined over :math:`\mathbb{H}^n`
@@ -238,8 +235,15 @@ class QuantKeyDist(Cone):
             # Define Z(X) using given Kraus operators
             self.r = len(Z_info)
             self.m = self.N // self.r
-            assert all([Zi.shape == (N, N) for Zi in Z_info]), "Kraus operators " \
+            assert all([Zi.shape == (N, N) for Zi in Z_info]), "Kraus operators "     \
                 "specified by Z_info must have the same dimensions."  # fmt: skip
+            assert not any([np.any(Zi - np.diag(np.diag(Zi))) for Zi in Z_info]),     \
+                "Kraus operators specified by Z_info must be diagonal."  # fmt: skip
+            assert all([all([x in {0, 1} for x in np.diag(Zi)]) for Zi in Z_info]),   \
+                "Diagonal elements of Kraus operators specified by Z_info must only " \
+                "be either 0s or 1s."  # fmt: skip
+            assert np.all(sum(Z_info) == np.eye(N)), "Kraus operators specified by "  \
+                "Z_info must satisfy ZiZj = 0 for all i =/= j."  # fmt: skip
 
             self.Z_list_raw = Z_info
             self.Z_idxs = [np.where(Z)[0] for Z in Z_info]

@@ -111,6 +111,10 @@ installed from `pip <https://pypi.org/project/qics/>`_ by calling
 
     pip install qics
 
+Note that the performance of QICS is highly dependent on the version of BLAS and
+LAPACK that `Numpy <https://numpy.org/devdocs/building/blas_lapack.html>`_ and 
+`SciPy <https://docs.scipy.org/doc/scipy/building/blas_lapack.html>`_ are linked to.
+
 
 PICOS interface
 ---------------

@@ -56,7 +56,7 @@ class OpPerspecTr(Cone):
         - :math:`g(x) = -x^p` if ``func=p`` is a :obj:`float` where
           :math:`p\in(0, 1)`
         - :math:`g(x) = x^p` if ``func=p`` is a :obj:`float` where
-          :math:`p\in(-1, 0)\cup(1, 2)`
+          :math:`p\in[-1, 0)\cup(1, 2)`
 
     iscomplex : :obj:`bool`
         Whether the matrices :math:`X` and :math:`Y` are defined over
