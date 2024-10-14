@@ -16,7 +16,7 @@ using QICS, which we have organized into the following categories.
         counterpart.
 
     .. grid-item-card:: Block diagonal
-        :link: nearest.html
+        :link: product.html
 
         How block-diagonal structure in a semidefinite program can be exploited.
 

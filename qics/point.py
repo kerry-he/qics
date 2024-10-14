@@ -185,8 +185,8 @@ class VecProduct(Vector):
 
     >>> import qics
     >>> cones = [                                       \
-    ...     qics.cones.PosSemidefinite(3),              \
-    ...     qics.cones.QuantRelEntr(2, iscomplex=True)  \
+    ...     qics.cones.PosSemidefinite(2),              \
+    ...     qics.cones.QuantRelEntr(3, iscomplex=True)  \
     ... ]
     >>> x = qics.point.VecProduct(cones)
     >>> x[0][0]  # Matrix corresponding to PosSemidefinite cone

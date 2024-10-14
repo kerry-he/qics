@@ -34,7 +34,7 @@ Holevo-Schumacher–Westmoreland theorem :ref:`[2,3] <channel_refs>`
     \max_{p \in \mathbb{R}^m} &&& S\biggl(\mathcal{N}\biggl(\sum_{i=1}^m 
     p_i\rho_i\biggr)\biggr) - \sum_{i=1}^m p_iS(\mathcal{N}(\rho_i))
 
-    \text{s.t.} &&& \sum_{i=1}^n p_i = 1
+    \text{subj. to} &&& \sum_{i=1}^n p_i = 1
 
     &&& p \geq 0.
 
@@ -43,104 +43,82 @@ cone as follows.
 
 .. tabs::
 
-    .. group-tab:: Native
+    .. code-tab:: python Native
 
-        .. testcode:: cqcc-native
+        import numpy as np
 
-            import numpy
-            import qics
+        import qics
+        from qics.quantum import entropy
+        from qics.quantum.random import density_matrix
+        from qics.vectorize import mat_to_vec, vec_dim
 
-            numpy.random.seed(1)
+        np.random.seed(1)
 
-            n = m = 16
+        n = m = 16
+        vn = vec_dim(n, iscomplex=True)
 
-            rhos = [qics.quantum.random.density_matrix(n, iscomplex=True) for i in range(m)]
+        # Generate random problem data
+        rhos = [density_matrix(n, iscomplex=True) for _ in range(m)]
+        rho_vecs = np.hstack(([mat_to_vec(rho) for rho in rhos]))
 
-            # Define objective function
-            # where x = ({pi}, t) and c = ({-S(N(Xi))}, 1)
-            c1 = numpy.array([[-qics.quantum.entropy(rho)] for rho in rhos])
-            c2 = numpy.array([[1.0]])
-            c  = numpy.vstack((c1, c2))
+        # Model problem using primal variables (p, t)
+        # Define objective function
+        c_p = np.array([[-entropy(rho)] for rho in rhos])
+        c_t = 1.0
+        c = np.block([[c_p], [c_t]])
 
-            # Build linear constraint Σ_i pi = 1
-            A = numpy.hstack((numpy.ones((1, m)), numpy.zeros((1, 1))))
-            b = numpy.ones((1, 1))
+        # Build linear constraint Σ_i pi = 1
+        A = np.block([np.ones((1, m)), 0.0])
+        b = np.array([[1.0]])
 
-            # Build linear cone constraints
-            # x_nn = p
-            G1 = numpy.hstack((-numpy.eye(m), numpy.zeros((m, 1))))
-            h1 = numpy.zeros((m, 1))
-            # t_qe = t
-            G2 = numpy.hstack((numpy.zeros((1, m)), -numpy.ones((1, 1))))
-            h2 = numpy.zeros((1, 1))
-            # u_qe = 1
-            G3 = numpy.hstack((numpy.zeros((1, m)), numpy.zeros((1, 1))))
-            h3 = numpy.ones((1, 1))
-            # X_qe = Σ_i pi N(Xi)
-            rhos_vec = numpy.hstack(([qics.vectorize.mat_to_vec(rho) for rho in rhos]))
-            G4 = numpy.hstack((-rhos_vec, numpy.zeros((2*n*n, 1))))
-            h4 = numpy.zeros((2*n*n, 1))
+        # Build linear cone constraints
+        G = np.block([
+            [-np.eye(m),       np.zeros((m, 1)) ],  # x_nn = p
+            [np.zeros((1, m)), -np.ones((1, 1)) ],  # t_qe = t
+            [np.zeros((1, m)), np.zeros((1, 1)) ],  # u_qe = 1
+            [-rho_vecs,        np.zeros((vn, 1))]   # X_qe = Σ_i pi N(Xi)
+        ])  
 
-            G = numpy.vstack((G1, G2, G3, G4))
-            h = numpy.vstack((h1, h2, h3, h4))
+        h = np.block([[np.zeros((m, 1))], [0.0], [1.0], [np.zeros((vn, 1))]])
 
-            # Define cones to optimize over
-            cones = [
-                qics.cones.NonNegOrthant(n), 
-                qics.cones.QuantEntr(n, iscomplex=True)
-            ]
+        # Define cones to optimize over
+        cones = [
+            qics.cones.NonNegOrthant(n),  # p >= 0
+            qics.cones.QuantEntr(n, iscomplex=True),  # (t, 1, Σ_i pi N(Xi)) ∈ QE
+        ]
 
-            # Initialize model and solver objects
-            model = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
-            solver = qics.Solver(model, verbose=0)
+        # Initialize model and solver objects
+        model = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
+        solver = qics.Solver(model)
 
-            # Solve problem
-            info = solver.solve()
+        # Solve problem
+        info = solver.solve()
 
-            print("Classical-quantum channel capacity:", -info["p_obj"])
+    .. code-tab:: python PICOS
 
-        |
+        import numpy as np
 
-        .. testoutput:: cqcc-native
-            :options: +ELLIPSIS
+        import picos
+        import qics
 
-            Classical-quantum channel capacity: 5.030868941106602
+        np.random.seed(1)
 
-    .. group-tab:: PICOS
+        n = m = 16
 
-        .. testcode:: cqcc-picos
+        rhos = [qics.quantum.random.density_matrix(n, iscomplex=True) for i in range(m)]
+        entr_rhos = np.array([[qics.quantum.entropy(rho)] for rho in rhos])
 
-            import numpy
-            import picos
-            import qics
+        # Define problem
+        P = picos.Problem()
+        p = picos.RealVariable("p", m)
+        average_rho = picos.sum([p[i]*rhos[i] for i in range(m)])
 
-            numpy.random.seed(1)
+        P.set_objective("max", picos.quantentr(average_rho) + (p | entr_rhos))
+        P.add_constraint(picos.sum(p) == 1)
+        P.add_constraint(p > 0)
 
-            n = m = 16
-
-            rhos = [qics.quantum.random.density_matrix(n, iscomplex=True) for i in range(m)]
-            entr_rhos = numpy.array([[qics.quantum.entropy(rho)] for rho in rhos])
-
-            # Define problem
-            P = picos.Problem()
-            p = picos.RealVariable("p", m)
-            average_rho = picos.sum([p[i]*rhos[i] for i in range(m)])
-
-            P.set_objective("max", picos.quantentr(average_rho) + (p | entr_rhos))
-            P.add_constraint(picos.sum(p) == 1)
-            P.add_constraint(p > 0)
-
-            # Solve problem
-            P.solve(solver="qics")
-
-            print("Classical-quantum channel capacity:", P.value)
-
-        |
-
-        .. testoutput:: cqcc-picos
-
-            Classical-quantum channel capacity: 5.030868855134452
-
+        # Solve problem
+        P.solve(solver="qics", verbosity=1)
 
 Entanglement-assisted channel capacity
 ----------------------------------------
@@ -164,7 +142,7 @@ Bennet-Shor-Smolin-Thapliyal theorem :ref:`[4] <channel_refs>`
     \max_{\rho \in \mathbb{H}^n} &&& S(\rho) - S(\text{tr}_B(V \rho V^\dagger)) 
     + S(\text{tr}_E(V \rho V^\dagger))
 
-    \text{s.t.} &&& \text{tr}[\rho] = 1
+    \text{subj. to} &&& \text{tr}[\rho] = 1
 
     &&& \rho \succeq 0.
 
@@ -185,129 +163,101 @@ follows.
 
 .. tabs::
 
-    .. group-tab:: Native
+    .. code-tab:: python Native
 
-        .. testcode:: eacc-native
+        import numpy as np
 
-            import numpy
-            import qics
+        import qics
+        from qics.quantum import p_tr
+        from qics.vectorize import eye, lin_to_mat, vec_dim
 
-            n = 2
-            N = n * n
+        n = 2
+        N = n * n
 
-            vn = qics.vectorize.vec_dim(n)
-            vN = qics.vectorize.vec_dim(N)
-            cn = qics.vectorize.vec_dim(n, compact=True)
+        vn = vec_dim(n)
+        vN = vec_dim(N)
+        cn = vec_dim(n, compact=True)
 
-            gamma = 0.5
-            V = numpy.array([
-                [1., 0.                 ], 
-                [0., numpy.sqrt(1-gamma)], 
-                [0., numpy.sqrt(gamma)  ], 
-                [0., 0.                 ]
-            ])
+        # Define amplitude damping channel
+        gamma = 0.5
+        V = np.array([
+            [1., 0.              ],
+            [0., np.sqrt(1-gamma)],
+            [0., np.sqrt(gamma)  ],
+            [0., 0.              ]
+        ])  
 
-            # Define objective functions
-            ct = numpy.array([[1.0]])
-            cs = numpy.array([[1.0]])
-            cX = numpy.zeros((cn, 1))
-            c = numpy.vstack((ct, cs, cX))
+        # Model problem using primal variables (t1, t2, cvec(X))
+        # Define objective functions
+        c = np.block([[1.0], [1.0], [np.zeros((cn, 1))]])
 
-            # Build linear constraints
-            # tr[X] = 1
-            A = numpy.hstack((
-                numpy.array([[0., 0.]]),
-                qics.vectorize.mat_to_vec(numpy.eye(n), compact=True).T,
-            ))
-            b = numpy.array([[1.0]])
+        # Build linear constraint tr[X] = 1
+        trace = lin_to_mat(lambda X: np.trace(X), (n, 1), compact=(True, False))
+        A = np.block([[0.0, 0.0, trace]])
+        b = np.array([[1.0]])
 
-            # Build conic linear constraints
-            VV = qics.vectorize.lin_to_mat(
-                lambda X: V @ X @ V.conj().T, (n, n*n), compact=(True, False)
-            )
-            trE = qics.vectorize.lin_to_mat(
-                lambda X: qics.quantum.p_tr(X, (n, n), 0), (N, n), compact=(False, False)
-            )
-            # t_qce = t
-            G1 = numpy.hstack((numpy.array([[1.0, 0.0]]), numpy.zeros((1, cn))))
-            h1 = numpy.array([[0.0]])
-            # X_qce = VXV'
-            G2 = numpy.hstack((numpy.zeros((vN, 2)), VV))
-            h2 = numpy.zeros((vN, 1))
-            # t_qe = s
-            G3 = numpy.hstack((numpy.array([[0.0, 1.0]]), numpy.zeros((1, cn))))
-            h3 = numpy.array([[0.0]])
-            # y_qe = 1
-            G4 = numpy.hstack((numpy.array([[0.0, 0.0]]), numpy.zeros((1, cn))))
-            h4 = numpy.array([[1.0]])
-            # X_qe = trE(VXV')
-            G5 = numpy.hstack((numpy.zeros((vn, 2)), trE @ VV))
-            h5 = numpy.zeros((vn, 1))
-            # X_psd = X
-            G6 = numpy.hstack((numpy.zeros((vn, 2)), qics.vectorize.eye(n).T))
-            h6 = numpy.zeros((vn, 1))
+        # Build conic linear constraints
+        VV = lin_to_mat(lambda X: V @ X @ V.conj().T, (n, N), compact=(True, False))
+        trE = lin_to_mat(lambda X: p_tr(X, (n, n), 0), (N, n), compact=(False, False))
 
-            G = -numpy.vstack((G1, G2, G3, G4, G5, G6))
-            h = numpy.vstack((h1, h2, h3, h4, h5, h6))
+        G = np.block([
+            [-1.0,              0.0,               np.zeros((1, cn))],  # t_qce = t1
+            [np.zeros((vN, 1)), np.zeros((vN, 1)), -VV              ],  # X_qce = VXV'
+            [0.0,               -1.0,              np.zeros((1, cn))],  # t_qe = t2
+            [0.0,               0.0,               np.zeros((1, cn))],  # u_qe = 1
+            [np.zeros((vn, 1)), np.zeros((vn, 1)), -trE @ VV        ],  # X_qe = tr_E(VXV')
+            [np.zeros((vn, 1)), np.zeros((vn, 1)), -eye(n).T        ]   # X_psd = X
+        ])  
 
-            # Define cones to optimize over
-            cones = [
-                qics.cones.QuantCondEntr((n, n), 1),
-                qics.cones.QuantEntr(n),
-                qics.cones.PosSemidefinite(n),
-            ]
+        h = np.block([
+            [0.0], 
+            [np.zeros((vN, 1))], 
+            [0.0], 
+            [1.0], 
+            [np.zeros((vn, 1))], 
+            [np.zeros((vn, 1))],
+        ])  
 
-            # Initialize model and solver objects
-            model = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
-            solver = qics.Solver(model, verbose=0)
+        # Define cones to optimize over
+        cones = [
+            qics.cones.QuantCondEntr((n, n), 1),  # (t1, VXV') ∈ QCE
+            qics.cones.QuantEntr(n),  # (t2, 1, tr_E(XVX')) ∈ QE
+            qics.cones.PosSemidefinite(n),  # X ⪰ 0
+        ]
 
-            # Solve problem
-            info = solver.solve()
+        # Initialize model and solver objects
+        model = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
+        solver = qics.Solver(model)
 
-            print("Entanglement-assisted channel capacity:", -info["p_obj"])
+        # Solve problem
+        info = solver.solve()
 
-        |
+    .. code-tab:: python PICOS
 
-        .. testoutput:: eacc-native
-            :options: +ELLIPSIS
+        import numpy as np
 
-            Entanglement-assisted channel capacity: 0.6931471989341152
+        import picos
 
-    .. group-tab:: PICOS
+        gamma = 0.5
 
-        .. testcode:: eacc-picos
+        V = np.array([
+            [1., 0.              ],
+            [0., np.sqrt(1-gamma)],
+            [0., np.sqrt(gamma)  ],
+            [0., 0.              ]
+        ])
 
-            import numpy
-            import picos
+        # Define problem
+        P = picos.Problem()
+        X = picos.SymmetricVariable("X", 2)
 
-            gamma = 0.5
+        P.set_objective("max", picos.quantcondentr(V*X*V.T, 1)
+                        + picos.quantentr(picos.partial_trace(V*X*V.T, 0)))
+        P.add_constraint(picos.trace(X) == 1)
+        P.add_constraint(X >> 0)
 
-            V = numpy.array([
-                [1., 0.                 ], 
-                [0., numpy.sqrt(1-gamma)], 
-                [0., numpy.sqrt(gamma)  ], 
-                [0., 0.                 ]
-            ])
-
-            # Define problem
-            P = picos.Problem()
-            X = picos.SymmetricVariable("X", 2)
-
-            P.set_objective("max", picos.quantcondentr(V*X*V.T, 1) 
-                            + picos.quantentr(picos.partial_trace(V*X*V.T, 0)))
-            P.add_constraint(picos.trace(X) == 1)
-            P.add_constraint(X >> 0)
-
-            # Solve problem
-            P.solve(solver="qics")
-
-            print("Entanglement-assisted channel capacity:", P.value)
-
-        |
-
-        .. testoutput:: eacc-picos
-
-            Entanglement-assisted channel capacity: 0.6931471810901259
+        # Solve problem
+        P.solve(solver="qics", verbosity=1)
 
 Quantum channel capacity of degradable channels
 -------------------------------------------------
@@ -329,7 +279,7 @@ its complementary channel :math:`\mathcal{N}_\text{c}` can be expressed as
     \max_{\rho \in \mathbb{H}^n} &&& S(\mathcal{N}(\rho)) -
     S(\text{tr}_F(W \mathcal{N}(\rho) W^\dagger))
 
-    \text{s.t.} &&& \text{tr}[\rho] = 1
+    \text{subj. to} &&& \text{tr}[\rho] = 1
 
     &&& \rho \succeq 0,
 
@@ -350,134 +300,109 @@ problem below.
 
 .. tabs::
 
-    .. group-tab:: Native
+    .. code-tab:: python Native
 
-        .. testcode:: qqcc-native
+        import numpy as np
 
-            import numpy
-            import qics
+        import qics
+        from qics.quantum import p_tr
+        from qics.vectorize import eye, lin_to_mat, vec_dim
 
-            n = 2
-            N = n * n
+        n = 2
+        N = n * n
 
-            vn = qics.vectorize.vec_dim(n)
-            vN = qics.vectorize.vec_dim(N)
-            cn = qics.vectorize.vec_dim(n, compact=True)
+        vn = vec_dim(n)
+        vN = vec_dim(N)
+        cn = vec_dim(n, compact=True)
 
-            gamma = 0.25
-            delta = (1-2*gamma) / (1-gamma)
+        # Define amplitude damping channel
+        gamma = 0.25
+        delta = (1 - 2 * gamma) / (1 - gamma)
+        V = np.array([
+            [1., 0.              ],
+            [0., np.sqrt(1-gamma)],
+            [0., np.sqrt(gamma)  ],
+            [0., 0.              ]
+        ])  
+        W = np.array([
+            [1., 0.              ],
+            [0., np.sqrt(delta)  ],
+            [0., np.sqrt(1-delta)],
+            [0., 0.              ]
+        ])  
 
-            V = numpy.array([
-                [1., 0.                 ],
-                [0., numpy.sqrt(1-gamma)],
-                [0., numpy.sqrt(gamma)  ],
-                [0., 0.                 ]
-            ])
 
-            W = numpy.array([
-                [1., 0.                 ],
-                [0., numpy.sqrt(delta)  ],
-                [0., numpy.sqrt(1-delta)],
-                [0., 0.                 ]
-            ])
+        def W_NX_W(X):
+            return W @ p_tr(V @ X @ V.conj().T, (n, n), 1) @ W.conj().T
 
-            # Define objective functions
-            ct = numpy.array([[1.0]])
-            cX = numpy.zeros((cn, 1))
-            c = numpy.vstack((ct, cX))
 
-            # Build linear constraints
-            # tr[X] = 1
-            A = numpy.hstack((
-                numpy.array([[0.]]),
-                qics.vectorize.mat_to_vec(numpy.eye(n), compact=True).T,
-            ))
-            b = numpy.array([[1.0]])
+        # Model problem using primal variables (t, cvec(X))
+        # Define objective functions
+        c = np.block([[1.0], [np.zeros((cn, 1))]])
 
-            # Build conic linear constraints
-            WNW = qics.vectorize.lin_to_mat(
-                lambda X: W @ qics.quantum.p_tr(V @ X @ V.conj().T, (n, n), 1) @ W.conj().T,
-                (n, N), compact=(True, False)
-            )
-            # t_qce = t
-            G1 = numpy.hstack((numpy.array([[1.0]]), numpy.zeros((1, cn))))
-            h1 = numpy.array([[0.0]])
-            # X_qce = VXV'
-            G2 = numpy.hstack((numpy.zeros((vN, 1)), WNW))
-            h2 = numpy.zeros((vN, 1))
-            # X_psd = X
-            G3 = numpy.hstack((numpy.zeros((vn, 1)), qics.vectorize.eye(n).T))
-            h3 = numpy.zeros((vn, 1))
+        # Build linear constraint tr[X] = 1
+        trace = lin_to_mat(lambda X: np.trace(X), (n, 1), compact=(True, False))
+        A = np.block([[0.0, trace]])
+        b = np.array([[1.0]])
 
-            G = -numpy.vstack((G1, G2, G3))
-            h = numpy.vstack((h1, h2, h3))
+        # Build conic linear constraints
+        W_NX_W_mat = lin_to_mat(W_NX_W, (n, N), compact=(True, False))
 
-            # Define cones to optimize over
-            cones = [
-                qics.cones.QuantCondEntr((n, n), 1),
-                qics.cones.PosSemidefinite(n),
-            ]
+        G = np.block([
+            [-1.0,              np.zeros((1, cn))],  # t_qce = t
+            [np.zeros((vN, 1)), -W_NX_W_mat      ],  # X_qce = WN(X)W'
+            [np.zeros((vn, 1)), -eye(n).T        ]   # X_psd = X
+        ])  
 
-            # Initialize model and solver objects
-            model = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
-            solver = qics.Solver(model, verbose=0)
+        h = np.block([[0.0], [np.zeros((vN, 1))], [np.zeros((vn, 1))]])
 
-            # Solve problem
-            info = solver.solve()
+        # Define cones to optimize over
+        cones = [
+            qics.cones.QuantCondEntr((n, n), 1),  # (t, WN(X)W') ∈ QCE
+            qics.cones.PosSemidefinite(n),  # X ⪰ 0
+        ]
 
-            print("Quantum-quantum channel capacity:", -info["p_obj"])
+        # Initialize model and solver objects
+        model = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
+        solver = qics.Solver(model)
 
-        |
+        # Solve problem
+        info = solver.solve()
 
-        .. testoutput:: qqcc-native
-            :options: +ELLIPSIS
+    .. code-tab:: python PICOS
 
-            Quantum-quantum channel capacity: 0.2754991678420877
+        import numpy as np
 
-    .. group-tab:: PICOS
+        import picos
 
-        .. testcode:: qqcc-picos
+        gamma = 0.25
+        delta = (1-2*gamma) / (1-gamma)
 
-            import numpy
-            import picos
+        V = np.array([
+            [1., 0.              ],
+            [0., np.sqrt(1-gamma)],
+            [0., np.sqrt(gamma)  ],
+            [0., 0.              ]
+        ])
 
-            gamma = 0.25
-            delta = (1-2*gamma) / (1-gamma)
+        W = np.array([
+            [1., 0.              ],
+            [0., np.sqrt(delta)  ],
+            [0., np.sqrt(1-delta)],
+            [0., 0.              ]
+        ])
 
-            V = numpy.array([
-                [1., 0.                 ], 
-                [0., numpy.sqrt(1-gamma)], 
-                [0., numpy.sqrt(gamma)  ], 
-                [0., 0.                 ]
-            ])
+        # Define problem
+        P = picos.Problem()
+        X = picos.SymmetricVariable("X", 2)
+        W_Nx_W = W * picos.partial_trace(V*X*V.T, 1) * W.T
 
-            W = numpy.array([
-                [1., 0.                 ], 
-                [0., numpy.sqrt(delta)  ], 
-                [0., numpy.sqrt(1-delta)], 
-                [0., 0.                 ]
-            ])
+        P.set_objective("max", picos.quantcondentr(W_Nx_W, 1))
+        P.add_constraint(picos.trace(X) == 1)
+        P.add_constraint(X >> 0)
 
-            # Define problem
-            P = picos.Problem()
-            X = picos.SymmetricVariable("X", 2)
-            W_Nx_W = W * picos.partial_trace(V*X*V.T, 1) * W.T
-
-            P.set_objective("max", picos.quantcondentr(W_Nx_W, 1))
-            P.add_constraint(picos.trace(X) == 1)
-            P.add_constraint(X >> 0)
-
-            # Solve problem
-            P.solve(solver="qics")
-
-            print("Quantum-quantum channel capacity:", P.value)
-
-        |
-
-        .. testoutput:: qqcc-picos
-
-            Quantum-quantum channel capacity: 0.27549915990288354
-
+        # Solve problem
+        P.solve(solver="qics", verbosity=1)
 
 Entanglement-assisted rate-distortion
 ----------------------------------------
@@ -497,7 +422,7 @@ rate-distortion function :ref:`[6,7] <channel_refs>`, which involves solving
     \min_{\rho_{AB} \in \mathbb{H}^{n^2}} &&& -S(\rho_{AB}) 
     + S(\text{tr}_A(\rho_{AB})) + S(\sigma_A)
 
-    \text{s.t.} &&& \text{tr}_B(\rho_{AB}) = \sigma_A
+    \text{subj. to} &&& \text{tr}_B(\rho_{AB}) = \sigma_A
 
     &&& 1 - \langle \psi | \rho_{AB} | \psi \rangle \leq D
 
@@ -509,98 +434,84 @@ below.
 
 .. tabs::
 
-    .. group-tab:: Native
+    .. code-tab:: python Native
 
-        .. testcode:: eard-native
+        import numpy as np
 
-            import numpy
-            import qics
+        import qics
+        from qics.quantum import p_tr, purify, entropy
+        from qics.quantum.random import density_matrix
+        from qics.vectorize import lin_to_mat, vec_dim, mat_to_vec
 
-            numpy.random.seed(1)
+        np.random.seed(1)
 
-            n = 4
-            D = 0.25
+        n = 4
+        N = n * n
+        vN = vec_dim(N, iscomplex=True)
+        cn = vec_dim(n, iscomplex=True, compact=True)
 
-            rho = qics.quantum.random.density_matrix(n)
-            entr_rho = qics.quantum.entropy(rho)
+        # Define random problem data
+        rho = density_matrix(n, iscomplex=True)
+        entr_rho = entropy(rho)
+        rho_cvec = mat_to_vec(rho, compact=True)
 
-            N = n * n
-            sn = qics.vectorize.vec_dim(n, compact=True)
-            vN = qics.vectorize.vec_dim(N)
+        D = 0.25
+        Delta = np.eye(N) - purify(rho)
+        Delta_vec = mat_to_vec(Delta)
 
-            # Define objective function
-            c = numpy.zeros((vN + 2, 1))
-            c[0] = 1.
+        # Model problem using primal variables (t, X, d)
+        # Define objective function
+        c = np.block([[1.0], [np.zeros((vN, 1))], [0.0]])
 
-            # Build linear constraint matrices
-            tr2 = qics.vectorize.lin_to_mat(lambda X : qics.quantum.p_tr(X, (n, n), 1), (N, n))
-            purification = qics.vectorize.mat_to_vec(qics.quantum.purify(rho))
-            # Tr_2[X] = rho
-            A1 = numpy.hstack((numpy.zeros((sn, 1)), tr2, numpy.zeros((sn, 1))))
-            b1 = qics.vectorize.mat_to_vec(rho, compact=True)
-            # 1 - tr[Psi X] <= D
-            A2 = numpy.hstack((numpy.zeros((1, 1)), -purification.T, numpy.ones((1, 1))))
-            b2 = numpy.array([[D - 1]])
+        # Build linear constraint matrices
+        tr_B = lin_to_mat(lambda X : p_tr(X, (n, n), 1), (N, n), iscomplex=True)
 
-            A = numpy.vstack((A1, A2))
-            b = numpy.vstack((b1, b2))
+        A = np.block([
+            [np.zeros((cn, 1)), tr_B,        np.zeros((cn, 1))],  # tr_B[X] = rho
+            [0.0,               Delta_vec.T, 1.0              ]   # d = D - <Delta, X>
+        ])
 
-            # Define cones to optimize over
-            cones = [
-                qics.cones.QuantCondEntr((n, n), 0), 
-                qics.cones.NonNegOrthant(1)
-            ]
+        b = np.block([[rho_cvec], [D]])
 
-            # Initialize model and solver objects
-            model  = qics.Model(c=c, A=A, b=b, cones=cones, offset=entr_rho)
-            solver = qics.Solver(model, verbose=0)
+        # Define cones to optimize over
+        cones = [
+            qics.cones.QuantCondEntr((n, n), 0, iscomplex=True),  # (t, X) ∈ QCE
+            qics.cones.NonNegOrthant(1)  # d = D - <Delta, X> >= 0
+        ]
 
-            # Solve problem
-            info = solver.solve()
+        # Initialize model and solver objects
+        model  = qics.Model(c=c, A=A, b=b, cones=cones, offset=entr_rho)
+        solver = qics.Solver(model)
 
-            print("Entanglement-assisted rate distortion:", info["p_obj"])
+        # Solve problem
+        info = solver.solve()
 
-        |
+    .. code-tab:: python PICOS
 
-        .. testoutput:: eard-native
+        import numpy as np
 
-            Entanglement-assisted rate distortion: 0.5121638233376051
+        import picos
+        import qics
 
-    .. group-tab:: PICOS
+        np.random.seed(1)
 
-        .. testcode:: eard-picos
+        n = 4
+        D = 0.25
 
-            import numpy
-            import picos
-            import qics
+        rho = qics.quantum.random.density_matrix(n)
+        entr_rho = qics.quantum.entropy(rho)
+        distortion_observable = picos.I(n*n) - qics.quantum.purify(rho)
 
-            numpy.random.seed(1)
+        # Define problem
+        P = picos.Problem()
+        X = picos.SymmetricVariable("X", n*n)
 
-            n = 4
-            D = 0.25
+        P.set_objective("min", -picos.quantcondentr(X, 0, (n, n)) + entr_rho)
+        P.add_constraint(picos.partial_trace(X, 1, (n, n)) == rho)
+        P.add_constraint((X | distortion_observable) < D)
 
-            rho = qics.quantum.random.density_matrix(n)
-            entr_rho = qics.quantum.entropy(rho)
-            distortion_observable = picos.I(n*n) - qics.quantum.purify(rho)
-
-            # Define problem
-            P = picos.Problem()
-            X = picos.SymmetricVariable("X", n*n)
-
-            P.set_objective("min", -picos.quantcondentr(X, 0, (n, n)) + entr_rho)
-            P.add_constraint(picos.partial_trace(X, 1, (n, n)) == rho)
-            P.add_constraint((X | distortion_observable) < D)
-
-            # Solve problem
-            P.solve(solver="qics")
-
-            print("Entanglement-assisted rate distortion:", P.value)
-
-        |
-
-        .. testoutput:: eard-picos
-
-            Entanglement-assisted rate distortion: 0.5121639020690582
+        # Solve problem
+        P.solve(solver="qics", verbosity=1)
 
 .. _channel_refs:
 

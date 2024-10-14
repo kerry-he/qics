@@ -1,53 +1,57 @@
+# Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
+
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
+# file in the root directory or at https://github.com/kerry-he/qics
+
 import numpy as np
 
 import qics
-import qics.quantum as qu
-import qics.vectorize as vec
+from qics.quantum import i_kr
+from qics.quantum.random import choi_operator
+from qics.vectorize import lin_to_mat, mat_to_vec, vec_dim
 
 np.random.seed(1)
 
-n = 2
+n = 4
 N = n * n
+vn = vec_dim(n, iscomplex=True)
+vN = vec_dim(N, iscomplex=True)
+cN = vec_dim(N, iscomplex=True, compact=True)
 
-J1 = qu.random.choi_operator(n, iscomplex=True)
-J2 = qu.random.choi_operator(n, iscomplex=True)
+# Generate random problem data
+J1 = choi_operator(n, iscomplex=True)
+J2 = choi_operator(n, iscomplex=True)
 J = J1 - J2
 
+# Model problem using primal variables (M, rho, sig)
 # Define objective function
-c1 = -0.5 * vec.mat_to_vec(
-    np.block([[np.zeros((N, N)), J], [J.conj().T, np.zeros((N, N))]])
-)
-c2 = np.zeros((2 * n * n, 1))
-c3 = np.zeros((2 * n * n, 1))
-c = np.vstack((c1, c2, c3))
+C_M = np.block([[np.zeros((N, N)), J], [J.conj().T, np.zeros((N, N))]])
+
+c_M = -0.5 * mat_to_vec(C_M)
+c_rho = np.zeros((vn, 1))
+c_sig = np.zeros((vn, 1))
+c = np.block([[c_M], [c_rho], [c_sig]])
 
 # Build linear constraints
-vN = vec.vec_dim(N, iscomplex=True, compact=True)
-submtx_11 = vec.lin_to_mat(lambda X: X[:N, :N], (2 * N, N), iscomplex=True)
-submtx_22 = vec.lin_to_mat(lambda X: X[N:, N:], (2 * N, N), iscomplex=True)
-i_kr = vec.lin_to_mat(lambda X: qu.i_kr(X, (n, n), 0), (n, N), iscomplex=True)
-tr = vec.mat_to_vec(np.eye(n, dtype=np.complex128)).T
-# I ⊗ rho block
-A1 = np.hstack((submtx_11, -i_kr, np.zeros((vN, 2 * n * n))))
-b1 = np.zeros((vN, 1))
-# I ⊗ sig block
-A2 = np.hstack((submtx_22, np.zeros((vN, 2 * n * n)), -i_kr))
-b2 = np.zeros((vN, 1))
-# tr[rho] = 1
-A3 = np.hstack((np.zeros((1, 8 * N * N)), tr, np.zeros((1, 2 * n * n))))
-b3 = np.array([[1.0]])
-# tr[sig] = 1
-A4 = np.hstack((np.zeros((1, 8 * N * N)), np.zeros((1, 2 * n * n)), tr))
-b4 = np.array([[1.0]])
+trace = lin_to_mat(lambda X: np.trace(X), (n, 1), iscomplex=True)
+ikr_1 = lin_to_mat(lambda X: i_kr(X, (n, n), 0), (n, N), iscomplex=True)
+submat_11 = lin_to_mat(lambda X: X[:N, :N], (2 * N, N), iscomplex=True)
+submat_22 = lin_to_mat(lambda X: X[N:, N:], (2 * N, N), iscomplex=True)
 
-A = np.vstack((A1, A2, A3, A4))
-b = np.vstack((b1, b2, b3, b4))
+A = np.block([
+    [submat_11,             -ikr_1,             np.zeros((cN, vn))],  # M11 = I ⊗ rho
+    [submat_22,             np.zeros((cN, vn)), -ikr_1            ],  # M22 = I ⊗ sig
+    [np.zeros((1, 4 * vN)), trace,              np.zeros((1, vn)) ],  # tr[rho] = 1
+    [np.zeros((1, 4 * vN)), np.zeros((1, vn)),  trace             ]   # tr[sig] = 1
+])  # fmt: skip
+
+b = np.block([[np.zeros((cN, 1))], [np.zeros((cN, 1))], [1.0], [1.0]])
 
 # Define cones to optimize over
 cones = [
-    qics.cones.PosSemidefinite(2 * n * n, iscomplex=True),
-    qics.cones.PosSemidefinite(n, iscomplex=True),
-    qics.cones.PosSemidefinite(n, iscomplex=True),
+    qics.cones.PosSemidefinite(2 * N, iscomplex=True),  # M ⪰ 0
+    qics.cones.PosSemidefinite(n, iscomplex=True),      # rho ⪰ 0
+    qics.cones.PosSemidefinite(n, iscomplex=True),      # sig ⪰ 0
 ]
 
 # Initialize model and solver objects

@@ -77,6 +77,10 @@ installed from [pip](https://pypi.org/project/qics/) by calling
 pip install qics
 ```
 
+Note that the performance of QICS is highly dependent on the version of BLAS and
+LAPACK that [Numpy](https://numpy.org/devdocs/building/blas_lapack.html) and 
+[SciPy](https://docs.scipy.org/doc/scipy/building/blas_lapack.html) are linked to.
+
 ## Documentation
 
 The full documentation of the code can be found
@@ -91,19 +95,18 @@ simple [nearest correlation matrix](https://qics.readthedocs.io/en/stable/exampl
 problem can be solved. 
 
 ```python
-  import numpy
-  import picos
+import picos
 
-  # Define the conic program
-  P = picos.Problem()
-  X = numpy.array([[2., 1.], [1., 2.]])
-  Y = picos.SymmetricVariable("Y", 2)
-  
-  P.set_objective("min", picos.quantrelentr(X, Y))
-  P.add_constraint(picos.maindiag(Y) == 1)
+# Define the conic program
+P = picos.Problem()
+X = picos.Constant("X", [[2., 1.], [1., 2.]])
+Y = picos.SymmetricVariable("Y", 2)
 
-  # Solve the conic program
-  P.solve(solver="qics")
+P.set_objective("min", picos.quantrelentr(X, Y))
+P.add_constraint(picos.maindiag(Y) == 1)
+
+# Solve the conic program
+P.solve(solver="qics")
 ```
 
 Some additional details about how to use QICS with PICOS can be found
@@ -117,25 +120,25 @@ show how the same nearest correlation matrix problem can be solved using QICS'
 native interface.
 
 ```python
- import numpy
- import qics
+import numpy
+import qics
 
- # Define the conic program
- c = numpy.array([[1., 0., 0., 0., 0., 0., 0., 0., 0.]]).T
- A = numpy.array([
-     [0., 1., 0., 0., 0., 0., 0., 0., 0.],
-     [0., 0., 1., 1., 0., 0., 0., 0., 0.],
-     [0., 0., 0., 0., 1., 0., 0., 0., 0.],
-     [0., 0., 0., 0., 0., 1., 0., 0., 0.],
-     [0., 0., 0., 0., 0., 0., 0., 0., 1.]
- ])
- b = numpy.array([[2., 2., 2., 1., 1.]]).T
- cones = [qics.cones.QuantRelEntr(2)]
- model = qics.Model(c=c, A=A, b=b, cones=cones)
+# Define the conic program
+c = numpy.array([[1., 0., 0., 0., 0., 0., 0., 0., 0.]]).T
+A = numpy.array([
+    [0., 1., 0., 0., 0., 0., 0., 0., 0.],
+    [0., 0., 1., 1., 0., 0., 0., 0., 0.],
+    [0., 0., 0., 0., 1., 0., 0., 0., 0.],
+    [0., 0., 0., 0., 0., 1., 0., 0., 0.],
+    [0., 0., 0., 0., 0., 0., 0., 0., 1.]
+])
+b = numpy.array([[2., 2., 2., 1., 1.]]).T
+cones = [qics.cones.QuantRelEntr(2)]
+model = qics.Model(c=c, A=A, b=b, cones=cones)
 
- # Solve the conic program
- solver = qics.Solver(model)
- info = solver.solve()
+# Solve the conic program
+solver = qics.Solver(model)
+info = solver.solve()
 ```
 
 Additional details describing this example can be found

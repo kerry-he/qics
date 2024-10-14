@@ -23,7 +23,7 @@ pages.
         counterpart.
 
     .. grid-item-card:: Block diagonal
-        :link: sdp/nearest.html
+        :link: sdp/product.html
 
         How block-diagonal structure in a semidefinite program can be exploited.
 
