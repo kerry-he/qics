@@ -78,7 +78,7 @@ pip install qics
 ```
 
 Note that the performance of QICS is highly dependent on the version of BLAS and
-LAPACK that [Numpy](https://numpy.org/devdocs/building/blas_lapack.html) and 
+LAPACK that [NumPy](https://numpy.org/doc/stable/building/blas_lapack.html) and 
 [SciPy](https://docs.scipy.org/doc/scipy/building/blas_lapack.html) are linked to.
 
 ## Documentation

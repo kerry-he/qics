@@ -142,7 +142,7 @@ the :class:`qics.Solver`. A list of these options can be found
 
     >>> info = solver.solve()
     ====================================================================
-               QICS v0.1.1 - Quantum Information Conic Solver
+               QICS v0.2.0 - Quantum Information Conic Solver
                   by K. He, J. Saunderson, H. Fawzi (2024)
     ====================================================================
     Problem summary:
