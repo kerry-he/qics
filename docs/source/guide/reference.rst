@@ -169,7 +169,7 @@ solved using a :class:`qics.Solver` class. This can be initialized with the
 following settings.
 
 .. list-table:: **Input parameters for** :class:`qics.Solver`
-   :widths: 20 65 15
+   :widths: 15 58 27
    :header-rows: 1
 
    * - Parameter
@@ -223,10 +223,12 @@ following settings.
      - ``None``
    * - ``use_invhess``
      - Whether to avoid using inverse Hessian product oracles by solving a
-       modified cone program with :math:`\mathcal{K}'=\{x:-Gx\in\mathcal{K}\}`.
-       Requires an initial point :math:`x_0` to be specified such that 
-       :math:`-Gx_0\in\text{int}\ \mathcal{K}`. 
-     - ``True``
+       modified cone program with :math:`G^{-1}(\mathcal{K})=\{x:Gx\in\mathcal{K}\}`.
+     - ``False`` if :math:`G\neq-\mathbb{I}`, :math:`G` is full column rank, and 
+       :math:`\mathcal{K}` mainly consists of :class:`~qics.cones.QuantRelEntr`, 
+       :class:`~qics.cones.OpPerspecEpi`, :class:`~qics.cones.OpPerspecTr`.
+       
+       ``True`` otherwise.
 
 Output parameters
 ~~~~~~~~~~~~~~~~~
