@@ -1,7 +1,13 @@
+# Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
+
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
+# file in the root directory or at https://github.com/kerry-he/qics
+
 import numpy as np
 import scipy as sp
-import qics._utils.linalg as lin
-import qics._utils.vector as vec
+
+from qics._utils.linalg import cho_fact, cho_solve
+from qics.point import Point, PointXYZ, VecProduct
 
 
 class KKTSolver:
@@ -26,7 +32,7 @@ class KKTSolver:
     using block elimination and Cholesky factorization of the Schur complement matrix.
     """
 
-    def __init__(self, model, ir=True):
+    def __init__(self, model, ir=True, use_invhess=True):
         self.model = model
 
         # Iterative refinement settings
@@ -37,22 +43,26 @@ class KKTSolver:
             "improv_ratio": 5.0,  # Expected reduction in tolerance, else slow progress
         }
 
+        self.use_invhess = use_invhess
+
         # Preallocate vectors do to computations with
-        self.cbh = vec.PointXYZ(model)
+        self.cbh = PointXYZ(model)
         self.cbh.x[:] = model.c
         self.cbh.y[:] = model.b
         self.cbh.z.vec[:] = model.h
 
-        self.ir_pnt = vec.Point(model)
-        self.res_pnt = vec.Point(model)
+        self.ir_pnt = Point(model)
+        self.res_pnt = Point(model)
 
-        self.ir_xyz = vec.PointXYZ(model)
-        self.res_xyz = vec.PointXYZ(model)
-        self.c_xyz = vec.PointXYZ(model)
-        self.v_xyz = vec.PointXYZ(model)
+        self.ir_xyz = PointXYZ(model)
+        self.res_xyz = PointXYZ(model)
+        self.c_xyz = PointXYZ(model)
+        self.v_xyz = PointXYZ(model)
 
-        self.work1 = vec.VecProduct(model.cones)
-        self.work2 = vec.VecProduct(model.cones)
+        self.work1 = VecProduct(model.cones)
+        self.work2 = VecProduct(model.cones)
+
+        self.GHG_fact = None
 
         return
 
@@ -62,27 +72,28 @@ class KKTSolver:
 
         # Precompute and factor Schur complement matrix
         if model.use_G:
-            GHG = blk_hess_congruence(model.G_T_views, model)
-            self.GHG_fact = lin.cho_fact(GHG, increment_diag=(not model.use_A))
+            if self.GHG_fact is None or self.use_invhess or model.issymmetric:
+                GHG = blk_hess_congruence(model.G_T_views, model)
+                self.GHG_fact = cho_fact(GHG, increment_diag=(not model.use_A))
 
             if model.use_A:
                 self.GHG_issingular = self.GHG_fact is None
                 if self.GHG_issingular:
                     # GHG is singular, Cholesky factor GHG + AA instead
                     GHG += model.A.T @ model.A
-                    self.GHG_fact = lin.cho_fact(GHG)
+                    self.GHG_fact = cho_fact(GHG)
 
-                GHGA = lin.cho_solve(self.GHG_fact, model.A_T_dense)
-                AGHGA = lin.dense_dot_x(GHGA.T, model.A_coo.T).T
-                self.AGHGA_fact = lin.cho_fact(AGHGA)
+                GHGA = cho_solve(self.GHG_fact, model.A_T_dense)
+                AGHGA = model.A @ GHGA
+                self.AGHGA_fact = cho_fact(AGHGA)
 
         elif model.use_A:
             AHA = blk_invhess_congruence(model.A_invG_views, model)
-            self.AHA_fact = lin.cho_fact(AHA)
+            self.AHA_fact = cho_fact(AHA)
 
         # Solve constant 3x3 subsystem
         self.solve_sys_3(self.c_xyz, self.cbh)
-        if self.ir:
+        if self.ir and self.use_invhess:
             self.solve_sys_3_ir(self.c_xyz, self.cbh)
 
         return
@@ -124,7 +135,7 @@ class KKTSolver:
         #     1) (cx, cy, cz) := M \ (c, b, h)
         #     2) (vx, vy, vz) := M \ (rx, ry, rz + H \ rs)
         # (the first one has been precomputed)
-        self.solve_sys_3(self.v_xyz, r.xyz, r.s)
+        self.solve_sys_3(self.v_xyz, r._xyz, r.s)
 
         # Second, backsubstitute to obtain solutions for the full 6x6 system
         #    dtau := (rtau + rkap + c' vx + b' vy + h' vz) / (T + c' cx + b' cy + h' cz)
@@ -143,7 +154,7 @@ class KKTSolver:
         d.tau[:] = tau_num / tau_den
 
         # (dx, dy, dz) := (vx, vy, vz) - dtau * (cx, cy, cz)
-        d.xyz.vec[:] = sp.linalg.blas.daxpy(
+        d._xyz.vec[:] = sp.linalg.blas.daxpy(
             self.c_xyz.vec, self.v_xyz.vec, a=-d.tau[0, 0]
         )
 
@@ -180,14 +191,14 @@ class KKTSolver:
             temp = r.x - model.G_T @ self.work1.vec
             if self.GHG_issingular:
                 temp -= model.A_T @ r.y
-            temp = r.y + model.A @ lin.cho_solve(self.GHG_fact, temp)
-            d.y[:] = lin.cho_solve(self.AGHGA_fact, temp)
+            temp = r.y + model.A @ cho_solve(self.GHG_fact, temp)
+            d.y[:] = cho_solve(self.AGHGA_fact, temp)
 
             # dx := (G'HG) \ [rx - G' (H rz + rs) - A' dy]
             temp = r.x - model.G_T @ self.work1.vec - model.A_T @ d.y
             if self.GHG_issingular:
                 temp -= model.A_T @ r.y
-            d.x[:] = lin.cho_solve(self.GHG_fact, temp)
+            d.x[:] = cho_solve(self.GHG_fact, temp)
 
             # dz := H (rz + G dx) + rs
             d.z.vec[:] = self.work1.vec
@@ -213,7 +224,7 @@ class KKTSolver:
             np.multiply(self.work2.vec, model.G_inv, out=d.x)
             temp = model.A @ d.x
             temp += r.y
-            d.y[:] = lin.cho_solve(self.AHA_fact, temp)
+            d.y[:] = cho_solve(self.AHA_fact, temp)
 
             # dz := G^-1 (rx - A' dy)
             A_T_dy = model.A_T @ d.y
@@ -238,7 +249,7 @@ class KKTSolver:
             if rs is not None:
                 self.work1 += rs
             temp = r.x - model.G_T @ self.work1.vec
-            d.x[:] = lin.cho_solve(self.GHG_fact, temp)
+            d.x[:] = cho_solve(self.GHG_fact, temp)
 
             # dz := H (rz + G dx) + rs
             self.work1.copy_from(model.G @ d.x)
@@ -340,26 +351,12 @@ class KKTSolver:
         return r
 
     def solve_sys_6_ir(self, d, r):
-        return solve_sys_ir(
-            d,
-            r,
-            self.apply_sys_6,
-            self.solve_sys_6,
-            self.res_pnt,
-            self.ir_pnt,
-            self.ir_settings,
-        )
+        return solve_sys_ir(d, r, self.apply_sys_6, self.solve_sys_6, self.res_pnt,
+                            self.ir_pnt, self.ir_settings)  # fmt: skip
 
     def solve_sys_3_ir(self, d, r):
-        return solve_sys_ir(
-            d,
-            r,
-            self.apply_sys_3,
-            self.solve_sys_3,
-            self.res_xyz,
-            self.ir_xyz,
-            self.ir_settings,
-        )
+        return solve_sys_ir(d, r, self.apply_sys_3, self.solve_sys_3, self.res_xyz,
+                            self.ir_xyz, self.ir_settings)  # fmt: skip
 
 
 def solve_sys_ir(x, b, A, A_inv, res, cor, settings):

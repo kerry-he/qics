@@ -1,5 +1,11 @@
+# Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
+
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
+# file in the root directory or at https://github.com/kerry-he/qics
+
 import numpy as np
-import qics._utils.linalg as lin
+
+from qics._utils.linalg import inp
 
 
 class Cone:
@@ -39,17 +45,27 @@ class Cone:
         H_psi = self.zeros()
         self.invhess_prod_ip(H_psi, psi)
 
-        return sum([lin.inp(H_psi_k, psi_k) for (H_psi_k, psi_k) in zip(H_psi, psi)])
+        return sum([inp(H_psi_k, psi_k) for (H_psi_k, psi_k) in zip(H_psi, psi)])
 
-    def set_point(self, primal, dual, a=True):
+    def set_point(self, primal, dual=None, a=True):
         self.primal = [primal_k * a for primal_k in primal]
-        self.dual = [dual_k * a for dual_k in dual]
+        if dual is not None:
+            self.dual = [dual_k * a for dual_k in dual]
+        else:
+            self.dual = None
 
         self.feas_updated = False
         self.grad_updated = False
         self.hess_aux_updated = False
         self.invhess_aux_updated = False
         self.dder3_aux_updated = False
+        self.nt_aux_updated = False
+
+    def set_dual(self, dual, a=True):
+        self.dual = [dual_k * a for dual_k in dual]
+
+    def get_dual_feas(self):
+        return True
 
     def grad_ip(self, out):
         assert self.feas_updated
@@ -61,34 +77,12 @@ class Cone:
 
         return out
 
-    def precompute_mat_vec(self, n=None):
+    def precompute_computational_basis(self, n=None):
+        if hasattr(self, "E"):
+            return
+
         n = self.n if (n is None) else n
         vn = n * n if self.iscomplex else n * (n + 1) // 2
-        # Indices to convert to and from compact vectors and matrices
-        if self.iscomplex:
-            self.diag_idxs = np.append(
-                0, np.cumsum([i for i in range(3, 2 * n + 1, 2)])
-            )
-            self.triu_idxs = np.empty(n * n, dtype=int)
-            self.scale = np.empty(n * n)
-            k = 0
-            for j in range(n):
-                for i in range(j):
-                    self.triu_idxs[k] = 2 * (j + i * n)
-                    self.triu_idxs[k + 1] = 2 * (j + i * n) + 1
-                    self.scale[k : k + 2] = np.sqrt(2.0)
-                    k += 2
-                self.triu_idxs[k] = 2 * (j + j * n)
-                self.scale[k] = 1.0
-                k += 1
-        else:
-            self.diag_idxs = np.append(0, np.cumsum([i for i in range(2, n + 1, 1)]))
-            self.triu_idxs = np.array(
-                [j + i * n for j in range(n) for i in range(j + 1)]
-            )
-            self.scale = np.array(
-                [1 if i == j else np.sqrt(2.0) for j in range(n) for i in range(j + 1)]
-            )
 
         # Computational basis for symmetric/Hermitian matrices
         rt2 = np.sqrt(0.5)
@@ -110,7 +104,7 @@ class Cone:
     def get_init_point(self, out):
         """Returns a central primal-dual point (s0, z0) satisfying
 
-             z0 = -F'(s0)
+            z0 = -F'(s0)
 
         and stores this point in-place in out.
 
@@ -149,8 +143,8 @@ class Cone:
         pass
 
     def hess_congr(self, A):
-        """Compute the congruence transform AH(s)A' with the Hessian matrix H of the
-        barrier function.
+        """Compute the congruence transform AH(s)A' with the Hessian matrix H of
+        the barrier function.
 
         Parameters
         ----------
@@ -167,8 +161,8 @@ class Cone:
         pass
 
     def invhess_prod_ip(self, out, H):
-        """Compute the inverse Hessian product D2F(s)^-1[H] of the barrier function in
-        the direction of H, and store this in-place in out.
+        """Compute the inverse Hessian product D2F(s)^-1[H] of the barrier
+        function in the direction of H, and store this in-place in out.
 
         Parameters
         ----------
@@ -444,61 +438,66 @@ def get_perspective_derivatives(func):
 
         def d3xh(x):
             return 2 * np.reciprocal(x)
+
     elif isinstance(func, (int, float)):
-        alpha = func
-        if alpha > 0 and alpha < 1:
+        a = func
+        if a > 0 and a < 1:
             sgn = -1
-        elif (alpha > 1 and alpha < 2) or (alpha > -1 and alpha < 0):
+        elif (a > 1 and a < 2) or (a >= -1 and a < 0):
             sgn = 1
+        b = 1.0 - a
 
         def g(x):
-            return sgn * np.power(x, alpha)
+            return sgn * np.power(x, a)
 
         def dg(x):
-            return sgn * np.power(x, alpha - 1) * alpha
+            return sgn * np.power(x, a - 1) * a
 
         def d2g(x):
-            return sgn * np.power(x, alpha - 2) * (alpha * (alpha - 1))
+            return sgn * np.power(x, a - 2) * (a * (a - 1))
 
         def d3g(x):
-            return sgn * np.power(x, alpha - 3) * (alpha * (alpha - 1) * (alpha - 2))
+            return sgn * np.power(x, a - 3) * (a * (a - 1) * (a - 2))
 
         def xg(x):
-            return sgn * np.power(x, alpha + 1)
+            return sgn * np.power(x, a + 1)
 
         def dxg(x):
-            return sgn * np.power(x, alpha) * (alpha + 1)
+            return sgn * np.power(x, a) * (a + 1)
 
         def d2xg(x):
-            return sgn * np.power(x, alpha - 1) * ((alpha + 1) * alpha)
+            return sgn * np.power(x, a - 1) * ((a + 1) * a)
 
         def d3xg(x):
-            return sgn * np.power(x, alpha - 2) * ((alpha + 1) * alpha * (alpha - 1))
-
-        beta = 1.0 - alpha
+            return sgn * np.power(x, a - 2) * ((a + 1) * a * (a - 1))
 
         def h(x):
-            return sgn * np.power(x, beta)
+            return sgn * np.power(x, b)
 
         def dh(x):
-            return sgn * np.power(x, beta - 1) * beta
+            return sgn * np.power(x, b - 1) * b
 
         def d2h(x):
-            return sgn * np.power(x, beta - 2) * (beta * (beta - 1))
+            return sgn * np.power(x, b - 2) * (b * (b - 1))
 
         def d3h(x):
-            return sgn * np.power(x, beta - 3) * (beta * (beta - 1) * (beta - 2))
+            return sgn * np.power(x, b - 3) * (b * (b - 1) * (b - 2))
 
         def xh(x):
-            return sgn * np.power(x, beta + 1)
+            return sgn * np.power(x, b + 1)
 
         def dxh(x):
-            return sgn * np.power(x, beta) * (beta + 1)
+            return sgn * np.power(x, b) * (b + 1)
 
         def d2xh(x):
-            return sgn * np.power(x, beta - 1) * ((beta + 1) * beta)
+            return sgn * np.power(x, b - 1) * ((b + 1) * b)
 
         def d3xh(x):
-            return sgn * np.power(x, beta - 2) * ((beta + 1) * beta * (beta - 1))
+            return sgn * np.power(x, b - 2) * ((b + 1) * b * (b - 1))
 
-    return (g, dg, d2g, d3g, xg, dxg, d2xg, d3xg, h, dh, d2h, d3h, xh, dxh, d2xh, d3xh)
+    return {
+        "g": (g, dg, d2g, d3g),
+        "h": (h, dh, d2h, d3h),
+        "xg": (xg, dxg, d2xg, d3xg),
+        "xh": (xh, dxh, d2xh, d3xh),
+    }

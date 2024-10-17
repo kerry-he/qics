@@ -1,56 +1,70 @@
-import numpy as np
-import qics
-import qics.vectorize as vec
-import qics.quantum as qu
+# Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-## Quantum channel capacity
-#   min  t + s
-#   s.t. tr[X] = 1      X >= 0
-#        Y = WN(X)W'    (t, Y) ∈ K_qce
-# for the amplitude damping channel
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
+# file in the root directory or at https://github.com/kerry-he/qics
+
+import numpy as np
+
+import qics
+from qics.quantum import p_tr
+from qics.vectorize import eye, lin_to_mat, vec_dim
 
 n = 2
 N = n * n
-gamma = 0.5
 
-V = np.array([[1, 0], [0, np.sqrt(gamma)], [0, np.sqrt(1 - gamma)], [0, 0]])
-W = np.array(
-    [
-        [1, 0],
-        [0, np.sqrt((1 - 2 * gamma) / (1 - gamma))],
-        [0, np.sqrt(gamma / (1 - gamma))],
-        [0, 0],
-    ]
-)
+vn = vec_dim(n)
+vN = vec_dim(N)
+cn = vec_dim(n, compact=True)
 
+# Define amplitude damping channel
+gamma = 0.25
+delta = (1 - 2 * gamma) / (1 - gamma)
+V = np.array([
+    [1., 0.              ],
+    [0., np.sqrt(1-gamma)],
+    [0., np.sqrt(gamma)  ],
+    [0., 0.              ]
+])  # fmt: skip
+W = np.array([
+    [1., 0.              ],
+    [0., np.sqrt(delta)  ],
+    [0., np.sqrt(1-delta)],
+    [0., 0.              ]
+])  # fmt: skip
+
+
+def W_NX_W(X):
+    return W @ p_tr(V @ X @ V.conj().T, (n, n), 1) @ W.conj().T
+
+
+# Model problem using primal variables (t, cvec(X))
 # Define objective functions
-# with variables (X, (t, Y))
-cX = np.zeros((n * n, 1))
-ct = np.array([[1.0 / np.log(2)]])
-cY = np.zeros((N * N, 1))
-c = np.vstack((cX, ct, cY))
+c = np.block([[1.0], [np.zeros((cn, 1))]])
 
-# Build linear constraints
-vn = vec.vec_dim(n, compact=True)
-vN = vec.vec_dim(N, compact=True)
-WNW = vec.lin_to_mat(
-    lambda X: W @ qu.p_tr(V @ X @ V.conj().T, (n, n), 1) @ W.conj().T, (n, N)
-)
-# tr[X] = 1
-A1 = np.hstack((vec.mat_to_vec(np.eye(n)).T, np.zeros((1, 1 + N * N))))
-b1 = np.array([[1.0]])
-# Y = WN(X)W'
-A2 = np.hstack((WNW, np.zeros((vN, 1)), -vec.eye(N)))
-b2 = np.zeros((vN, 1))
+# Build linear constraint tr[X] = 1
+trace = lin_to_mat(lambda X: np.trace(X), (n, 1), compact=(True, False))
+A = np.block([[0.0, trace]])
+b = np.array([[1.0]])
 
-A = np.vstack((A1, A2))
-b = np.vstack((b1, b2))
+# Build conic linear constraints
+W_NX_W_mat = lin_to_mat(W_NX_W, (n, N), compact=(True, False))
 
-# Input into model and solve
-cones = [qics.cones.PosSemidefinite(n), qics.cones.QuantCondEntr((n, n), 1)]
+G = np.block([
+    [-1.0,              np.zeros((1, cn))],  # t_qce = t
+    [np.zeros((vN, 1)), -W_NX_W_mat      ],  # X_qce = WN(X)W'
+    [np.zeros((vn, 1)), -eye(n).T        ]   # X_psd = X
+])  # fmt: skip
+
+h = np.block([[0.0], [np.zeros((vN, 1))], [np.zeros((vn, 1))]])
+
+# Define cones to optimize over
+cones = [
+    qics.cones.QuantCondEntr((n, n), 1),  # (t, WN(X)W') ∈ QCE
+    qics.cones.PosSemidefinite(n),  # X ⪰ 0
+]
 
 # Initialize model and solver objects
-model = qics.Model(c=c, A=A, b=b, cones=cones)
+model = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
 solver = qics.Solver(model)
 
 # Solve problem

@@ -1,8 +1,15 @@
+# Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
+# Based on test_examples.py from CVXOPT by M. Andersen and L. Vandenberghe.
+
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
+# file in the root directory or at https://github.com/kerry-he/qics
+
 def test_ptr_ikr():
     # Tests that p_tr and i_kr satisfy the adjoint relationship
     #     <p_tr(X), Y> = <X, i_kr(Y)>
     import numpy as np
-    from qics.quantum import p_tr, i_kr
+
+    from qics.quantum import i_kr, p_tr
 
     np.random.seed(1)
 
@@ -45,7 +52,8 @@ def test_ptr_ikr_multi():
     # Tests that p_tr_multi and i_kr_multi satisfy the adjoint relationship
     #     <p_tr_multi(Xs), Ys> = <Xs, i_kr_multi(Ys)>
     import numpy as np
-    from qics.quantum import p_tr_multi, i_kr_multi
+
+    from qics.quantum import i_kr_multi, p_tr_multi
 
     np.random.seed(1)
 

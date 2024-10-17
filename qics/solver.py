@@ -1,3 +1,8 @@
+# Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
+
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
+# file in the root directory or at https://github.com/kerry-he/qics
+
 import itertools
 import math
 import sys
@@ -6,38 +11,45 @@ import time
 import numpy as np
 import scipy as sp
 
-import qics._utils.linalg as lin
-import qics._utils.vector as vec
 from qics import __version__
 from qics._stepper import KKTSolver, NonSymStepper, SymStepper
+from qics._utils.linalg import is_full_col_rank, norm_inf
+from qics.cones import OpPerspecEpi, OpPerspecTr, QuantRelEntr
+from qics.point import Point
 
 spinner = itertools.cycle(["-", "/", "|", "\\"])
 
 
 class Solver:
-    """A class representing an instance of a solver.
+    r"""A class representing an instance of a solver, and is parameterized
+    by a conic program model and adjustable solver settings.
 
     Parameters
     ----------
-    model : qics.Model
-        Model class which specifies an instance of a conic program.
-    max_iter : int, optional
-        Maximum number of solver iterations before terminating. Default is ``100``.
-    max_time : float, optional
-        Maximum time elapsed, in seconds, before terminating. Default is ``3600``.
-    tol_gap : float, optional
-        Stopping tolerance for (relative) optimality gap. Default is ``1e-8``.
-    tol_feas : float, optional
-        Stopping tolerance for (relative) primal and dual feasibility. Default is
+    model : :class:`~qics.Model`
+        Representation of a given conic program.
+    max_iter : :obj:`int`, optional
+        Maximum number of solver iterations before terminating. The default
+        is ``100``.
+    max_time : :obj:`float`, optional
+        Maximum time elapsed, in seconds, before terminating. The default
+        is ``3600``.
+    tol_gap : :obj:`float`, optional
+        Stopping tolerance for (relative) optimality gap. The default is
         ``1e-8``.
-    tol_infeas : float, optional
-        Tolerance for detecting infeasible problem. Default is ``1e-12``.
-    tol_ip : float, optional
-        Tolerance for detecting ill-posed problem. Default is ``1e-13``.
-    tol_near : float, optional
-        Allowable margin for certifying near optimality when solver is stopped early.
-        Default is ``1e3``.
-    verbose : int, optional
+    tol_feas : :obj:`float`, optional
+        Stopping tolerance for (relative) primal and dual feasibility. The
+        default is ``1e-8``.
+    tol_infeas : :obj:`float`, optional
+        Tolerance for detecting infeasible problem. The default is
+        ``1e-12``.
+    tol_ip : :obj:`float`, optional
+        Tolerance for detecting ill-posed problem. The default is
+        ``1e-13``.
+    tol_near : :obj:`float`, optional
+        Allowable margin for certifying near optimality when solver is
+        stopped early. The default is ``1e3``.
+    verbose : {``0``, ``1``, ``2``, ``3``}, optional
         Verbosity level of the solver, where
 
         - ``0`` : No output.
@@ -45,10 +57,27 @@ class Solver:
         - ``2`` : Also print summary of the solver at each iteration.
         - ``3`` : Also print summary of the stepper at each iteration.
 
-        Default is ``2``.
-    ir : bool, optional
-        Whether to use iterative refinement when solving the KKT system. Default is
-        ``True``.
+        The default is ``2``.
+    ir : :obj:`bool`, optional
+        Whether to use iterative refinement when solving the KKT system.
+        The default is ``True``.
+    toa : :obj:`bool`, optional
+        Whether to use third-order adjustments to improve the stepping
+        directions. The default is ``True``.
+    init_pnt : :class:`~qics.point.Point`, optional
+        Where to initialize the interior-point algorithm from. Variables
+        which contain :obj:`~numpy.nan` are flagged to be intialized using
+        the default initialization method. The default is ``None``, which
+        intializes all variables using the default method.
+    use_invhess : :obj:`bool`, optional
+        Whether or not to avoid using inverse Hessian product oracles by
+        solving a modified cone program with
+        :math:`G^{-1}(\mathcal{K})=\{ x : Gx \in \mathcal{K} \}`. By 
+        default, this is ``False`` if :math:`G\neq-\mathbb{I}`, :math:`G`
+        is full column rank, and :math:`\mathcal{K}` mainly consists of
+        :class:`~qics.cones.QuantRelEntr`, 
+        :class:`~qics.cones.OpPerspecEpi`, and
+        :class:`~qics.cones.OpPerspecTr` cones, and is ``True`` otherwise.
     """
 
     def __init__(
@@ -63,7 +92,11 @@ class Solver:
         tol_near=1e3,
         verbose=2,
         ir=True,
+        toa=True,
+        init_pnt=None,
+        use_invhess=None,
     ):
+        # Basic solver options
         self.max_iter = max_iter
         self.max_time = max_time
         self.verbose = verbose
@@ -74,91 +107,130 @@ class Solver:
         self.tol_ip = tol_ip
         self.tol_near = tol_near
 
-        self.point = vec.Point(model)
-        self.point_best = vec.Point(model)
-
+        # Slow progress options
         self.small_step_tol = 0.005
         self.consecutive_small_step_limit = 2
         self.consecutive_small_steps = 0
 
-        self.solution_status = None
-        self.exit_status = None
+        # Avoiding inverse Hessian options
+        cones = model.cones
+        if use_invhess is None:
+            # Default decision tree for whether to avoid inverse Hessian oracles
+            SLOW_CONES = (QuantRelEntr, OpPerspecEpi, OpPerspecTr)
+            q_slow_cones = sum([sum(K.dim) for K in cones if isinstance(K, SLOW_CONES)])
 
+            use_invhess = model.issymmetric or q_slow_cones / model.q <= 0.55 \
+                          or not model.use_G or not is_full_col_rank(model.G)  # fmt: skip
+        elif not use_invhess:
+            if not model.use_G:
+                raise Exception(
+                    "Avoiding inverse Hessian oracles is not supported nor recommended "
+                    "if G is easily invertible."
+                )
+            if not is_full_col_rank(model.G):
+                raise Exception(
+                    "Avoiding inverse Hessian oracles is not supported when G is not "
+                    "full column rank."
+                )
+        self.use_invhess = use_invhess
+
+        # Preprocess model
         self.model = model
-        kktsolver = KKTSolver(model, ir=ir)
-        self.stepper = (
-            SymStepper(kktsolver, model)
-            if model.issymmetric
-            else NonSymStepper(kktsolver, model)
-        )
+        model._preprocess(use_invhess, init_pnt)
+
+        # Initialize steppers
+        kktsolver = KKTSolver(model, ir=ir, use_invhess=use_invhess)
+        if model.issymmetric:
+            self.stepper = SymStepper(kktsolver, model, toa=toa)
+        else:
+            self.stepper = NonSymStepper(kktsolver, model, toa=toa)
+
+        # Initialize points and process initial point
+        self.point = Point(model)
+        self.point_best = Point(model)
+
+        self.point.vec.fill(np.nan)
+        if init_pnt is not None:
+            n_orig, p_orig = model.n_orig, model.p_orig
+            self.point.x[:n_orig] = init_pnt.x * model.c_scale[:n_orig]
+            self.point.y[:p_orig] = init_pnt.y * model.b_scale[:p_orig]
+            self.point.z.vec[:] = init_pnt.z.vec * model.h_scale
+            self.point.s.vec[:] = init_pnt.s.vec * model.h_scale
+            self.point.tau[:] = init_pnt.tau
+            self.point.kap[:] = init_pnt.kap
 
         return
 
     def solve(self):
-        """Run the primal-dual interior point solver for a given problem model.
+        r"""Run the primal-dual interior point solver for a given problem
+        model.
 
         Returns
         -------
-        dict
-            Dictionary containing solver output, with the following keys
+        :obj:`dict`
+            Dictionary which summarizes the solution of a conic program.
+            Contains the following keys.
 
-            - ``x_opt`` : Optimal primal variable x.
-            - ``y_opt`` : Optimal dual variable y.
-            - ``z_opt`` : Optimal dual variable z.
-            - ``s_opt`` : Optimal primal variable s.
+            - x_opt (:obj:`~numpy.ndarray`) : Optimal primal variable
+              :math:`x^*`.
+            - y_opt (:obj:`~numpy.ndarray`) : Optimal dual variable
+              :math:`y^*`.
+            - z_opt (:obj:`~qics.point.VecProduct`) : Optimal dual variable
+              :math:`z^*`.
+            - s_opt (:obj:`~qics.point.VecProduct`) : Optimal primal
+              variable :math:`s^*=h-Gx^*`.
+            - sol_status (:obj:`string`) : Solution status. Can either be:
 
-            - ``sol_status`` : Solution status. Can either be:
-
-                - ``optimal``       : Primal-dual optimal solution reached
+                - ``optimal``      : Primal-dual optimal solution reached
                 - ``pinfeas``      : Detected primal infeasibility
                 - ``dinfeas``      : Detected dual infeasibility
-                - ``near_optimal``  : Near primal-dual optimal solution
-                - ``near_pinfeas``  : Near primal infeasibility
-                - ``near_dinfeas``  : Near dual infeasibiltiy
+                - ``near_optimal`` : Near primal-dual optimal solution
+                - ``near_pinfeas`` : Near primal infeasibility
+                - ``near_dinfeas`` : Near dual infeasibiltiy
                 - ``illposed``     : Problem is ill-posed
-                - ``unknown``       : Unknown solution status
+                - ``unknown``      : Unknown solution status
 
-            - ``exit_status`` : Solver exit status. Can either be:
+            - exit_status (:obj:`string`) : Solver exit status. Can either
+              be:
 
-                - ``solved``        : Terminated at desired tolerance
-                - ``max_iter``      : Exceeded maximum allowable iterations
-                - ``max_time``      : Exceeded maximum allowable time
-                - ``step_failure``  : Unable to take another step
-                - ``slow_progress`` : Residuals are decreasing too slowly
+                - ``solved``       : Terminated at desired tolerance
+                - ``max_iter``     : Exceeded maximum allowable iterations
+                - ``max_time``     : Exceeded maximum allowable time
+                - ``step_failure`` : Unable to take another step
+                - ``slow_progress``: Residuals are decreasing too slowly
 
-            - ``num_iter`` : Number of solver iterations.
-            - ``solve_time`` : Total time elapsed (in seconds).
-
-            - ``p_obj`` : Optimal primal objective.
-            - ``d_obj`` : Optimal dual objective.
-            - ``opt_gap`` : Relative optimality gap.
-            - ``p_feas`` : Primal feasibility.
-            - ``d_feas`` : Dual feasibiltiy.
+            - num_iter (:obj:`int`) : Number of solver iterations.
+            - solve_time (:obj:`float`) : Total time elapsed (in seconds).
+            - p_obj (:obj:`float`) : Optimal primal objective
+              :math:`c^\top x^*`.
+            - d_obj (:obj:`float`) : Optimal dual objective
+              :math:`-b^\top y^* - h^\top z^*`.
+            - opt_gap (:obj:`float`) : Relative optimality gap.
+            - p_feas (:obj:`float`) : Relative primal feasibility.
+            - d_feas (:obj:`float`) : Relative dual feasibiltiy.
         """
-        # Print header
-        if self.verbose:
-            self.print_title()
-
         # Setup solver
         self.setup_solver()
         self.setup_point()
         self.calc_mu()
         self.get_gap_feas()
 
-        # ==============================================================
-        # Print iteration status
-        # ==============================================================
-        if self.verbose >= 2:
-            self.print_iter_heading()
-            self.print_iter()
-        elif self.verbose:
-            print()
-            sys.stdout.write("Running...")
+        # Print header
+        if self.verbose:
+            self.print_title()
+            if self.verbose >= 2:
+                self.print_iter_heading()
+                self.print_iter()
+            else:
+                print()
+                sys.stdout.write("Running...")
 
+        # Run main solver loop
         while True:
             if self.step_and_check():
                 break
 
+        # Solver has termianted, perform final clean up
         self.solve_time = time.time() - self.start_time
 
         # If we didn't reach a solution, check if we are close to optimal
@@ -187,12 +259,15 @@ class Solver:
             self.print_solution()
 
         # Scale variables back
-        x_opt = self.point.x / self.model.c_scale.reshape((-1, 1)) / self.point.tau
-        y_opt = self.point.y / self.model.b_scale.reshape((-1, 1)) / self.point.tau
+        x_opt = self.point.x / self.model.c_scale / self.point.tau
+        y_opt = self.point.y / self.model.b_scale / self.point.tau
+        if not self.use_invhess:
+            x_opt = (x_opt + self.model.x_offset)[: self.model.n_orig]
+            y_opt = y_opt[: self.model.p_orig]
         z_opt = self.point.z
-        z_opt.vec /= self.model.h_scale.reshape((-1, 1)) * self.point.tau
+        z_opt.vec[:] = z_opt.vec / self.model.h_scale / self.point.tau
         s_opt = self.point.s
-        s_opt.vec /= self.model.h_scale.reshape((-1, 1)) * self.point.tau
+        s_opt.vec[:] = s_opt.vec / self.model.h_scale / self.point.tau
 
         return {
             "x_opt": x_opt,
@@ -219,11 +294,7 @@ class Solver:
 
         # Take a step
         self.point, success, alpha = self.stepper.step(
-            self.model,
-            self.point,
-            self.res,
-            self.mu,
-            self.verbose,
+            self.model, self.point, self.res, self.mu, self.verbose
         )
         self.iter += 1
         self.elapsed_time = time.time() - self.start_time
@@ -307,9 +378,9 @@ class Solver:
 
         model = self.model
 
-        self.c_max = lin.norm_inf(model.c)
-        self.b_max = lin.norm_inf(model.b)
-        self.h_max = lin.norm_inf(model.h)
+        self.c_max = norm_inf(model.c)
+        self.b_max = norm_inf(model.b)
+        self.h_max = norm_inf(model.h)
 
         if self.verbose == 3:
             if self.model.issymmetric:
@@ -324,14 +395,30 @@ class Solver:
     def setup_point(self):
         model = self.model
 
-        self.point.tau[:] = 1.0
-        self.point.kap[:] = 1.0
+        if any(np.isnan(self.point.x)):
+            self.point.x.fill(0.0)
+        if any(np.isnan(self.point.y)):
+            self.point.y.fill(0.0)
 
         for k, cone_k in enumerate(model.cones):
-            cone_k.get_init_point(self.point.s[k])
-            assert cone_k.get_feas()
-            cone_k.grad_ip(self.point.z[k])
-        self.point.z.vec *= -1
+            if any(np.isnan(self.point.s.vecs[k])):
+                cone_k.get_init_point(self.point.s[k])
+            else:
+                cone_k.set_point(self.point.s[k])
+            if not cone_k.get_feas():
+                raise ValueError("Initial primal variable s is infeasible.")
+
+            if any(np.isnan(self.point.z.vecs[k])):
+                cone_k.grad_ip(self.point.z[k])
+                self.point.z.vecs[k] *= -1
+            cone_k.set_dual(self.point.z[k])
+            if not cone_k.get_dual_feas():
+                raise ValueError("Initial dual variable z is infeasible.")
+
+        if any(np.isnan(self.point.tau)):
+            self.point.tau.fill(1.0)
+        if any(np.isnan(self.point.kap)):
+            self.point.kap.fill(1.0)
 
         self.calc_mu()
         if not math.isclose(self.mu, 1.0):
@@ -341,8 +428,8 @@ class Solver:
 
     def calc_mu(self):
         s_inp_z = self.point.s.inp(self.point.z)
-        s_inp_z += self.point.tau[0, 0] * self.point.kap[0, 0]
-        self.mu = s_inp_z / self.model.nu
+        kap_inp_tau = self.point.tau[0, 0] * self.point.kap[0, 0]
+        self.mu = (s_inp_z + kap_inp_tau) / self.model.nu
         return self.mu
 
     def get_gap_feas(self):
@@ -366,9 +453,11 @@ class Solver:
 
         self.p_obj = p_obj_tau / tau + self.model.offset
         self.d_obj = d_obj_tau / tau + self.model.offset
-        self.gap = min(
-            [self.point.z.inp(self.point.s) / tau, abs(p_obj_tau - d_obj_tau)]
-        ) / max([tau, min([abs(p_obj_tau), abs(d_obj_tau)])])
+
+        gap1 = self.point.z.inp(self.point.s) / tau
+        gap2 = abs(p_obj_tau - d_obj_tau)
+        self.gap = min(gap1, gap2)
+        self.gap /= max(tau, min([abs(p_obj_tau), abs(d_obj_tau)]))
 
         # Get primal and dual infeasibilities
         self.x_res = model.A_T @ y
@@ -378,23 +467,21 @@ class Solver:
         self.z_res = model.G @ x
         self.z_res += s
 
-        norm_x_res = lin.norm_inf(self.x_res)
-        norm_y_res = lin.norm_inf(self.y_res)
-        norm_z_res = lin.norm_inf(self.z_res)
+        norm_x_res = norm_inf(self.x_res)
+        norm_y_res = norm_inf(self.y_res)
+        norm_z_res = norm_inf(self.z_res)
 
         self.x_infeas = norm_x_res / d_obj_tau if (d_obj_tau > 0) else np.inf
         self.y_infeas = -norm_y_res / p_obj_tau if (p_obj_tau < 0) else np.inf
         self.z_infeas = -norm_z_res / p_obj_tau if (p_obj_tau < 0) else np.inf
 
         # Get ill posedness certificates
-        norm_xyzs = max(
-            lin.norm_inf(x), lin.norm_inf(y), lin.norm_inf(z), lin.norm_inf(s)
-        )
-        self.illposed_res = (
-            max(norm_x_res, norm_y_res, norm_z_res) / norm_xyzs
-            if (norm_xyzs > 0)
-            else np.inf
-        )
+        norm_xyzs = max(norm_inf(x), norm_inf(y), norm_inf(z), norm_inf(s))
+        if norm_xyzs > 0:
+            norm_xyz_res = max(norm_x_res, norm_y_res, norm_z_res)
+            self.illposed_res = norm_xyz_res / norm_xyzs
+        else:
+            self.illposed_res = np.inf
 
         # Get primal and dual feasibilities
         self.x_res = sp.linalg.blas.daxpy(c, self.x_res, a=-tau)
@@ -404,9 +491,9 @@ class Solver:
             self.z_res = sp.linalg.blas.daxpy(h, self.z_res, a=-tau)
         self.tau_res = p_obj_tau - d_obj_tau + kap
 
-        self.x_feas = lin.norm_inf(self.x_res) / (1.0 + self.c_max) / tau
-        self.y_feas = lin.norm_inf(self.y_res) / (1.0 + self.b_max) / tau
-        self.z_feas = lin.norm_inf(self.z_res) / (1.0 + self.h_max) / tau
+        self.x_feas = norm_inf(self.x_res) / (1.0 + self.c_max) / tau
+        self.y_feas = norm_inf(self.y_res) / (1.0 + self.b_max) / tau
+        self.z_feas = norm_inf(self.z_res) / (1.0 + self.h_max) / tau
 
         self.res = {
             "x": self.x_res,
@@ -418,9 +505,15 @@ class Solver:
         return
 
     def copy_solver_data(self):
-        if (self.iter == 0) or max(
-            self.x_feas_best, self.y_feas_best, self.z_feas_best, self.gap_best
-        ) > max(self.x_feas, self.y_feas, self.z_feas, self.gap):
+        gap_feas = max(self.x_feas, self.y_feas, self.z_feas, self.gap)
+        if self.iter == 0:
+            # Best point hasn't been initialized yet
+            gap_feas_best = np.inf
+        else:
+            gap_feas_best = max(self.x_feas_best, self.y_feas_best,
+                                self.z_feas_best, self.gap_best)  # fmt: skip
+
+        if gap_feas_best > gap_feas:
             self.point_best.vec[:] = self.point.vec
             self.best_iter = self.iter
 
@@ -485,10 +578,8 @@ class Solver:
             if self.model.issymmetric:
                 print(f"|  {'dir_tol':^7}   {'sigma':^5}   {'alpha':^5}", end="")
             else:
-                print(
-                    f"|  {'step':^6}   {'dir_tol':^7}   {'prox':^7}   {'alpha':^5}",
-                    end="",
-                )
+                print(f"|  {'step':^6}   {'dir_tol':^7}   ", end="")
+                print(f"{'prox':^7}   {'alpha':^5}", end="")
         print(f"\n{'':{filler}^{self.printbar_size}}", end="")
 
     def print_iter(self):

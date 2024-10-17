@@ -1,6 +1,12 @@
+# Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
+
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
+# file in the root directory or at https://github.com/kerry-he/qics
+
 import numpy as np
 import scipy as sp
-import qics._utils.linalg as lin
+
+from qics._utils.linalg import dense_dot_x
 from qics.cones.base import Cone, get_central_ray_entr
 
 
@@ -9,8 +15,8 @@ class ClassEntr(Cone):
 
     .. math::
 
-        \mathcal{K}_{\text{ce}} = \text{cl}\{ (t, u, x) \in \mathbb{R} \times
-        \mathbb{R}_{++} \times \mathbb{R}^n_{++} : t \geq -u H(x / u) \},
+        \mathcal{CE}_{n} = \text{cl}\{ (t, u, x) \in \mathbb{R} \times
+        \mathbb{R}_{++} \times \mathbb{R}^n_{++} : t \geq -u H(u^{-1}x) \},
 
     where
 
@@ -18,19 +24,38 @@ class ClassEntr(Cone):
 
         H(x) = -\sum_{i=1}^n x_i \log(x_i),
 
-    is the classical (Shannon) entropy function. The classical entropy epigraph can be
-    recovered by enforcing the linear constraint :math:`u=1`.
+    is the classical (Shannon) entropy function.
 
     Parameters
     ----------
-    n : int
-        Dimension of the vector :math:`x`, i.e., how many terms are in the classical
-        entropy function.
+    n : :obj:`int`
+        Dimension of the vector :math:`x`, i.e., how many terms are in the
+        classical entropy function.
+
+    See also
+    --------
+    ClassRelEntr : Classical relative entropy cone
+    QuantEntr : (Homogenized) quantum entropy cone
+
+    Notes
+    -----
+    The epigraph of the classical entropy can be obtained by enforcing the
+    linear constraint :math:`u=1`.
+
+    Additionally, the exponential cone
+
+    .. math::
+
+        \mathcal{E}=\{ (x,y,z)\in\mathbb{R}_+\times\mathbb{R}_+
+        \times\mathbb{R} : y \geq x \exp(z/x) \},
+
+    can be modelled by realizing that if :math:`(x,y,z)\in\mathcal{E}`,
+    then :math:`(-z, y, x)\in\mathcal{CE}_1`.
     """
 
     def __init__(self, n):
-        # Dimension properties
-        self.n = n  # Dimension of system
+        self.n = n
+
         self.nu = 2 + self.n  # Barrier parameter
 
         self.dim = [1, 1, n]
@@ -71,18 +96,18 @@ class ClassEntr(Cone):
 
         (self.t, self.u, self.x) = self.primal
 
+        # Check that u and x are strictly positive
         if (self.u <= 0) or any(self.x <= 0):
             self.feas = False
             return self.feas
 
+        # Check that t > -u H(x/u) = Σ_i xi log(xi) - (Σ_i xi) log(u)
         self.sum_x = np.sum(self.x)
         self.log_x = np.log(self.x)
         self.log_u = np.log(self.u[0, 0])
-        self.log_sum_x = np.log(self.sum_x)
 
         entr_x = self.x.T @ self.log_x
         entr_xu = self.sum_x * self.log_u
-
         self.z = (self.t - (entr_x - entr_xu))[0, 0]
 
         self.feas = self.z > 0
@@ -95,12 +120,18 @@ class ClassEntr(Cone):
         assert self.feas_updated
         assert not self.grad_updated
 
-        self.zi = np.reciprocal(self.z)
+        # Compute gradients of classical entropy
+        # D_u H(u, x) = -Σ_i xi / u
         self.ui = np.reciprocal(self.u)
+        self.DPhiu = -self.sum_x * self.ui
+        # D_x H(u, x) = log(x) + (1 - log(u))
+        self.DPhiX = self.log_x + (1.0 - self.log_u)
+
+        # Compute 1 / x
         self.xi = np.reciprocal(self.x)
 
-        self.DPhiu = -self.sum_x * self.ui
-        self.DPhiX = self.log_x + (1.0 - self.log_u)
+        # Compute gradient of barrier function
+        self.zi = np.reciprocal(self.z)
 
         self.grad = [
             -self.zi,
@@ -114,9 +145,6 @@ class ClassEntr(Cone):
         assert self.grad_updated
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
-
-        # Computes Hessian product of the CE barrier with a single vector (Ht, Hu, Hx)
-        # See hess_congr() for additional comments
 
         (Ht, Hu, Hx) = H
 
@@ -141,53 +169,59 @@ class ClassEntr(Cone):
         p = A.shape[0]
         lhs = np.zeros((p, sum(self.dim)))
 
-        # Precompute Hessian products for quantum entropy
+        work1, work2 = self.work1, self.work2
+
+        # ======================================================================
+        # Hessian products with respect to t
+        # ======================================================================
+        # D2_t F(t, u, x)[Ht, Hu, Hx]
+        #         = (Ht - D_u H(u, x)[Hu] - D_x H(u, x)[Hx]) / z^2
+        out_t = self.At - self.Au * self.DPhiu[0, 0]
+        out_t -= (self.Ax @ self.DPhiX).ravel()
+        out_t *= self.zi2
+
+        lhs[:, 0] = out_t
+
+        # ======================================================================
+        # Hessian products with respect to u
+        # ======================================================================
+        # Hessian products for classical entropy
         # D2_uu Phi(u, x) [Hu] =  sum(x) Hu / u^2
-        # D2_ux Phi(u, x) [Hx] = -sum(Hx) / u
-        # D2_xu Phi(u, x) [Hu] = -Hu / u
-        # D2_xx Phi(u, x) [Hx] =  Hx / x
         D2PhiuH = self.Huu * self.Au
+        # D2_ux Phi(u, x) [Hx] = -sum(Hx) / u
         D2PhiuH += self.Hux * np.sum(self.Ax, axis=1)
 
-        np.multiply(self.Hxx.T, self.Ax, out=self.work1)
-        self.work1 += self.Hux * self.Au.reshape(-1, 1)
+        # Hessian product of barrier function
+        # D2_u F(t, u, x)[Ht, Hu, Hx]
+        #         = -D2_t F(t, u, x)[Ht, Hu, Hx] * D_u H(u, x)
+        #           + (D2_uu H(u, x)[Hu] + D2_ux H(u, x)[Hx]) / z
+        #           + Hu / u^2
+        out_u = -out_t * self.DPhiu
+        out_u += D2PhiuH
 
-        # ====================================================================
-        # Hessian products with respect to t
-        # ====================================================================
-        # D2_tt F(t, u, x)[Ht] = Ht / z^2
-        # D2_tu F(t, u, x)[Hu] = -(D_u Phi(u, x) [Hu]) / z^2
-        # D2_tx F(t, u, x)[Hx] = -(D_X Phi(u, x) [Hx]) / z^2
-        outt = self.At - self.Au * self.DPhiu[0, 0]
-        outt -= (self.Ax @ self.DPhiX).ravel()
-        outt *= self.zi2
+        lhs[:, 1] = out_u
 
-        lhs[:, 0] = outt
-
-        # ====================================================================
-        # Hessian products with respect to u
-        # ====================================================================
-        # D2_ut F(t, u, x)[Ht] = -Ht (D_u Phi(u, x)) / z^2
-        # D2_uu F(t, u, x)[Hu] = (D_u Phi(u, x) [Hu]) D_u Phi(u, x) / z^2 + (D2_uu Phi(u, x) [Hu]) / z + Hu / u^2
-        # D2_ux F(t, u, x)[Hx] = (D_x Phi(u, x) [Hx]) D_u Phi(u, x) / z^2 + (D2_ux Phi(u, x) [Hx]) / z
-        outu = -outt * self.DPhiu
-        outu += D2PhiuH
-
-        lhs[:, 1] = outu
-
-        # ====================================================================
+        # ======================================================================
         # Hessian products with respect to x
-        # ====================================================================
-        # D2_ut F(t, u, X)[Ht] = -Ht (D_u Phi(u, x)) / z^2
-        # D2_xu F(t, u, X)[Hu] = (D_u Phi(u, x) [Hu]) D_x Phi(u, x) / z^2 + (D2_xu Phi(u, x) [Hu]) / z
-        # D2_xx F(t, u, X)[Hx] = (D_x Phi(u, x) [Hx]) D_x Phi(u, x) / z^2 + (D2_xx Phi(u, x) [Hx]) / z + Hx / x^2
-        np.outer(outt, self.DPhiX, out=self.work2)
-        self.work1 -= self.work2
+        # ======================================================================
+        # Hessian products for classical entropy
+        # D2_xx Phi(u, x) [Hx] =  Hx / x
+        np.multiply(self.Hxx.T, self.Ax, out=work1)
+        # D2_xu Phi(u, x) [Hu] = -Hu / u
+        work1 += self.Hux * self.Au.reshape(-1, 1)
 
-        lhs[:, 2:] = self.work1
+        # Hessian product of barrier function
+        # D2_x F(t, u, x)[Ht, Hu, Hx]
+        #         = -D2_t F(t, u, x)[Ht, Hu, Hx] * D_x H(u, x)
+        #           + (D2_xu H(u, x)[Hu] + D2_xx H(u, x)[Hx]) / z
+        #           + Hx / x^2
+        np.outer(out_t, self.DPhiX, out=work2)
+        work1 -= work2
+
+        lhs[:, 2:] = work1
 
         # Multiply A (H A')
-        return lin.dense_dot_x(lhs, A.T)
+        return dense_dot_x(lhs, A.T)
 
     def invhess_prod_ip(self, out, H):
         assert self.grad_updated
@@ -196,22 +230,19 @@ class ClassEntr(Cone):
         if not self.invhess_aux_updated:
             self.update_invhessprod_aux()
 
-        # Computes Hessian product of the CE barrier with a single vector (Ht, Hu, Hx)
-        # See invhess_congr() for additional comments
-
         (Ht, Hu, Hx) = H
 
         Wu = Hu + Ht * self.DPhiu
         Wx = Hx + Ht * self.DPhiX
 
-        # Hessian product of classical entropy
-        outu = self.rho * (Wu - self.Hxx_inv_Hux.T @ Wx)
-        outx = self.Hxx_inv * Wx - outu * self.Hxx_inv_Hux
+        # Inverse Hessian product of classical entropy
+        out_u = self.rho * (Wu - self.Hxx_inv_Hux.T @ Wx)
+        out_x = self.Hxx_inv * Wx - out_u * self.Hxx_inv_Hux
 
-        # Hessian product of barrier function
-        out[0][:] = Ht * self.z2 + outu * self.DPhiu + outx.T @ self.DPhiX
-        out[1][:] = outu
-        out[2][:] = outx
+        # Inverse Hessian product of barrier function
+        out[0][:] = Ht * self.z2 + out_u * self.DPhiu + out_x.T @ self.DPhiX
+        out[1][:] = out_u
+        out[2][:] = out_x
 
         return out
 
@@ -224,14 +255,16 @@ class ClassEntr(Cone):
         if not self.congr_aux_updated:
             self.congr_aux(A)
 
-        # The inverse Hessian product applied on (Ht, Hu, Hx) for the CE barrier is
+        # The inverse Hessian product applied on (Ht, Hu, Hx) for the CE barrier
+        # is
         #     (u, x) =  M \ (Wu, Wx)
         #         t  =  z^2 Ht + <DPhi(u, x), (u, x)>
         # where (Wu, Wx) = [(Hu, Hx) + Ht DPhi(u, x)]
         #     M = [ (1 + sum(x)/z) / u^2        -1' / zu       ] = [ a  b']
         #         [        -1 / zu         diag(1/zx + 1/x^2)  ]   [ b  D ]
         #
-        # To solve linear systems with M, we simplify it by doing block elimination, in which case we get
+        # To solve linear systems with M, we simplify it by doing block
+        # elimination, in which case we get
         #     u = (Wu - b' D^-1 Wx) / (a - b' D^-1 b)
         #     x = D^-1 (Wx - Wu b)
 
@@ -245,30 +278,33 @@ class ClassEntr(Cone):
         np.outer(self.At, self.DPhiX, out=self.work1)
         self.work1 += self.Ax
 
-        # ====================================================================
+        # ======================================================================
         # Inverse Hessian products with respect to u
-        # ====================================================================
-        outu = self.rho * (Wu - (self.work1 @ self.Hxx_inv_Hux).ravel())
-        lhs[:, 1] = outu
+        # ======================================================================
+        # u = (Wu - b' D^-1 Wx) / (a - b' D^-1 b)
+        out_u = self.rho * (Wu - (self.work1 @ self.Hxx_inv_Hux).ravel())
+        lhs[:, 1] = out_u
 
-        # ====================================================================
+        # ======================================================================
         # Inverse Hessian products with respect to x
-        # ====================================================================
+        # ======================================================================
+        # x = D^-1 (Wx - Wu b)
         self.work1 *= self.Hxx_inv.T
-        np.outer(outu, self.Hxx_inv_Hux, out=self.work2)
+        np.outer(out_u, self.Hxx_inv_Hux, out=self.work2)
         self.work1 -= self.work2
         lhs[:, 2:] = self.work1
 
-        # ====================================================================
+        # ======================================================================
         # Inverse Hessian products with respect to t
-        # ====================================================================
-        outt = self.z2 * self.At
-        outt += outu * self.DPhiu[0, 0]
-        outt += (self.work1 @ self.DPhiX).ravel()
-        lhs[:, 0] = outt
+        # ======================================================================
+        # t = z^2 Ht + <DH(u, x), (u, x)>
+        out_t = self.z2 * self.At
+        out_t += out_u * self.DPhiu[0, 0]
+        out_t += (self.work1 @ self.DPhiX).ravel()
+        lhs[:, 0] = out_t
 
         # Multiply A (H A')
-        return lin.dense_dot_x(lhs, A.T)
+        return dense_dot_x(lhs, A.T)
 
     def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
@@ -319,9 +355,9 @@ class ClassEntr(Cone):
 
         return out
 
-    # ========================================================================
+    # ==========================================================================
     # Auxilliary functions
-    # ========================================================================
+    # ==========================================================================
     def congr_aux(self, A):
         assert not self.congr_aux_updated
 
@@ -351,8 +387,6 @@ class ClassEntr(Cone):
 
         self.hess_aux_updated = True
 
-        return
-
     def update_invhessprod_aux(self):
         assert not self.invhess_aux_updated
         assert self.grad_updated
@@ -374,5 +408,3 @@ class ClassEntr(Cone):
         self.xi3 = self.xi * self.xi2
 
         self.dder3_aux_updated = True
-
-        return

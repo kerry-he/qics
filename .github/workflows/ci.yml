@@ -33,7 +33,7 @@ jobs:
       - name: Test with pytest  
         run: |  
           pip install pytest pytest-cov
-          coverage run -m pytest -v -s  
+          coverage run -m pytest -v -s --doctest-modules
       - name: Generate Coverage Report  
         run: |  
           coverage report -m

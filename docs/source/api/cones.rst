@@ -1,130 +1,80 @@
 .. py:module:: qics.cones
 
-qics.cones
-===============
+Cone oracles (:mod:`qics.cones`)
+================================
 
-QICS requires constraints and objectives to be represented using cones. Here, we
-categorize and list all of the cones which are currently supported by QICS.
-
-**Symmetric cones**
-
-.. list-table::
-   :widths: 25 25 50
-   :header-rows: 1
-   :align: center
-
-   * - Cone
-     - QICS class
-     - Description
-   * - Nonnegative orthant
-     - :class:`qics.cones.NonNegOrthant`
-     - :math:`\{ x \in \mathbb{R}^n : x \geq 0 \}`
-   * - Positive semidefinite
-     - :class:`qics.cones.PosSemidefinite`
-     - :math:`\{ X \in \mathbb{H}^n : X \succeq 0 \}`
-   * - Second order cone
-     - :class:`qics.cones.SecondOrder`
-     - :math:`\{ (t, x) \in \mathbb{R} \times \mathbb{R}^{n} : t \geq \| x \|_2 \}.`
-
-
-**Classical entropy (exponential) cones**
-
-.. list-table::
-   :widths: 25 25 50
-   :header-rows: 1
-   :align: center
-
-   * - Cone
-     - QICS class
-     - Description
-   * - Classical entropy
-     - :class:`qics.cones.QuantEntr`
-     - :math:`\text{cl}\{ (t, u, x) \in \mathbb{R} \times \mathbb{R}_{++} \times 
-       \mathbb{R}^n_{++} : t \geq -u S(u^{-1} x) \}`
-   * - Classical relative entropy
-     - :class:`qics.cones.QuantRelEntr`
-     - :math:`\text{cl}\{ (t, x, y) \in \mathbb{R} \times \mathbb{R}^n_{++} \times 
-       \mathbb{R}^n_{++} : t \geq H(x \| y) \}`
-
-**Quantum entropy cones**
-
-.. list-table::
-   :widths: 25 25 50
-   :header-rows: 1
-   :align: center
-
-   * - Cone
-     - QICS class
-     - Description
-   * - Quantum entropy
-     - :class:`qics.cones.QuantEntr`
-     - :math:`\text{cl}\{ (t, u, X) \in \mathbb{R} \times \mathbb{R}_{++} \times 
-       \mathbb{H}^n_{++} : t \geq -u S(u^{-1} X) \}`
-   * - Quantum relative entropy
-     - :class:`qics.cones.QuantRelEntr`
-     - :math:`\text{cl}\{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
-       \mathbb{H}^n_{++} : t \geq S(X \| Y) \}`
-   * - Quantum conditional entropy
-     - :class:`qics.cones.QuantCondEntr`
-     - :math:`\text{cl}\{ (t, X) \in \mathbb{R} \times \mathbb{H}^{n}_{++} : 
-       t \geq -S(X) + S(\text{tr}_i(X)) \}`
-   * - Quantum key distribution
-     - :class:`qics.cones.QuantKeyDist`
-     - :math:`\text{cl}\{ (t, X) \in \mathbb{R} \times \mathbb{H}^n_{++} : 
-       t \geq -S(\mathcal{G}(X)) + S(\mathcal{Z}(\mathcal{G}(X))) \}`
-
-**Noncommutative perspective cones**
-
-.. list-table::
-   :widths: 25 25 50
-   :header-rows: 1
-   :align: center
-
-   * - Cone
-     - QICS class
-     - Description
-   * - Operator perspective trace
-     - :class:`qics.cones.OpPerspecTr`
-     - :math:`\text{cl}\{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
-       \mathbb{H}^n_{++} : t \geq \text{tr}[P_g(X, Y)] \}`
-   * - Operator perspective epigraph
-     - :class:`qics.cones.OpPerspecEpi`
-     - :math:`\text{cl}\{ (T, X, Y) \in \mathbb{H}^n \times \mathbb{H}^n_{++} \times 
-       \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \}`
+This module contains classes representing conic sets which users use to define 
+the Cartesian product of cones :math:`\mathcal{K}` the conic program is defined
+over. These classes contain feasibility, gradient, Hessian product, inverse
+Hessian product, and third order derivative oracles which are required by the
+interior-point algorithm. Symmetric cones contain additional oracles for 
+computing the Nesterov-Todd scalings and other related functions.
 
 Symmetric cones
 --------------------
 
-.. autoclass:: qics.cones.NonNegOrthant
+.. list-table::
+   :widths: 50 50
 
-.. autoclass:: qics.cones.PosSemidefinite
-
-.. autoclass:: qics.cones.SecondOrder
+   * - :class:`~qics.cones.NonNegOrthant`\ (n)
+     - Nonnegative orthant
+   * - :class:`~qics.cones.PosSemidefinite`\ (n[, iscomplex])
+     - Positive semidefinite cone
+   * - :class:`~qics.cones.SecondOrder`\ (n)
+     - Second order cone
 
 
 Classical entropy cones
 ---------------------------
 
-.. autoclass:: qics.cones.ClassEntr
+.. list-table::
+   :widths: 50 50
 
-.. autoclass:: qics.cones.ClassRelEntr
+   * - :class:`~qics.cones.ClassEntr`\ (n)
+     - Classical entropy cone
+   * - :class:`~qics.cones.ClassRelEntr`\ (n)
+     - Classical relative entropy cone
 
 
 Quantum entropy cones
 ---------------------------
 
-.. autoclass:: qics.cones.QuantEntr
+.. list-table::
+   :widths: 50 50
 
-.. autoclass:: qics.cones.QuantRelEntr
-
-.. autoclass:: qics.cones.QuantCondEntr
-
-.. autoclass:: qics.cones.QuantKeyDist
-
+   * - :class:`~qics.cones.QuantEntr`\ (n[, iscomplex])
+     - Quantum entropy cone
+   * - :class:`~qics.cones.QuantRelEntr`\ (n[, iscomplex])
+     - Quantum relative entropy cone
+   * - :class:`~qics.cones.QuantCondEntr`\ (sys, dims[, iscomplex])
+     - Quantum conditional entropy cone
+   * - :class:`~qics.cones.QuantKeyDist`\ (G_info, K_info[, iscomplex])
+     - Quantum key distribution cone
 
 Operator perspective cones
 ---------------------------
 
-.. autoclass:: qics.cones.OpPerspecTr
+.. list-table::
+   :widths: 50 50
 
-.. autoclass:: qics.cones.OpPerspecEpi
+   * - :class:`~qics.cones.OpPerspecTr`\ (n, func[, iscomplex])
+     - Trace operator perspective cone
+   * - :class:`~qics.cones.OpPerspecEpi`\ (n, func[, iscomplex])
+     - Operator perspective epigraph
+
+
+.. toctree::
+   :hidden:
+   :maxdepth: 0
+
+   cones/NonNegOrthant
+   cones/PosSemidefinite
+   cones/SecondOrder
+   cones/ClassEntr
+   cones/ClassRelEntr
+   cones/QuantEntr
+   cones/QuantRelEntr
+   cones/QuantCondEntr
+   cones/QuantKeyDist
+   cones/OpPerspecTr
+   cones/OpPerspecEpi
