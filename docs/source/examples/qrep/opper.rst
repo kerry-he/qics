@@ -232,9 +232,9 @@ in QICS below.
 References
 ----------
 
-    1. "Semi-definite optimization of the measured relative entropies of quantum
-       states and channels." H. Zixin, and M. M. Wilde. 
-       arXiv preprint arXiv:2406.19060 (2024).
+    1. M. Berta, O. Fawzi, and M. Tomamichel, “On variational expressions for quantum
+       relative entropies,” Letters in Mathematical Physics, vol. 107, pp. 2239–2265,
+       2017.
 
     2. D. Bertsimas, R. Cory-Wright, and J. Pauphilet, “A new perspective on low-rank
-       optimization,” Mathematical Programming, pp. 1–46, 2023.
+       optimization,” Mathematical Programming, vol. 202, no. 1, pp. 47–92, 2023.
