@@ -1,35 +1,39 @@
-import numpy as np
-import qics
-import qics.vectorize as vec
+# Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
 
-## Nearest correlation matrix
-#   min  S(X||Y)
-#   s.t. Y_ii = 1
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
+# file in the root directory or at https://github.com/kerry-he/qics
+
+import numpy as np
+
+import qics
+from qics.vectorize import vec_dim, mat_to_vec, eye
+
+np.random.seed(1)
 
 n = 5
 
-# Generate random matrix C
-C = np.random.randn(n, n)
-C = C @ C.T
+vn = vec_dim(n)
+cn = vec_dim(n, compact=True)
 
+# Generate random positive semidefinite matrix C
+C = np.random.randn(n, n)
+C = C @ C.T / n
+C_cvec = mat_to_vec(C, compact=True)
+
+# Model problem using primal variables (t, X, Y)
 # Define objective function
-ct = np.array(([[1.0]]))
-cX = np.zeros((n * n, 1))
-cY = np.zeros((n * n, 1))
-c = np.vstack((ct, cX, cY))
+c = np.block([[1.0], [np.zeros((vn, 1))], [np.zeros((vn, 1))]])
 
 # Build linear constraints
-# X = C
-sn = vec.vec_dim(n, compact=True)
-A1 = np.hstack((np.zeros((sn, 1)), vec.eye(n), np.zeros((sn, n * n))))
-b1 = vec.mat_to_vec(C, compact=True)
-# Yii = 1
-A2 = np.zeros((n, 1 + 2 * n * n))
-A2[range(n), range(1 + n * n, 1 + 2 * n * n, n + 1)] = 1.0
-b2 = np.ones((n, 1))
+diag = np.zeros((n, vn))
+diag[np.arange(n), np.arange(0, vn, n + 1)] = 1.
 
-A = np.vstack((A1, A2))
-b = np.vstack((b1, b2))
+A = np.block([
+    [np.zeros((cn, 1)), eye(n),            np.zeros((cn, vn))],  # X = C
+    [np.zeros((n, 1)),  np.zeros((n, vn)), diag              ]   # Yii = 1
+])  # fmt: skip
+
+b = np.block([[C_cvec], [np.ones((n, 1))]])
 
 # Define cones to optimize over
 cones = [qics.cones.QuantRelEntr(n)]

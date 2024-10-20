@@ -1,6 +1,11 @@
+# Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
+
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
+# file in the root directory or at https://github.com/kerry-he/qics
+
+import numba as nb
 import numpy as np
 import scipy as sp
-import numba as nb
 
 
 def norm_inf(x):
@@ -119,9 +124,9 @@ def scale_axis(A, scale_rows=None, scale_cols=None):
     if sp.sparse.issparse(A):
         A_coo = A.tocoo()
         if scale_rows is not None:
-            A_coo.data *= np.take(scale_rows, A_coo.row)
+            A_coo.data *= np.take(scale_rows.ravel(), A_coo.row)
         if scale_cols is not None:
-            A_coo.data *= np.take(scale_cols, A_coo.col)
+            A_coo.data *= np.take(scale_cols.ravel(), A_coo.col)
         return A_coo
     else:
         if scale_rows is not None:
@@ -140,6 +145,16 @@ def abs_max(A, axis):
         return np.maximum(A.max(axis=axis, initial=0.0), -A.min(axis=axis, initial=0.0))
 
 
+def is_full_col_rank(A, tol=1e-8):
+    if A.size == 0:
+        return True
+    AA = A.T @ A
+    if sp.sparse.issparse(AA):
+        AA = AA.toarray()
+    eigs = np.linalg.eigvalsh(AA)
+    return all(eigs > tol)
+
+
 def dense_dot_x(A, B):
     if sp.sparse.issparse(B):
         return dense_dot_sparse(A, B.col, B.row, B.data, B.shape)
@@ -147,7 +162,11 @@ def dense_dot_x(A, B):
         return A @ B
 
 
-@nb.njit(parallel=True)
+def x_dot_dense(A, B):
+    return dense_dot_x(B.T, A.T).T
+
+
+@nb.njit(cache=True, parallel=True)
 def dense_dot_sparse(A, B_col, B_row, B_val, B_shape):
     A_dot_B = np.zeros((A.shape[0], B_shape[1]))
     for j in nb.prange(A.shape[0]):

@@ -72,7 +72,8 @@ instance/
 .scrapy
 
 # Sphinx documentation
-docs/_build/
+docs/build/
+docs/doctest/
 
 # PyBuilder
 .pybuilder/
@@ -170,3 +171,4 @@ cython_debug/
 *.dat-s
 *.csv
 *.dat-c
+*.cbf

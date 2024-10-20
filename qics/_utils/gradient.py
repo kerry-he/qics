@@ -1,10 +1,15 @@
-import numpy as np
+# Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
+
+# This Python package QICS is licensed under the MIT license; see LICENSE.md
+# file in the root directory or at https://github.com/kerry-he/qics
+
 import numba as nb
+import numpy as np
 
 from qics._utils.linalg import congr_multi
 
 
-@nb.njit
+@nb.njit(cache=True)
 def D1_f(D, f_D, df_D):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -26,7 +31,7 @@ def D1_f(D, f_D, df_D):
     return D1
 
 
-@nb.njit
+@nb.njit(cache=True)
 def D1_log(D, log_D):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -51,7 +56,7 @@ def D1_log(D, log_D):
     return D1
 
 
-@nb.njit
+@nb.njit(cache=True)
 def D2_f(D, D1, d2f_D):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -82,7 +87,7 @@ def D2_f(D, D1, d2f_D):
     return D2
 
 
-@nb.njit
+@nb.njit(cache=True)
 def D2_log(D, D1):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -113,7 +118,7 @@ def D2_log(D, D1):
     return D2
 
 
-@nb.njit
+@nb.njit(cache=True)
 def D3_f_ij(i, j, D, D2, d3f_D):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -148,7 +153,7 @@ def D3_f_ij(i, j, D, D2, d3f_D):
     return D3_ij
 
 
-@nb.njit
+@nb.njit(cache=True)
 def D3_log_ij(i, j, D2, D, f):
     eps = np.finfo(np.float64).eps
     rteps = np.sqrt(eps)
@@ -210,22 +215,21 @@ def scnd_frechet_multi(
     return out
 
 
-@nb.njit
+@nb.njit(cache=True, parallel=True)
 def thrd_frechet(D, D2, d3f_D, U, H1, H2, H3=None):
     n = D.size
     out = np.zeros_like(H1)
 
     # If H3 is None, then assume H2=H3
     if H3 is None:
-        for i in range(n):
+        for i in nb.prange(n):
             for j in range(i + 1):
                 D3_ij = D3_f_ij(i, j, D, D2, d3f_D)
 
                 for b in range(n):
                     for a in range(n):
                         temp = H1[i, b] * H2[b, a] * H2[a, j]
-                        temp += H2[i, b] * H1[b, a] * H2[a, j]
-                        temp += H2[i, b] * H2[b, a] * H1[a, j]
+                        temp += H2[i, b] * (H1[b, a] * H2[a, j] + H2[b, a] * H1[a, j])
                         out[i, j] = out[i, j] + D3_ij[b, a] * temp
 
                 out[j, i] = np.conj(out[i, j])
@@ -233,18 +237,23 @@ def thrd_frechet(D, D2, d3f_D, U, H1, H2, H3=None):
         out *= 2
 
     else:
-        for i in range(n):
+        for i in nb.prange(n):
             for j in range(i + 1):
                 D3_ij = D3_f_ij(i, j, D, D2, d3f_D)
 
                 for b in range(n):
                     for a in range(n):
-                        temp = H1[i, b] * H2[b, a] * H3[a, j]
-                        temp += H1[i, b] * H3[b, a] * H2[a, j]
-                        temp += H2[i, b] * H1[b, a] * H3[a, j]
-                        temp += H2[i, b] * H3[b, a] * H1[a, j]
-                        temp += H3[i, b] * H1[b, a] * H2[a, j]
-                        temp += H3[i, b] * H2[b, a] * H1[a, j]
+                        work = H2[b, a] * H3[a, j]
+                        work += H3[b, a] * H2[a, j]
+                        temp = H1[i, b] * work
+
+                        work = H1[b, a] * H3[a, j]
+                        work += H3[b, a] * H1[a, j]
+                        temp += H2[i, b] * work
+
+                        work = H1[b, a] * H2[a, j]
+                        work += H2[b, a] * H1[a, j]
+                        temp += H3[i, b] * work
                         out[i, j] = out[i, j] + D3_ij[b, a] * temp
 
                 out[j, i] = np.conj(out[i, j])
@@ -259,7 +268,7 @@ def get_S_matrix(D2_UXU, rt2, iscomplex=False):
         return get_S_matrix_symmetric(D2_UXU, rt2)
 
 
-@nb.njit
+@nb.njit(cache=True)
 def get_S_matrix_symmetric(D2_UXU, rt2):
     n = D2_UXU.shape[0]
     vn = n * (n + 1) // 2
@@ -306,7 +315,7 @@ def get_S_matrix_symmetric(D2_UXU, rt2):
     return S
 
 
-@nb.njit
+@nb.njit(cache=True)
 def get_S_matrix_hermitian(D2_UXU, rt2):
     n = D2_UXU.shape[0]
     vn = n * n
