@@ -85,13 +85,18 @@ LAPACK that [NumPy](https://numpy.org/doc/stable/building/blas_lapack.html) and
 
 The full documentation of the code can be found
 [here](https://qics.readthedocs.io/en/stable/). Technical details about our
-implementation can be found in our paper (coming soon).
+implementation can be found in our [paper](http://arxiv.org/abs/2410.17803).
 
 ## PICOS interface
 
 The easiest way to use **QICS** is through the Python optimization modelling
-interface [PICOS](https://picos-api.gitlab.io/picos/). Below, we show how a
-simple [nearest correlation matrix](https://qics.readthedocs.io/en/stable/examples/qrep/nearest.html#nearest-correlation-matrix) 
+interface [PICOS](https://picos-api.gitlab.io/picos/), and can be installed using
+
+```bash
+pip install picos
+```
+
+Below, we show how a simple [nearest correlation matrix](https://qics.readthedocs.io/en/stable/examples/qrep/nearest.html#nearest-correlation-matrix) 
 problem can be solved. 
 
 ```python
@@ -143,3 +148,15 @@ info = solver.solve()
 
 Additional details describing this example can be found
 [here](https://qics.readthedocs.io/en/stable/guide/gettingstarted.html).
+
+## Citing QICS
+
+If you find our work useful, please cite our [paper](http://arxiv.org/abs/2410.17803)
+using:
+
+    @article{he2024qics,
+      title={{QICS}: {Q}uantum Information Conic Solver},
+      author={He, Kerry and Saunderson, James and Fawzi, Hamza},
+      journal={arXiv preprint arXiv:2410.17803},
+      year={2024}
+    }

@@ -120,8 +120,13 @@ PICOS interface
 ---------------
 
 The easiest way to use **QICS** is through the Python optimization modelling 
-interface `PICOS <https://picos-api.gitlab.io/picos/>`_. Below, we show how a 
-simple :ref:`nearest correlation matrix<examples/qrep/nearest:nearest 
+interface `PICOS <https://picos-api.gitlab.io/picos/>`_, which can be installed using
+
+.. code-block:: bash
+
+    pip install picos
+
+Below, we show how a simple :ref:`nearest correlation matrix<examples/qrep/nearest:nearest 
 correlation matrix>` problem can be solved.
 
 .. code-block:: python
@@ -175,6 +180,22 @@ interface.
 
 Additional details explaining this example can be found 
 :doc:`here<guide/gettingstarted>`.
+
+Citing QICS
+-----------
+
+If you find our work useful, please cite our `paper <http://arxiv.org/abs/2410.17803>`_
+using:
+
+.. code-block:: bibtex
+
+    @article{he2024qics,
+      title={{QICS}: {Q}uantum Information Conic Solver},
+      author={He, Kerry and Saunderson, James and Fawzi, Hamza},
+      journal={arXiv preprint arXiv:2410.17803},
+      year={2024}
+    }
+
 
 .. toctree::
    :hidden:
