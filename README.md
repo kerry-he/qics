@@ -3,6 +3,7 @@
 [![Documentation Status](https://readthedocs.org/projects/qics/badge/?version=latest)](https://qics.readthedocs.io/en/latest/?badge=latest)
 [![Build Status](http://github.com/kerry-he/qics/actions/workflows/ci.yml/badge.svg?event=push)](http://github.com/kerry-he/qics/actions/workflows/ci.yml)
 [![PyPi Status](http://img.shields.io/pypi/v/qics.svg)](https://pypi.python.org/pypi/qics/)
+[![AUR Status](https://img.shields.io/aur/version/python-qics)](https://aur.archlinux.org/packages/python-qics)
 
 **QICS** is a primal-dual interior point solver fully implemented in Python, and
 is specialized towards problems arising in quantum information theory. **QICS**
