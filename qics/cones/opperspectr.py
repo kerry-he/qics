@@ -300,7 +300,7 @@ class OpPerspecTr(Cone):
         # Hessian products with respect to t
         # ======================================================================
         # D2_t F(t, X, Y)[Ht, Hx, Hy]
-        #         = (Ht - D_X S(X||Y)[Hx] - D_Y S(X||Y)[Hy]) / z^2
+        #         = (Ht - D_X trPg(X, Y)[Hx] - D_Y trPg(X, Y)[Hy]) / z^2
         out_t = Ht - inp(self.DPhiX, Hx) - inp(self.DPhiY, Hy)
         out_t *= self.zi2
         out[0][:] = out_t
@@ -323,8 +323,8 @@ class OpPerspecTr(Cone):
         # ==================================================================
         # Hessian product of barrier function
         # D2_Y F(t, X, Y)[Ht, Hx, Hy]
-        #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_Y S(X||Y)
-        #           + (D2_YX S(X||Y)[Hx] + D2_YY S(X||Y)[Hy]) / z
+        #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_Y trPg(X, Y)
+        #           + (D2_YX trPg(X, Y)[Hx] + D2_YY trPg(X, Y)[Hy]) / z
         #           + Y^-1 Hy Y^-1
         out_Y = -out_t * self.DPhiY
         out_Y += self.zi * (D2PhiYXH + D2PhiYYH)
@@ -358,7 +358,7 @@ class OpPerspecTr(Cone):
         # Hessian products with respect to t
         # ======================================================================
         # D2_t F(t, X, Y)[Ht, Hx, Hy]
-        #         = (Ht - D_X S(X||Y)[Hx] - D_Y S(X||Y)[Hy]) / z^2
+        #         = (Ht - D_X trPg(X, Y)[Hx] - D_Y trPg(X, Y)[Hy]) / z^2
         DPhiX_vec = self.DPhiX.view(np.float64).reshape((-1, 1))
         DPhiY_vec = self.DPhiY.view(np.float64).reshape((-1, 1))
 
@@ -430,8 +430,8 @@ class OpPerspecTr(Cone):
 
         # Hessian product of barrier function
         # D2_Y F(t, X, Y)[Ht, Hx, Hy]
-        #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_Y S(X||Y)
-        #           + (D2_YX S(X||Y)[Hx] + D2_YY S(X||Y)[Hy]) / z
+        #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_Y trPg(X, Y)
+        #           + (D2_YX trPg(X, Y)[Hx] + D2_YY trPg(X, Y)[Hy]) / z
         #           + Y^-1 Hy Y^-1
         work5 *= self.zi
         np.outer(out_t, self.DPhiY, out=work2.reshape((p, -1)))
