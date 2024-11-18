@@ -21,7 +21,7 @@ from qics._utils.linalg import (
     inp,
     x_dot_dense,
 )
-from qics.cones.base import Cone, get_central_ray_relentr, get_perspective_derivatives
+from qics.cones.base import Cone, get_perspective_derivatives
 from qics.vectorize import get_full_to_compact_op, vec_to_mat
 
 
@@ -79,7 +79,7 @@ class SandwichedRenyiEntr(Cone):
         return self.iscomplex
 
     def get_init_point(self, out):
-        (t0, x0, y0) = get_central_ray_relentr(self.n)
+        (t0, x0, y0) = self.get_central_ray()
 
         point = [
             np.array([[t0]]),
@@ -745,3 +745,55 @@ class SandwichedRenyiEntr(Cone):
         self.work15 = np.empty((self.n, self.n, self.vn), dtype=self.dtype)
 
         self.invhess_aux_aux_updated = True
+
+    def get_central_ray(self):
+        # Solve a 3-dimensional nonlinear system of equations to get the central
+        # point of the barrier function
+        n, alpha = self.n, self.alpha
+        (t, x, y) = (1.0 + n * self.g(1.0), 1.0, 1.0)
+
+        for _ in range(10):
+            # Precompute some useful things
+            z = t - n * self.g(x) * (y ** (1 - alpha))
+            zi = 1 / z
+            zi2 = zi * zi
+
+            dx = self.dg(x) * (y ** (1 - alpha))
+            dy = self.g(x) * (1 - alpha) * (y ** (-alpha))
+
+            d2dx2 = self.d2g(x) * (y ** (1 - alpha))
+            d2dy2 = self.g(x) * (1 - alpha) * (-alpha) * (y ** (-alpha - 1))
+            d2dxdy = self.dg(x) * (1 - alpha) * (y ** (-alpha))
+
+            # Get gradient
+            g = np.array([t - zi, 
+                          n * x + n * dx * zi - n / x, 
+                          n * y + n * dy * zi - n / y])  # fmt: skip
+
+            # Get Hessian
+            (Htt, Htx, Hty) = (zi2, -n * zi2 * dx, -n * zi2 * dy)
+            Hxx = n * n * zi2 * dx * dx + n * zi * d2dx2 + n / x / x
+            Hyy = n * n * zi2 * dy * dy + n * zi * d2dy2 + n / y / y
+            Hxy = n * n * zi2 * dx * dy + n * zi * d2dxdy
+
+            H = np.array([[Htt + 1, Htx, Hty],
+                          [Htx, Hxx + n, Hxy],
+                          [Hty, Hxy, Hyy + n]])  # fmt: skip
+
+            # Perform Newton step
+            delta = -np.linalg.solve(H, g)
+            decrement = -np.dot(delta, g)
+
+            # Check feasible
+            (t1, x1, y1) = (t + delta[0], x + delta[1], y + delta[2])
+            if x1 < 0 or y1 < 0 or t1 < n * self.g(x) * (y1 ** (1 - alpha)):
+                # Exit if not feasible and return last feasible point
+                break
+
+            (t, x, y) = (t1, x1, y1)
+
+            # Exit if decrement is small, i.e., near optimality
+            if decrement / 2.0 <= 1e-12:
+                break
+
+        return (t, x, y)

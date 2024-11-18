@@ -6,7 +6,6 @@
 import numpy as np
 
 import qics
-from qics.quantum import p_tr, purify, entropy
 from qics.quantum.random import density_matrix
 from qics.vectorize import lin_to_mat, vec_dim, mat_to_vec
 
