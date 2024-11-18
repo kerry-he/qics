@@ -28,6 +28,8 @@ from qics.vectorize import get_full_to_compact_op, vec_to_mat
 class SandwichedRenyiEntr(Cone):
 
     def __init__(self, n, alpha, iscomplex=False):
+        assert 0.5 <= alpha and alpha <= 2
+
         self.n = n
         self.alpha = alpha
         self.iscomplex = iscomplex
@@ -109,38 +111,38 @@ class SandwichedRenyiEntr(Cone):
             self.feas = False
             return self.feas
 
-        # Construct (X^(b/2) Y X^(b/2)) and (Y^1/2 X^b Y^1/2)
+        # Construct (Y^(b/2) X Y^(b/2)) and (X^1/2 Y^b X^1/2)
         # and double check they are also PSD (in case of numerical errors)
         beta = (1 - self.alpha) / self.alpha
 
-        beta_Dx = np.power(self.Dx, beta)
-        beta2_Dx = np.power(self.Dx, beta / 2)
-        beta2_X = self.Ux * np.sqrt(beta_Dx)
-        beta4_X = self.Ux * np.sqrt(beta2_Dx)
-        ibeta4_X = self.Ux / np.sqrt(beta2_Dx)
-        self.beta_X = beta2_X @ beta2_X.conj().T
-        self.beta2_X = beta4_X @ beta4_X.conj().T
-        self.ibeta2_X = ibeta4_X @ ibeta4_X.conj().T
+        rt2_Dx = np.sqrt(self.Dx)
+        rt4_X = self.Ux * np.sqrt(rt2_Dx)
+        irt4_X = self.Ux / np.sqrt(rt2_Dx)
+        self.rt2_X = rt4_X @ rt4_X.conj().T
+        self.irt2_X = irt4_X @ irt4_X.conj().T
 
-        rt2_Dy = np.sqrt(self.Dy)
-        rt4_Y = self.Uy * np.sqrt(rt2_Dy)
-        irt4_Y = self.Uy / np.sqrt(rt2_Dy)
-        self.rt2_Y = rt4_Y @ rt4_Y.conj().T
-        self.irt2_Y = irt4_Y @ irt4_Y.conj().T
+        beta_Dy = np.power(self.Dy, beta)
+        beta2_Dy = np.power(self.Dy, beta / 2)
+        beta2_Y = self.Uy * np.sqrt(beta_Dy)
+        beta4_Y = self.Uy * np.sqrt(beta2_Dy)
+        ibeta4_Y = self.Uy / np.sqrt(beta2_Dy)
+        self.beta_Y = beta2_Y @ beta2_Y.conj().T
+        self.beta2_Y = beta4_Y @ beta4_Y.conj().T
+        self.ibeta2_Y = ibeta4_Y @ ibeta4_Y.conj().T
 
-        XYX = self.beta2_X @ self.Y @ self.beta2_X
-        YXY = self.rt2_Y @ self.beta_X @ self.rt2_Y
+        YXY = self.beta2_Y @ self.X @ self.beta2_Y
+        XYX = self.rt2_X @ self.beta_Y @ self.rt2_X
 
-        self.Dxyx, self.Uxyx = np.linalg.eigh(XYX)
         self.Dyxy, self.Uyxy = np.linalg.eigh(YXY)
+        self.Dxyx, self.Uxyx = np.linalg.eigh(XYX)
 
         if any(self.Dxyx <= 0) or any(self.Dyxy <= 0):
             self.feas = False
             return self.feas
 
-        # Check that t > tr[ ( X^(b/2) Y X^(b/2) )^a ]
-        self.g_Dxyx = self.g(self.Dxyx)
-        self.z = self.t[0, 0] - np.sum(self.g_Dxyx)
+        # Check that t > tr[ ( Y^(b/2) X Y^(b/2) )^a ]
+        self.g_Dyxy = self.g(self.Dyxy)
+        self.z = self.t[0, 0] - np.sum(self.g_Dyxy)
 
         self.feas = self.z > 0
         return self.feas
@@ -154,19 +156,20 @@ class SandwichedRenyiEntr(Cone):
         assert not self.grad_updated
 
         # Compute gradients of sandwiched Renyi entropy
-        # D_X f(X, Y) = Ux ( h^[1](Dx) .* [Ux' Y^½ a*( Y^½ X^b Y^½ )^(a-1) Y^½ Ux] ) Ux'
-        self.D1x_h = D1_f(self.Dx, self.h(self.Dx), self.dh(self.Dx))
 
+        # D_X f(X, Y) = Y^b/2 a*( Y^b/2 X Y^b/2 )^(a-1) Y^b/2
         self.dg_Dyxy = self.dg(self.Dyxy)
         self.dg_YXY = (self.Uyxy * self.dg_Dyxy) @ self.Uyxy.conj().T
-        work = self.Ux.conj().T @ self.rt2_Y @ self.dg_YXY @ self.rt2_Y @ self.Ux
-        work = self.Ux @ (self.D1x_h * work) @ self.Ux.conj().T
-        self.DPhiX = (work + work.conj().T) * 0.5
+        self.DPhiX = self.beta2_Y @ self.dg_YXY @ self.beta2_Y
+        self.DPhiX = (self.DPhiX + self.DPhiX.conj().T) * 0.5
 
-        # D_Y f(X, Y) = X^b/2 a*( X^b/2 Y X^b/2 )^(a-1) X^b/2
+        # D_Y f(X, Y) = Uy ( h^[1](Dy) .* [Uy' X^½ a*( X^½ Y^b X^½ )^(a-1) X^½ Uy] ) Uy'
+        self.D1y_h = D1_f(self.Dy, self.h(self.Dy), self.dh(self.Dy))
+
         self.dg_Dxyx = self.dg(self.Dxyx)
         self.dg_XYX = (self.Uxyx * self.dg_Dxyx) @ self.Uxyx.conj().T
-        self.DPhiY = self.beta2_X @ self.dg_XYX @ self.beta2_X
+        work = self.Uy.conj().T @ self.rt2_X @ self.dg_XYX @ self.rt2_X @ self.Uy
+        self.DPhiY = self.Uy @ (self.D1y_h * work) @ self.Uy.conj().T
         self.DPhiY = (self.DPhiY + self.DPhiY.conj().T) * 0.5
 
         # Compute X^-1 and Y^-1
@@ -198,27 +201,27 @@ class SandwichedRenyiEntr(Cone):
 
         # Hessian product of trace operator perspective
         # D2_XX D(X, Y)[Hx]
-        work = self.D1x_h * (self.Ux.conj().T @ Hx @ self.Ux)
-        work = self.Uyxy.conj().T @ self.rt2_Y @ self.Ux @ work @ self.Ux.conj().T @ self.rt2_Y @ self.Uyxy
-        work = self.Ux.conj().T @ self.rt2_Y @ self.Uyxy @ (self.D1yxy_dg * work) @ self.Uyxy.conj().T @ self.rt2_Y @ self.Ux
-        D2PhiXXH = self.Ux @ (self.D1x_h * work) @ self.Ux.conj().T
+        work = self.D1y_h * (self.Uy.conj().T @ Hy @ self.Uy)
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.Uy @ work @ self.Uy.conj().T @ self.rt2_X @ self.Uxyx
+        work = self.Uy.conj().T @ self.rt2_X @ self.Uxyx @ (self.D1xyx_dg * work) @ self.Uxyx.conj().T @ self.rt2_X @ self.Uy
+        D2PhiYYH = self.Uy @ (self.D1y_h * work) @ self.Uy.conj().T
 
-        work = self.Ux.conj().T @ self.rt2_Y @ self.dg_YXY @ self.rt2_Y @ self.Ux
-        D2PhiXXH += scnd_frechet(self.D2x_h, work, self.Ux.conj().T @ Hx @ self.Ux, U=self.Ux)
+        work = self.Uy.conj().T @ self.rt2_X @ self.dg_XYX @ self.rt2_X @ self.Uy
+        D2PhiYYH += scnd_frechet(self.D2y_h, work, self.Uy.conj().T @ Hy @ self.Uy, U=self.Uy)
 
         # D2_XY D(X, Y)[Hy]
-        work = self.D1xyx_g * (self.Uxyx.conj().T @ self.beta2_X @ Hy @ self.beta2_X @ self.Uxyx)
-        work = self.Ux.conj().T @ self.ibeta2_X @ self.Uxyx @ work @ self.Uxyx.conj().T @ self.ibeta2_X @ self.Ux
-        D2PhiXYH = self.alpha * self.Ux @ (work * self.D1x_h) @ self.Ux.conj().T
+        work = self.D1yxy_g * (self.Uyxy.conj().T @ self.beta2_Y @ Hx @ self.beta2_Y @ self.Uyxy)
+        work = self.Uy.conj().T @ self.ibeta2_Y @ self.Uyxy @ work @ self.Uyxy.conj().T @ self.ibeta2_Y @ self.Uy
+        D2PhiYXH = self.alpha * self.Uy @ (work * self.D1y_h) @ self.Uy.conj().T
 
         # D2_YX D(X, Y)[Hx]
-        work = self.D1x_h * (self.Ux.conj().T @ Hx @ self.Ux)
-        work = self.Uxyx.conj().T @ self.ibeta2_X @ self.Ux @ work @ self.Ux.conj().T @ self.ibeta2_X @ self.Uxyx
-        D2PhiYXH = self.alpha * self.beta2_X @ self.Uxyx @ (self.D1xyx_g * work) @ self.Uxyx.conj().T @ self.beta2_X
+        work = self.D1y_h * (self.Uy.conj().T @ Hy @ self.Uy)
+        work = self.Uyxy.conj().T @ self.ibeta2_Y @ self.Uy @ work @ self.Uy.conj().T @ self.ibeta2_Y @ self.Uyxy
+        D2PhiXYH = self.alpha * self.beta2_Y @ self.Uyxy @ (self.D1yxy_g * work) @ self.Uyxy.conj().T @ self.beta2_Y
 
         # D2_YY D(X, Y)[Hy]
-        work = self.Uxyx.conj().T @ self.beta2_X @ Hy @ self.beta2_X @ self.Uxyx
-        D2PhiYYH = self.beta2_X @ self.Uxyx @ (work * self.D1xyx_dg) @ self.Uxyx.conj().T @ self.beta2_X
+        work = self.Uyxy.conj().T @ self.beta2_Y @ Hx @ self.beta2_Y @ self.Uyxy
+        D2PhiXXH = self.beta2_Y @ self.Uyxy @ (work * self.D1yxy_dg) @ self.Uyxy.conj().T @ self.beta2_Y
 
         # ======================================================================
         # Hessian products with respect to t
@@ -287,38 +290,38 @@ class SandwichedRenyiEntr(Cone):
         lhs[:, 0] = out_t
 
         # ======================================================================
-        # Hessian products with respect to X
+        # Hessian products with respect to Y
         # ======================================================================
         # Hessian products of trace operator perspective
 
-        # Hxx
+        # Hyy
         # work = self.D1x_h * (self.Ux.conj().T @ Hx @ self.Ux)
         # work = self.Uyxy.conj().T @ self.rt2_Y @ self.Ux @ work @ self.Ux.conj().T @ self.rt2_Y @ self.Uyxy
         # work = self.Ux.conj().T @ self.rt2_Y @ self.Uyxy @ (self.D1yxy_dg * work) @ self.Uyxy.conj().T @ self.rt2_Y @ self.Ux
         # D2PhiXXH = self.Ux @ (self.D1x_h * work) @ self.Ux.conj().T
-        congr_multi(work2, self.Ux.conj().T, self.Ax, work=work4)
-        np.multiply(work2, self.D1x_h, out=work1)
-        congr_multi(work5, self.Uyxy.conj().T @ self.rt2_Y @ self.Ux, work1, work=work4)
-        work5 *= self.D1yxy_dg
-        congr_multi(work1, self.Ux.conj().T @ self.rt2_Y @ self.Uyxy, work5, work=work4)
-        work1 *= self.D1x_h
-        congr_multi(work5, self.Ux, work1, work=work4)
+        congr_multi(work2, self.Uy.conj().T, self.Ay, work=work4)
+        np.multiply(work2, self.D1y_h, out=work1)
+        congr_multi(work5, self.Uxyx.conj().T @ self.rt2_X @ self.Uy, work1, work=work4)
+        work5 *= self.D1xyx_dg
+        congr_multi(work1, self.Uy.conj().T @ self.rt2_X @ self.Uxyx, work5, work=work4)
+        work1 *= self.D1y_h
+        congr_multi(work5, self.Uy, work1, work=work4)
         # work = self.Ux.conj().T @ self.rt2_Y @ self.dg_YXY @ self.rt2_Y @ self.Ux
         # D2PhiXXH += scnd_frechet(self.D2x_h, work, self.Ux.conj().T @ Hx @ self.Ux, U=self.Ux)
-        work = self.Ux.conj().T @ self.rt2_Y @ self.dg_YXY @ self.rt2_Y @ self.Ux
-        scnd_frechet_multi(work1, self.D2x_h, work2, work, U=self.Ux,
+        work = self.Uy.conj().T @ self.rt2_X @ self.dg_XYX @ self.rt2_X @ self.Uy
+        scnd_frechet_multi(work1, self.D2y_h, work2, work, U=self.Uy,
                                 work1=work3, work2=work4, work3=work6)  # fmt: skip
         work5 += work1
 
-        # Hxy
+        # Hyx
         # work = self.D1xyx_g * (self.Uxyx.conj().T @ self.beta2_X @ Hy @ self.beta2_X @ self.Uxyx)
         # work = self.Ux.conj().T @ self.ibeta2_X @ self.Uxyx @ work @ self.Uxyx.conj().T @ self.ibeta2_X @ self.Ux
         # D2PhiXYH = self.alpha * self.Ux @ (work * self.D1x_h) @ self.Ux.conj().T
-        congr_multi(work3, self.Uxyx.conj().T @ self.beta2_X, self.Ay, work=work4)
-        np.multiply(work3, self.D1xyx_g, out=work0)
-        congr_multi(work1, self.Ux.conj().T @ self.ibeta2_X @ self.Uxyx, work0, work=work4)
-        work1 *= self.alpha * self.D1x_h
-        congr_multi(work0, self.Ux, work1, work=work4)
+        congr_multi(work3, self.Uyxy.conj().T @ self.beta2_Y, self.Ax, work=work4)
+        np.multiply(work3, self.D1yxy_g, out=work0)
+        congr_multi(work1, self.Uy.conj().T @ self.ibeta2_Y @ self.Uyxy, work0, work=work4)
+        work1 *= self.alpha * self.D1y_h
+        congr_multi(work0, self.Uy, work1, work=work4)
         work5 += work0
 
         # Hessian product of barrier function
@@ -327,32 +330,32 @@ class SandwichedRenyiEntr(Cone):
         #           + (D2_XX trPg(X, Y)[Hx] + D2_XY trPg(X, Y)[Hy]) / z
         #           + X^-1 Hx X^-1
         work5 *= self.zi
-        np.outer(out_t, self.DPhiX, out=work1.reshape((p, -1)))
+        np.outer(out_t, self.DPhiY, out=work1.reshape((p, -1)))
         work5 -= work1
-        congr_multi(work1, self.inv_X, self.Ax, work=work4)
+        congr_multi(work1, self.inv_Y, self.Ay, work=work4)
         work5 += work1
 
-        lhs[:, self.idx_X] = work5.reshape((p, -1)).view(np.float64)
+        lhs[:, self.idx_Y] = work5.reshape((p, -1)).view(np.float64)
 
         # ==================================================================
-        # Hessian products with respect to Y
+        # Hessian products with respect to X
         # ==================================================================
         # Hessian products of trace operator perspective
 
-        # D2_YX D(X, Y)[Hx]
+        # D2_XY D(X, Y)[Hx]
         # work = self.D1x_h * (self.Ux.conj().T @ Hx @ self.Ux)
         # work = self.Uxyx.conj().T @ self.ibeta2_X @ self.Ux @ work @ self.Ux.conj().T @ self.ibeta2_X @ self.Uxyx
         # D2PhiYXH = self.alpha * self.beta2_X @ self.Uxyx @ (self.D1xyx_g * work) @ self.Uxyx.conj().T @ self.beta2_X
-        work2 *= self.D1x_h
-        congr_multi(work0, self.Uxyx.conj().T @ self.ibeta2_X @ self.Ux, work2, work=work4)
-        work0 *= self.alpha * self.D1xyx_g
-        congr_multi(work5, self.beta2_X @ self.Uxyx, work0, work=work4)
+        work2 *= self.D1y_h
+        congr_multi(work0, self.Uyxy.conj().T @ self.ibeta2_Y @ self.Uy, work2, work=work4)
+        work0 *= self.alpha * self.D1yxy_g
+        congr_multi(work5, self.beta2_Y @ self.Uyxy, work0, work=work4)
 
-        # D2_YY D(X, Y)[Hy]
+        # D2_XX D(X, Y)[Hy]
         # work = slef.Uxyx.conj().T @ self.beta2_X @ Hy @ self.beta2_X @ self.Uxyx
         # D2PhiYYH = self.beta2_X @ self.Uxyx @ (work * self.D1xyx_dg) @ self.Uxyx.conj().T @ self.beta2_X
-        work3 *= self.D1xyx_dg
-        congr_multi(work1, self.beta2_X @ self.Uxyx, work3, work=work4)
+        work3 *= self.D1yxy_dg
+        congr_multi(work1, self.beta2_Y @ self.Uyxy, work3, work=work4)
         work5 += work1
 
         # Hessian product of barrier function
@@ -361,12 +364,12 @@ class SandwichedRenyiEntr(Cone):
         #           + (D2_YX trPg(X, Y)[Hx] + D2_YY trPg(X, Y)[Hy]) / z
         #           + Y^-1 Hy Y^-1
         work5 *= self.zi
-        np.outer(out_t, self.DPhiY, out=work1.reshape((p, -1)))
+        np.outer(out_t, self.DPhiX, out=work1.reshape((p, -1)))
         work5 -= work1
-        congr_multi(work1, self.inv_Y, self.Ay, work=work3)
+        congr_multi(work1, self.inv_X, self.Ax, work=work3)
         work5 += work1
 
-        lhs[:, self.idx_Y] = work5.reshape((p, -1)).view(np.float64)
+        lhs[:, self.idx_X] = work5.reshape((p, -1)).view(np.float64)
 
         # Multiply A (H A')
         return dense_dot_x(lhs, A.T)
@@ -457,96 +460,90 @@ class SandwichedRenyiEntr(Cone):
 
         # Hessian product of trace operator perspective
         # D2_XX D(X, Y)[Hx]
-        work = self.D1x_h * (self.Ux.conj().T @ Hx @ self.Ux)
-        work = self.Uyxy.conj().T @ self.rt2_Y @ self.Ux @ work @ self.Ux.conj().T @ self.rt2_Y @ self.Uyxy
-        work = self.Ux.conj().T @ self.rt2_Y @ self.Uyxy @ (self.D1yxy_dg * work) @ self.Uyxy.conj().T @ self.rt2_Y @ self.Ux
-        D2PhiXXH = self.Ux @ (self.D1x_h * work) @ self.Ux.conj().T
+        work = self.D1y_h * (self.Uy.conj().T @ Hy @ self.Uy)
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.Uy @ work @ self.Uy.conj().T @ self.rt2_X @ self.Uxyx
+        work = self.Uy.conj().T @ self.rt2_X @ self.Uxyx @ (self.D1xyx_dg * work) @ self.Uxyx.conj().T @ self.rt2_X @ self.Uy
+        D2PhiYYH = self.Uy @ (self.D1y_h * work) @ self.Uy.conj().T
 
-        work = self.Ux.conj().T @ self.rt2_Y @ self.dg_YXY @ self.rt2_Y @ self.Ux
-        D2PhiXXH += scnd_frechet(self.D2x_h, work, self.Ux.conj().T @ Hx @ self.Ux, U=self.Ux)
+        work = self.Uy.conj().T @ self.rt2_X @ self.dg_XYX @ self.rt2_X @ self.Uy
+        D2PhiYYH += scnd_frechet(self.D2y_h, work, self.Uy.conj().T @ Hy @ self.Uy, U=self.Uy)
 
         # D2_XY D(X, Y)[Hy]
-
-        work = self.D1xyx_g * (self.Uxyx.conj().T @ self.beta2_X @ Hy @ self.beta2_X @ self.Uxyx)
-        work = self.Ux.conj().T @ self.ibeta2_X @ self.Uxyx @ work @ self.Uxyx.conj().T @ self.ibeta2_X @ self.Ux
-        D2PhiXYH = self.alpha * self.Ux @ (work * self.D1x_h) @ self.Ux.conj().T
+        work = self.D1yxy_g * (self.Uyxy.conj().T @ self.beta2_Y @ Hx @ self.beta2_Y @ self.Uyxy)
+        work = self.Uy.conj().T @ self.ibeta2_Y @ self.Uyxy @ work @ self.Uyxy.conj().T @ self.ibeta2_Y @ self.Uy
+        D2PhiYXH = self.alpha * self.Uy @ (work * self.D1y_h) @ self.Uy.conj().T
 
         # D2_YX D(X, Y)[Hx]
-        work = self.D1x_h * (self.Ux.conj().T @ Hx @ self.Ux)
-        work = self.Uxyx.conj().T @ self.ibeta2_X @ self.Ux @ work @ self.Ux.conj().T @ self.ibeta2_X @ self.Uxyx
-        D2PhiYXH = self.alpha * self.beta2_X @ self.Uxyx @ (self.D1xyx_g * work) @ self.Uxyx.conj().T @ self.beta2_X
+        work = self.D1y_h * (self.Uy.conj().T @ Hy @ self.Uy)
+        work = self.Uyxy.conj().T @ self.ibeta2_Y @ self.Uy @ work @ self.Uy.conj().T @ self.ibeta2_Y @ self.Uyxy
+        D2PhiXYH = self.alpha * self.beta2_Y @ self.Uyxy @ (self.D1yxy_g * work) @ self.Uyxy.conj().T @ self.beta2_Y
 
         # D2_YY D(X, Y)[Hy]
-        work = self.Uxyx.conj().T @ self.beta2_X @ Hy @ self.beta2_X @ self.Uxyx
-        D2PhiYYH = self.beta2_X @ self.Uxyx @ (work * self.D1xyx_dg) @ self.Uxyx.conj().T @ self.beta2_X
+        work = self.Uyxy.conj().T @ self.beta2_Y @ Hx @ self.beta2_Y @ self.Uyxy
+        D2PhiXXH = self.beta2_Y @ self.Uyxy @ (work * self.D1yxy_dg) @ self.Uyxy.conj().T @ self.beta2_Y
 
         D2PhiXHH = inp(Hx, D2PhiXXH + D2PhiXYH)
         D2PhiYHH = inp(Hy, D2PhiYXH + D2PhiYYH)
 
         # Trace noncommutative perspective third order derivatives
-        self.D2xyx_dg = D2_f(self.Dxyx, self.D1xyx_dg, self.d3g(self.Dxyx))
-        self.D2xyx_g = D2_f(self.Dxyx, self.D1xyx_g, self.d2g(self.Dxyx))
-
-        self.D1yxy_g = D1_f(self.Dyxy, self.g(self.Dyxy), self.dg(self.Dyxy))
-        self.D2yxy_g = D2_f(self.Dyxy, self.D1yxy_g, self.d2g(self.Dyxy))
         self.D2yxy_dg = D2_f(self.Dyxy, self.D1yxy_dg, self.d3g(self.Dyxy))
+        self.D2yxy_g = D2_f(self.Dyxy, self.D1yxy_g, self.d2g(self.Dyxy))
+
+        self.D1xyx_g = D1_f(self.Dxyx, self.g(self.Dxyx), self.dg(self.Dxyx))
+        self.D2xyx_g = D2_f(self.Dxyx, self.D1xyx_g, self.d2g(self.Dxyx))
+        self.D2xyx_dg = D2_f(self.Dxyx, self.D1xyx_dg, self.d3g(self.Dxyx))
 
         # Second derivatives of D_X trPg(X, Y)
-        work = self.Ux.conj().T @ self.rt2_Y @ self.dg_YXY @ self.rt2_Y @ self.Ux
-        work2 = self.Ux.conj().T @ Hx @ self.Ux
-        D3PhiXXX = thrd_frechet(self.Dx, self.D2x_h, self.d3h(self.Dx), self.Ux, work, work2)
+        work = self.Uyxy.conj().T @ self.beta2_Y @ Hx @ self.beta2_Y @ self.Uyxy
+        D3PhiXXX = scnd_frechet(self.D2yxy_dg, work, work, U=self.beta2_Y @ self.Uyxy)
 
-        work = self.rt2_Y @ self.Ux @ (self.D1x_h * (self.Ux.conj().T @ Hx @ self.Ux)) @ self.Ux.conj().T @ self.rt2_Y
-        work = self.Uyxy @ (self.D1yxy_dg * (self.Uyxy.conj().T @ work @ self.Uyxy)) @ self.Uyxy.conj().T
-        work = self.Ux.conj().T @ self.rt2_Y @ work @ self.rt2_Y @ self.Ux
-        work2 = self.Ux.conj().T @ Hx @ self.Ux
-        D3PhiXXX += 2 * scnd_frechet(self.D2x_h, work, work2, U=self.Ux)
-
-        work = self.Ux.conj().T @ Hx @ self.Ux
-        work = scnd_frechet(self.D2x_h, work, work, U=self.Uyxy.conj().T @ self.rt2_Y @ self.Ux)
-        work = self.rt2_Y @ self.Uyxy @ (self.D1yxy_dg * work) @ self.Uyxy.conj().T @ self.rt2_Y
-        D3PhiXXX += self.Ux @ (self.D1x_h * (self.Ux.conj().T @ work @ self.Ux)) @ self.Ux.conj().T
-
-        work = self.rt2_Y @ self.Ux @ (self.D1x_h * (self.Ux.conj().T @ Hx @ self.Ux)) @ self.Ux.conj().T @ self.rt2_Y
-        work = self.Uyxy.conj().T @ work @ self.Uyxy
-        work = scnd_frechet(self.D2yxy_dg, work, work, U=self.Ux.conj().T @ self.rt2_Y @ self.Uyxy)
-        D3PhiXXX += self.Ux @ (self.D1x_h * work) @ self.Ux.conj().T
-
-        ##
-
-        work = self.Ux @ (self.D1x_h * (self.Ux.conj().T @ Hx @ self.Ux)) @ self.Ux.conj().T
-        work = self.Uyxy.conj().T @ self.rt2_Y @ work @ self.rt2_Y @ self.Uyxy
-        work2 = self.Uyxy.conj().T @ self.irt2_Y @ Hy @ self.irt2_Y @ self.Uyxy
-        work = scnd_frechet(self.D2yxy_g, work, work2, U=self.Ux.conj().T @ self.rt2_Y @ self.Uyxy)
-        D3PhiXXY = self.Ux @ (self.D1x_h * work) @ self.Ux.conj().T
-        work = self.Ux.conj().T @ self.rt2_Y @ self.Uyxy @ (self.D1yxy_g * work2) @ self.Uyxy.conj().T @ self.rt2_Y @ self.Ux
-        work2 = self.Ux.conj().T @ Hx @ self.Ux
-        D3PhiXXY += scnd_frechet(self.D2x_h, work, work2, U=self.Ux)
-        D3PhiXXY *= self.alpha
-
+        work2 = self.D1y_h * (self.Uy.conj().T @ Hy @ self.Uy)
+        work2 = self.Uyxy.conj().T @ self.ibeta2_Y @ self.Uy @ work2 @ self.Uy.conj().T @ self.ibeta2_Y @ self.Uyxy
+        D3PhiXXY = self.alpha * scnd_frechet(self.D2yxy_g, work, work2, U=self.beta2_Y @ self.Uyxy)
+        
         D3PhiXYX = D3PhiXXY
 
-        work = self.Uxyx.conj().T @ self.beta2_X @ Hy @ self.beta2_X @ self.Uxyx
-        work = scnd_frechet(self.D2xyx_g, work, work, U=self.Ux.conj().T @ self.ibeta2_X @ self.Uxyx)
-        D3PhiXYY = self.alpha * self.Ux @ (self.D1x_h * work) @ self.Ux.conj().T
+        work = self.D1y_h * (self.Uy.conj().T @ Hy @ self.Uy)
+        work = self.Uxyx.conj().T @ self.rt2_X @ self.Uy @ work @ self.Uy.conj().T @ self.rt2_X @ self.Uxyx
+        D3PhiXYY = scnd_frechet(self.D2xyx_g, work, work, U=self.irt2_X @ self.Uxyx)
+        work = self.Uy.conj().T @ Hy @ self.Uy
+        work = scnd_frechet(self.D2y_h, work, work, U=self.Uxyx.conj().T @ self.rt2_X @ self.Uy)
+        D3PhiXYY += self.irt2_X @ self.Uxyx @ (self.D1xyx_g * work) @ self.Uxyx.conj().T @ self.irt2_X
+        D3PhiXYY *= self.alpha
 
         # Second derivatives of D_Y trPg(X, Y)
-        work = self.Uxyx.conj().T @ self.beta2_X @ Hy @ self.beta2_X @ self.Uxyx
-        D3PhiYYY = scnd_frechet(self.D2xyx_dg, work, work, U=self.beta2_X @ self.Uxyx)
+        work = self.Uy.conj().T @ self.rt2_X @ self.dg_XYX @ self.rt2_X @ self.Uy
+        work2 = self.Uy.conj().T @ Hy @ self.Uy
+        D3PhiYYY = thrd_frechet(self.Dy, self.D2y_h, self.d3h(self.Dy), self.Uy, work, work2)
+        work = self.rt2_X @ self.Uy @ (self.D1y_h * (self.Uy.conj().T @ Hy @ self.Uy)) @ self.Uy.conj().T @ self.rt2_X
+        work = self.Uxyx @ (self.D1xyx_dg * (self.Uxyx.conj().T @ work @ self.Uxyx)) @ self.Uxyx.conj().T
+        work = self.Uy.conj().T @ self.rt2_X @ work @ self.rt2_X @ self.Uy
+        work2 = self.Uy.conj().T @ Hy @ self.Uy
+        D3PhiYYY += 2 * scnd_frechet(self.D2y_h, work, work2, U=self.Uy)
+        work = self.Uy.conj().T @ Hy @ self.Uy
+        work = scnd_frechet(self.D2y_h, work, work, U=self.Uxyx.conj().T @ self.rt2_X @ self.Uy)
+        work = self.rt2_X @ self.Uxyx @ (self.D1xyx_dg * work) @ self.Uxyx.conj().T @ self.rt2_X
+        D3PhiYYY += self.Uy @ (self.D1y_h * (self.Uy.conj().T @ work @ self.Uy)) @ self.Uy.conj().T
+        work = self.rt2_X @ self.Uy @ (self.D1y_h * (self.Uy.conj().T @ Hy @ self.Uy)) @ self.Uy.conj().T @ self.rt2_X
+        work = self.Uxyx.conj().T @ work @ self.Uxyx
+        work = scnd_frechet(self.D2xyx_dg, work, work, U=self.Uy.conj().T @ self.rt2_X @ self.Uxyx)
+        D3PhiYYY += self.Uy @ (self.D1y_h * work) @ self.Uy.conj().T
 
-        work2 = self.D1x_h * (self.Ux.conj().T @ Hx @ self.Ux)
-        work2 = self.Uxyx.conj().T @ self.ibeta2_X @ self.Ux @ work2 @ self.Ux.conj().T @ self.ibeta2_X @ self.Uxyx
-        D3PhiYYX = self.alpha * scnd_frechet(self.D2xyx_g, work, work2, U=self.beta2_X @ self.Uxyx)
-        
+        work = self.Uy @ (self.D1y_h * (self.Uy.conj().T @ Hy @ self.Uy)) @ self.Uy.conj().T
+        work = self.Uxyx.conj().T @ self.rt2_X @ work @ self.rt2_X @ self.Uxyx
+        work2 = self.Uxyx.conj().T @ self.irt2_X @ Hx @ self.irt2_X @ self.Uxyx
+        work = scnd_frechet(self.D2xyx_g, work, work2, U=self.Uy.conj().T @ self.rt2_X @ self.Uxyx)
+        D3PhiYYX = self.Uy @ (self.D1y_h * work) @ self.Uy.conj().T
+        work = self.Uy.conj().T @ self.rt2_X @ self.Uxyx @ (self.D1xyx_g * work2) @ self.Uxyx.conj().T @ self.rt2_X @ self.Uy
+        work2 = self.Uy.conj().T @ Hy @ self.Uy
+        D3PhiYYX += scnd_frechet(self.D2y_h, work, work2, U=self.Uy)
+        D3PhiYYX *= self.alpha
+
         D3PhiYXY = D3PhiYYX
 
-        work = self.D1x_h * (self.Ux.conj().T @ Hx @ self.Ux)
-        work = self.Uyxy.conj().T @ self.rt2_Y @ self.Ux @ work @ self.Ux.conj().T @ self.rt2_Y @ self.Uyxy
-        D3PhiYXX = scnd_frechet(self.D2yxy_g, work, work, U=self.irt2_Y @ self.Uyxy)
-        work = self.Ux.conj().T @ Hx @ self.Ux
-        work = scnd_frechet(self.D2x_h, work, work, U=self.Uyxy.conj().T @ self.rt2_Y @ self.Ux)
-        D3PhiYXX += self.irt2_Y @ self.Uyxy @ (self.D1yxy_g * work) @ self.Uyxy.conj().T @ self.irt2_Y
-        D3PhiYXX *= self.alpha
+        work = self.Uyxy.conj().T @ self.beta2_Y @ Hx @ self.beta2_Y @ self.Uyxy
+        work = scnd_frechet(self.D2yxy_g, work, work, U=self.Uy.conj().T @ self.ibeta2_Y @ self.Uyxy)
+        D3PhiYXX = self.alpha * self.Uy @ (self.D1y_h * work) @ self.Uy.conj().T
 
         # Third derivatives of barrier
         dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhiXHH + D2PhiYHH)
@@ -615,12 +612,12 @@ class SandwichedRenyiEntr(Cone):
         assert not self.hess_aux_updated
         assert self.grad_updated
 
-        self.D1x_h = D1_f(self.Dx, self.h(self.Dx), self.dh(self.Dx))
-        self.D2x_h = D2_f(self.Dx, self.D1x_h, self.d2h(self.Dx))
+        self.D1y_h = D1_f(self.Dy, self.h(self.Dy), self.dh(self.Dy))
+        self.D2y_h = D2_f(self.Dy, self.D1y_h, self.d2h(self.Dy))
 
-        self.D1xyx_g = D1_f(self.Dxyx, self.g(self.Dxyx), self.dg(self.Dxyx))
-        self.D1yxy_dg = D1_f(self.Dyxy, self.dg(self.Dyxy), self.d2g(self.Dyxy))
+        self.D1yxy_g = D1_f(self.Dyxy, self.g(self.Dyxy), self.dg(self.Dyxy))
         self.D1xyx_dg = D1_f(self.Dxyx, self.dg(self.Dxyx), self.d2g(self.Dxyx))
+        self.D1yxy_dg = D1_f(self.Dyxy, self.dg(self.Dyxy), self.d2g(self.Dyxy))
 
         # Preparing other required variables
         self.zi2 = self.zi * self.zi
@@ -661,63 +658,63 @@ class SandwichedRenyiEntr(Cone):
         self.DPhi_cvec = np.vstack((DPhiX_cvec, DPhiY_cvec))
 
         # ======================================================================
-        # Construct XX block of Hessian, i.e., (D2xxPhi + X^-1 ⊗ X^-1)
+        # Construct YY block of Hessian, i.e., (D2xxPhi + X^-1 ⊗ X^-1)
         # ======================================================================
         # work = self.D1x_h * (self.Ux.conj().T @ Hx @ self.Ux)
         # work = self.Uyxy.conj().T @ self.rt2_Y @ self.Ux @ work @ self.Ux.conj().T @ self.rt2_Y @ self.Uyxy
         # work = self.Ux.conj().T @ self.rt2_Y @ self.Uyxy @ (self.D1yxy_dg * work) @ self.Uyxy.conj().T @ self.rt2_Y @ self.Ux
         # D2PhiXXH = self.Ux @ (self.D1x_h * work) @ self.Ux.conj().T
-        congr_multi(work11, self.Ux.conj().T, self.E, work=work13)
-        np.multiply(work11, self.D1x_h, out=work14)
-        congr_multi(work12, self.Uyxy.conj().T @ self.rt2_Y @ self.Ux, work14, work=work13)
-        work12 *= self.D1yxy_dg
-        congr_multi(work14, self.Ux.conj().T @ self.rt2_Y @ self.Uyxy, work12, work=work13)
-        work14 *= self.D1x_h
-        congr_multi(work10, self.Ux, work14, work=work13)
+        congr_multi(work11, self.Uy.conj().T, self.E, work=work13)
+        np.multiply(work11, self.D1y_h, out=work14)
+        congr_multi(work12, self.Uxyx.conj().T @ self.rt2_X @ self.Uy, work14, work=work13)
+        work12 *= self.D1xyx_dg
+        congr_multi(work14, self.Uy.conj().T @ self.rt2_X @ self.Uxyx, work12, work=work13)
+        work14 *= self.D1y_h
+        congr_multi(work10, self.Uy, work14, work=work13)
         # work = self.Ux.conj().T @ self.rt2_Y @ self.dg_YXY @ self.rt2_Y @ self.Ux
         # D2PhiXXH += scnd_frechet(self.D2x_h, work, self.Ux.conj().T @ Hx @ self.Ux, U=self.Ux)
-        work = self.Ux.conj().T @ self.rt2_Y @ self.dg_YXY @ self.rt2_Y @ self.Ux
-        scnd_frechet_multi(work14, self.D2x_h, work11, work, U=self.Ux,
+        work = self.Uy.conj().T @ self.rt2_X @ self.dg_XYX @ self.rt2_X @ self.Uy
+        scnd_frechet_multi(work14, self.D2y_h, work11, work, U=self.Uy,
                                 work1=work12, work2=work13, work3=work15)  # fmt: skip
         work10 += work14
         work10 *= self.zi
         # X^1 Eij X^-1
-        congr_multi(work14, self.inv_X, self.E, work=work13)
+        congr_multi(work14, self.inv_Y, self.E, work=work13)
         work14 += work10
         # Vectorize matrices as compact vectors to get square matrix
         work = work14.view(np.float64).reshape((self.vn, -1))
-        Hxx = x_dot_dense(self.F2C_op, work.T)
-
-        # ======================================================================
-        # Construct YY block of Hessian, i.e., (D2yyPhi + Y^-1 ⊗ Y^-1)
-        # ======================================================================
-        # work = self.Uxyx.conj().T @ self.beta2_X @ Hy @ self.beta2_X @ self.Uxyx
-        # D2PhiYYH = self.beta2_X @ self.Uxyx @ (work * self.D1xyx_dg) @ self.Uxyx.conj().T @ self.beta2_X
-        congr_multi(work14, self.Uxyx.conj().T @ self.beta2_X, self.E, work=work13)
-        np.multiply(work14, self.D1xyx_dg, out=work10)
-        congr_multi(work11, self.beta2_X @ self.Uxyx, work10, work=work13)
-        work11 *= self.zi
-        # Y^-1 Eij Y^-1
-        congr_multi(work12, self.inv_Y, self.E, work=work13)
-        work12 += work11
-        # Vectorize matrices as compact vectors to get square matrix
-        work = work12.view(np.float64).reshape((self.vn, -1))
         Hyy = x_dot_dense(self.F2C_op, work.T)
 
         # ======================================================================
-        # Construct XY block of Hessian, i.e., D2yxPhi
+        # Construct XX block of Hessian, i.e., (D2yyPhi + Y^-1 ⊗ Y^-1)
+        # ======================================================================
+        # work = self.Uxyx.conj().T @ self.beta2_X @ Hy @ self.beta2_X @ self.Uxyx
+        # D2PhiYYH = self.beta2_X @ self.Uxyx @ (work * self.D1xyx_dg) @ self.Uxyx.conj().T @ self.beta2_X
+        congr_multi(work14, self.Uyxy.conj().T @ self.beta2_Y, self.E, work=work13)
+        np.multiply(work14, self.D1yxy_dg, out=work10)
+        congr_multi(work11, self.beta2_Y @ self.Uyxy, work10, work=work13)
+        work11 *= self.zi
+        # Y^-1 Eij Y^-1
+        congr_multi(work12, self.inv_X, self.E, work=work13)
+        work12 += work11
+        # Vectorize matrices as compact vectors to get square matrix
+        work = work12.view(np.float64).reshape((self.vn, -1))
+        Hxx = x_dot_dense(self.F2C_op, work.T)
+
+        # ======================================================================
+        # Construct YX block of Hessian, i.e., D2yxPhi
         # ======================================================================
         # work = self.D1xyx_g * (self.Uxyx.conj().T @ self.beta2_X @ Hy @ self.beta2_X @ self.Uxyx)
         # work = self.Ux.conj().T @ self.ibeta2_X @ self.Uxyx @ work @ self.Uxyx.conj().T @ self.ibeta2_X @ self.Ux
         # D2PhiXYH = self.alpha * self.Ux @ (work * self.D1x_h) @ self.Ux.conj().T
-        work14 *= self.D1xyx_g
-        congr_multi(work12, self.Ux.conj().T @ self.ibeta2_X @ self.Uxyx, work14, work=work13)
-        work12 *= self.alpha * self.D1x_h
-        congr_multi(work14, self.Ux, work12, work=work13)
+        work14 *= self.D1yxy_g
+        congr_multi(work12, self.Uy.conj().T @ self.ibeta2_Y @ self.Uyxy, work14, work=work13)
+        work12 *= self.alpha * self.D1y_h
+        congr_multi(work14, self.Uy, work12, work=work13)
         work14 *= self.zi
         # Vectorize matrices as compact vectors to get square matrix
         work = work14.view(np.float64).reshape((self.vn, -1))
-        Hxy = x_dot_dense(self.F2C_op, work.T)
+        Hyx = x_dot_dense(self.F2C_op, work.T)
 
         # Construct Hessian and factorize
         Hxx = (Hxx + Hxx.conj().T) * 0.5
@@ -725,8 +722,8 @@ class SandwichedRenyiEntr(Cone):
 
         self.hess[: self.vn, : self.vn] = Hxx
         self.hess[self.vn :, self.vn :] = Hyy
-        self.hess[self.vn :, : self.vn] = Hxy.T
-        self.hess[: self.vn, self.vn :] = Hxy
+        self.hess[self.vn :, : self.vn] = Hyx
+        self.hess[: self.vn, self.vn :] = Hyx.T
 
         self.hess_fact = cho_fact(self.hess)
         self.invhess_aux_updated = True
