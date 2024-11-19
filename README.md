@@ -22,10 +22,11 @@ Some notable cones that QICS supports include
 |----------------|:---------------------:|:---------------:|
 | Positive semidefinite |  [`qics.cones.PosSemidefinite`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.PosSemidefinite)  | $\\{ X \in \mathbb{H}^n : X \succeq 0 \\}$ |
 | Quantum entropy |  [`qics.cones.QuantEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.QuantEntr)  | $\text{cl}\\{ (t, u, X) \in \mathbb{R} \times \mathbb{R}_{++} \times \mathbb{H}^n\_{++} : t \geq -u S(u^{-1} X) \\}$ |
-| Quantum relative entropy |  [`qics.cones.QuantRelEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.QuantRelEntr)  | $\text{cl}\{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq S(X \\| Y) \}$ |
+| Quantum relative entropy |  [`qics.cones.QuantRelEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.QuantRelEntr)  | $\text{cl}\\{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq S(X \\| Y) \\}$ |
 | Quantum conditional entropy |  [`qics.cones.QuantCondEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.QuantCondEntr)  | $\text{cl}\\{ (t, X) \in \mathbb{R} \times \mathbb{H}^{\Pi_in_i}_{++} : t \geq -S(X) + S(\text{tr}_i(X)) \\}$ |
 | Quantum key distribution |  [`qics.cones.QuantKeyDist`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.QuantKeyDist)  | $\text{cl}\\{ (t, X) \in \mathbb{R} \times \mathbb{H}^n_{++} : t \geq -S(\mathcal{G}(X)) + S(\mathcal{Z}(\mathcal{G}(X))) \\}$ |
 | Operator perspective epigraph |  [`qics.cones.OpPerspecEpi`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.OpPerspecEpi)  | $\text{cl}\\{ (T, X, Y) \in \mathbb{H}^n \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \\}$ |
+| Sandwiched Renyi entropy |  [`qics.cones.SandRenyiEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.SandRenyiEntr)  | $\text{cl}\\{ (t, X, Y) \in \mathbb{R} \times\mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \\}$ |
 
 where $S(X)=-\text{tr}[X\log(X)]$ is the quantum entropy, 
 $S(X \| Y)=\text{tr}[X\log(X) - X\log(Y)]$ is the quantum relative entropy, and

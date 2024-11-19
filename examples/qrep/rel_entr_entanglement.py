@@ -41,7 +41,7 @@ b = np.block([[C_cvec], [1.0], [np.zeros((cN, 1))]])
 
 # Input into model and solve
 cones = [
-    qics.cones.QuantRelEntr(N, iscomplex=True),     # (t, X, Y) ∈ QRE
+    qics.cones.QuantRelEntr(N, iscomplex=True),  # (t, X, Y) ∈ QRE
     qics.cones.PosSemidefinite(N, iscomplex=True),  # Z = T2(Y) ⪰ 0
 ]
 

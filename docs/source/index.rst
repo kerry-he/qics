@@ -56,6 +56,11 @@ supports include:
      - :class:`qics.cones.OpPerspecEpi`
      - :math:`\text{cl}\{ (T, X, Y) \in \mathbb{H}^n \times \mathbb{H}^n_{++}
        \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \}`
+   * - Sandwiched Renyi entropy
+     - :class:`qics.cones.SandRenyiEntr`
+     - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
+       \mathbb{H}^n_{++} : t \geq \text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} 
+       X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \}`
 
 where :math:`S(X)=-\text{tr}[X\log(X)]` is the quantum entropy, 
 :math:`S(X \| Y)=\text{tr}[X\log(X) - X\log(Y)]` is the quantum relative 

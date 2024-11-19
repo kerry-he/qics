@@ -72,10 +72,10 @@ class Solver:
     use_invhess : :obj:`bool`, optional
         Whether or not to avoid using inverse Hessian product oracles by
         solving a modified cone program with
-        :math:`G^{-1}(\mathcal{K})=\{ x : Gx \in \mathcal{K} \}`. By 
+        :math:`G^{-1}(\mathcal{K})=\{ x : Gx \in \mathcal{K} \}`. By
         default, this is ``False`` if :math:`G\neq-\mathbb{I}`, :math:`G`
         is full column rank, and :math:`\mathcal{K}` mainly consists of
-        :class:`~qics.cones.QuantRelEntr`, 
+        :class:`~qics.cones.QuantRelEntr`,
         :class:`~qics.cones.OpPerspecEpi`, and
         :class:`~qics.cones.OpPerspecTr` cones, and is ``True`` otherwise.
     """

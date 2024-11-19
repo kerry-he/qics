@@ -46,10 +46,10 @@ h = np.block([
 ])  # fmt: skip
 
 # Define cones to optimize over
-cones = [qics.cones.SandwichedRenyiEntr(N, 0.75, True)]
+cones = [qics.cones.SandRenyiEntr(N, 0.75, True)]
 
 # Initialize model and solver objects
-model  = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
+model = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
 solver = qics.Solver(model, verbose=3)
 
 # Solve problem

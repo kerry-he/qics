@@ -25,7 +25,79 @@ from qics.cones.base import Cone, get_perspective_derivatives
 from qics.vectorize import get_full_to_compact_op, vec_to_mat
 
 
-class SandwichedRenyiEntr(Cone):
+class SandRenyiEntr(Cone):
+    r"""A class representing the epigraph or hypograph of the trace function used to 
+    define the sandwiched Renyi entropy, i.e.,
+
+    .. math::
+
+        \mathcal{SRE}_{n, \alpha} = \text{cl} \{ (t, X, Y) \in \mathbb{R} \times
+        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq -\text{tr}[ ( 
+        Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \},
+
+    when :math:`\alpha\in[1/2, 1)`, and
+
+    .. math::
+
+        \mathcal{SRE}_{n, \alpha} = \text{cl}\{ (t, X, Y) \in \mathbb{R} \times
+        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[ ( 
+        Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \},
+
+    when :math:`\alpha\in(1, 2]`.
+
+    Parameters
+    ----------
+    n : :obj:`int`
+        Dimension of the matrices :math:`X` and :math:`Y`.
+    alpha : :obj:`float`
+        The exponent :math:`\alpha` used to parameterize the sandwiched Renyi entropy.
+    iscomplex : :obj:`bool`
+        Whether the matrices :math:`X` and :math:`Y` are defined over
+        :math:`\mathbb{H}^n` (``True``), or restricted to
+        :math:`\mathbb{S}^n` (``False``). The default is ``False``.
+
+    See also
+    --------
+    QuantRelEntr : Quantum relative entropy
+
+    Notes
+    -----
+    The sandwiched Renyi entropy is actually defined as the function
+
+    .. math::
+
+        D_\alpha(X \| Y) = \frac{1}{\alpha - 1} \log(\Psi_\alpha(X, Y)),
+
+    where
+
+    .. math::
+
+        \Psi_\alpha(X, Y) = \text{trace}\!\left[ \left(Y^\frac{1-\alpha}{2\alpha} X 
+        Y^\frac{1-\alpha}{2\alpha} \right)^\alpha \right].
+
+    Note that :math:`\Psi_\alpha` is jointly concave for :math:`\alpha\in[1/2, 1)`, and
+    jointly convex for :math:`\alpha\in(1, 2]`, whereas :math:`D_\alpha` is jointly
+    convex for :math:`\alpha\in[1/2, 1)`, but is neither convex nor concave for 
+    :math:`\alpha\in(1, 2]`.
+
+    Note that due to monotonicity of :math:`x \mapsto \log(x)`, we can minimize the
+    sandwiched Renyi entropy by using the identities
+
+    .. math::
+
+        \min_{(X,Y)\in\mathcal{C}} D_\alpha(X \| Y)  = \frac{1}{\alpha - 1} 
+        \log\left( \max_{(X,Y)\in\mathcal{C}} \Psi_\alpha(X, Y) \right),
+
+    if :math:`\alpha\in[1/2, 1)`, and
+
+    .. math::
+
+        \min_{(X,Y)\in\mathcal{C}} D_\alpha(X \| Y)  = \frac{1}{\alpha - 1} 
+        \log\left( \min_{(X,Y)\in\mathcal{C}} \Psi_\alpha(X, Y) \right),
+    
+    if :math:`\alpha\in(1, 2]`.
+
+    """
 
     def __init__(self, n, alpha, iscomplex=False):
         assert 0.5 <= alpha and alpha <= 2
@@ -58,10 +130,10 @@ class SandwichedRenyiEntr(Cone):
         # Get function handles for h(x)=x^β where β=(1-α)/α
         # and their first, second and third derivatives
         b = (1 - alpha) / alpha
-        self.h = lambda x : np.power(x, b)
-        self.dh = lambda x : np.power(x, b - 1) * b
-        self.d2h = lambda x : np.power(x, b - 2) * (b * (b - 1))
-        self.d3h = lambda x : np.power(x, b - 3) * (b * (b - 1) * (b - 2))
+        self.h = lambda x: np.power(x, b)
+        self.dh = lambda x: np.power(x, b - 1) * b
+        self.d2h = lambda x: np.power(x, b - 2) * (b * (b - 1))
+        self.d3h = lambda x: np.power(x, b - 3) * (b * (b - 1) * (b - 2))
 
         # Get sparse operator to convert from full to compact vectorizations
         self.F2C_op = get_full_to_compact_op(n, iscomplex)
@@ -214,7 +286,7 @@ class SandwichedRenyiEntr(Cone):
         work = self.alpha * self.D1yxy_g * UYHxYU
         work = self.Uy_ib2Y_Uyxy @ work @ self.Uy_ib2Y_Uyxy.conj().T
         D2PhiYXH = self.Uy @ (work * self.D1y_h) @ self.Uy.conj().T
-        # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½] 
+        # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½]
         #                     + Dh(Y)[X^½ D(g')(X^½ Y^β X^½)[X^½ Dh(X)[Hx] X^½] X^½]
         work = self.Uy_rtX_Uxyx.conj().T @ (self.D1y_h * UHyU) @ self.Uy_rtX_Uxyx
         work = self.Uy_rtX_Uxyx @ (self.D1xyx_dg * work) @ self.Uy_rtX_Uxyx.conj().T
@@ -233,7 +305,7 @@ class SandwichedRenyiEntr(Cone):
         # Hessian products with respect to X
         # ======================================================================
         # D2_X F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X Ψ(X, Y)
-        #                               + (D2_XX Ψ(X, Y)[Hx] + D2_XY Ψ(X, Y)[Hy]) / z 
+        #                               + (D2_XX Ψ(X, Y)[Hx] + D2_XY Ψ(X, Y)[Hy]) / z
         #                               + X^-1 Hx X^-1
         out_X = -out_t * self.DPhiX
         out_X += self.zi * (D2PhiXYH + D2PhiXXH)
@@ -287,7 +359,7 @@ class SandwichedRenyiEntr(Cone):
         # Hessian products with respect to Y
         # ======================================================================
         # Hessian products of sandwiched Renyi entropy
-        # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½] 
+        # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½]
         #                     + Dh(Y)[X^½ D(g')(X^½ Y^β X^½)[X^½ Dh(X)[Hx] X^½] X^½]
         # Compute first term i.e., D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½]
         congr_multi(work2, self.Uy.conj().T, self.Ay, work=work4)
@@ -337,7 +409,7 @@ class SandwichedRenyiEntr(Cone):
 
         # Hessian product of barrier function
         # D2_X F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X Ψ(X, Y)
-        #                               + (D2_XX Ψ(X, Y)[Hx] + D2_XY Ψ(X, Y)[Hy]) / z 
+        #                               + (D2_XX Ψ(X, Y)[Hx] + D2_XY Ψ(X, Y)[Hy]) / z
         #                               + X^-1 Hx X^-1
         work5 *= self.zi
         np.outer(out_t, self.DPhiX, out=work1.reshape((p, -1)))
@@ -446,7 +518,7 @@ class SandwichedRenyiEntr(Cone):
         work = self.alpha * self.D1yxy_g * UYHxYU
         work = self.Uy_ib2Y_Uyxy @ work @ self.Uy_ib2Y_Uyxy.conj().T
         D2PhiYXH = self.Uy @ (work * self.D1y_h) @ self.Uy.conj().T
-        # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½] 
+        # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½]
         #                     + Dh(Y)[X^½ D(g')(X^½ Y^β X^½)[X^½ Dh(X)[Hx] X^½] X^½]
         work = self.Uy_rtX_Uxyx.conj().T @ (self.D1y_h * UHyU) @ self.Uy_rtX_Uxyx
         work = self.Uy_rtX_Uxyx @ (self.D1xyx_dg * work) @ self.Uy_rtX_Uxyx.conj().T
@@ -627,7 +699,7 @@ class SandwichedRenyiEntr(Cone):
         # ======================================================================
         # Construct YY block of Hessian, i.e., (D2yyxPhi + Y^-1 ⊗ Y^-1)
         # ======================================================================
-        # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½] 
+        # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½]
         #                     + Dh(Y)[X^½ D(g')(X^½ Y^β X^½)[X^½ Dh(X)[Hx] X^½] X^½]
         # Compute first term i.e., D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½]
         congr_multi(work11, self.Uy.conj().T, self.E, work=work13)

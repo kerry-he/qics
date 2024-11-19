@@ -112,6 +112,12 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(gdict["info"]["exit_status"], "solved")
         self.assertAlmostEqual(gdict["info"]["p_obj"], 0.5248915, places=6)
 
+    def test_qrep_renyi_mutual_inf(self):
+        gdict = self.exec_example("qrep/renyi_mutual_inf.py")
+        self.assertEqual(gdict["info"]["sol_status"], "optimal")
+        self.assertEqual(gdict["info"]["exit_status"], "solved")
+        self.assertAlmostEqual(gdict["info"]["p_obj"], -0.8048370, places=6)
+
     # Noncommutative perspective programs
     def test_ncp_measured_rel_entr(self):
         gdict = self.exec_example("ncp/measured_rel_entr.py")

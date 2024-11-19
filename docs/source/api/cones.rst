@@ -50,6 +50,8 @@ Quantum entropy cones
      - Quantum conditional entropy cone
    * - :class:`~qics.cones.QuantKeyDist`\ (G_info, K_info[, iscomplex])
      - Quantum key distribution cone
+   * - :class:`~qics.cones.SandRenyiEntr`\ (n, alpha[, iscomplex])
+     - Sandwiched Renyi entropy cone
 
 Operator perspective cones
 ---------------------------
@@ -76,5 +78,6 @@ Operator perspective cones
    cones/QuantRelEntr
    cones/QuantCondEntr
    cones/QuantKeyDist
+   cones/SandRenyiEntr
    cones/OpPerspecTr
    cones/OpPerspecEpi

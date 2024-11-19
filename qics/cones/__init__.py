@@ -19,4 +19,4 @@ from qics.cones.quantkeydist import QuantKeyDist  # noqa
 from qics.cones.opperspectr import OpPerspecTr  # noqa
 from qics.cones.opperspecepi import OpPerspecEpi  # noqa
 
-from qics.cones.sandwichedrenyi import SandwichedRenyiEntr  # noqa
+from qics.cones.sandrenyientr import SandRenyiEntr  # noqa
