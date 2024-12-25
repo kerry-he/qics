@@ -143,7 +143,6 @@ class RenyiEntr(Cone):
         self.hess_aux_updated = False
         self.invhess_aux_updated = False
         self.invhess_aux_aux_updated = False
-        self.dder3_aux_updated = False
         self.congr_aux_updated = False
 
         return
@@ -461,81 +460,57 @@ class RenyiEntr(Cone):
         assert self.grad_updated
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
-        if not self.dder3_aux_updated:
-            self.update_dder3_aux()
 
         (Ht, Hx, Hy) = H
 
         chi = Ht[0, 0] - inp(self.DPhiX, Hx) - inp(self.DPhiY, Hy)
         chi2 = chi * chi
 
+        self.zi3 = self.zi2 * self.zi
+
+        UHxU = self.Ux.conj().T @ Hx @ self.Ux
         UHyU = self.Uy.conj().T @ Hy @ self.Uy
-        UYHxYU = self.b2Y_Uyxy.conj().T @ Hx @ self.b2Y_Uyxy
 
         # Hessian product of sandwiched Renyi entropy
-        # D2_XX Ψ(X, Y)[Hx] = Y^β/2 D(g')(Y^β/2 X Y^β/2)[Y^β/2 Hx Y^β/2] Y^β/2
-        D2PhiXXH = self.b2Y_Uyxy @ (self.D1yxy_dg * UYHxYU) @ self.b2Y_Uyxy.conj().T
-        # D2_XY Ψ(X, Y)[Hy] = α * Y^β/2 Dg(Y^β/2 X Y^β/2)[Y^-β/2 Dh(Y)[Hy] Y^-β/2] Y^β/2
-        work = self.alpha * self.D1y_h * UHyU
-        work = self.Uy_ib2Y_Uyxy.conj().T @ work @ self.Uy_ib2Y_Uyxy
-        D2PhiXYH = self.b2Y_Uyxy @ (self.D1yxy_g * work) @ self.b2Y_Uyxy.conj().T
-        # D2_YX Ψ(X, Y)[Hx] = α * Dh(Y)[Y^-β/2 Dg(Y^β/2 X Y^β/2)[Y^β/2 Hx Y^β/2] Y^-β/2]
-        work = self.alpha * self.D1yxy_g * UYHxYU
-        work = self.Uy_ib2Y_Uyxy @ work @ self.Uy_ib2Y_Uyxy.conj().T
-        D2PhiYXH = self.Uy @ (work * self.D1y_h) @ self.Uy.conj().T
-        # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½]
-        #                     + Dh(Y)[X^½ D(g')(X^½ Y^β X^½)[X^½ Dh(X)[Hx] X^½] X^½]
-        work = self.Uy_rtX_Uxyx.conj().T @ (self.D1y_h * UHyU) @ self.Uy_rtX_Uxyx
-        work = self.Uy_rtX_Uxyx @ (self.D1xyx_dg * work) @ self.Uy_rtX_Uxyx.conj().T
-        D2PhiYYH = self.Uy @ (self.D1y_h * work) @ self.Uy.conj().T
-        D2PhiYYH += scnd_frechet(self.D2y_h, self.UX_dgXYX_XU, UHyU, U=self.Uy)
+        # D2_XX Ψ(X, Y)[Hx] = D2g(X)[h(Y), Hx]
+        D2PhiXXH = scnd_frechet(self.D2x_g, self.Ux_hY_Ux, UHxU, U=self.Ux)
+        # D2_XY Ψ(X, Y)[Hy] = Dg(X)[Dh(Y)[Hy]]
+        work = self.UxUy @ (self.D1y_h * UHyU) @ self.UxUy.conj().T
+        D2PhiXYH = self.Ux @ (self.D1x_g * work) @ self.Ux.conj().T
+        # D2_YX Ψ(X, Y)[Hx] = Dh(Y)[Dg(X)[Hx]]
+        work = self.UxUy.conj().T @ (self.D1x_g * UHxU) @ self.UxUy
+        D2PhiYXH = self.Uy @ (self.D1y_h * work) @ self.Uy.conj().T
+        # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[g(X), Hy]
+        D2PhiYYH = scnd_frechet(self.D2y_h, self.Uy_gX_Uy, UHyU, U=self.Uy)
 
         D2PhiXHH = inp(Hx, D2PhiXXH + D2PhiXYH)
         D2PhiYHH = inp(Hy, D2PhiYXH + D2PhiYYH)
 
         # Trace noncommutative perspective third order derivatives
 
-        self.irtX_Uxyx = self.irt2_X @ self.Uxyx
-        self.rtX_Uxyx = self.rt2_X @ self.Uxyx
-
-        D1yh_UHyU = self.D1y_h * UHyU
-
         # Second derivatives of D_X Ψ(X, Y)
-        D3PhiXXX = scnd_frechet(self.D2yxy_dg, UYHxYU, UYHxYU, U=self.b2Y_Uyxy)
-
-        work = self.Uy_ib2Y_Uyxy.conj().T @ D1yh_UHyU @ self.Uy_ib2Y_Uyxy
-        D3PhiXXY = scnd_frechet(self.D2yxy_g, UYHxYU, work, U=self.b2Y_Uyxy)
-        D3PhiXXY *= self.alpha
+        D3PhiXXX = thrd_frechet(self.Dx, self.D2x_g, self.d3g(self.Dx), self.Ux, 
+                                self.Ux_hY_Ux, UHxU)  # fmt: skip
+        
+        work = self.UxUy @ (self.D1y_h * UHyU) @ self.UxUy.conj().T
+        D3PhiXXY = scnd_frechet(self.D2x_g, UHxU, work, U=self.Ux)
 
         D3PhiXYX = D3PhiXXY
 
-        work3 = self.Uy_rtX_Uxyx.conj().T @ D1yh_UHyU @ self.Uy_rtX_Uxyx
-        D3PhiXYY = scnd_frechet(self.D2xyx_g, work3, work3, U=self.irtX_Uxyx)
-        work2 = scnd_frechet(self.D2y_h, UHyU, UHyU, U=self.Uy_rtX_Uxyx.conj().T)
-        D3PhiXYY += self.irtX_Uxyx @ (self.D1xyx_g * work2) @ self.irtX_Uxyx.conj().T
-        D3PhiXYY *= self.alpha
+        work = scnd_frechet(self.D2y_h, UHyU, UHyU, U=self.UxUy)
+        D3PhiXYY = self.Ux @ (self.D1x_g * work) @ self.Ux.conj().T
 
         # Second derivatives of D_Y Ψ(X, Y)
         D3PhiYYY = thrd_frechet(self.Dy, self.D2y_h, self.d3h(self.Dy), self.Uy, 
-                                self.UX_dgXYX_XU, UHyU)  # fmt: skip
-        work = self.Uy_rtX_Uxyx @ (self.D1xyx_dg * work3) @ self.Uy_rtX_Uxyx.conj().T
-        D3PhiYYY += 2 * scnd_frechet(self.D2y_h, work, UHyU, U=self.Uy)
-        work = self.Uy_rtX_Uxyx @ (self.D1xyx_dg * work2) @ self.Uy_rtX_Uxyx.conj().T
-        D3PhiYYY += self.Uy @ (self.D1y_h * work) @ self.Uy.conj().T
-        work = scnd_frechet(self.D2xyx_dg, work3, work3, U=self.Uy_rtX_Uxyx)
-        D3PhiYYY += self.Uy @ (self.D1y_h * work) @ self.Uy.conj().T
-
-        work2 = self.irtX_Uxyx.conj().T @ Hx @ self.irtX_Uxyx
-        work = scnd_frechet(self.D2xyx_g, work2, work3, U=self.Uy_rtX_Uxyx)
-        D3PhiYYX = self.Uy @ (self.D1y_h * work) @ self.Uy.conj().T
-        work = self.Uy_rtX_Uxyx @ (self.D1xyx_g * work2) @ self.Uy_rtX_Uxyx.conj().T
-        D3PhiYYX += scnd_frechet(self.D2y_h, work, UHyU, U=self.Uy)
-        D3PhiYYX *= self.alpha
+                                self.Uy_gX_Uy, UHyU)  # fmt: skip
+        
+        work = self.UxUy.conj().T @ (self.D1x_g * UHxU) @ self.UxUy
+        D3PhiYYX = scnd_frechet(self.D2y_h, UHyU, work, U=self.Uy)
 
         D3PhiYXY = D3PhiYYX
 
-        work = scnd_frechet(self.D2yxy_g, UYHxYU, UYHxYU, U=self.Uy_ib2Y_Uyxy)
-        D3PhiYXX = self.alpha * self.Uy @ (self.D1y_h * work) @ self.Uy.conj().T
+        work = scnd_frechet(self.D2x_g, UHxU, UHxU, U=self.UxUy.conj().T)
+        D3PhiYXX = self.Uy @ (self.D1y_h * work) @ self.Uy.conj().T
 
         # Third derivatives of barrier
         dder3_t = -2 * self.zi3 * chi2 - self.zi2 * (D2PhiXHH + D2PhiYHH)
@@ -612,18 +587,6 @@ class RenyiEntr(Cone):
 
         self.hess_aux_updated = True
 
-    def update_dder3_aux(self):
-        assert not self.dder3_aux_updated
-        assert self.hess_aux_updated
-
-        self.D2x_g = D2_f(self.Dx, self.D1x_g, self.d2g(self.Dx))
-        self.D2y_h = D2_f(self.Dy, self.D1y_h, self.d2h(self.Dy))
-
-        # Preparing other required variables
-        self.zi3 = self.zi2 * self.zi
-
-        self.dder3_aux_updated = True
-
     def update_invhessprod_aux(self):
         assert not self.invhess_aux_updated
         assert self.grad_updated
@@ -637,7 +600,7 @@ class RenyiEntr(Cone):
 
         self.z2 = self.z * self.z
 
-        work10, work11, work12 = self.work10, self.work11, self.work12
+        work11, work12 = self.work11, self.work12
         work13, work14, work15 = self.work13, self.work14, self.work15
 
         # Precompute compact vectorizations of derivatives
@@ -713,7 +676,6 @@ class RenyiEntr(Cone):
 
         self.hess = np.empty((2 * self.vn, 2 * self.vn))
 
-        self.work10 = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
         self.work11 = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
         self.work12 = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
         self.work13 = np.empty((self.vn, self.n, self.n), dtype=self.dtype)
