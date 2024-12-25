@@ -328,30 +328,48 @@ class RenyiEntr(Cone):
 
         lhs[:, 0] = out_t
 
+        # ==================================================================
+        # Hessian products with respect to X
+        # ==================================================================
+        # Hessian products of Renyi entropy
+        # D2_XX Ψ(X, Y)[Hx] = D2g(X)[h(Y), Hx]
+        congr_multi(work2, self.Ux.conj().T, self.Ax, work=work4)
+        scnd_frechet_multi(work5 self.D2x_g, work2, self.Ux_hY_Ux, U=self.Ux,
+                           work1=work3, work2=work4 work3=work6)  # fmt: skip
+
+        # D2_XY Ψ(X, Y)[Hy] = Dg(X)[Dh(Y)[Hy]]
+        congr_multi(work1, self.Uy.conj().T, self.Ay, work=work4)
+        np.multiply(work1, self.D1y_h, out=work0)
+        congr_multi(work3, self.UxUy, work0, work=work4)
+        work3 *= self.D1x_g
+        congr_multi(work0, self.Ux, work3, work=work4)
+        work5 += work0
+
+        # Hessian product of barrier function
+        # D2_X F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X Ψ(X, Y)
+        #                               + (D2_XX Ψ(X, Y)[Hx] + D2_XY Ψ(X, Y)[Hy]) / z
+        #                               + X^-1 Hx X^-1
+        work5 *= self.zi
+        np.outer(out_t, self.DPhiX, out=work3.reshape((p, -1)))
+        work5 -= work3
+        congr_multi(work4, self.inv_X, self.Ax, work=work3)
+        work5 += work4
+
+        lhs[:, self.idx_X] = work5.reshape((p, -1)).view(np.float64)
+
         # ======================================================================
         # Hessian products with respect to Y
         # ======================================================================
         # Hessian products of sandwiched Renyi entropy
-        # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½]
-        #                     + Dh(Y)[X^½ D(g')(X^½ Y^β X^½)[X^½ Dh(X)[Hx] X^½] X^½]
-        # Compute first term i.e., D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½]
-        congr_multi(work2, self.Uy.conj().T, self.Ay, work=work4)
-        np.multiply(work2, self.D1y_h, out=work1)
-        congr_multi(work5, self.Uy_rtX_Uxyx.conj().T, work1, work=work4)
-        work5 *= self.D1xyx_dg
-        congr_multi(work1, self.Uy_rtX_Uxyx, work5, work=work4)
-        work1 *= self.D1y_h
-        congr_multi(work5, self.Uy, work1, work=work4)
-        # Compute second term i.e., Dh(Y)[X^½ D(g')(X^½ Y^β X^½)[X^½ Dh(X)[Hx] X^½] X^½]
-        scnd_frechet_multi(work1, self.D2y_h, work2, self.UX_dgXYX_XU, U=self.Uy,
-                           work1=work3, work2=work4, work3=work6)  # fmt: skip
-        work5 += work1
-        # D2_YX Ψ(X, Y)[Hx] = α * Dh(Y)[Y^-β/2 Dg(Y^β/2 X Y^β/2)[Y^β/2 Hx Y^β/2] Y^-β/2]
-        congr_multi(work3, self.b2Y_Uyxy.conj().T, self.Ax, work=work4)
-        np.multiply(work3, self.D1yxy_g, out=work0)
-        congr_multi(work1, self.Uy_ib2Y_Uyxy, work0, work=work4)
-        work1 *= self.alpha * self.D1y_h
-        congr_multi(work0, self.Uy, work1, work=work4)
+        # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[g(X), Hy]
+        scnd_frechet_multi(work5 self.D2y_h, work1, self.Uy_gX_Uy, U=self.Uy,
+                           work1=work3, work2=work4 work3=work6)  # fmt: skip
+
+        # D2_YX Ψ(X, Y)[Hx] = Dh(Y)[Dg(X)[Hx]]
+        work2 *= self.D1x_g
+        congr_multi(work3, self.UxUy.conj().T, work2, work=work4)
+        work3 *= self.D1y_h
+        congr_multi(work0, self.Uy, work3, work=work4)
         work5 += work0
 
         # Hessian product of barrier function
@@ -365,32 +383,6 @@ class RenyiEntr(Cone):
         work5 += work1
 
         lhs[:, self.idx_Y] = work5.reshape((p, -1)).view(np.float64)
-
-        # ==================================================================
-        # Hessian products with respect to X
-        # ==================================================================
-        # Hessian products of sandwiched Renyi entropy
-        # D2_XY Ψ(X, Y)[Hy] = α * Y^β/2 Dg(Y^β/2 X Y^β/2)[Y^-β/2 Dh(Y)[Hy] Y^-β/2] Y^β/2
-        work2 *= self.D1y_h
-        congr_multi(work0, self.Uy_ib2Y_Uyxy.conj().T, work2, work=work4)
-        work0 *= self.alpha * self.D1yxy_g
-        congr_multi(work5, self.b2Y_Uyxy, work0, work=work4)
-        # D2_XX Ψ(X, Y)[Hx] = Y^β/2 D(g')(Y^β/2 X Y^β/2)[Y^β/2 Hx Y^β/2] Y^β/2
-        work3 *= self.D1yxy_dg
-        congr_multi(work1, self.b2Y_Uyxy, work3, work=work4)
-        work5 += work1
-
-        # Hessian product of barrier function
-        # D2_X F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X Ψ(X, Y)
-        #                               + (D2_XX Ψ(X, Y)[Hx] + D2_XY Ψ(X, Y)[Hy]) / z
-        #                               + X^-1 Hx X^-1
-        work5 *= self.zi
-        np.outer(out_t, self.DPhiX, out=work1.reshape((p, -1)))
-        work5 -= work1
-        congr_multi(work1, self.inv_X, self.Ax, work=work3)
-        work5 += work1
-
-        lhs[:, self.idx_X] = work5.reshape((p, -1)).view(np.float64)
 
         # Multiply A (H A')
         return dense_dot_x(lhs, A.T)
@@ -658,37 +650,12 @@ class RenyiEntr(Cone):
         self.DPhi_cvec = np.vstack((DPhiX_cvec, DPhiY_cvec))
 
         # ======================================================================
-        # Construct YY block of Hessian, i.e., (D2yyxPhi + Y^-1 ⊗ Y^-1)
-        # ======================================================================
-        # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½]
-        #                     + Dh(Y)[X^½ D(g')(X^½ Y^β X^½)[X^½ Dh(X)[Hx] X^½] X^½]
-        # Compute first term i.e., D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½]
-        congr_multi(work11, self.Uy.conj().T, self.E, work=work13)
-        np.multiply(work11, self.D1y_h, out=work14)
-        congr_multi(work12, self.Uy_rtX_Uxyx.conj().T, work14, work=work13)
-        work12 *= self.D1xyx_dg
-        congr_multi(work14, self.Uy_rtX_Uxyx, work12, work=work13)
-        work14 *= self.D1y_h
-        congr_multi(work10, self.Uy, work14, work=work13)
-        # Compute second term i.e., Dh(Y)[X^½ D(g')(X^½ Y^β X^½)[X^½ Dh(X)[Hx] X^½] X^½]
-        scnd_frechet_multi(work14, self.D2y_h, work11, self.UX_dgXYX_XU, U=self.Uy,
-                           work1=work12, work2=work13, work3=work15)  # fmt: skip
-        work10 += work14
-        work10 *= self.zi
-        # Y^1 Eij Y^-1
-        congr_multi(work14, self.inv_Y, self.E, work=work13)
-        work14 += work10
-        # Vectorize matrices as compact vectors to get square matrix
-        work = work14.view(np.float64).reshape((self.vn, -1))
-        Hyy = x_dot_dense(self.F2C_op, work.T)
-
-        # ======================================================================
         # Construct XX block of Hessian, i.e., (D2xxPhi + X^-1 ⊗ X^-1)
         # ======================================================================
-        # D2_XX Ψ(X, Y)[Hx] = Y^β/2 D(g')(Y^β/2 X Y^β/2)[Y^β/2 Hx Y^β/2] Y^β/2
-        congr_multi(work14, self.b2Y_Uyxy.conj().T, self.E, work=work13)
-        np.multiply(work14, self.D1yxy_dg, out=work10)
-        congr_multi(work11, self.b2Y_Uyxy, work10, work=work13)
+        # D2_XX Ψ(X, Y)[Hx] = D2g(X)[h(Y), Hx]
+        congr_multi(work14, self.Ux.conj().T, self.E, work=work13)
+        scnd_frechet_multi(work11 self.D2x_g, work14, self.Ux_hY_Ux, U=self.Ux,
+                           work1=work12, work2=work13, work3=work15)  # fmt: skip
         work11 *= self.zi
         # X^-1 Eij X^-1
         congr_multi(work12, self.inv_X, self.E, work=work13)
@@ -698,13 +665,28 @@ class RenyiEntr(Cone):
         Hxx = x_dot_dense(self.F2C_op, work.T)
 
         # ======================================================================
+        # Construct YY block of Hessian, i.e., (D2yyxPhi + Y^-1 ⊗ Y^-1)
+        # ======================================================================
+        # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[g(X), Hy]
+        congr_multi(work14, self.Uy.conj().T, self.E, work=work13)
+        scnd_frechet_multi(work11 self.D2y_g, work14, self.Uy_hX_Uy, U=self.Uy,
+                    work1=work12, work2=work13, work3=work15)  # fmt: skip
+        work10 *= self.zi
+        # Y^1 Eij Y^-1
+        congr_multi(work12, self.inv_Y, self.E, work=work13)
+        work12 += work10
+        # Vectorize matrices as compact vectors to get square matrix
+        work = work12.view(np.float64).reshape((self.vn, -1))
+        Hyy = x_dot_dense(self.F2C_op, work.T)
+
+        # ======================================================================
         # Construct XY block of Hessian, i.e., D2xyPhi
         # ======================================================================
-        # D2_XY Ψ(X, Y)[Hy] = α * Y^β/2 Dg(Y^β/2 X Y^β/2)[Y^-β/2 Dh(Y)[Hy] Y^-β/2] Y^β/2
-        work14 *= self.D1yxy_g
-        congr_multi(work12, self.Uy_ib2Y_Uyxy, work14, work=work13)
-        work12 *= self.alpha * self.D1y_h
-        congr_multi(work14, self.Uy, work12, work=work13)
+        # D2_XY Ψ(X, Y)[Hy] = Dg(X)[Dh(Y)[Hy]]
+        work14 *= self.D1y_h
+        congr_multi(work12, self.UxUy, work14, work=work13)
+        work12 *= self.D1x_g
+        congr_multi(work14, self.Ux, work12, work=work13)
         work14 *= self.zi
         # Vectorize matrices as compact vectors to get square matrix
         work = work14.view(np.float64).reshape((self.vn, -1))
