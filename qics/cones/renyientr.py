@@ -334,8 +334,8 @@ class RenyiEntr(Cone):
         # Hessian products of Renyi entropy
         # D2_XX Ψ(X, Y)[Hx] = D2g(X)[h(Y), Hx]
         congr_multi(work2, self.Ux.conj().T, self.Ax, work=work4)
-        scnd_frechet_multi(work5 self.D2x_g, work2, self.Ux_hY_Ux, U=self.Ux,
-                           work1=work3, work2=work4 work3=work6)  # fmt: skip
+        scnd_frechet_multi(work5, self.D2x_g, work2, self.Ux_hY_Ux, U=self.Ux,
+                           work1=work3, work2=work4, work3=work6)  # fmt: skip
 
         # D2_XY Ψ(X, Y)[Hy] = Dg(X)[Dh(Y)[Hy]]
         congr_multi(work1, self.Uy.conj().T, self.Ay, work=work4)
@@ -362,8 +362,8 @@ class RenyiEntr(Cone):
         # ======================================================================
         # Hessian products of sandwiched Renyi entropy
         # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[g(X), Hy]
-        scnd_frechet_multi(work5 self.D2y_h, work1, self.Uy_gX_Uy, U=self.Uy,
-                           work1=work3, work2=work4 work3=work6)  # fmt: skip
+        scnd_frechet_multi(work5, self.D2y_h, work1, self.Uy_gX_Uy, U=self.Uy,
+                           work1=work3, work2=work4, work3=work6)  # fmt: skip
 
         # D2_YX Ψ(X, Y)[Hx] = Dh(Y)[Dg(X)[Hx]]
         work2 *= self.D1x_g
@@ -654,7 +654,7 @@ class RenyiEntr(Cone):
         # ======================================================================
         # D2_XX Ψ(X, Y)[Hx] = D2g(X)[h(Y), Hx]
         congr_multi(work14, self.Ux.conj().T, self.E, work=work13)
-        scnd_frechet_multi(work11 self.D2x_g, work14, self.Ux_hY_Ux, U=self.Ux,
+        scnd_frechet_multi(work11, self.D2x_g, work14, self.Ux_hY_Ux, U=self.Ux,
                            work1=work12, work2=work13, work3=work15)  # fmt: skip
         work11 *= self.zi
         # X^-1 Eij X^-1
@@ -669,12 +669,12 @@ class RenyiEntr(Cone):
         # ======================================================================
         # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[g(X), Hy]
         congr_multi(work14, self.Uy.conj().T, self.E, work=work13)
-        scnd_frechet_multi(work11 self.D2y_g, work14, self.Uy_hX_Uy, U=self.Uy,
-                    work1=work12, work2=work13, work3=work15)  # fmt: skip
-        work10 *= self.zi
+        scnd_frechet_multi(work11, self.D2y_h, work14, self.Uy_gX_Uy, U=self.Uy,
+                           work1=work12, work2=work13, work3=work15)  # fmt: skip
+        work11 *= self.zi
         # Y^1 Eij Y^-1
         congr_multi(work12, self.inv_Y, self.E, work=work13)
-        work12 += work10
+        work12 += work11
         # Vectorize matrices as compact vectors to get square matrix
         work = work12.view(np.float64).reshape((self.vn, -1))
         Hyy = x_dot_dense(self.F2C_op, work.T)
@@ -698,8 +698,8 @@ class RenyiEntr(Cone):
 
         self.hess[: self.vn, : self.vn] = Hxx
         self.hess[self.vn :, self.vn :] = Hyy
-        self.hess[self.vn :, : self.vn] = Hxy
-        self.hess[: self.vn, self.vn :] = Hxy.T
+        self.hess[self.vn :, : self.vn] = Hxy.T
+        self.hess[: self.vn, self.vn :] = Hxy
 
         self.hess_fact = cho_fact(self.hess)
         self.invhess_aux_updated = True

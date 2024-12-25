@@ -72,7 +72,7 @@ class SandRenyiEntr(Cone):
 
     .. math::
 
-        \Psi_\alpha(X, Y) = \text{trace}\!\left[ \left(Y^\frac{1-\alpha}{2\alpha} X 
+        \Psi_\alpha(X, Y) = \text{tr}\!\left[ \left(Y^\frac{1-\alpha}{2\alpha} X 
         Y^\frac{1-\alpha}{2\alpha} \right)^\alpha \right].
 
     Note that :math:`\Psi_\alpha` is jointly concave for :math:`\alpha\in[1/2, 1)`, and
