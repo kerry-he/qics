@@ -35,7 +35,7 @@ class SandRenyiEntr(Cone):
         \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq -\text{tr}[ ( 
         Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \},
 
-    when :math:`\alpha\in[1/2, 1)`, and
+    when :math:`\alpha\in[1/2, 1]`, and
 
     .. math::
 
@@ -43,7 +43,7 @@ class SandRenyiEntr(Cone):
         \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[ ( 
         Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \},
 
-    when :math:`\alpha\in(1, 2]`.
+    when :math:`\alpha\in[1, 2]`.
 
     Parameters
     ----------
@@ -58,6 +58,7 @@ class SandRenyiEntr(Cone):
 
     See also
     --------
+    RenyiEntr : Renyi entropy
     QuantRelEntr : Quantum relative entropy
 
     Notes
@@ -75,8 +76,8 @@ class SandRenyiEntr(Cone):
         \Psi_\alpha(X, Y) = \text{tr}\!\left[ \left(Y^\frac{1-\alpha}{2\alpha} X 
         Y^\frac{1-\alpha}{2\alpha} \right)^\alpha \right].
 
-    Note that :math:`\Psi_\alpha` is jointly concave for :math:`\alpha\in[1/2, 1)`, and
-    jointly convex for :math:`\alpha\in(1, 2]`, whereas :math:`D_\alpha` is jointly
+    Note that :math:`\Psi_\alpha` is jointly concave for :math:`\alpha\in[1/2, 1]`, and
+    jointly convex for :math:`\alpha\in[1, 2]`, whereas :math:`D_\alpha` is jointly
     convex for :math:`\alpha\in[1/2, 1)`, but is neither convex nor concave for 
     :math:`\alpha\in(1, 2]`.
 

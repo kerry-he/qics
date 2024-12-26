@@ -64,6 +64,17 @@ Operator perspective cones
    * - :class:`~qics.cones.OpPerspecEpi`\ (n, func[, iscomplex])
      - Operator perspective epigraph
 
+Renyi entropy cones
+---------------------------
+
+.. list-table::
+   :widths: 50 50
+
+   * - :class:`~qics.cones.RenyiEntr`\ (n, alpha[, iscomplex])
+     - Renyi entropy cone
+   * - :class:`~qics.cones.SandRenyiEntr`\ (n, alpha[, iscomplex])
+     - Sandwiched Renyi entropy cone
+
 
 .. toctree::
    :hidden:
@@ -78,6 +89,7 @@ Operator perspective cones
    cones/QuantRelEntr
    cones/QuantCondEntr
    cones/QuantKeyDist
-   cones/SandRenyiEntr
    cones/OpPerspecTr
    cones/OpPerspecEpi
+   cones/RenyiEntr
+   cones/SandRenyiEntr

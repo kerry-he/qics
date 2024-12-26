@@ -56,6 +56,10 @@ supports include:
      - :class:`qics.cones.OpPerspecEpi`
      - :math:`\text{cl}\{ (T, X, Y) \in \mathbb{H}^n \times \mathbb{H}^n_{++}
        \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \}`
+   * - Renyi entropy
+     - :class:`qics.cones.RenyiEntr`
+     - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
+       \mathbb{H}^n_{++} : t \geq \text{tr}[ X^\alpha Y^{1-\alpha} ] \}`
    * - Sandwiched Renyi entropy
      - :class:`qics.cones.SandRenyiEntr`
      - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 

@@ -35,7 +35,7 @@ class RenyiEntr(Cone):
         \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq -\text{tr}[ 
         X^\alpha Y^{1-\alpha} ] \},
 
-    when :math:`\alpha\in[1/2, 1)`, and
+    when :math:`\alpha\in[0, 1]`, and
 
     .. math::
 
@@ -43,7 +43,7 @@ class RenyiEntr(Cone):
         \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[ 
         X^\alpha Y^{1-\alpha} ] \},
 
-    when :math:`\alpha\in(1, 2]`.
+    when :math:`\alpha\in[-1, 0] \cup [1, 2]`.
 
     Parameters
     ----------
@@ -58,6 +58,7 @@ class RenyiEntr(Cone):
 
     See also
     --------
+    SandRenyiEntr : Sandwiched Renyi entropy
     QuantRelEntr : Quantum relative entropy
 
     Notes
@@ -74,10 +75,10 @@ class RenyiEntr(Cone):
 
         \Psi_\alpha(X, Y) = \text{tr}[ X^\alpha Y^{1-\alpha} ].
 
-    Note that :math:`\Psi_\alpha` is jointly concave for :math:`\alpha\in[1/2, 1)`, and
-    jointly convex for :math:`\alpha\in(1, 2]`, whereas :math:`D_\alpha` is jointly
-    convex for :math:`\alpha\in[1/2, 1)`, but is neither convex nor concave for 
-    :math:`\alpha\in(1, 2]`.
+    Note that :math:`\Psi_\alpha` is jointly concave for :math:`\alpha\in[1/2, 1]`, and
+    jointly convex for :math:`\alpha\in[-1, 0] \cup [1, 2]`, whereas :math:`D_\alpha` is 
+    jointly convex for :math:`\alpha\in[0, 1)`, but is neither convex nor concave for 
+    :math:`\alpha\in[-1, 0) \cup (1, 2]`.
 
     Note that due to monotonicity of :math:`x \mapsto \log(x)`, we can minimize the
     sandwiched Renyi entropy by using the identities
@@ -87,14 +88,22 @@ class RenyiEntr(Cone):
         \min_{(X,Y)\in\mathcal{C}} D_\alpha(X \| Y)  = \frac{1}{\alpha - 1} 
         \log\left( \max_{(X,Y)\in\mathcal{C}} \Psi_\alpha(X, Y) \right),
 
-    if :math:`\alpha\in[1/2, 1)`, and
+    if :math:`\alpha\in[0, 1)`, and
 
     .. math::
 
         \min_{(X,Y)\in\mathcal{C}} D_\alpha(X \| Y)  = \frac{1}{\alpha - 1} 
         \log\left( \min_{(X,Y)\in\mathcal{C}} \Psi_\alpha(X, Y) \right),
     
-    if :math:`\alpha\in(1, 2]`.
+    if :math:`\alpha\in(1, 2]`. Similarly, we can maximize the sandwiched Renyi entropy
+    by using the identities
+
+    .. math::
+
+        \max_{(X,Y)\in\mathcal{C}} D_\alpha(X \| Y)  = \frac{1}{\alpha - 1}
+        \log\left( \min_{(X,Y)\in\mathcal{C}} \Psi_\alpha(X, Y) \right),
+
+    for :math:`\alpha\in[-1, 0]`.
 
     """
 
@@ -247,8 +256,6 @@ class RenyiEntr(Cone):
             self.update_hessprod_aux()
 
         (Ht, Hx, Hy) = H
-
-        self.UxUy = self.Ux.conj().T @ self.Uy
 
         UHxU = self.Ux.conj().T @ Hx @ self.Ux
         UHyU = self.Uy.conj().T @ Hy @ self.Uy
@@ -583,6 +590,7 @@ class RenyiEntr(Cone):
         self.D2y_h = D2_f(self.Dy, self.D1y_h, self.d2h(self.Dy))
 
         # Preparing other required variables
+        self.UxUy = self.Ux.conj().T @ self.Uy
         self.zi2 = self.zi * self.zi
 
         self.hess_aux_updated = True
