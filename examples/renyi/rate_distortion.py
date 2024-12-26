@@ -51,8 +51,7 @@ h = np.block([
 ])  # fmt: skip
 
 # Define cones to optimize over
-# cones = [qics.cones.QuantRelEntr(N), qics.cones.NonNegOrthant(1)]
-alpha = 1.00001
+alpha = 1.01
 cones = [qics.cones.SandRenyiEntr(N, alpha), qics.cones.NonNegOrthant(1)]
 
 # Initialize model and solver objects
@@ -61,5 +60,3 @@ solver = qics.Solver(model, verbose=3)
 
 # Solve problem
 info = solver.solve()
-
-print(np.log(info["p_obj"]) / (alpha - 1))

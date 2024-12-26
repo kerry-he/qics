@@ -42,7 +42,7 @@ pages.
     .. grid-item-card:: Quantum key distribution
         :link: qrep/qkd.html
 
-        How to can compute the quantum key rate for a given quantum
+        How to compute the quantum key rate for a given quantum
         cryptographic protocol. 
 
     .. grid-item-card:: Nearest matrix
@@ -62,6 +62,12 @@ pages.
 
         Some examples involving operator relative entropies and weighted 
         geometric means.
+
+    .. grid-item-card:: Renyi entropies
+        :link: renyi.html
+
+        Some examples involving minimizing Renyi entropies and sandwiched
+        Renyi entropies.
 
 
 .. toctree::

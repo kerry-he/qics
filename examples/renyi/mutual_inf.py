@@ -21,7 +21,7 @@ cm = vec_dim(m, compact=True, iscomplex=True)
 
 # Define random problem data
 rhoAB = density_matrix(N, iscomplex=True)
-tauA = qics.quantum.p_tr(rhoAB, (n, m), 1)
+rhoA = qics.quantum.p_tr(rhoAB, (n, m), 1)
 
 # Model problem using primal variables (t, sigB)
 # Define objective function
@@ -33,12 +33,12 @@ A = np.block([[0.0, trace]])
 b = np.array([[1.0]])
 
 # Build conic linear constraints
-tauA_kron = lin_to_mat(lambda X: np.kron(tauA, X), (m, N), compact=(True, False), iscomplex=True)
+rhoA_kron = lin_to_mat(lambda X: np.kron(rhoA, X), (m, N), compact=(True, False), iscomplex=True)
 
 G = np.block([
     [-1.0,              np.zeros((1, cm)) ],   # t_sre = t
     [np.zeros((vN, 1)), np.zeros((vN, cm))],   # X_sre = rhoAB
-    [np.zeros((vN, 1)), -tauA_kron         ],  # Y_sre = tauA x sigB
+    [np.zeros((vN, 1)), -rhoA_kron         ],  # Y_sre = rhoA x sigB
 ])  # fmt: skip
 
 h = np.block([
@@ -57,18 +57,3 @@ solver = qics.Solver(model, verbose=3)
 
 # Solve problem
 info = solver.solve()
-
-
-# Check if satisfies identity by: https://doi.org/10.1063/1.4964755
-def mpower(X, p):
-    D, U = np.linalg.eigh(X)
-    return (U * np.power(D, p)) @ U.conj().T
-
-sigB = vec_to_mat(info["x_opt"][1:], iscomplex=True, compact=True)
-
-temp = mpower(np.kron(tauA, sigB), (1-alpha)/(2*alpha))
-temp = mpower(temp @ rhoAB @ temp, alpha)
-
-temp = qics.quantum.p_tr(temp, (n, m), 0) / np.trace(temp)
-
-print(np.linalg.norm(sigB - temp))

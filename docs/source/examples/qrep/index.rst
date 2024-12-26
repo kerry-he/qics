@@ -12,7 +12,7 @@ quantum information theory, which we organized into the following categories.
     .. grid-item-card:: Quantum key distribution
         :link: qkd.html
 
-        How to can compute the quantum key rate for a given quantum
+        How to compute the quantum key rate for a given quantum
         cryptographic protocol. 
 
     .. grid-item-card:: Nearest matrix
@@ -33,6 +33,12 @@ quantum information theory, which we organized into the following categories.
         Some examples involving operator relative entropies and weighted 
         geometric means.
 
+    .. grid-item-card:: Renyi entropies
+        :link: renyi.html
+
+        Some examples involving minimizing Renyi entropies and sandwiched
+        Renyi entropies.
+
 
 .. toctree::
    :hidden:
@@ -42,3 +48,4 @@ quantum information theory, which we organized into the following categories.
    nearest.rst
    channel.rst
    opper.rst
+   renyi.rst
