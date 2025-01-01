@@ -8,7 +8,7 @@ import numpy as np
 import qics
 import qics.quantum
 from qics.quantum.random import density_matrix
-from qics.vectorize import lin_to_mat, vec_dim, mat_to_vec, vec_to_mat
+from qics.vectorize import lin_to_mat, vec_dim, mat_to_vec
 
 np.random.seed(1)
 
@@ -33,7 +33,9 @@ A = np.block([[0.0, trace]])
 b = np.array([[1.0]])
 
 # Build conic linear constraints
-rhoA_kron = lin_to_mat(lambda X: np.kron(rhoA, X), (m, N), compact=(True, False), iscomplex=True)
+rhoA_kron = lin_to_mat(
+    lambda X: np.kron(rhoA, X), (m, N), compact=(True, False), iscomplex=True
+)
 
 G = np.block([
     [-1.0,              np.zeros((1, cm)) ],   # t_sre = t
@@ -42,7 +44,7 @@ G = np.block([
 ])  # fmt: skip
 
 h = np.block([
-    [0.0], 
+    [0.0              ], 
     [mat_to_vec(rhoAB)], 
     [np.zeros((vN, 1))], 
 ])  # fmt: skip
@@ -53,7 +55,7 @@ cones = [qics.cones.SandRenyiEntr(N, alpha, True)]
 
 # Initialize model and solver objects
 model = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
-solver = qics.Solver(model, verbose=3)
+solver = qics.Solver(model)
 
 # Solve problem
 info = solver.solve()

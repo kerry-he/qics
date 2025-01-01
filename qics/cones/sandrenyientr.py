@@ -26,13 +26,13 @@ from qics.vectorize import get_full_to_compact_op, vec_to_mat
 
 
 class SandRenyiEntr(Cone):
-    r"""A class representing the epigraph or hypograph of the trace function used to 
+    r"""A class representing the epigraph or hypograph of the trace function used to
     define the sandwiched Renyi entropy, i.e.,
 
     .. math::
 
         \mathcal{SRE}_{n, \alpha} = \text{cl} \{ (t, X, Y) \in \mathbb{R} \times
-        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq -\text{tr}[ ( 
+        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq -\text{tr}[ (
         Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \},
 
     when :math:`\alpha\in[1/2, 1]`, and
@@ -40,7 +40,7 @@ class SandRenyiEntr(Cone):
     .. math::
 
         \mathcal{SRE}_{n, \alpha} = \text{cl}\{ (t, X, Y) \in \mathbb{R} \times
-        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[ ( 
+        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[ (
         Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \},
 
     when :math:`\alpha\in[1, 2]`.
@@ -73,12 +73,12 @@ class SandRenyiEntr(Cone):
 
     .. math::
 
-        \Psi_\alpha(X, Y) = \text{tr}\!\left[ \left(Y^\frac{1-\alpha}{2\alpha} X 
+        \Psi_\alpha(X, Y) = \text{tr}\!\left[ \left(Y^\frac{1-\alpha}{2\alpha} X
         Y^\frac{1-\alpha}{2\alpha} \right)^\alpha \right].
 
     Note that :math:`\Psi_\alpha` is jointly concave for :math:`\alpha\in[1/2, 1]`, and
     jointly convex for :math:`\alpha\in[1, 2]`, whereas :math:`D_\alpha` is jointly
-    convex for :math:`\alpha\in[1/2, 1)`, but is neither convex nor concave for 
+    convex for :math:`\alpha\in[1/2, 1)`, but is neither convex nor concave for
     :math:`\alpha\in(1, 2]`.
 
     Note that due to monotonicity of :math:`x \mapsto \log(x)`, we can minimize the
@@ -86,16 +86,16 @@ class SandRenyiEntr(Cone):
 
     .. math::
 
-        \min_{(X,Y)\in\mathcal{C}} D_\alpha(X \| Y)  = \frac{1}{\alpha - 1} 
+        \min_{(X,Y)\in\mathcal{C}} D_\alpha(X \| Y)  = \frac{1}{\alpha - 1}
         \log\left( \max_{(X,Y)\in\mathcal{C}} \Psi_\alpha(X, Y) \right),
 
     if :math:`\alpha\in[1/2, 1)`, and
 
     .. math::
 
-        \min_{(X,Y)\in\mathcal{C}} D_\alpha(X \| Y)  = \frac{1}{\alpha - 1} 
+        \min_{(X,Y)\in\mathcal{C}} D_\alpha(X \| Y)  = \frac{1}{\alpha - 1}
         \log\left( \min_{(X,Y)\in\mathcal{C}} \Psi_\alpha(X, Y) \right),
-    
+
     if :math:`\alpha\in(1, 2]`.
 
     """

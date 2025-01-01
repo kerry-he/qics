@@ -138,5 +138,6 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(gdict["info"]["exit_status"], "solved")
         self.assertAlmostEqual(gdict["info"]["p_obj"], 1.0016057, places=6)
 
+
 if __name__ == "__main__":
     unittest.main()
