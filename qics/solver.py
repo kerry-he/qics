@@ -14,10 +14,11 @@ import scipy as sp
 from qics import __version__
 from qics._stepper import KKTSolver, NonSymStepper, SymStepper
 from qics._utils.linalg import is_full_col_rank, norm_inf
-from qics.cones import OpPerspecEpi, OpPerspecTr, QuantRelEntr
+from qics.cones import OpPerspecEpi, OpPerspecTr, QuantRelEntr, SandRenyiEntr, RenyiEntr
 from qics.point import Point
 
-spinner = itertools.cycle(["-", "/", "|", "\\"])
+SLOW_CONES = (QuantRelEntr, OpPerspecEpi, OpPerspecTr, SandRenyiEntr, RenyiEntr)
+SPINNER = itertools.cycle(["-", "/", "|", "\\"])
 
 
 class Solver:
@@ -116,7 +117,6 @@ class Solver:
         cones = model.cones
         if use_invhess is None:
             # Default decision tree for whether to avoid inverse Hessian oracles
-            SLOW_CONES = (QuantRelEntr, OpPerspecEpi, OpPerspecTr)
             q_slow_cones = sum([sum(K.dim) for K in cones if isinstance(K, SLOW_CONES)])
 
             use_invhess = model.issymmetric or q_slow_cones / model.q <= 0.55 \
@@ -309,7 +309,7 @@ class Solver:
         if self.verbose >= 2:
             self.print_iter()
         elif self.verbose:
-            sys.stdout.write(next(spinner))
+            sys.stdout.write(next(SPINNER))
             sys.stdout.flush()
             sys.stdout.write("\b")
 

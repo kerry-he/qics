@@ -26,13 +26,13 @@ from qics.vectorize import get_full_to_compact_op, vec_to_mat
 
 
 class RenyiEntr(Cone):
-    r"""A class representing the epigraph or hypograph of the trace function used to 
+    r"""A class representing the epigraph or hypograph of the trace function used to
     define the Renyi entropy, i.e.,
 
     .. math::
 
         \mathcal{RE}_{n, \alpha} = \text{cl} \{ (t, X, Y) \in \mathbb{R} \times
-        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq -\text{tr}[ 
+        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq -\text{tr}[
         X^\alpha Y^{1-\alpha} ] \},
 
     when :math:`\alpha\in[0, 1]`, and
@@ -40,7 +40,7 @@ class RenyiEntr(Cone):
     .. math::
 
         \mathcal{RE}_{n, \alpha} = \text{cl} \{ (t, X, Y) \in \mathbb{R} \times
-        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[ 
+        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[
         X^\alpha Y^{1-\alpha} ] \},
 
     when :math:`\alpha\in[-1, 0] \cup [1, 2]`.
@@ -76,8 +76,8 @@ class RenyiEntr(Cone):
         \Psi_\alpha(X, Y) = \text{tr}[ X^\alpha Y^{1-\alpha} ].
 
     Note that :math:`\Psi_\alpha` is jointly concave for :math:`\alpha\in[1/2, 1]`, and
-    jointly convex for :math:`\alpha\in[-1, 0] \cup [1, 2]`, whereas :math:`D_\alpha` is 
-    jointly convex for :math:`\alpha\in[0, 1)`, but is neither convex nor concave for 
+    jointly convex for :math:`\alpha\in[-1, 0] \cup [1, 2]`, whereas :math:`D_\alpha` is
+    jointly convex for :math:`\alpha\in[0, 1)`, but is neither convex nor concave for
     :math:`\alpha\in[-1, 0) \cup (1, 2]`.
 
     Note that due to monotonicity of :math:`x \mapsto \log(x)`, we can minimize the
@@ -85,16 +85,16 @@ class RenyiEntr(Cone):
 
     .. math::
 
-        \min_{(X,Y)\in\mathcal{C}} D_\alpha(X \| Y)  = \frac{1}{\alpha - 1} 
+        \min_{(X,Y)\in\mathcal{C}} D_\alpha(X \| Y)  = \frac{1}{\alpha - 1}
         \log\left( \max_{(X,Y)\in\mathcal{C}} \Psi_\alpha(X, Y) \right),
 
     if :math:`\alpha\in[0, 1)`, and
 
     .. math::
 
-        \min_{(X,Y)\in\mathcal{C}} D_\alpha(X \| Y)  = \frac{1}{\alpha - 1} 
+        \min_{(X,Y)\in\mathcal{C}} D_\alpha(X \| Y)  = \frac{1}{\alpha - 1}
         \log\left( \min_{(X,Y)\in\mathcal{C}} \Psi_\alpha(X, Y) \right),
-    
+
     if :math:`\alpha\in(1, 2]`. Similarly, we can maximize the sandwiched Renyi entropy
     by using the identities
 
@@ -498,7 +498,7 @@ class RenyiEntr(Cone):
         # Second derivatives of D_X Ψ(X, Y)
         D3PhiXXX = thrd_frechet(self.Dx, self.D2x_g, self.d3g(self.Dx), self.Ux, 
                                 self.Ux_hY_Ux, UHxU)  # fmt: skip
-        
+
         work = self.UxUy @ (self.D1y_h * UHyU) @ self.UxUy.conj().T
         D3PhiXXY = scnd_frechet(self.D2x_g, UHxU, work, U=self.Ux)
 
@@ -510,7 +510,7 @@ class RenyiEntr(Cone):
         # Second derivatives of D_Y Ψ(X, Y)
         D3PhiYYY = thrd_frechet(self.Dy, self.D2y_h, self.d3h(self.Dy), self.Uy, 
                                 self.Uy_gX_Uy, UHyU)  # fmt: skip
-        
+
         work = self.UxUy.conj().T @ (self.D1x_g * UHxU) @ self.UxUy
         D3PhiYYX = scnd_frechet(self.D2y_h, UHyU, work, U=self.Uy)
 
