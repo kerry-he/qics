@@ -21,11 +21,11 @@ from qics._utils.linalg import (
     inp,
     x_dot_dense,
 )
-from qics.cones.base import Cone
+from qics.cones.base import Cone, get_perspective_derivatives
 from qics.vectorize import get_full_to_compact_op, vec_to_mat
 
 
-class SandRenyiEntr(Cone):
+class TrSandRenyiEntr(Cone):
     r"""A class representing the epigraph or hypograph of the trace function used to 
     define the sandwiched Renyi entropy, i.e.,
 
@@ -101,35 +101,32 @@ class SandRenyiEntr(Cone):
     """
 
     def __init__(self, n, alpha, iscomplex=False):
-        assert 0.5 <= alpha and alpha < 1
+        assert 0.5 <= alpha and alpha <= 2
 
         self.n = n
         self.alpha = alpha
         self.iscomplex = iscomplex
 
-        self.nu = 2 + 2 * n  # Barrier parameter
+        self.nu = 1 + 2 * n  # Barrier parameter
 
         if iscomplex:
             self.vn = n * n
-            self.dim = [1, 1, 2 * n * n, 2 * n * n]
-            self.type = ["r", "r", "h", "h"]
+            self.dim = [1, 2 * n * n, 2 * n * n]
+            self.type = ["r", "h", "h"]
             self.dtype = np.complex128
         else:
             self.vn = n * (n + 1) // 2
-            self.dim = [1, 1, n * n, n * n]
-            self.type = ["r", "r", "s", "s"]
+            self.dim = [1, n * n, n * n]
+            self.type = ["r", "s", "s"]
             self.dtype = np.float64
 
-        self.idx_X = slice(2, 2 + self.dim[1])
-        self.idx_Y = slice(2 + self.dim[1], sum(self.dim))
+        self.idx_X = slice(1, 1 + self.dim[1])
+        self.idx_Y = slice(1 + self.dim[1], sum(self.dim))
 
         # Get function handles for g(x)=x^α
         # and their first, second and third derivatives
-        a = alpha
-        self.g = lambda x: np.power(x, a)
-        self.dg = lambda x: np.power(x, a - 1) * a
-        self.d2g = lambda x: np.power(x, a - 2) * (a * (a - 1))
-        self.d3g = lambda x: np.power(x, a - 3) * (a * (a - 1) * (a - 2))
+        perspective_derivatives = get_perspective_derivatives(alpha)
+        self.g, self.dg, self.d2g, self.d3g = perspective_derivatives["g"]
 
         # Get function handles for h(x)=x^β where β=(1-α)/α
         # and their first, second and third derivatives
@@ -161,7 +158,6 @@ class SandRenyiEntr(Cone):
 
         point = [
             np.array([[t0]]),
-            np.array([[1.0]]),
             np.eye(self.n, dtype=self.dtype) * x0,
             np.eye(self.n, dtype=self.dtype) * y0,
         ]
@@ -171,7 +167,6 @@ class SandRenyiEntr(Cone):
         out[0][:] = point[0]
         out[1][:] = point[1]
         out[2][:] = point[2]
-        out[3][:] = point[3]
 
         return out
 
@@ -181,7 +176,7 @@ class SandRenyiEntr(Cone):
 
         self.feas_updated = True
 
-        (self.t, self.u, self.X, self.Y) = self.primal
+        (self.t, self.X, self.Y) = self.primal
 
         # Check that X and Y are positive definite
         self.Dx, self.Ux = np.linalg.eigh(self.X)
@@ -217,18 +212,16 @@ class SandRenyiEntr(Cone):
             self.feas = False
             return self.feas
 
-        # Check that t > log( tr[ ( Y^(β/2) X Y^(β/2) )^α ] ) / (α - 1)
-        self.Tr = np.sum(self.g(self.Dyxy))
-        self.z = (self.t - self.u * np.log(self.Tr / self.u) / (self.alpha - 1))[0, 0]
+        # Check that t > tr[ ( Y^(β/2) X Y^(β/2) )^α ]
+        self.g_Dyxy = self.g(self.Dyxy)
+        self.z = self.t[0, 0] - np.sum(self.g_Dyxy)
 
         self.feas = self.z > 0
         return self.feas
 
     def get_val(self):
         assert self.feas_updated
-        func = -np.log(self.z)
-        func -= np.sum(np.log(self.Dx)) + np.sum(np.log(self.Dy)) + np.log(self.u[0, 0])
-        return func
+        return -np.log(self.z) - np.sum(np.log(self.Dx)) - np.sum(np.log(self.Dy))
 
     def update_grad(self):
         assert self.feas_updated
@@ -245,18 +238,13 @@ class SandRenyiEntr(Cone):
         self.rtX_Uy = self.rt2_X @ self.Uy
         self.UX_dgXYX_XU = self.rtX_Uy.conj().T @ self.dg_XYX @ self.rtX_Uy
 
-        # Compute gradients of trace sandwiched Renyi entropy
+        # Compute gradients of sandwiched Renyi entropy
         # D_X Ψ(X, Y) = Y^β/2 g'( Y^β/2 X Y^β/2 ) Y^β/2
-        self.DTrX = self.beta2_Y @ self.dg_YXY @ self.beta2_Y
-        self.DTrX = (self.DTrX + self.DTrX.conj().T) * 0.5
+        self.DPhiX = self.beta2_Y @ self.dg_YXY @ self.beta2_Y
+        self.DPhiX = (self.DPhiX + self.DPhiX.conj().T) * 0.5
         # D_Y Ψ(X, Y) = Uy ( h^[1](Dy) .* [Uy' X^½ g'( X^½ Y^β X^½ ) X^½ Uy] ) Uy'
-        self.DTrY = self.Uy @ (self.D1y_h * self.UX_dgXYX_XU) @ self.Uy.conj().T
-        self.DTrY = (self.DTrY + self.DTrY.conj().T) * 0.5
-
-        # Compute gradient of sandwiched Renyi entropy
-        self.DPhiu = (np.log(self.Tr / self.u) - 1) / (self.alpha - 1)
-        self.DPhiX = (self.u * self.DTrX / self.Tr) / (self.alpha - 1)
-        self.DPhiY = (self.u * self.DTrY / self.Tr) / (self.alpha - 1)
+        self.DPhiY = self.Uy @ (self.D1y_h * self.UX_dgXYX_XU) @ self.Uy.conj().T
+        self.DPhiY = (self.DPhiY + self.DPhiY.conj().T) * 0.5
 
         # Compute X^-1 and Y^-1
         inv_Dx = np.reciprocal(self.Dx)
@@ -272,7 +260,6 @@ class SandRenyiEntr(Cone):
 
         self.grad = [
             -self.zi,
-            self.zi * self.DPhiu - 1 / self.u,
             self.zi * self.DPhiX - self.inv_X,
             self.zi * self.DPhiY - self.inv_Y,
         ]
@@ -284,54 +271,36 @@ class SandRenyiEntr(Cone):
         if not self.hess_aux_updated:
             self.update_hessprod_aux()
 
-        (Ht, Hu, Hx, Hy) = H
+        (Ht, Hx, Hy) = H
 
         UHyU = self.Uy.conj().T @ Hy @ self.Uy
         UYHxYU = self.b2Y_Uyxy.conj().T @ Hx @ self.b2Y_Uyxy
 
-        # Hessian product of trace sandwiched Renyi entropy
+        # Hessian product of sandwiched Renyi entropy
         # D2_XX Ψ(X, Y)[Hx] = Y^β/2 D(g')(Y^β/2 X Y^β/2)[Y^β/2 Hx Y^β/2] Y^β/2
-        D2TrXXH = self.b2Y_Uyxy @ (self.D1yxy_dg * UYHxYU) @ self.b2Y_Uyxy.conj().T
+        D2PhiXXH = self.b2Y_Uyxy @ (self.D1yxy_dg * UYHxYU) @ self.b2Y_Uyxy.conj().T
         # D2_XY Ψ(X, Y)[Hy] = α * Y^β/2 Dg(Y^β/2 X Y^β/2)[Y^-β/2 Dh(Y)[Hy] Y^-β/2] Y^β/2
         work = self.alpha * self.D1y_h * UHyU
         work = self.Uy_ib2Y_Uyxy.conj().T @ work @ self.Uy_ib2Y_Uyxy
-        D2TrXYH = self.b2Y_Uyxy @ (self.D1yxy_g * work) @ self.b2Y_Uyxy.conj().T
+        D2PhiXYH = self.b2Y_Uyxy @ (self.D1yxy_g * work) @ self.b2Y_Uyxy.conj().T
         # D2_YX Ψ(X, Y)[Hx] = α * Dh(Y)[Y^-β/2 Dg(Y^β/2 X Y^β/2)[Y^β/2 Hx Y^β/2] Y^-β/2]
         work = self.alpha * self.D1yxy_g * UYHxYU
         work = self.Uy_ib2Y_Uyxy @ work @ self.Uy_ib2Y_Uyxy.conj().T
-        D2TrYXH = self.Uy @ (work * self.D1y_h) @ self.Uy.conj().T
+        D2PhiYXH = self.Uy @ (work * self.D1y_h) @ self.Uy.conj().T
         # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½]
         #                     + Dh(Y)[X^½ D(g')(X^½ Y^β X^½)[X^½ Dh(X)[Hx] X^½] X^½]
         work = self.Uy_rtX_Uxyx.conj().T @ (self.D1y_h * UHyU) @ self.Uy_rtX_Uxyx
         work = self.Uy_rtX_Uxyx @ (self.D1xyx_dg * work) @ self.Uy_rtX_Uxyx.conj().T
-        D2TrYYH = self.Uy @ (self.D1y_h * work) @ self.Uy.conj().T
-        D2TrYYH += scnd_frechet(self.D2y_h, self.UX_dgXYX_XU, UHyU, U=self.Uy)
-
-        D2TrXH = D2TrXXH + D2TrXYH
-        D2TrYH = D2TrYXH + D2TrYYH
-
-        # Hessian product of sandwiched Renyi entropy
-        chi = (Hu - (inp(self.DTrX, Hx) + inp(self.DTrY, Hy)) * self.u) / self.Tr
-        D2PhiuH = -chi * self.u / (self.alpha - 1)
-        D2PhiXH = (self.DTrX * chi + self.u * D2TrXH) / self.Tr / (self.alpha - 1)
-        D2PhiYH = (self.DTrY * chi + self.u * D2TrYH) / self.Tr / (self.alpha - 1)
+        D2PhiYYH = self.Uy @ (self.D1y_h * work) @ self.Uy.conj().T
+        D2PhiYYH += scnd_frechet(self.D2y_h, self.UX_dgXYX_XU, UHyU, U=self.Uy)
 
         # ======================================================================
         # Hessian products with respect to t
         # ======================================================================
         # D2_t F(t, X, Y)[Ht, Hx, Hy] = (Ht - D_X Ψ(X, Y)[Hx] - D_Y Ψ(X, Y)[Hy]) / z^2
-        out_t = Ht - self.DPhiu * Hu - inp(self.DPhiX, Hx) - inp(self.DPhiY, Hy)
+        out_t = Ht - inp(self.DPhiX, Hx) - inp(self.DPhiY, Hy)
         out_t *= self.zi2
         out[0][:] = out_t
-
-        # ======================================================================
-        # Hessian products with respect to u
-        # ======================================================================
-        # D2_X F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X Ψ(X, Y)
-        #                               + (D2_XX Ψ(X, Y)[Hx] + D2_XY Ψ(X, Y)[Hy]) / z
-        #                               + X^-1 Hx X^-1
-        out_u = -out_t * self.DPhiu + self.zi * D2PhiuH + Hu / self.u / self.u
-        out[1][:] = out_u
 
         # ======================================================================
         # Hessian products with respect to X
@@ -339,9 +308,11 @@ class SandRenyiEntr(Cone):
         # D2_X F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X Ψ(X, Y)
         #                               + (D2_XX Ψ(X, Y)[Hx] + D2_XY Ψ(X, Y)[Hy]) / z
         #                               + X^-1 Hx X^-1
-        out_X = -out_t * self.DPhiX + self.zi * D2PhiXH + self.inv_X @ Hx @ self.inv_X
+        out_X = -out_t * self.DPhiX
+        out_X += self.zi * (D2PhiXYH + D2PhiXXH)
+        out_X += self.inv_X @ Hx @ self.inv_X
         out_X = (out_X + out_X.conj().T) * 0.5
-        out[2][:] = out_X
+        out[1][:] = out_X
 
         # ==================================================================
         # Hessian products with respect to Y
@@ -350,9 +321,11 @@ class SandRenyiEntr(Cone):
         # D2_Y F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_Y Ψ(X, Y)
         #                               + (D2_YX Ψ(X, Y)[Hx] + D2_YY Ψ(X, Y)[Hy]) / z
         #                               + Y^-1 Hy Y^-1
-        out_Y = -out_t * self.DPhiY + self.zi * D2PhiYH + self.inv_Y @ Hy @ self.inv_Y
+        out_Y = -out_t * self.DPhiY
+        out_Y += self.zi * (D2PhiYXH + D2PhiYYH)
+        out_Y += self.inv_Y @ Hy @ self.inv_Y
         out_Y = (out_Y + out_Y.conj().T) * 0.5
-        out[3][:] = out_Y
+        out[2][:] = out_Y
 
         return out
 

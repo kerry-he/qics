@@ -188,7 +188,7 @@ We can verify this by using **QICS** as follows.
 
         # Define cones to optimize over
         alpha = 0.5
-        cones = [qics.cones.SandRenyiEntr(N, alpha, True)]
+        cones = [qics.cones.TrSandRenyiEntr(N, alpha, True)]
 
         # Initialize model and solver objects
         model = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)

@@ -168,7 +168,7 @@ definitions and interfaces to all of the cones QICS currently support below.
      - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
        \mathbb{H}^n_{++} : t \geq \text{tr}[ X^\alpha Y^{1-\alpha} ] \}`
    * - Sandwiched Renyi entropy
-     - :class:`qics.cones.SandRenyiEntr`
+     - :class:`qics.cones.TrSandRenyiEntr`
      - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
        \mathbb{H}^n_{++} : t \geq \text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} 
        X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \}`

@@ -52,7 +52,7 @@ h = np.block([
 
 # Define cones to optimize over
 alpha = 1.01
-cones = [qics.cones.SandRenyiEntr(N, alpha), qics.cones.NonNegOrthant(1)]
+cones = [qics.cones.TrSandRenyiEntr(N, alpha), qics.cones.NonNegOrthant(1)]
 
 # Initialize model and solver objects
 model = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)

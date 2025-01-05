@@ -58,7 +58,7 @@ class RenyiEntr(Cone):
 
     See also
     --------
-    SandRenyiEntr : Sandwiched Renyi entropy
+    TrSandRenyiEntr : Sandwiched Renyi entropy
     QuantRelEntr : Quantum relative entropy
 
     Notes
