@@ -64,7 +64,7 @@ pages.
         geometric means.
 
     .. grid-item-card:: Renyi entropies
-        :link: renyi.html
+        :link: qrep/renyi.html
 
         Some examples involving minimizing Renyi entropies and sandwiched
         Renyi entropies.
