@@ -377,11 +377,26 @@ class SandRenyiEntr(Cone):
         DPhiX_vec = self.DPhiX.view(np.float64).reshape((-1, 1))
         DPhiY_vec = self.DPhiY.view(np.float64).reshape((-1, 1))
 
-        out_t = self.At - (self.Ax_vec @ DPhiX_vec).ravel()
-        out_t -= (self.Ay_vec @ DPhiY_vec).ravel()
+        out_t = self.At - self.Au * self.DPhiu[0, 0]
+        out_t -= (self.Ax_vec @ DPhiX_vec + self.Ay_vec @ DPhiY_vec).ravel()
         out_t *= self.zi2
 
         lhs[:, 0] = out_t
+
+        # ======================================================================
+        # Hessian products with respect to u
+        # ======================================================================
+        # D2_X F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X Ψ(X, Y)
+        #                               + (D2_XX Ψ(X, Y)[Hx] + D2_XY Ψ(X, Y)[Hy]) / z
+        #                               + X^-1 Hx X^-1
+        DTrX_vec = self.DTrX.view(np.float64).reshape((-1, 1))
+        DTrY_vec = self.DTrY.view(np.float64).reshape((-1, 1))
+
+        chi = self.Au - (self.Ax_vec @ DTrX_vec + self.Ay_vec @ DTrY_vec).ravel() * self.u
+        chi /= self.Tr
+
+        out_u = -chi * self.u / (self.alpha - 1)
+        lhs[:, 1] = out_u
 
         # ======================================================================
         # Hessian products with respect to Y
@@ -408,6 +423,12 @@ class SandRenyiEntr(Cone):
         work1 *= self.alpha * self.D1y_h
         congr_multi(work0, self.Uy, work1, work=work4)
         work5 += work0
+
+        # D2PhiYH = (self.DTrY * chi + self.u * D2TrYH) / self.Tr / (self.alpha - 1)
+        work5 *= self.u
+        np.multiply(chi, self.DTrY, out=work0)
+        work5 += work0
+        work5 /= self.Tr * (self.alpha - 1)
 
         # Hessian product of barrier function
         # D2_Y F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_Y Ψ(X, Y)
@@ -444,6 +465,12 @@ class SandRenyiEntr(Cone):
         work5 -= work1
         congr_multi(work1, self.inv_X, self.Ax, work=work3)
         work5 += work1
+
+        # D2PhiXH = (self.DTrX * chi + self.u * D2TrXH) / self.Tr / (self.alpha - 1)
+        work5 *= self.u
+        np.multiply(chi, self.DTrX, out=work2)
+        work5 += work0
+        work5 /= self.Tr * (self.alpha - 1)
 
         lhs[:, self.idx_X] = work5.reshape((p, -1)).view(np.float64)
 
@@ -646,6 +673,7 @@ class SandRenyiEntr(Cone):
         Ax_dense = np.ascontiguousarray(A[:, self.idx_X])
         Ay_dense = np.ascontiguousarray(A[:, self.idx_Y])
         self.At = A[:, 0]
+        self.Au = A[:, 1]
         self.Ax = np.array([vec_to_mat(Ax_k, iscomplex) for Ax_k in Ax_dense])
         self.Ay = np.array([vec_to_mat(Ay_k, iscomplex) for Ay_k in Ay_dense])
 
