@@ -120,8 +120,8 @@ class SandRenyiEntr(Cone):
             self.type = ["r", "r", "s", "s"]
             self.dtype = np.float64
 
-        self.idx_X = slice(2, 2 + self.dim[1])
-        self.idx_Y = slice(2 + self.dim[1], sum(self.dim))
+        self.idx_X = slice(2, 2 + self.dim[2])
+        self.idx_Y = slice(2 + self.dim[2], sum(self.dim))
 
         # Get function handles for g(x)=x^α
         # and their first, second and third derivatives
@@ -311,10 +311,10 @@ class SandRenyiEntr(Cone):
         D2TrYH = D2TrYXH + D2TrYYH
 
         # Hessian product of sandwiched Renyi entropy
-        chi = Hu - ((inp(self.DTrX, Hx) + inp(self.DTrY, Hy)) * self.u) / self.Tr
-        D2PhiuH = -chi / self.u / (self.alpha - 1)
-        D2PhiXH = (self.DTrX * chi + self.u * D2TrXH) / self.Tr / (self.alpha - 1)
-        D2PhiYH = (self.DTrY * chi + self.u * D2TrYH) / self.Tr / (self.alpha - 1)
+        rho = Hu - ((inp(self.DTrX, Hx) + inp(self.DTrY, Hy)) * self.u) / self.Tr
+        D2PhiuH = -rho / self.u / (self.alpha - 1)
+        D2PhiXH = (self.DTrX * rho + self.u * D2TrXH) / self.Tr / (self.alpha - 1)
+        D2PhiYH = (self.DTrY * rho + self.u * D2TrYH) / self.Tr / (self.alpha - 1)
 
         # ======================================================================
         # Hessian products with respect to t
@@ -377,7 +377,7 @@ class SandRenyiEntr(Cone):
         DPhiX_vec = self.DPhiX.view(np.float64).reshape((-1, 1))
         DPhiY_vec = self.DPhiY.view(np.float64).reshape((-1, 1))
 
-        out_t = self.At - self.Au * self.DPhiu[0, 0]
+        out_t = self.At - (self.Au * self.DPhiu).ravel()
         out_t -= (self.Ax_vec @ DPhiX_vec + self.Ay_vec @ DPhiY_vec).ravel()
         out_t *= self.zi2
 
@@ -389,13 +389,25 @@ class SandRenyiEntr(Cone):
         # D2_X F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X Ψ(X, Y)
         #                               + (D2_XX Ψ(X, Y)[Hx] + D2_XY Ψ(X, Y)[Hy]) / z
         #                               + X^-1 Hx X^-1
+        # Hessian product of sandwiched Renyi entropy
         DTrX_vec = self.DTrX.view(np.float64).reshape((-1, 1))
         DTrY_vec = self.DTrY.view(np.float64).reshape((-1, 1))
 
-        chi = self.Au - (self.Ax_vec @ DTrX_vec + self.Ay_vec @ DTrY_vec).ravel() * self.u
-        chi /= self.Tr
+        rho = self.Ax_vec @ DTrX_vec + self.Ay_vec @ DTrY_vec
+        rho *= -self.u / self.Tr
+        rho += self.Au
 
-        out_u = -chi * self.u / (self.alpha - 1)
+        D2PhiuH = -rho / (self.u[0, 0] * (self.alpha - 1))
+
+        # Hessian product of barrier function
+        # D2_u F(t, u, X)[Ht, Hu, Hx]
+        #         = -D2_t F(t, u, X)[Ht, Hu, Hx] * D_u S(u, X)
+        #           + (D2_uu S(u, X)[Hu] + D2_uX S(u, X)[Hx]) / z
+        #           + Hu / u^2
+        out_u = -out_t * self.DPhiu[0, 0]
+        out_u += self.zi * D2PhiuH.ravel()
+        out_u += (self.Au / (self.u * self.u)).ravel()
+
         lhs[:, 1] = out_u
 
         # ======================================================================
@@ -424,9 +436,9 @@ class SandRenyiEntr(Cone):
         congr_multi(work0, self.Uy, work1, work=work4)
         work5 += work0
 
-        # D2PhiYH = (self.DTrY * chi + self.u * D2TrYH) / self.Tr / (self.alpha - 1)
+        # D2PhiYH = (self.DTrY * rho + self.u * D2TrYH) / self.Tr / (self.alpha - 1)
         work5 *= self.u
-        np.multiply(chi, self.DTrY, out=work0)
+        np.outer(rho, self.DTrY, out=work0.reshape((p, -1)))
         work5 += work0
         work5 /= self.Tr * (self.alpha - 1)
 
@@ -456,6 +468,12 @@ class SandRenyiEntr(Cone):
         congr_multi(work1, self.b2Y_Uyxy, work3, work=work4)
         work5 += work1
 
+        # D2PhiXH = (self.DTrX * rho + self.u * D2TrXH) / self.Tr / (self.alpha - 1)
+        work5 *= self.u
+        np.outer(rho, self.DTrX, out=work0.reshape((p, -1)))
+        work5 += work0
+        work5 /= self.Tr * (self.alpha - 1)
+
         # Hessian product of barrier function
         # D2_X F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X Ψ(X, Y)
         #                               + (D2_XX Ψ(X, Y)[Hx] + D2_XY Ψ(X, Y)[Hy]) / z
@@ -465,12 +483,6 @@ class SandRenyiEntr(Cone):
         work5 -= work1
         congr_multi(work1, self.inv_X, self.Ax, work=work3)
         work5 += work1
-
-        # D2PhiXH = (self.DTrX * chi + self.u * D2TrXH) / self.Tr / (self.alpha - 1)
-        work5 *= self.u
-        np.multiply(chi, self.DTrX, out=work2)
-        work5 += work0
-        work5 /= self.Tr * (self.alpha - 1)
 
         lhs[:, self.idx_X] = work5.reshape((p, -1)).view(np.float64)
 
@@ -542,16 +554,16 @@ class SandRenyiEntr(Cone):
 
         # Compute (Wu, Wx, Wy)
         np.outer(self.DPhi_cvec, self.At, out=self.work)
-        self.work += self.Axy_cvec.T
+        self.work += self.Auxy_cvec.T
 
         # Solve for (X, Y) =  M \ (Wx, Wy)
-        out_xy = cho_solve(self.hess_fact, self.work)
+        out_uxy = cho_solve(self.hess_fact, self.work)
 
         # Solve for t = z^2 Ht + <DPhi(X, Y), (X, Y)>
-        out_t = self.z2 * self.At.reshape(-1, 1) + out_xy.T @ self.DPhi_cvec
+        out_t = self.z2 * self.At.reshape(-1, 1) + out_uxy.T @ self.DPhi_cvec
 
         # Multiply A (H A')
-        return x_dot_dense(self.Axy_cvec, out_xy) + np.outer(self.At, out_t)
+        return x_dot_dense(self.Auxy_cvec, out_uxy) + np.outer(self.At, out_t)
 
     def third_dir_deriv_axpy(self, out, H, a=True):
         assert self.grad_updated
@@ -593,10 +605,10 @@ class SandRenyiEntr(Cone):
         D2TrHH = inp(Hx, D2TrXH) + inp(Hy, D2TrYH)
 
         # Hessian product of sandwiched Renyi entropy
-        chi = Hu - ((inp(self.DTrX, Hx) + inp(self.DTrY, Hy)) * self.u) / self.Tr
-        D2PhiuH = -chi / self.u / (self.alpha - 1)
-        D2PhiXH = (self.DTrX * chi + self.u * D2TrXH) / self.Tr / (self.alpha - 1)
-        D2PhiYH = (self.DTrY * chi + self.u * D2TrYH) / self.Tr / (self.alpha - 1)
+        rho = Hu - self.u * DTrH / self.Tr
+        D2PhiuH = -rho / self.u / (self.alpha - 1)
+        D2PhiXH = (self.DTrX * rho + self.u * D2TrXH) / self.Tr / (self.alpha - 1)
+        D2PhiYH = (self.DTrY * rho + self.u * D2TrYH) / self.Tr / (self.alpha - 1)
 
         D2PhiuHH = inp(Hu, D2PhiuH)
         D2PhiXHH = inp(Hx, D2PhiXH)
@@ -653,12 +665,12 @@ class SandRenyiEntr(Cone):
         eta = 2 * self.u * DTrH * DTrH / self.Tr - 2 * Hu * DTrH - self.u * D2TrHH
         eta /= self.Tr * self.Tr
 
-        D3PhiXHH = 2 * chi / self.Tr * D2TrXH
+        D3PhiXHH = 2 * rho / self.Tr * D2TrXH
         D3PhiXHH += self.DTrX * eta
         D3PhiXHH += self.u / self.Tr * (D3TrXXX + D3TrXXY + D3TrXYX + D3TrXYY)
         D3PhiXHH /= self.alpha - 1
 
-        D3PhiYHH = 2 * chi / self.Tr * D2TrYH
+        D3PhiYHH = 2 * rho / self.Tr * D2TrYH
         D3PhiYHH += self.DTrY * eta
         D3PhiYHH += self.u / self.Tr * (D3TrYYY + D3TrYYX + D3TrYXY + D3TrYXX)
         D3PhiYHH /= self.alpha - 1
@@ -704,26 +716,26 @@ class SandRenyiEntr(Cone):
         # Get slices and views of A matrix to be used in congruence computations
         if sp.sparse.issparse(A):
             A = A.tocsr()
+        self.Au = A[:, [1]]
         self.Ax_vec = A[:, self.idx_X]
         self.Ay_vec = A[:, self.idx_Y]
         Ax_cvec = (self.F2C_op @ self.Ax_vec.T).T
         Ay_cvec = (self.F2C_op @ self.Ay_vec.T).T
         if sp.sparse.issparse(A):
-            self.Axy_cvec = sp.sparse.hstack((Ax_cvec, Ay_cvec), format="coo")
+            self.Auxy_cvec = sp.sparse.hstack((self.Au, Ax_cvec, Ay_cvec), format="coo")
         else:
-            self.Axy_cvec = np.hstack((Ax_cvec, Ay_cvec))
+            self.Auxy_cvec = np.hstack((self.Au, Ax_cvec, Ay_cvec))
 
         if sp.sparse.issparse(A):
             A = A.toarray()
         Ax_dense = np.ascontiguousarray(A[:, self.idx_X])
         Ay_dense = np.ascontiguousarray(A[:, self.idx_Y])
         self.At = A[:, 0]
-        self.Au = A[:, 1]
         self.Ax = np.array([vec_to_mat(Ax_k, iscomplex) for Ax_k in Ax_dense])
         self.Ay = np.array([vec_to_mat(Ay_k, iscomplex) for Ay_k in Ay_dense])
 
         # Preallocate matrices we will need when performing these congruences
-        self.work = np.empty_like(self.Axy_cvec.T)
+        self.work = np.empty_like(self.Auxy_cvec.T)
 
         self.work0 = np.empty_like(self.Ax)
         self.work1 = np.empty_like(self.Ax)
@@ -798,7 +810,7 @@ class SandRenyiEntr(Cone):
         DPhiX_cvec = self.F2C_op @ DPhiX_vec
         DPhiY_vec = self.DPhiY.view(np.float64).reshape(-1, 1)
         DPhiY_cvec = self.F2C_op @ DPhiY_vec
-        self.DPhi_cvec = np.vstack((DPhiX_cvec, DPhiY_cvec))
+        self.DPhi_cvec = np.vstack((self.DPhiu, DPhiX_cvec, DPhiY_cvec))
 
         # ======================================================================
         # Construct YY block of Hessian, i.e., (D2yyxPhi + Y^-1 ⊗ Y^-1)
