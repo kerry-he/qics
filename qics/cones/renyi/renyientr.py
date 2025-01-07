@@ -39,7 +39,7 @@ class RenyiEntr(Cone):
     .. math::
 
         D_\alpha(X\|Y)=\frac{1}{\alpha-1}\left(\text{tr}[X^\alpha Y^{1-\alpha}]\right),
-    
+
     is the :math:`\alpha`-Renyi entropy.
 
     Parameters
@@ -250,17 +250,17 @@ class RenyiEntr(Cone):
         rho = Hu - ((inp(self.DTrX, Hx) + inp(self.DTrY, Hy)) * self.u) / self.Tr
         # D2_u S(X, Y)[(Hu, Hx, Hy)] = (DΨ(X,Y)[(Hx,Hy)]/Ψ - Hu/u) / (α-1)
         D2PhiuH = -rho / self.u / (self.alpha - 1)
-        # D2_X S(X, Y)[(Hu, Hx, Hy)] 
+        # D2_X S(X, Y)[(Hu, Hx, Hy)]
         #   = ((Hu/Ψ - u/Ψ^2 DΨ(X,Y)[(Hx,Hy)]) D_X Ψ + u/Ψ D2_X Ψ(X,Y)[(Hx,Hy)]) / (α-1)
         D2PhiXH = (self.DTrX * rho + self.u * D2TrXH) / self.Tr / (self.alpha - 1)
-        # D2_Y S(X, Y)[(Hu, Hx, Hy)] 
+        # D2_Y S(X, Y)[(Hu, Hx, Hy)]
         #   = ((Hu/Ψ - u/Ψ^2 DΨ(X,Y)[(Hx,Hy)]) D_Y Ψ + u/Ψ D2_Y Ψ(X,Y)[(Hx,Hy)]) / (α-1)
         D2PhiYH = (self.DTrY * rho + self.u * D2TrYH) / self.Tr / (self.alpha - 1)
 
         # ======================================================================
         # Hessian products with respect to t
         # ======================================================================
-        # D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy] 
+        # D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy]
         #    = (Ht - D_u S(u, X, Y)[Hu] - D_X S(u, X, Y)[Hx] - D_Y S(u, X, Y)[Hy]) / z^2
         out_t = Ht - self.DPhiu * Hu - inp(self.DPhiX, Hx) - inp(self.DPhiY, Hy)
         out_t *= self.zi2
@@ -269,7 +269,7 @@ class RenyiEntr(Cone):
         # ======================================================================
         # Hessian products with respect to u
         # ======================================================================
-        # D2_u F(t, u, X, Y)[Ht, Hu, Hx, Hy] 
+        # D2_u F(t, u, X, Y)[Ht, Hu, Hx, Hy]
         #    = -D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy] * D_u S(u, X, Y)
         #      + D2_u Ψ(X, Y)[(Hu, Hx, Hy)] / z + Hu / u^2
         out_u = -out_t * self.DPhiu + self.zi * D2PhiuH + Hu / self.u / self.u
@@ -278,7 +278,7 @@ class RenyiEntr(Cone):
         # ======================================================================
         # Hessian products with respect to X
         # ======================================================================
-        # D2_X F(t, u, X, Y)[Ht, Hu, Hx, Hy] 
+        # D2_X F(t, u, X, Y)[Ht, Hu, Hx, Hy]
         #    = -D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy] * D_X S(u, X, Y)
         #      + D2_X Ψ(X, Y)[(Hu, Hx, Hy)] / z + X^-1 Hx X^-1
         out_X = -out_t * self.DPhiX + self.zi * D2PhiXH + self.inv_X @ Hx @ self.inv_X
@@ -288,7 +288,7 @@ class RenyiEntr(Cone):
         # ==================================================================
         # Hessian products with respect to Y
         # ==================================================================
-        # D2_Y F(t, u, X, Y)[Ht, Hu, Hx, Hy] 
+        # D2_Y F(t, u, X, Y)[Ht, Hu, Hx, Hy]
         #    = -D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy] * D_Y S(u, X, Y)
         #      + D2_Y Ψ(X, Y)[(Hu, Hx, Hy)] / z + Y^-1 Hy Y^-1
         out_Y = -out_t * self.DPhiY + self.zi * D2PhiYH + self.inv_Y @ Hy @ self.inv_Y
@@ -317,7 +317,7 @@ class RenyiEntr(Cone):
         # ======================================================================
         # Hessian products with respect to t
         # ======================================================================
-        # D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy] 
+        # D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy]
         #    = (Ht - D_u S(u, X, Y)[Hu] - D_X S(u, X, Y)[Hx] - D_Y S(u, X, Y)[Hy]) / z^2
         DPhiX_vec = self.DPhiX.view(np.float64).reshape((-1, 1))
         DPhiY_vec = self.DPhiY.view(np.float64).reshape((-1, 1))
@@ -339,7 +339,7 @@ class RenyiEntr(Cone):
         D2PhiuH = -rho / (self.u[0, 0] * (self.alpha - 1))
 
         # Hessian product of barrier function
-        # D2_u F(t, u, X, Y)[Ht, Hu, Hx, Hy] 
+        # D2_u F(t, u, X, Y)[Ht, Hu, Hx, Hy]
         #    = -D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy] * D_u S(u, X, Y)
         #      + D2_u Ψ(X, Y)[(Hu, Hx, Hy)] / z + Hu / u^2
         out_u = -out_t * self.DPhiu[0, 0]
@@ -366,7 +366,7 @@ class RenyiEntr(Cone):
         work5 += work0
 
         # Hessian products of Renyi entropy
-        # D2_X S(X, Y)[(Hu, Hx, Hy)] 
+        # D2_X S(X, Y)[(Hu, Hx, Hy)]
         #   = ((Hu/Ψ - u/Ψ^2 DΨ(X,Y)[(Hx,Hy)]) D_X Ψ + u/Ψ D2_X Ψ(X,Y)[(Hx,Hy)]) / (α-1)
         work5 *= self.u
         np.outer(rho, self.DTrX, out=work0.reshape((p, -1)))
@@ -374,7 +374,7 @@ class RenyiEntr(Cone):
         work5 /= self.Tr * (self.alpha - 1)
 
         # Hessian product of barrier function
-        # D2_X F(t, u, X, Y)[Ht, Hu, Hx, Hy] 
+        # D2_X F(t, u, X, Y)[Ht, Hu, Hx, Hy]
         #    = -D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy] * D_X S(u, X, Y)
         #      + D2_X Ψ(X, Y)[(Hu, Hx, Hy)] / z + X^-1 Hx X^-1
         work5 *= self.zi
@@ -401,7 +401,7 @@ class RenyiEntr(Cone):
         work5 += work0
 
         # Hessian products of Renyi entropy
-        # D2_Y S(X, Y)[(Hu, Hx, Hy)] 
+        # D2_Y S(X, Y)[(Hu, Hx, Hy)]
         #   = ((Hu/Ψ - u/Ψ^2 DΨ(X,Y)[(Hx,Hy)]) D_Y Ψ + u/Ψ D2_Y Ψ(X,Y)[(Hx,Hy)]) / (α-1)
         work5 *= self.u
         np.outer(rho, self.DTrY, out=work0.reshape((p, -1)))
@@ -409,7 +409,7 @@ class RenyiEntr(Cone):
         work5 /= self.Tr * (self.alpha - 1)
 
         # Hessian product of barrier function
-        # D2_Y F(t, u, X, Y)[Ht, Hu, Hx, Hy] 
+        # D2_Y F(t, u, X, Y)[Ht, Hu, Hx, Hy]
         #    = -D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy] * D_Y S(u, X, Y)
         #      + D2_Y Ψ(X, Y)[(Hu, Hx, Hy)] / z + Y^-1 Hy Y^-1
         work5 *= self.zi
@@ -537,10 +537,10 @@ class RenyiEntr(Cone):
         rho = Hu - ((inp(self.DTrX, Hx) + inp(self.DTrY, Hy)) * self.u) / self.Tr
         # D2_u S(X, Y)[(Hu, Hx, Hy)] = (DΨ(X,Y)[(Hx,Hy)]/Ψ - Hu/u) / (α-1)
         D2PhiuH = -rho / self.u / (self.alpha - 1)
-        # D2_X S(X, Y)[(Hu, Hx, Hy)] 
+        # D2_X S(X, Y)[(Hu, Hx, Hy)]
         #   = ((Hu/Ψ - u/Ψ^2 DΨ(X,Y)[(Hx,Hy)]) D_X Ψ + u/Ψ D2_X Ψ(X,Y)[(Hx,Hy)]) / (α-1)
         D2PhiXH = (self.DTrX * rho + self.u * D2TrXH) / self.Tr / (self.alpha - 1)
-        # D2_Y S(X, Y)[(Hu, Hx, Hy)] 
+        # D2_Y S(X, Y)[(Hu, Hx, Hy)]
         #   = ((Hu/Ψ - u/Ψ^2 DΨ(X,Y)[(Hx,Hy)]) D_Y Ψ + u/Ψ D2_Y Ψ(X,Y)[(Hx,Hy)]) / (α-1)
         D2PhiYH = (self.DTrY * rho + self.u * D2TrYH) / self.Tr / (self.alpha - 1)
 
@@ -721,7 +721,7 @@ class RenyiEntr(Cone):
                            work1=work12, work2=work13, work3=work15)  # fmt: skip
 
         # Hessian product of Renyi entropy
-        # D2_XX S(X, Y)[Hx] 
+        # D2_XX S(X, Y)[Hx]
         #   = (u/Ψ D2_XX Ψ(X, Y)[Hx] - u/Ψ^2 D_X Ψ(X, Y)[Hx] D_X Ψ) / (α - 1)
         np.multiply(DTrX_cvec, self.DTrX.reshape(1, self.n, self.n), out=work13)
         work13 /= self.Tr
@@ -745,13 +745,13 @@ class RenyiEntr(Cone):
                            work1=work12, work2=work13, work3=work15)  # fmt: skip
 
         # Hessian product of Renyi entropy
-        # D2_YY S(X, Y)[Hy] 
+        # D2_YY S(X, Y)[Hy]
         #   = (u/Ψ D2_YY Ψ(X, Y)[Hy] - u/Ψ^2 D_Y Ψ(X, Y)[Hy] D_Y Ψ) / (α - 1)
         np.multiply(DTrY_cvec, self.DTrY.reshape(1, self.n, self.n), out=work13)
         work13 /= self.Tr
         work10 -= work13
         work10 *= self.zi * self.u / self.Tr / (self.alpha - 1)
-        
+
         # Y^1 Eij Y^-1
         congr_multi(work12, self.inv_Y, self.E, work=work13)
         work12 += work10
@@ -768,9 +768,9 @@ class RenyiEntr(Cone):
         congr_multi(work12, self.UxUy, work14, work=work13)
         work12 *= self.D1x_g
         congr_multi(work14, self.Ux, work12, work=work13)
-        
+
         # Hessian product of Renyi entropy
-        # D2_XX S(X, Y)[Hx] 
+        # D2_XX S(X, Y)[Hx]
         #   = (u/Ψ D2_XY Ψ(X, Y)[Hy] - u/Ψ^2 D_Y Ψ(X, Y)[Hy] D_X Ψ) / (α - 1)
         np.multiply(DTrY_cvec, self.DTrX.reshape(1, self.n, self.n), out=work13)
         work13 /= self.Tr
