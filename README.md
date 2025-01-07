@@ -26,7 +26,7 @@ Some notable cones that QICS supports include
 | Quantum conditional entropy |  [`qics.cones.QuantCondEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.QuantCondEntr)  | $\text{cl}\\{ (t, X) \in \mathbb{R} \times \mathbb{H}^{\Pi_in_i}_{++} : t \geq -S(X) + S(\text{tr}_i(X)) \\}$ |
 | Quantum key distribution |  [`qics.cones.QuantKeyDist`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.QuantKeyDist)  | $\text{cl}\\{ (t, X) \in \mathbb{R} \times \mathbb{H}^n_{++} : t \geq -S(\mathcal{G}(X)) + S(\mathcal{Z}(\mathcal{G}(X))) \\}$ |
 | Operator perspective epigraph |  [`qics.cones.OpPerspecEpi`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.OpPerspecEpi)  | $\text{cl}\\{ (T, X, Y) \in \mathbb{H}^n \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \\}$ |
-| Renyi entropy |  [`qics.cones.RenyiEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.RenyiEntr)  | $\text{cl}\\{ (t, X, Y) \in \mathbb{R} \times\mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[ X^\alpha Y^{1-\alpha} ] \\}$ |
+| Renyi entropy |  [`qics.cones.TrRenyiEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.TrRenyiEntr)  | $\text{cl}\\{ (t, X, Y) \in \mathbb{R} \times\mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[ X^\alpha Y^{1-\alpha} ] \\}$ |
 | Sandwiched Renyi entropy |  [`qics.cones.TrSandRenyiEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.TrSandRenyiEntr)  | $\text{cl}\\{ (t, X, Y) \in \mathbb{R} \times\mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \\}$ |
 
 where $S(X)=-\text{tr}[X\log(X)]$ is the quantum entropy, 

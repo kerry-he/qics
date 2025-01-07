@@ -14,10 +14,12 @@ import scipy as sp
 from qics import __version__
 from qics._stepper import KKTSolver, NonSymStepper, SymStepper
 from qics._utils.linalg import is_full_col_rank, norm_inf
-from qics.cones import OpPerspecEpi, OpPerspecTr, QuantRelEntr, SandRenyiEntr, RenyiEntr
+from qics.cones import (OpPerspecEpi, OpPerspecTr, QuantRelEntr, RenyiEntr, 
+                        SandRenyiEntr, TrSandRenyiEntr, TrRenyiEntr)  # fmt: skip
 from qics.point import Point
 
-SLOW_CONES = (QuantRelEntr, OpPerspecEpi, OpPerspecTr, SandRenyiEntr, RenyiEntr)
+SLOW_CONES = (QuantRelEntr, OpPerspecEpi, OpPerspecTr, RenyiEntr, SandRenyiEntr, 
+              TrRenyiEntr, TrSandRenyiEntr)  # fmt: skip
 SPINNER = itertools.cycle(["-", "/", "|", "\\"])
 
 

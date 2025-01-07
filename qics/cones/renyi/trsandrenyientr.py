@@ -39,7 +39,7 @@ class TrSandRenyiEntr(Cone):
 
     .. math::
 
-        \mathcal{SRE}_{n, \alpha} = \text{cl}\{ (t, X, Y) \in \mathbb{R} \times
+        \mathcal{TSRE}_{n, \alpha} = \text{cl}\{ (t, X, Y) \in \mathbb{R} \times
         \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[ ( 
         Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \},
 
@@ -58,7 +58,7 @@ class TrSandRenyiEntr(Cone):
 
     See also
     --------
-    RenyiEntr : Renyi entropy
+    TrRenyiEntr : Renyi entropy
     QuantRelEntr : Quantum relative entropy
 
     Notes

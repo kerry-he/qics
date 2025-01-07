@@ -217,14 +217,20 @@ def test_cone_oracles():
     _test_cone(qics.cones.OpPerspecEpi(3, 0.3))
     _test_cone(qics.cones.OpPerspecEpi(3, 0.3, True))
 
+    _test_cone(qics.cones.RenyiEntr(3, 0.5))
+    _test_cone(qics.cones.RenyiEntr(2, 0.5, True))
+
+    _test_cone(qics.cones.SandRenyiEntr(3, 0.75))
+    _test_cone(qics.cones.SandRenyiEntr(2, 0.75, True))
+
+    _test_cone(qics.cones.TrRenyiEntr(3, -0.5))
+    _test_cone(qics.cones.TrRenyiEntr(2, -0.5, True))
+    _test_cone(qics.cones.TrRenyiEntr(3, 0.5))
+    _test_cone(qics.cones.TrRenyiEntr(2, 0.5, True))
+    _test_cone(qics.cones.TrRenyiEntr(3, 1.5))
+    _test_cone(qics.cones.TrRenyiEntr(2, 1.5, True))
+
     _test_cone(qics.cones.TrSandRenyiEntr(3, 0.75))
     _test_cone(qics.cones.TrSandRenyiEntr(2, 0.75, True))
     _test_cone(qics.cones.TrSandRenyiEntr(3, 1.5))
     _test_cone(qics.cones.TrSandRenyiEntr(2, 1.5, True))
-
-    _test_cone(qics.cones.RenyiEntr(3, -0.5))
-    _test_cone(qics.cones.RenyiEntr(2, -0.5, True))
-    _test_cone(qics.cones.RenyiEntr(3, 0.5))
-    _test_cone(qics.cones.RenyiEntr(2, 0.5, True))
-    _test_cone(qics.cones.RenyiEntr(3, 1.5))
-    _test_cone(qics.cones.RenyiEntr(2, 1.5, True))

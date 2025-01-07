@@ -164,7 +164,7 @@ definitions and interfaces to all of the cones QICS currently support below.
      - QICS class
      - Description
    * - Renyi entropy
-     - :class:`qics.cones.RenyiEntr`
+     - :class:`qics.cones.TrRenyiEntr`
      - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
        \mathbb{H}^n_{++} : t \geq \text{tr}[ X^\alpha Y^{1-\alpha} ] \}`
    * - Sandwiched Renyi entropy

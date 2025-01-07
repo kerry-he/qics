@@ -25,13 +25,13 @@ from qics.cones.base import Cone, get_perspective_derivatives
 from qics.vectorize import get_full_to_compact_op, vec_to_mat
 
 
-class RenyiEntr(Cone):
+class TrRenyiEntr(Cone):
     r"""A class representing the epigraph or hypograph of the trace function used to
     define the Renyi entropy, i.e.,
 
     .. math::
 
-        \mathcal{RE}_{n, \alpha} = \text{cl} \{ (t, X, Y) \in \mathbb{R} \times
+        \mathcal{TRE}_{n, \alpha} = \text{cl} \{ (t, X, Y) \in \mathbb{R} \times
         \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq -\text{tr}[
         X^\alpha Y^{1-\alpha} ] \},
 
@@ -636,7 +636,7 @@ class RenyiEntr(Cone):
         Hxx = x_dot_dense(self.F2C_op, work.T)
 
         # ======================================================================
-        # Construct YY block of Hessian, i.e., (D2yyxPhi + Y^-1 ⊗ Y^-1)
+        # Construct YY block of Hessian, i.e., (D2yyPhi + Y^-1 ⊗ Y^-1)
         # ======================================================================
         # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[g(X), Hy]
         congr_multi(work14, self.Uy.conj().T, self.E, work=work13)
