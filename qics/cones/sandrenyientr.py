@@ -183,11 +183,11 @@ class SandRenyiEntr(Cone):
 
         (self.t, self.u, self.X, self.Y) = self.primal
 
-        # Check that X and Y are positive definite
+        # Check that u, X, and Y are positive
         self.Dx, self.Ux = np.linalg.eigh(self.X)
         self.Dy, self.Uy = np.linalg.eigh(self.Y)
 
-        if any(self.Dx <= 0) or any(self.Dy <= 0):
+        if self.u <= 0 or any(self.Dx <= 0) or any(self.Dy <= 0):
             self.feas = False
             return self.feas
 
@@ -245,7 +245,7 @@ class SandRenyiEntr(Cone):
         self.rtX_Uy = self.rt2_X @ self.Uy
         self.UX_dgXYX_XU = self.rtX_Uy.conj().T @ self.dg_XYX @ self.rtX_Uy
 
-        # Compute gradients of trace sandwiched Renyi entropy
+        # Compute gradients of trace function
         # D_X Ψ(X, Y) = Y^β/2 g'( Y^β/2 X Y^β/2 ) Y^β/2
         self.DTrX = self.beta2_Y @ self.dg_YXY @ self.beta2_Y
         self.DTrX = (self.DTrX + self.DTrX.conj().T) * 0.5
@@ -253,9 +253,12 @@ class SandRenyiEntr(Cone):
         self.DTrY = self.Uy @ (self.D1y_h * self.UX_dgXYX_XU) @ self.Uy.conj().T
         self.DTrY = (self.DTrY + self.DTrY.conj().T) * 0.5
 
-        # Compute gradient of sandwiched Renyi entropy
+        # Compute gradients of sandwiched Renyi entropy
+        # D_u S(u, X, Y) = (log(Ψ / u) - 1) / (α - 1)
         self.DPhiu = (np.log(self.Tr / self.u) - 1) / (self.alpha - 1)
+        # D_X S(u, X, Y) = (D_X Ψ(X, Y) / Ψ) / (α - 1)
         self.DPhiX = (self.u * self.DTrX / self.Tr) / (self.alpha - 1)
+        # D_Y S(u, X, Y) = (D_Y Ψ(X, Y) / Ψ) / (α - 1)
         self.DPhiY = (self.u * self.DTrY / self.Tr) / (self.alpha - 1)
 
         # Compute X^-1 and Y^-1
@@ -289,7 +292,7 @@ class SandRenyiEntr(Cone):
         UHyU = self.Uy.conj().T @ Hy @ self.Uy
         UYHxYU = self.b2Y_Uyxy.conj().T @ Hx @ self.b2Y_Uyxy
 
-        # Hessian product of trace sandwiched Renyi entropy
+        # Hessian product of trace function
         # D2_XX Ψ(X, Y)[Hx] = Y^β/2 D(g')(Y^β/2 X Y^β/2)[Y^β/2 Hx Y^β/2] Y^β/2
         D2TrXXH = self.b2Y_Uyxy @ (self.D1yxy_dg * UYHxYU) @ self.b2Y_Uyxy.conj().T
         # D2_XY Ψ(X, Y)[Hy] = α * Y^β/2 Dg(Y^β/2 X Y^β/2)[Y^-β/2 Dh(Y)[Hy] Y^-β/2] Y^β/2
@@ -312,14 +315,20 @@ class SandRenyiEntr(Cone):
 
         # Hessian product of sandwiched Renyi entropy
         rho = Hu - ((inp(self.DTrX, Hx) + inp(self.DTrY, Hy)) * self.u) / self.Tr
+        # D2_u S(X, Y)[(Hu, Hx, Hy)] = (DΨ(X,Y)[(Hx,Hy)]/Ψ - Hu/u) / (α-1)
         D2PhiuH = -rho / self.u / (self.alpha - 1)
+        # D2_X S(X, Y)[(Hu, Hx, Hy)] 
+        #   = ((Hu/Ψ - u/Ψ^2 DΨ(X,Y)[(Hx,Hy)]) D_X Ψ + u/Ψ D2_X Ψ(X,Y)[(Hx,Hy)]) / (α-1)
         D2PhiXH = (self.DTrX * rho + self.u * D2TrXH) / self.Tr / (self.alpha - 1)
+        # D2_Y S(X, Y)[(Hu, Hx, Hy)] 
+        #   = ((Hu/Ψ - u/Ψ^2 DΨ(X,Y)[(Hx,Hy)]) D_Y Ψ + u/Ψ D2_Y Ψ(X,Y)[(Hx,Hy)]) / (α-1)
         D2PhiYH = (self.DTrY * rho + self.u * D2TrYH) / self.Tr / (self.alpha - 1)
 
         # ======================================================================
         # Hessian products with respect to t
         # ======================================================================
-        # D2_t F(t, X, Y)[Ht, Hx, Hy] = (Ht - D_X Ψ(X, Y)[Hx] - D_Y Ψ(X, Y)[Hy]) / z^2
+        # D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy] 
+        #    = (Ht - D_u S(u, X, Y)[Hu] - D_X S(u, X, Y)[Hx] - D_Y S(u, X, Y)[Hy]) / z^2
         out_t = Ht - self.DPhiu * Hu - inp(self.DPhiX, Hx) - inp(self.DPhiY, Hy)
         out_t *= self.zi2
         out[0][:] = out_t
@@ -327,18 +336,18 @@ class SandRenyiEntr(Cone):
         # ======================================================================
         # Hessian products with respect to u
         # ======================================================================
-        # D2_X F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X Ψ(X, Y)
-        #                               + (D2_XX Ψ(X, Y)[Hx] + D2_XY Ψ(X, Y)[Hy]) / z
-        #                               + X^-1 Hx X^-1
+        # D2_u F(t, u, X, Y)[Ht, Hu, Hx, Hy] 
+        #    = -D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy] * D_u S(u, X, Y)
+        #      + D2_u Ψ(X, Y)[(Hu, Hx, Hy)] / z + Hu / u^2
         out_u = -out_t * self.DPhiu + self.zi * D2PhiuH + Hu / self.u / self.u
         out[1][:] = out_u
 
         # ======================================================================
         # Hessian products with respect to X
         # ======================================================================
-        # D2_X F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X Ψ(X, Y)
-        #                               + (D2_XX Ψ(X, Y)[Hx] + D2_XY Ψ(X, Y)[Hy]) / z
-        #                               + X^-1 Hx X^-1
+        # D2_X F(t, u, X, Y)[Ht, Hu, Hx, Hy] 
+        #    = -D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy] * D_X S(u, X, Y)
+        #      + D2_X Ψ(X, Y)[(Hu, Hx, Hy)] / z + X^-1 Hx X^-1
         out_X = -out_t * self.DPhiX + self.zi * D2PhiXH + self.inv_X @ Hx @ self.inv_X
         out_X = (out_X + out_X.conj().T) * 0.5
         out[2][:] = out_X
@@ -346,10 +355,9 @@ class SandRenyiEntr(Cone):
         # ==================================================================
         # Hessian products with respect to Y
         # ==================================================================
-        # Hessian product of barrier function
-        # D2_Y F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_Y Ψ(X, Y)
-        #                               + (D2_YX Ψ(X, Y)[Hx] + D2_YY Ψ(X, Y)[Hy]) / z
-        #                               + Y^-1 Hy Y^-1
+        # D2_Y F(t, u, X, Y)[Ht, Hu, Hx, Hy] 
+        #    = -D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy] * D_Y S(u, X, Y)
+        #      + D2_Y Ψ(X, Y)[(Hu, Hx, Hy)] / z + Y^-1 Hy Y^-1
         out_Y = -out_t * self.DPhiY + self.zi * D2PhiYH + self.inv_Y @ Hy @ self.inv_Y
         out_Y = (out_Y + out_Y.conj().T) * 0.5
         out[3][:] = out_Y
@@ -370,10 +378,14 @@ class SandRenyiEntr(Cone):
         work2, work3 = self.work2, self.work3
         work4, work5, work6 = self.work4, self.work5, self.work6
 
+        DTrX_vec = self.DTrX.view(np.float64).reshape((-1, 1))
+        DTrY_vec = self.DTrY.view(np.float64).reshape((-1, 1))
+
         # ======================================================================
         # Hessian products with respect to t
         # ======================================================================
-        # D2_t F(t, X, Y)[Ht, Hx, Hy] = (Ht - D_X Ψ(X, Y)[Hx] - D_Y Ψ(X, Y)[Hy]) / z^2
+        # D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy] 
+        #    = (Ht - D_u S(u, X, Y)[Hu] - D_X S(u, X, Y)[Hx] - D_Y S(u, X, Y)[Hy]) / z^2
         DPhiX_vec = self.DPhiX.view(np.float64).reshape((-1, 1))
         DPhiY_vec = self.DPhiY.view(np.float64).reshape((-1, 1))
 
@@ -386,24 +398,17 @@ class SandRenyiEntr(Cone):
         # ======================================================================
         # Hessian products with respect to u
         # ======================================================================
-        # D2_X F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X Ψ(X, Y)
-        #                               + (D2_XX Ψ(X, Y)[Hx] + D2_XY Ψ(X, Y)[Hy]) / z
-        #                               + X^-1 Hx X^-1
         # Hessian product of sandwiched Renyi entropy
-        DTrX_vec = self.DTrX.view(np.float64).reshape((-1, 1))
-        DTrY_vec = self.DTrY.view(np.float64).reshape((-1, 1))
-
+        # D2_u S(X, Y)[(Hu, Hx, Hy)] = (DΨ(X,Y)[(Hx,Hy)]/Ψ - Hu/u) / (α-1)
         rho = self.Ax_vec @ DTrX_vec + self.Ay_vec @ DTrY_vec
         rho *= -self.u / self.Tr
         rho += self.Au
-
         D2PhiuH = -rho / (self.u[0, 0] * (self.alpha - 1))
 
         # Hessian product of barrier function
-        # D2_u F(t, u, X)[Ht, Hu, Hx]
-        #         = -D2_t F(t, u, X)[Ht, Hu, Hx] * D_u S(u, X)
-        #           + (D2_uu S(u, X)[Hu] + D2_uX S(u, X)[Hx]) / z
-        #           + Hu / u^2
+        # D2_u F(t, u, X, Y)[Ht, Hu, Hx, Hy] 
+        #    = -D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy] * D_u S(u, X, Y)
+        #      + D2_u Ψ(X, Y)[(Hu, Hx, Hy)] / z + Hu / u^2
         out_u = -out_t * self.DPhiu[0, 0]
         out_u += self.zi * D2PhiuH.ravel()
         out_u += (self.Au / (self.u * self.u)).ravel()
@@ -413,7 +418,7 @@ class SandRenyiEntr(Cone):
         # ======================================================================
         # Hessian products with respect to Y
         # ======================================================================
-        # Hessian products of sandwiched Renyi entropy
+        # Hessian products of trace function
         # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½]
         #                     + Dh(Y)[X^½ D(g')(X^½ Y^β X^½)[X^½ Dh(X)[Hx] X^½] X^½]
         # Compute first term i.e., D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½]
@@ -436,16 +441,18 @@ class SandRenyiEntr(Cone):
         congr_multi(work0, self.Uy, work1, work=work4)
         work5 += work0
 
-        # D2PhiYH = (self.DTrY * rho + self.u * D2TrYH) / self.Tr / (self.alpha - 1)
+        # Hessian products of sandwiched Renyi entropy
+        # D2_Y S(X, Y)[(Hu, Hx, Hy)] 
+        #   = ((Hu/Ψ - u/Ψ^2 DΨ(X,Y)[(Hx,Hy)]) D_Y Ψ + u/Ψ D2_Y Ψ(X,Y)[(Hx,Hy)]) / (α-1)
         work5 *= self.u
         np.outer(rho, self.DTrY, out=work0.reshape((p, -1)))
         work5 += work0
         work5 /= self.Tr * (self.alpha - 1)
 
         # Hessian product of barrier function
-        # D2_Y F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_Y Ψ(X, Y)
-        #                               + (D2_YX Ψ(X, Y)[Hx] + D2_YY Ψ(X, Y)[Hy]) / z
-        #                               + Y^-1 Hy Y^-1
+        # D2_Y F(t, u, X, Y)[Ht, Hu, Hx, Hy] 
+        #    = -D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy] * D_Y S(u, X, Y)
+        #      + D2_Y Ψ(X, Y)[(Hu, Hx, Hy)] / z + Y^-1 Hy Y^-1
         work5 *= self.zi
         np.outer(out_t, self.DPhiY, out=work1.reshape((p, -1)))
         work5 -= work1
@@ -457,7 +464,7 @@ class SandRenyiEntr(Cone):
         # ==================================================================
         # Hessian products with respect to X
         # ==================================================================
-        # Hessian products of sandwiched Renyi entropy
+        # Hessian products of trace function
         # D2_XY Ψ(X, Y)[Hy] = α * Y^β/2 Dg(Y^β/2 X Y^β/2)[Y^-β/2 Dh(Y)[Hy] Y^-β/2] Y^β/2
         work2 *= self.D1y_h
         congr_multi(work0, self.Uy_ib2Y_Uyxy.conj().T, work2, work=work4)
@@ -468,16 +475,18 @@ class SandRenyiEntr(Cone):
         congr_multi(work1, self.b2Y_Uyxy, work3, work=work4)
         work5 += work1
 
-        # D2PhiXH = (self.DTrX * rho + self.u * D2TrXH) / self.Tr / (self.alpha - 1)
+        # Hessian products of sandwiched Renyi entropy
+        # D2_X S(X, Y)[(Hu, Hx, Hy)] 
+        #   = ((Hu/Ψ - u/Ψ^2 DΨ(X,Y)[(Hx,Hy)]) D_X Ψ + u/Ψ D2_X Ψ(X,Y)[(Hx,Hy)]) / (α-1)
         work5 *= self.u
         np.outer(rho, self.DTrX, out=work0.reshape((p, -1)))
         work5 += work0
         work5 /= self.Tr * (self.alpha - 1)
 
         # Hessian product of barrier function
-        # D2_X F(t, X, Y)[Ht, Hx, Hy] = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_X Ψ(X, Y)
-        #                               + (D2_XX Ψ(X, Y)[Hx] + D2_XY Ψ(X, Y)[Hy]) / z
-        #                               + X^-1 Hx X^-1
+        # D2_X F(t, u, X, Y)[Ht, Hu, Hx, Hy] 
+        #    = -D2_t F(t, u, X, Y)[Ht, Hu, Hx, Hy] * D_X S(u, X, Y)
+        #      + D2_X Ψ(X, Y)[(Hu, Hx, Hy)] / z + X^-1 Hx X^-1
         work5 *= self.zi
         np.outer(out_t, self.DPhiX, out=work1.reshape((p, -1)))
         work5 -= work1
@@ -511,7 +520,7 @@ class SandRenyiEntr(Cone):
         Wy_vec = Wy.view(np.float64).reshape(-1, 1)
         Wy_cvec = self.F2C_op @ Wy_vec
 
-        # Solve for (X, Y) =  M \ (Wx, Wy)
+        # Solve for (u, X, Y) =  M \ (Wu, Wx, Wy)
         Wuxy_cvec = np.vstack((Wu, Wx_cvec, Wy_cvec))
         out_uXY = cho_solve(self.hess_fact, Wuxy_cvec)
         out_u = out_uXY[0]
@@ -549,17 +558,18 @@ class SandRenyiEntr(Cone):
         #     (u, X, Y) =  M \ (Wu, Wx, Wy)
         #         t  =  z^2 Ht + <DPhi(u, X, Y), (u, X, Y)>
         # where (Wu, Wx, Wy) = (Hu, Hx, Hy) + Ht DPhi(u, X, Y) and
-        #     M = 1/z [ D2xxPhi D2xyPhi ] + [ X^1 ⊗ X^-1              ]
-        #             [ D2yxPhi D2yyPhi ]   [              Y^1 ⊗ Y^-1 ]
+        #     M = 1/z [ D2uuPhi D2uxPhi D2uyPhi ] + [ 1 / u^2                         ]
+        #             [ D2uxPhi D2xxPhi D2xyPhi ] + [         X^1 ⊗ X^-1             ]
+        #             [ D2uyPhi D2yxPhi D2yyPhi ]   [                     Y^1 ⊗ Y^-1 ]
 
         # Compute (Wu, Wx, Wy)
         np.outer(self.DPhi_cvec, self.At, out=self.work)
         self.work += self.Auxy_cvec.T
 
-        # Solve for (X, Y) =  M \ (Wx, Wy)
+        # Solve for (u, X, Y) =  M \ (Wu, Wx, Wy)
         out_uxy = cho_solve(self.hess_fact, self.work)
 
-        # Solve for t = z^2 Ht + <DPhi(X, Y), (X, Y)>
+        # Solve for t = z^2 Ht + <DPhi(u, X, Y), (u, X, Y)>
         out_t = self.z2 * self.At.reshape(-1, 1) + out_uxy.T @ self.DPhi_cvec
 
         # Multiply A (H A')
@@ -582,7 +592,7 @@ class SandRenyiEntr(Cone):
         DTrYH = inp(Hy, self.DTrY)
         DTrH = DTrXH + DTrYH
 
-        # Hessian product of sandwiched Renyi entropy
+        # Hessian product of trace function
         # D2_XX Ψ(X, Y)[Hx] = Y^β/2 D(g')(Y^β/2 X Y^β/2)[Y^β/2 Hx Y^β/2] Y^β/2
         D2TrXXH = self.b2Y_Uyxy @ (self.D1yxy_dg * UYHxYU) @ self.b2Y_Uyxy.conj().T
         # D2_XY Ψ(X, Y)[Hy] = α * Y^β/2 Dg(Y^β/2 X Y^β/2)[Y^-β/2 Dh(Y)[Hy] Y^-β/2] Y^β/2
@@ -605,19 +615,23 @@ class SandRenyiEntr(Cone):
         D2TrHH = inp(Hx, D2TrXH) + inp(Hy, D2TrYH)
 
         # Hessian product of sandwiched Renyi entropy
-        rho = Hu - self.u * DTrH / self.Tr
+        rho = Hu - ((inp(self.DTrX, Hx) + inp(self.DTrY, Hy)) * self.u) / self.Tr
+        # D2_u S(X, Y)[(Hu, Hx, Hy)] = (DΨ(X,Y)[(Hx,Hy)]/Ψ - Hu/u) / (α-1)
         D2PhiuH = -rho / self.u / (self.alpha - 1)
+        # D2_X S(X, Y)[(Hu, Hx, Hy)] 
+        #   = ((Hu/Ψ - u/Ψ^2 DΨ(X,Y)[(Hx,Hy)]) D_X Ψ + u/Ψ D2_X Ψ(X,Y)[(Hx,Hy)]) / (α-1)
         D2PhiXH = (self.DTrX * rho + self.u * D2TrXH) / self.Tr / (self.alpha - 1)
+        # D2_Y S(X, Y)[(Hu, Hx, Hy)] 
+        #   = ((Hu/Ψ - u/Ψ^2 DΨ(X,Y)[(Hx,Hy)]) D_Y Ψ + u/Ψ D2_Y Ψ(X,Y)[(Hx,Hy)]) / (α-1)
         D2PhiYH = (self.DTrY * rho + self.u * D2TrYH) / self.Tr / (self.alpha - 1)
 
         D2PhiuHH = inp(Hu, D2PhiuH)
         D2PhiXHH = inp(Hx, D2PhiXH)
         D2PhiYHH = inp(Hy, D2PhiYH)
 
-        # Trace noncommutative perspective third order derivatives
+        # Third order derivatives of trace function
         self.irtX_Uxyx = self.irt2_X @ self.Uxyx
         self.rtX_Uxyx = self.rt2_X @ self.Uxyx
-
         D1yh_UHyU = self.D1y_h * UHyU
 
         # Second derivatives of D_X Ψ(X, Y)
@@ -657,25 +671,23 @@ class SandRenyiEntr(Cone):
         work = scnd_frechet(self.D2yxy_g, UYHxYU, UYHxYU, U=self.Uy_ib2Y_Uyxy)
         D3TrYXX = self.alpha * self.Uy @ (self.D1y_h * work) @ self.Uy.conj().T
 
-        # Sandwiched Renyi entropy third order derivatives
-        D3PhiuHH = Hu * Hu / self.u / self.u
-        D3PhiuHH += (D2TrHH - DTrH * DTrH / self.Tr) / self.Tr
-        D3PhiuHH /= self.alpha - 1
+        D3TrX = D3TrXXX + D3TrXXY + D3TrXYX + D3TrXYY
+        D3TrY = D3TrYYY + D3TrYYX + D3TrYXY + D3TrYXX
 
+        # Third order derivatives of sandwiched Renyi entropy
         eta = 2 * self.u * DTrH * DTrH / self.Tr - 2 * Hu * DTrH - self.u * D2TrHH
         eta /= self.Tr * self.Tr
 
-        D3PhiXHH = 2 * rho / self.Tr * D2TrXH
-        D3PhiXHH += self.DTrX * eta
-        D3PhiXHH += self.u / self.Tr * (D3TrXXX + D3TrXXY + D3TrXYX + D3TrXYY)
+        D3PhiuHH = (Hu / self.u) ** 2 + (D2TrHH - DTrH * DTrH / self.Tr) / self.Tr
+        D3PhiuHH /= self.alpha - 1
+
+        D3PhiXHH = (2 * rho * D2TrXH + self.u * D3TrX) / self.Tr + self.DTrX * eta
         D3PhiXHH /= self.alpha - 1
 
-        D3PhiYHH = 2 * rho / self.Tr * D2TrYH
-        D3PhiYHH += self.DTrY * eta
-        D3PhiYHH += self.u / self.Tr * (D3TrYYY + D3TrYYX + D3TrYXY + D3TrYXX)
+        D3PhiYHH = (2 * rho * D2TrYH + self.u * D3TrY) / self.Tr + self.DTrY * eta
         D3PhiYHH /= self.alpha - 1
 
-        # Third derivatives of barrier
+        # Third derivatives of barrier function
         chi = (Ht - self.DPhiu * Hu - inp(self.DPhiX, Hx) - inp(self.DPhiY, Hy))[0, 0]
         chi2 = chi * chi
 
@@ -792,8 +804,9 @@ class SandRenyiEntr(Cone):
             self.update_invhessprod_aux_aux()
 
         # Precompute and factorize the matrix
-        #     M = 1/z [ D2xxPhi D2xyPhi ] + [ X^1 ⊗ X^-1               ]
-        #             [ D2yxPhi D2yyPhi ]   [               Y^1 ⊗ Y^-1 ]
+        #     M = 1/z [ D2uuPhi D2uxPhi D2uyPhi ] + [ 1 / u^2                         ]
+        #             [ D2uxPhi D2xxPhi D2xyPhi ] + [         X^1 ⊗ X^-1             ]
+        #             [ D2uyPhi D2yxPhi D2yyPhi ]   [                     Y^1 ⊗ Y^-1 ]
 
         self.z2 = self.z * self.z
 
@@ -813,8 +826,16 @@ class SandRenyiEntr(Cone):
         self.DPhi_cvec = np.vstack((self.DPhiu, DPhiX_cvec, DPhiY_cvec))
 
         # ======================================================================
+        # Construct blocks of Hessian corresponding to u
+        # ======================================================================
+        Huu = -self.zi / (self.u * (self.alpha - 1)) + 1 / self.u / self.u
+        Hux = self.zi * DTrX_cvec.ravel() / self.Tr / (self.alpha - 1)
+        Huy = self.zi * DTrY_cvec.ravel() / self.Tr / (self.alpha - 1)
+
+        # ======================================================================
         # Construct YY block of Hessian, i.e., (D2yyxPhi + Y^-1 ⊗ Y^-1)
         # ======================================================================
+        # Hessian products of trace function
         # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½]
         #                     + Dh(Y)[X^½ D(g')(X^½ Y^β X^½)[X^½ Dh(X)[Hx] X^½] X^½]
         # Compute first term i.e., D2h(Y)[Hy, X^½ g'(X^½ Y^β X^½) X^½]
@@ -831,6 +852,8 @@ class SandRenyiEntr(Cone):
         work10 += work14
 
         # Hessian product of sandwiched Renyi entropy
+        # D2_YY S(X, Y)[Hy] 
+        #   = (u/Ψ D2_YY Ψ(X, Y)[Hy] - u/Ψ^2 D_Y Ψ(X, Y)[Hy] D_Y Ψ) / (α - 1)
         np.multiply(DTrY_cvec, self.DTrY.reshape(1, self.n, self.n), out=work13)
         work13 /= self.Tr
         work10 -= work13
@@ -846,12 +869,15 @@ class SandRenyiEntr(Cone):
         # ======================================================================
         # Construct XX block of Hessian, i.e., (D2xxPhi + X^-1 ⊗ X^-1)
         # ======================================================================
+        # Hessian products of trace function
         # D2_XX Ψ(X, Y)[Hx] = Y^β/2 D(g')(Y^β/2 X Y^β/2)[Y^β/2 Hx Y^β/2] Y^β/2
         congr_multi(work14, self.b2Y_Uyxy.conj().T, self.E, work=work13)
         np.multiply(work14, self.D1yxy_dg, out=work10)
         congr_multi(work11, self.b2Y_Uyxy, work10, work=work13)
 
         # Hessian product of sandwiched Renyi entropy
+        # D2_XX S(X, Y)[Hx] 
+        #   = (u/Ψ D2_XX Ψ(X, Y)[Hx] - u/Ψ^2 D_X Ψ(X, Y)[Hx] D_X Ψ) / (α - 1)
         np.multiply(DTrX_cvec, self.DTrX.reshape(1, self.n, self.n), out=work13)
         work13 /= self.Tr
         work11 -= work13
@@ -867,6 +893,7 @@ class SandRenyiEntr(Cone):
         # ======================================================================
         # Construct XY block of Hessian, i.e., D2xyPhi
         # ======================================================================
+        # Hessian products of trace function
         # D2_XY Ψ(X, Y)[Hy] = α * Y^β/2 Dg(Y^β/2 X Y^β/2)[Y^-β/2 Dh(Y)[Hy] Y^-β/2] Y^β/2
         work14 *= self.D1yxy_g
         congr_multi(work12, self.Uy_ib2Y_Uyxy, work14, work=work13)
@@ -874,6 +901,8 @@ class SandRenyiEntr(Cone):
         congr_multi(work14, self.Uy, work12, work=work13)
         
         # Hessian product of sandwiched Renyi entropy
+        # D2_XX S(X, Y)[Hx] 
+        #   = (u/Ψ D2_XY Ψ(X, Y)[Hy] - u/Ψ^2 D_Y Ψ(X, Y)[Hy] D_X Ψ) / (α - 1)
         np.multiply(DTrX_cvec, self.DTrY.reshape(1, self.n, self.n), out=work13)
         work13 /= self.Tr
         work14 -= work13
@@ -886,10 +915,6 @@ class SandRenyiEntr(Cone):
         # Construct Hessian and factorize
         Hxx = (Hxx + Hxx.conj().T) * 0.5
         Hyy = (Hyy + Hyy.conj().T) * 0.5
-
-        Huu = -self.zi / (self.u * (self.alpha - 1)) + 1 / self.u / self.u
-        Hux = self.zi * DTrX_cvec.ravel() / self.Tr / (self.alpha - 1)
-        Huy = self.zi * DTrY_cvec.ravel() / self.Tr / (self.alpha - 1)
 
         self.hess[0, 0] = Huu
         self.hess[0, 1 : 1 + self.vn] = Hux
