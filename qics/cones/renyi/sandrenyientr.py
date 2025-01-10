@@ -690,21 +690,22 @@ class SandRenyiEntr(Cone):
         # Get slices and views of A matrix to be used in congruence computations
         if sp.sparse.issparse(A):
             A = A.tocsr()
-        self.Au = A[:, [1]]
+        Au = A[:, [1]]
         self.Ax_vec = A[:, self.idx_X]
         self.Ay_vec = A[:, self.idx_Y]
         Ax_cvec = (self.F2C_op @ self.Ax_vec.T).T
         Ay_cvec = (self.F2C_op @ self.Ay_vec.T).T
         if sp.sparse.issparse(A):
-            self.Auxy_cvec = sp.sparse.hstack((self.Au, Ax_cvec, Ay_cvec), format="coo")
+            self.Auxy_cvec = sp.sparse.hstack((Au, Ax_cvec, Ay_cvec), format="coo")
         else:
-            self.Auxy_cvec = np.hstack((self.Au, Ax_cvec, Ay_cvec))
+            self.Auxy_cvec = np.hstack((Au, Ax_cvec, Ay_cvec))
 
         if sp.sparse.issparse(A):
             A = A.toarray()
         Ax_dense = np.ascontiguousarray(A[:, self.idx_X])
         Ay_dense = np.ascontiguousarray(A[:, self.idx_Y])
         self.At = A[:, 0]
+        self.Au = A[:, [1]]
         self.Ax = np.array([vec_to_mat(Ax_k, iscomplex) for Ax_k in Ax_dense])
         self.Ay = np.array([vec_to_mat(Ay_k, iscomplex) for Ay_k in Ay_dense])
 
