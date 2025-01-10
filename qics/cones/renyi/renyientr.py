@@ -117,11 +117,11 @@ class RenyiEntr(Cone):
         return self.iscomplex
 
     def get_init_point(self, out):
-        (t0, x0, y0) = self.get_central_ray()
+        (t0, u0, x0, y0) = self.get_central_ray()
 
         point = [
             np.array([[t0]]),
-            np.array([[1.0]]),
+            np.array([[u0]]),
             np.eye(self.n, dtype=self.dtype) * x0,
             np.eye(self.n, dtype=self.dtype) * y0,
         ]
@@ -818,53 +818,64 @@ class RenyiEntr(Cone):
         self.invhess_aux_aux_updated = True
 
     def get_central_ray(self):
-        # Solve a 3-dimensional nonlinear system of equations to get the central
+        # Solve a 4-dimensional nonlinear system of equations to get the central
         # point of the barrier function
         n, alpha = self.n, self.alpha
-        (t, x, y) = (1.0 + n * self.g(1.0), 1.0, 1.0)
+        (t, u, x, y) = (1.0 + n * self.g(1.0), 1.0, 1.0, 1.0)
 
-        for _ in range(10):
+        for _ in range(20):
             # Precompute some useful things
-            z = t - n * self.g(x) * (y ** (1 - alpha))
+            x_a, y_b = x ** alpha, y ** (1 - alpha)
+            z = t - u * np.log(n * x_a * y_b / u) / (alpha - 1)
             zi = 1 / z
             zi2 = zi * zi
 
-            dx = self.dg(x) * (y ** (1 - alpha))
-            dy = self.g(x) * (1 - alpha) * (y ** (-alpha))
+            du = (np.log(n * x_a * y_b / u) - 1) / (alpha - 1)
+            dx = alpha / (alpha - 1) * u / x
+            dy = -u / y
 
-            d2dx2 = self.d2g(x) * (y ** (1 - alpha))
-            d2dy2 = self.g(x) * (1 - alpha) * (-alpha) * (y ** (-alpha - 1))
-            d2dxdy = self.dg(x) * (1 - alpha) * (y ** (-alpha))
+            d2du2 = -1 / (alpha - 1) / u
+            d2dudx = alpha / (alpha - 1) / x
+            d2dudy = -1 / y
+            d2dx2 = -alpha / (alpha - 1) * u / x / x
+            d2dy2 = 0
+            d2dxdy = u / y / y
 
             # Get gradient
             g = np.array([t - zi, 
-                          n * x + n * dx * zi - n / x, 
-                          n * y + n * dy * zi - n / y])  # fmt: skip
+                          u + du * zi - 1 / u, 
+                          n * x + dx * zi - n / x, 
+                          n * y + dy * zi - n / y])  # fmt: skip
 
             # Get Hessian
-            (Htt, Htx, Hty) = (zi2, -n * zi2 * dx, -n * zi2 * dy)
-            Hxx = n * n * zi2 * dx * dx + n * zi * d2dx2 + n / x / x
-            Hyy = n * n * zi2 * dy * dy + n * zi * d2dy2 + n / y / y
-            Hxy = n * n * zi2 * dx * dy + n * zi * d2dxdy
+            (Htt, Htu, Htx, Hty) = (zi2, -zi2 * du, -zi2 * dx, -zi2 * dy)
+            Huu = zi2 * dx * dx + zi * d2du2 + 1 / u / u
+            Hux = zi2 * du * dx + zi * d2dudx
+            Huy = zi2 * du * dy + zi * d2dudy
+            Hxx = zi2 * dx * dx + zi * d2dx2 + n / x / x
+            Hyy = zi2 * dy * dy + zi * d2dy2 + n / y / y
+            Hxy = zi2 * dx * dy + zi * d2dxdy
 
-            H = np.array([[Htt + 1, Htx, Hty],
-                          [Htx, Hxx + n, Hxy],
-                          [Hty, Hxy, Hyy + n]])  # fmt: skip
+            H = np.array([[Htt + 1, Htu, Htx, Hty],
+                          [Htu, Huu + 1, Hux, Huy],
+                          [Htx, Hux, Hxx + n, Hxy],
+                          [Hty, Huy, Hxy, Hyy + n]])  # fmt: skip
 
             # Perform Newton step
             delta = -np.linalg.solve(H, g)
             decrement = -np.dot(delta, g)
 
             # Check feasible
-            (t1, x1, y1) = (t + delta[0], x + delta[1], y + delta[2])
-            if x1 < 0 or y1 < 0 or t1 < n * self.g(x) * (y1 ** (1 - alpha)):
+            (t1, u1, x1, y1) = (t + delta[0], u + delta[1], x + delta[2], y + delta[3])
+            x_a, y_b = x1 ** alpha, y1 ** (1 - alpha)
+            if x1 < 0 or y1 < 0 or t1 < u1 * np.log(n * x_a * y_b / u1) / (alpha - 1):
                 # Exit if not feasible and return last feasible point
                 break
 
-            (t, x, y) = (t1, x1, y1)
+            (t, u, x, y) = (t1, u1, x1, y1)
 
             # Exit if decrement is small, i.e., near optimality
             if decrement / 2.0 <= 1e-12:
                 break
 
-        return (t, x, y)
+        return (t, u, x, y)
