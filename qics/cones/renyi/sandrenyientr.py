@@ -919,7 +919,7 @@ class SandRenyiEntr(Cone):
 
         for _ in range(20):
             # Precompute some useful things
-            x_a, y_b = x ** alpha, y ** (1 - alpha)
+            x_a, y_b = np.power(x, alpha), np.power(y, 1 - alpha)
             z = t - u * np.log(n * x_a * y_b / u) / (alpha - 1)
             zi = 1 / z
             zi2 = zi * zi
@@ -961,7 +961,7 @@ class SandRenyiEntr(Cone):
 
             # Check feasible
             (t1, u1, x1, y1) = (t + delta[0], u + delta[1], x + delta[2], y + delta[3])
-            x_a, y_b = x1 ** alpha, y1 ** (1 - alpha)
+            x_a, y_b = np.power(x, alpha), np.power(y, 1 - alpha)
             if x1 < 0 or y1 < 0 or t1 < u1 * np.log(n * x_a * y_b / u1) / (alpha - 1):
                 # Exit if not feasible and return last feasible point
                 break
