@@ -696,9 +696,18 @@ class TrRenyiEntr(Cone):
         # Solve a 3-dimensional nonlinear system of equations to get the central
         # point of the barrier function
         n, alpha = self.n, self.alpha
-        (t, x, y) = (1.0 + n * self.g(1.0), 1.0, 1.0)
+        if 0 <= alpha and alpha <= 1:
+            (t, x, y) = (1.0 + n * self.g(1.0), 1.0, 1.0)
+        elif 1 <= alpha:
+            t = np.sqrt(n) * (1 + (1 - alpha) * 0.2976)
+            y = np.sqrt(1 - (1 - alpha) * (t * t - 1) / n)
+            x = np.power(np.power(y, 1 - alpha) * (t - 1 / t) / n, 1 / alpha)
+        elif -1 <= alpha and alpha <= 0:
+            t = np.sqrt(n) * (1 + alpha * 0.2976)
+            x = np.sqrt(1 - alpha * (t * t - 1) / n)
+            y = np.power(np.power(x, alpha) * (t - 1 / t) / n, 1 / (1 - alpha))
 
-        for _ in range(10):
+        for _ in range(20):
             # Precompute some useful things
             z = t - n * self.g(x) * (y ** (1 - alpha))
             zi = 1 / z
@@ -730,10 +739,18 @@ class TrRenyiEntr(Cone):
             delta = -np.linalg.solve(H, g)
             decrement = -np.dot(delta, g)
 
-            # Check feasible
-            (t1, x1, y1) = (t + delta[0], x + delta[1], y + delta[2])
-            if x1 < 0 or y1 < 0 or t1 < n * self.g(x) * (y1 ** (1 - alpha)):
-                # Exit if not feasible and return last feasible point
+            # Backtracking line search
+            step, step_success = 1.0, False
+            for __ in range(10):
+                t1 = t + step * delta[0]
+                x1 = x + step * delta[1]
+                y1 = y + step * delta[2]
+                if x1 > 0 and y1 > 0 and t1 > n * self.g(x1) * (y1 ** (1 - alpha)):
+                    step_success = True
+                    break
+                step /= 2
+
+            if not step_success:
                 break
 
             (t, x, y) = (t1, x1, y1)
