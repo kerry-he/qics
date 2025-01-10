@@ -647,7 +647,7 @@ The advantage of optimizing the trace function is that :math:`\hat{\Psi}_\alpha`
 concave for :math:`\alpha\in[1/2, 1]`, and jointly convex for :math:`\alpha\in[1, 2]`,
 whereas :math:`D_\alpha` is jointly convex for :math:`\alpha\in[1/2, 1)`, but is neither
 convex nor concave for :math:`\alpha\in(1, 2]`. Therefore, QICS supports 
-:math:`\hat{\Psi}_\alpha`for a wider range of :math:`\alpha`. However, sometimes it is 
+:math:`\hat{\Psi}_\alpha` for a wider range of :math:`\alpha`. However, sometimes it is 
 not straightforward to reformulate an optimization problem involving the sandwiched  
 Renyi entropy into an equivalent convex problem involving the trace function.
 
