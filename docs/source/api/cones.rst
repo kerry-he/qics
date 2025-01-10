@@ -70,10 +70,14 @@ Renyi entropy cones
 .. list-table::
    :widths: 50 50
 
-   * - :class:`~qics.cones.TrRenyiEntr`\ (n, alpha[, iscomplex])
+   * - :class:`~qics.cones.RenyiEntr`\ (n, alpha[, iscomplex])
      - Renyi entropy cone
-   * - :class:`~qics.cones.TrSandRenyiEntr`\ (n, alpha[, iscomplex])
+   * - :class:`~qics.cones.SandRenyiEntr`\ (n, alpha[, iscomplex])
      - Sandwiched Renyi entropy cone
+   * - :class:`~qics.cones.TrRenyiEntr`\ (n, alpha[, iscomplex])
+     - Trace Renyi entropy cone
+   * - :class:`~qics.cones.TrSandRenyiEntr`\ (n, alpha[, iscomplex])
+     - Tracec sandwiched Renyi entropy cone
 
 
 .. toctree::
@@ -91,5 +95,7 @@ Renyi entropy cones
    cones/QuantKeyDist
    cones/OpPerspecTr
    cones/OpPerspecEpi
+   cones/RenyiEntr
+   cones/SandRenyiEntr
    cones/TrRenyiEntr
    cones/TrSandRenyiEntr

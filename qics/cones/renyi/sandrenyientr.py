@@ -38,8 +38,8 @@ class SandRenyiEntr(Cone):
 
     .. math::
 
-        \hat{D}_\alpha(X \| Y) = \frac{1}{\alpha-1} \left(\text{tr}[
-        ( Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ]\right),
+        \hat{D}_\alpha(X \| Y) = \frac{1}{\alpha-1} \log(\text{tr}[
+        ( Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ]),
 
     is the sandwiched :math:`\alpha`-Renyi divergence.
 

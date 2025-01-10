@@ -164,10 +164,18 @@ definitions and interfaces to all of the cones QICS currently support below.
      - QICS class
      - Description
    * - Renyi entropy
+     - :class:`qics.cones.RenyiEntr`
+     - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
+       \mathbb{H}^n_{++} : t \geq u D_\alpha(u^{-1}X \| u^{-1}Y) \}`
+   * - Sandwiched Renyi entropy
+     - :class:`qics.cones.SandRenyiEntr`
+     - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
+       \mathbb{H}^n_{++} : t \geq u \hat{D}_\alpha(u^{-1}X \| u^{-1}Y) \}`
+   * - Trace Renyi entropy
      - :class:`qics.cones.TrRenyiEntr`
      - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
        \mathbb{H}^n_{++} : t \geq \text{tr}[ X^\alpha Y^{1-\alpha} ] \}`
-   * - Sandwiched Renyi entropy
+   * - Trace sandwiched Renyi entropy
      - :class:`qics.cones.TrSandRenyiEntr`
      - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
        \mathbb{H}^n_{++} : t \geq \text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} 

@@ -38,7 +38,7 @@ class RenyiEntr(Cone):
 
     .. math::
 
-        D_\alpha(X\|Y)=\frac{1}{\alpha-1}\left(\text{tr}[X^\alpha Y^{1-\alpha}]\right),
+        D_\alpha(X\|Y)=\frac{1}{\alpha-1}\log(\text{tr}[X^\alpha Y^{1-\alpha}]),
 
     is the :math:`\alpha`-Renyi entropy.
 

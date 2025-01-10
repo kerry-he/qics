@@ -1,4 +1,4 @@
-﻿qics.cones.TrRenyiEntr
+﻿qics.cones.RenyiEntr
 ==============================
 
-.. autoclass:: qics.cones.TrRenyiEntr
+.. autoclass:: qics.cones.RenyiEntr
