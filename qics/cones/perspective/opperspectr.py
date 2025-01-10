@@ -786,8 +786,19 @@ class OpPerspecTr(Cone):
         # point of the barrier function
         n = self.n
         (t, x, y) = (1.0 + n * self.g(1.0), 1.0, 1.0)
+        n, func = self.n, self.func
+        if self.func == "log" or 0 <= func and func <= 1:
+            (t, x, y) = (1.0 + n * self.g(1.0), 1.0, 1.0)
+        elif 1 <= func:
+            t = np.sqrt(n) * (1 + (1 - func) * 0.2976)
+            x = np.sqrt(1 - (1 - func) * (t * t - 1) / n)
+            y = np.power(np.power(x, 1 - func) * (t - 1 / t) / n, 1 / func)
+        elif -1 <= func and func <= 0:
+            t = np.sqrt(n) * (1 + func * 0.2976)
+            y = np.sqrt(1 - func * (t * t - 1) / n)
+            x = np.power(np.power(y, func) * (t - 1 / t) / n, 1 / (1 - func))
 
-        for _ in range(10):
+        for _ in range(20):
             # Precompute some useful things
             z = t - n * x * self.g(y / x)
             zi = 1 / z
@@ -819,10 +830,18 @@ class OpPerspecTr(Cone):
             delta = -np.linalg.solve(H, g)
             decrement = -np.dot(delta, g)
 
-            # Check feasible
-            (t1, x1, y1) = (t + delta[0], x + delta[1], y + delta[2])
-            if x1 < 0 or y1 < 0 or t1 < n * x1 * self.g(y1 / x1):
-                # Exit if not feasible and return last feasible point
+            # Backtracking line search
+            step, step_success = 1.0, False
+            for __ in range(10):
+                t1 = t + step * delta[0]
+                x1 = x + step * delta[1]
+                y1 = y + step * delta[2]
+                if x1 > 0 and y1 > 0 and t1 > n * x1 * self.g(y1 / x1):
+                    step_success = True
+                    break
+                step /= 2
+
+            if not step_success:
                 break
 
             (t, x, y) = (t1, x1, y1)
