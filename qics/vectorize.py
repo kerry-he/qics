@@ -134,7 +134,7 @@ def mat_to_vec(mat, compact=False):
     """
     if np.isscalar(mat):
         mat = np.array([[mat]])
-    
+
     iscomplex = np.iscomplexobj(mat)
 
     if iscomplex:

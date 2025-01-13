@@ -11,7 +11,7 @@ quantum relative entropy program from :ref:`[1,2] <qkd_refs>`
 
 .. math::
 
-    \max_{X\in\mathbb{H}^n} &&& S(\mathcal{G}(X) \| \mathcal{Z}(\mathcal{G}(X)))
+    \min_{X\in\mathbb{H}^n} &&& S(\mathcal{G}(X) \| \mathcal{Z}(\mathcal{G}(X)))
 
     \text{s.t.} &&& \langle A_i, X \rangle = b_i, \quad \forall i,\ldots,p
 

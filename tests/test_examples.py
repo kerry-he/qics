@@ -125,6 +125,19 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(gdict["info"]["exit_status"], "solved")
         self.assertAlmostEqual(gdict["info"]["p_obj"], 39.1674844, places=6)
 
+    # Renyi entropy programs
+    def test_renyi_mutual_inf(self):
+        gdict = self.exec_example("renyi/mutual_inf.py")
+        self.assertEqual(gdict["info"]["sol_status"], "optimal")
+        self.assertEqual(gdict["info"]["exit_status"], "solved")
+        self.assertAlmostEqual(gdict["info"]["p_obj"], 1.2994880, places=6)
+
+    def test_renyi_rate_distortion(self):
+        gdict = self.exec_example("renyi/rate_distortion.py")
+        self.assertEqual(gdict["info"]["sol_status"], "optimal")
+        self.assertEqual(gdict["info"]["exit_status"], "solved")
+        self.assertAlmostEqual(gdict["info"]["p_obj"], 1.0016057, places=6)
+
 
 if __name__ == "__main__":
     unittest.main()

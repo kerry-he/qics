@@ -31,23 +31,23 @@ Delta_vec = mat_to_vec(Delta)
 c = np.block([[1.0], [np.zeros((vN, 1))], [0.0]])
 
 # Build linear constraint matrices
-tr_B = lin_to_mat(lambda X : p_tr(X, (n, n), 1), (N, n), iscomplex=True)
+tr_B = lin_to_mat(lambda X: p_tr(X, (n, n), 1), (N, n), iscomplex=True)
 
 A = np.block([
     [np.zeros((cn, 1)), tr_B,        np.zeros((cn, 1))],  # tr_B[X] = rho
     [0.0,               Delta_vec.T, 1.0              ]   # d = D - <Delta, X>
-])
+])  # fmt: skip
 
 b = np.block([[rho_cvec], [D]])
 
 # Define cones to optimize over
 cones = [
     qics.cones.QuantCondEntr((n, n), 0, iscomplex=True),  # (t, X) ∈ QCE
-    qics.cones.NonNegOrthant(1)  # d = D - <Delta, X> >= 0
+    qics.cones.NonNegOrthant(1),  # d = D - <Delta, X> >= 0
 ]
 
 # Initialize model and solver objects
-model  = qics.Model(c=c, A=A, b=b, cones=cones, offset=entr_rho)
+model = qics.Model(c=c, A=A, b=b, cones=cones, offset=entr_rho)
 solver = qics.Solver(model)
 
 # Solve problem

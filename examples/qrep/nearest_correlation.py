@@ -26,7 +26,7 @@ c = np.block([[1.0], [np.zeros((vn, 1))], [np.zeros((vn, 1))]])
 
 # Build linear constraints
 diag = np.zeros((n, vn))
-diag[np.arange(n), np.arange(0, vn, n + 1)] = 1.
+diag[np.arange(n), np.arange(0, vn, n + 1)] = 1.0
 
 A = np.block([
     [np.zeros((cn, 1)), eye(n),            np.zeros((cn, vn))],  # X = C

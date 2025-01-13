@@ -300,7 +300,7 @@ class OpPerspecTr(Cone):
         # Hessian products with respect to t
         # ======================================================================
         # D2_t F(t, X, Y)[Ht, Hx, Hy]
-        #         = (Ht - D_X S(X||Y)[Hx] - D_Y S(X||Y)[Hy]) / z^2
+        #         = (Ht - D_X trPg(X, Y)[Hx] - D_Y trPg(X, Y)[Hy]) / z^2
         out_t = Ht - inp(self.DPhiX, Hx) - inp(self.DPhiY, Hy)
         out_t *= self.zi2
         out[0][:] = out_t
@@ -323,8 +323,8 @@ class OpPerspecTr(Cone):
         # ==================================================================
         # Hessian product of barrier function
         # D2_Y F(t, X, Y)[Ht, Hx, Hy]
-        #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_Y S(X||Y)
-        #           + (D2_YX S(X||Y)[Hx] + D2_YY S(X||Y)[Hy]) / z
+        #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_Y trPg(X, Y)
+        #           + (D2_YX trPg(X, Y)[Hx] + D2_YY trPg(X, Y)[Hy]) / z
         #           + Y^-1 Hy Y^-1
         out_Y = -out_t * self.DPhiY
         out_Y += self.zi * (D2PhiYXH + D2PhiYYH)
@@ -358,7 +358,7 @@ class OpPerspecTr(Cone):
         # Hessian products with respect to t
         # ======================================================================
         # D2_t F(t, X, Y)[Ht, Hx, Hy]
-        #         = (Ht - D_X S(X||Y)[Hx] - D_Y S(X||Y)[Hy]) / z^2
+        #         = (Ht - D_X trPg(X, Y)[Hx] - D_Y trPg(X, Y)[Hy]) / z^2
         DPhiX_vec = self.DPhiX.view(np.float64).reshape((-1, 1))
         DPhiY_vec = self.DPhiY.view(np.float64).reshape((-1, 1))
 
@@ -430,8 +430,8 @@ class OpPerspecTr(Cone):
 
         # Hessian product of barrier function
         # D2_Y F(t, X, Y)[Ht, Hx, Hy]
-        #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_Y S(X||Y)
-        #           + (D2_YX S(X||Y)[Hx] + D2_YY S(X||Y)[Hy]) / z
+        #         = -D2_t F(t, X, Y)[Ht, Hx, Hy] * D_Y trPg(X, Y)
+        #           + (D2_YX trPg(X, Y)[Hx] + D2_YY trPg(X, Y)[Hy]) / z
         #           + Y^-1 Hy Y^-1
         work5 *= self.zi
         np.outer(out_t, self.DPhiY, out=work2.reshape((p, -1)))
@@ -786,8 +786,19 @@ class OpPerspecTr(Cone):
         # point of the barrier function
         n = self.n
         (t, x, y) = (1.0 + n * self.g(1.0), 1.0, 1.0)
+        n, func = self.n, self.func
+        if self.func == "log" or 0 <= func and func <= 1:
+            (t, x, y) = (1.0 + n * self.g(1.0), 1.0, 1.0)
+        elif 1 <= func:
+            t = np.sqrt(n) * (1 + (1 - func) * 0.2976)
+            x = np.sqrt(1 - (1 - func) * (t * t - 1) / n)
+            y = np.power(np.power(x, 1 - func) * (t - 1 / t) / n, 1 / func)
+        elif -1 <= func and func <= 0:
+            t = np.sqrt(n) * (1 + func * 0.2976)
+            y = np.sqrt(1 - func * (t * t - 1) / n)
+            x = np.power(np.power(y, func) * (t - 1 / t) / n, 1 / (1 - func))
 
-        for _ in range(10):
+        for _ in range(20):
             # Precompute some useful things
             z = t - n * x * self.g(y / x)
             zi = 1 / z
@@ -819,10 +830,18 @@ class OpPerspecTr(Cone):
             delta = -np.linalg.solve(H, g)
             decrement = -np.dot(delta, g)
 
-            # Check feasible
-            (t1, x1, y1) = (t + delta[0], x + delta[1], y + delta[2])
-            if x1 < 0 or y1 < 0 or t1 < n * x1 * self.g(y1 / x1):
-                # Exit if not feasible and return last feasible point
+            # Backtracking line search
+            step, step_success = 1.0, False
+            for __ in range(10):
+                t1 = t + step * delta[0]
+                x1 = x + step * delta[1]
+                y1 = y + step * delta[2]
+                if x1 > 0 and y1 > 0 and t1 > n * x1 * self.g(y1 / x1):
+                    step_success = True
+                    break
+                step /= 2
+
+            if not step_success:
                 break
 
             (t, x, y) = (t1, x1, y1)
