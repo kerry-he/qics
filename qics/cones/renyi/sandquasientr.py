@@ -69,7 +69,7 @@ class SandQuasiEntr(Cone):
 
     .. math::
 
-        \hat{D}_\alpha(X \| Y) = \frac{1}{\alpha - 1} \log(\Psi_\alpha(X, Y)),
+        \hat{D}_\alpha(X \| Y) = \frac{1}{\alpha - 1} \log(\hat{\Psi}_\alpha(X, Y)),
 
     where :math:`\hat{\Psi}_\alpha` is the sandwiched quasi-relative entropy, defined as
 
