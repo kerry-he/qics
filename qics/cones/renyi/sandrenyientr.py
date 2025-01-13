@@ -119,11 +119,11 @@ class SandRenyiEntr(Cone):
         return self.iscomplex
 
     def get_init_point(self, out):
-        (t0, x0, y0) = self.get_central_ray()
+        (t0, u0, x0, y0) = self.get_central_ray()
 
         point = [
             np.array([[t0]]),
-            np.array([[1.0]]),
+            np.array([[u0]]),
             np.eye(self.n, dtype=self.dtype) * x0,
             np.eye(self.n, dtype=self.dtype) * y0,
         ]
