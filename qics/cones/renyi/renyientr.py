@@ -55,8 +55,8 @@ class RenyiEntr(Cone):
 
     See also
     --------
-    SandRenyiEntr : SandwichedRenyi entropy
-    TrRenyiEntr : Trace function used to define the Renyi entropy
+    QuasiEntr : Quasi-relative entropy
+    SandRenyiEntr : Sandwiched Renyi entropy
     QuantRelEntr : Quantum relative entropy
 
     """

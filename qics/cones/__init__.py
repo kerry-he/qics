@@ -21,5 +21,5 @@ from qics.cones.perspective.opperspecepi import OpPerspecEpi  # noqa
 
 from qics.cones.renyi.renyientr import RenyiEntr  # noqa
 from qics.cones.renyi.sandrenyientr import SandRenyiEntr  # noqa
-from qics.cones.renyi.trrenyientr import TrRenyiEntr  # noqa
-from qics.cones.renyi.trsandrenyientr import TrSandRenyiEntr  # noqa
+from qics.cones.renyi.quasientr import QuasiEntr  # noqa
+from qics.cones.renyi.sandquasientr import SandQuasiEntr  # noqa

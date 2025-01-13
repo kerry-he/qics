@@ -179,7 +179,7 @@ where
 
     \Psi_\alpha(X, Y) = \text{tr}[ X^\alpha Y^{1-\alpha} ],
 
-see :class:`~qics.cones.TrRenyiEntr`. We can check the same identity by minimizing
+see :class:`~qics.cones.QuasiEntr`. We can check the same identity by minimizing
 the trace function :math:`\Psi_\alpha` instead of directly minimizing the Renyi entropy
 by using nearly the same code.
 
@@ -234,7 +234,7 @@ by using nearly the same code.
         ])
 
         # Define cones to optimize over
-        cones = [qics.cones.TrRenyiEntr(N, alpha, True)]
+        cones = [qics.cones.QuasiEntr(N, alpha, True)]
 
         # Initialize model and solver objects
         model = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
@@ -282,7 +282,7 @@ by using nearly the same code.
         P = picos.Problem()
         sigB = picos.HermitianVariable("sigB", m)
 
-        obj = picos.trrenyientr(rhoAB, rhoA @ sigB, alpha)
+        obj = picos.quasientr(rhoAB, rhoA @ sigB, alpha)
         P.set_objective("max", obj)
         P.add_constraint(picos.trace(sigB) == 1)
 
@@ -401,7 +401,7 @@ We can verify this by using **QICS** as follows.
         ])
 
         # Define cones to optimize over
-        cones = [qics.cones.TrSandRenyiEntr(N, alpha, True)]
+        cones = [qics.cones.SandQuasiEntr(N, alpha, True)]
 
         # Initialize model and solver objects
         model = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
@@ -503,7 +503,7 @@ where
     \hat{\Psi}_\alpha(X, Y) = \text{tr}\!\left[ \left(Y^\frac{1-\alpha}{2\alpha} X
     Y^\frac{1-\alpha}{2\alpha} \right)^\alpha \right].
 
-see :class:`~qics.cones.TrSandRenyiEntr`. We can check the same identity by minimizing
+see :class:`~qics.cones.SandQuasiEntr`. We can check the same identity by minimizing
 the trace function :math:`\\hat{Psi}_\alpha` instead of directly minimizing the 
 sandwiched Renyi entropy by using nearly the same code.
 
@@ -558,7 +558,7 @@ sandwiched Renyi entropy by using nearly the same code.
         ])
 
         # Define cones to optimize over
-        cones = [qics.cones.TrSandRenyiEntr(N, alpha, True)]
+        cones = [qics.cones.SandQuasiEntr(N, alpha, True)]
 
         # Initialize model and solver objects
         model = qics.Model(c=c, A=A, b=b, G=G, h=h, cones=cones)
@@ -606,7 +606,7 @@ sandwiched Renyi entropy by using nearly the same code.
         P = picos.Problem()
         sigB = picos.HermitianVariable("sigB", m)
 
-        obj = picos.trsandrenyientr(rhoAB, rhoA @ sigB, alpha)
+        obj = picos.sandquasientr(rhoAB, rhoA @ sigB, alpha)
         P.set_objective("max", obj)
         P.add_constraint(picos.trace(sigB) == 1)
 

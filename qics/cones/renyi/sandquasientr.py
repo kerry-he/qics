@@ -25,13 +25,13 @@ from qics.cones.base import Cone, get_perspective_derivatives
 from qics.vectorize import get_full_to_compact_op, vec_to_mat
 
 
-class TrSandRenyiEntr(Cone):
-    r"""A class representing the epigraph or hypograph of the trace function used to
-    define the sandwiched Renyi entropy, i.e.,
+class SandQuasiEntr(Cone):
+    r"""A class representing the epigraph or hypograph of the sandwiched quasi-relative
+    entropy, i.e.,
 
     .. math::
 
-        \mathcal{SRE}_{n, \alpha} = \text{cl} \{ (t, X, Y) \in \mathbb{R} \times
+        \mathcal{SQE}_{n, \alpha} = \text{cl} \{ (t, X, Y) \in \mathbb{R} \times
         \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq -\text{tr}[ (
         Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \},
 
@@ -39,7 +39,7 @@ class TrSandRenyiEntr(Cone):
 
     .. math::
 
-        \mathcal{TSRE}_{n, \alpha} = \text{cl}\{ (t, X, Y) \in \mathbb{R} \times
+        \mathcal{SQE}_{n, \alpha} = \text{cl}\{ (t, X, Y) \in \mathbb{R} \times
         \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[ (
         Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \},
 
@@ -50,7 +50,8 @@ class TrSandRenyiEntr(Cone):
     n : :obj:`int`
         Dimension of the matrices :math:`X` and :math:`Y`.
     alpha : :obj:`float`
-        The exponent :math:`\alpha` used to parameterize the sandwiched Renyi entropy.
+        The exponent :math:`\alpha` used to parameterize the sandwiched quasi-relative
+        entropy.
     iscomplex : :obj:`bool`
         Whether the matrices :math:`X` and :math:`Y` are defined over
         :math:`\mathbb{H}^n` (``True``), or restricted to
@@ -58,27 +59,28 @@ class TrSandRenyiEntr(Cone):
 
     See also
     --------
-    TrRenyiEntr : Renyi entropy
+    QuasiEntr : Renyi entropy
+    SandRenyiEntr : Sandwiched Renyi entropy
     QuantRelEntr : Quantum relative entropy
 
     Notes
     -----
-    The sandwiched Renyi entropy is actually defined as the function
+    The sandwiched Renyi entropy is defined as the function
 
     .. math::
 
-        D_\alpha(X \| Y) = \frac{1}{\alpha - 1} \log(\Psi_\alpha(X, Y)),
+        \hat{D}_\alpha(X \| Y) = \frac{1}{\alpha - 1} \log(\Psi_\alpha(X, Y)),
 
-    where
+    where :math:`\hat{\Psi}_\alpha` is the sandwiched quasi-relative entropy, defined as
 
     .. math::
 
-        \Psi_\alpha(X, Y) = \text{tr}\!\left[ \left(Y^\frac{1-\alpha}{2\alpha} X
+        \hat{\Psi}_\alpha(X, Y) = \text{tr}\!\left[ \left(Y^\frac{1-\alpha}{2\alpha} X
         Y^\frac{1-\alpha}{2\alpha} \right)^\alpha \right].
 
-    Note that :math:`\Psi_\alpha` is jointly concave for :math:`\alpha\in[1/2, 1]`, and
-    jointly convex for :math:`\alpha\in[1, 2]`, whereas :math:`D_\alpha` is jointly
-    convex for :math:`\alpha\in[1/2, 1)`, but is neither convex nor concave for
+    Note that :math:`\hat{\Psi}_\alpha` is jointly concave for :math:`\alpha\in[1/2,1]`,
+    and jointly convex for :math:`\alpha\in[1, 2]`, whereas :math:`\hat{D}_\alpha` is
+    jointly convex for :math:`\alpha\in[1/2, 1)`, but is neither convex nor concave for
     :math:`\alpha\in(1, 2]`.
 
     Note that due to monotonicity of :math:`x \mapsto \log(x)`, we can minimize the
@@ -86,15 +88,15 @@ class TrSandRenyiEntr(Cone):
 
     .. math::
 
-        \min_{(X,Y)\in\mathcal{C}} D_\alpha(X \| Y)  = \frac{1}{\alpha - 1}
-        \log\left( \max_{(X,Y)\in\mathcal{C}} \Psi_\alpha(X, Y) \right),
+        \min_{(X,Y)\in\mathcal{C}} \hat{D}_\alpha(X \| Y)  = \frac{1}{\alpha - 1}
+        \log\left( \max_{(X,Y)\in\mathcal{C}} \hat{\Psi}_\alpha(X, Y) \right),
 
     if :math:`\alpha\in[1/2, 1)`, and
 
     .. math::
 
-        \min_{(X,Y)\in\mathcal{C}} D_\alpha(X \| Y)  = \frac{1}{\alpha - 1}
-        \log\left( \min_{(X,Y)\in\mathcal{C}} \Psi_\alpha(X, Y) \right),
+        \min_{(X,Y)\in\mathcal{C}} \hat{D}_\alpha(X \| Y)  = \frac{1}{\alpha - 1}
+        \log\left( \min_{(X,Y)\in\mathcal{C}} \hat{\Psi}_\alpha(X, Y) \right),
 
     if :math:`\alpha\in(1, 2]`.
 

@@ -25,13 +25,13 @@ from qics.cones.base import Cone, get_perspective_derivatives
 from qics.vectorize import get_full_to_compact_op, vec_to_mat
 
 
-class TrRenyiEntr(Cone):
-    r"""A class representing the epigraph or hypograph of the trace function used to
-    define the Renyi entropy, i.e.,
+class QuasiEntr(Cone):
+    r"""A class representing the epigraph or hypograph of the quasi-relative entropy,
+    i.e.,
 
     .. math::
 
-        \mathcal{TRE}_{n, \alpha} = \text{cl} \{ (t, X, Y) \in \mathbb{R} \times
+        \mathcal{QE}_{n, \alpha} = \text{cl} \{ (t, X, Y) \in \mathbb{R} \times
         \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq -\text{tr}[
         X^\alpha Y^{1-\alpha} ] \},
 
@@ -39,7 +39,7 @@ class TrRenyiEntr(Cone):
 
     .. math::
 
-        \mathcal{RE}_{n, \alpha} = \text{cl} \{ (t, X, Y) \in \mathbb{R} \times
+        \mathcal{QE}_{n, \alpha} = \text{cl} \{ (t, X, Y) \in \mathbb{R} \times
         \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[
         X^\alpha Y^{1-\alpha} ] \},
 
@@ -50,7 +50,7 @@ class TrRenyiEntr(Cone):
     n : :obj:`int`
         Dimension of the matrices :math:`X` and :math:`Y`.
     alpha : :obj:`float`
-        The exponent :math:`\alpha` used to parameterize the sandwiched Renyi entropy.
+        The exponent :math:`\alpha` used to parameterize the quasi-relative entropy.
     iscomplex : :obj:`bool`
         Whether the matrices :math:`X` and :math:`Y` are defined over
         :math:`\mathbb{H}^n` (``True``), or restricted to
@@ -58,18 +58,19 @@ class TrRenyiEntr(Cone):
 
     See also
     --------
-    TrSandRenyiEntr : Sandwiched Renyi entropy
+    RenyiEntr : Renyi entropy
+    SandQuasiEntr : Sandwiched quasi-relative entropy
     QuantRelEntr : Quantum relative entropy
 
     Notes
     -----
-    The Renyi entropy is actually defined as the function
+    The Renyi entropy is defined as the function
 
     .. math::
 
         D_\alpha(X \| Y) = \frac{1}{\alpha - 1} \log(\Psi_\alpha(X, Y)),
 
-    where
+    where :math:`\Psi_\alpha` is the quasi-relative entropy defined as
 
     .. math::
 
@@ -95,7 +96,7 @@ class TrRenyiEntr(Cone):
         \min_{(X,Y)\in\mathcal{C}} D_\alpha(X \| Y)  = \frac{1}{\alpha - 1}
         \log\left( \min_{(X,Y)\in\mathcal{C}} \Psi_\alpha(X, Y) \right),
 
-    if :math:`\alpha\in(1, 2]`. Similarly, we can maximize the sandwiched Renyi entropy
+    if :math:`\alpha\in(1, 2]`. Similarly, we can maximize the Renyi entropy
     by using the identities
 
     .. math::
@@ -222,7 +223,7 @@ class TrRenyiEntr(Cone):
         self.Ux_hY_Ux = self.Ux.conj().T @ self.hY @ self.Ux
         self.Uy_gX_Uy = self.Uy.conj().T @ self.gX @ self.Uy
 
-        # Compute gradients of sandwiched Renyi entropy
+        # Compute gradients of Renyi entropy
         # D_X Ψ(X, Y) = Dg(X)[h(Y)]
         self.DPhiX = self.Ux @ (self.D1x_g * self.Ux_hY_Ux) @ self.Ux.conj().T
         self.DPhiX = (self.DPhiX + self.DPhiX.conj().T) * 0.5
@@ -260,7 +261,7 @@ class TrRenyiEntr(Cone):
         UHxU = self.Ux.conj().T @ Hx @ self.Ux
         UHyU = self.Uy.conj().T @ Hy @ self.Uy
 
-        # Hessian product of sandwiched Renyi entropy
+        # Hessian product of Renyi entropy
         # D2_XX Ψ(X, Y)[Hx] = D2g(X)[h(Y), Hx]
         D2PhiXXH = scnd_frechet(self.D2x_g, self.Ux_hY_Ux, UHxU, U=self.Ux)
         # D2_XY Ψ(X, Y)[Hy] = Dg(X)[Dh(Y)[Hy]]
@@ -366,7 +367,7 @@ class TrRenyiEntr(Cone):
         # ======================================================================
         # Hessian products with respect to Y
         # ======================================================================
-        # Hessian products of sandwiched Renyi entropy
+        # Hessian products of Renyi entropy
         # D2_YY Ψ(X, Y)[Hy] = D2h(Y)[g(X), Hy]
         scnd_frechet_multi(work5, self.D2y_h, work1, self.Uy_gX_Uy, U=self.Uy,
                            work1=work3, work2=work4, work3=work6)  # fmt: skip
@@ -478,7 +479,7 @@ class TrRenyiEntr(Cone):
         UHxU = self.Ux.conj().T @ Hx @ self.Ux
         UHyU = self.Uy.conj().T @ Hy @ self.Uy
 
-        # Hessian product of sandwiched Renyi entropy
+        # Hessian product of Renyi entropy
         # D2_XX Ψ(X, Y)[Hx] = D2g(X)[h(Y), Hx]
         D2PhiXXH = scnd_frechet(self.D2x_g, self.Ux_hY_Ux, UHxU, U=self.Ux)
         # D2_XY Ψ(X, Y)[Hy] = Dg(X)[Dh(Y)[Hy]]
