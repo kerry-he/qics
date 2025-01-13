@@ -171,11 +171,11 @@ definitions and interfaces to all of the cones QICS currently support below.
      - :class:`qics.cones.SandRenyiEntr`
      - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
        \mathbb{H}^n_{++} : t \geq u \hat{D}_\alpha(u^{-1}X \| u^{-1}Y) \}`
-   * - Trace Renyi entropy
+   * - Quasi-relative entropy
      - :class:`qics.cones.QuasiEntr`
      - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
        \mathbb{H}^n_{++} : t \geq \text{tr}[ X^\alpha Y^{1-\alpha} ] \}`
-   * - Trace sandwiched Renyi entropy
+   * - Sandwiched quasi-relative entropy
      - :class:`qics.cones.SandQuasiEntr`
      - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
        \mathbb{H}^n_{++} : t \geq \text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} 
