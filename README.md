@@ -29,12 +29,9 @@ Some notable cones that QICS supports include
 | Renyi entropy |  [`qics.cones.RenyiEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.RenyiEntr)  | $\text{cl}\\{ (t, X, Y) \in \mathbb{R} \times\mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u D_\alpha(u^{-1}X \| u^{-1}Y) \\}$ |
 | Sandwiched Renyi entropy |  [`qics.cones.SandRenyiEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.SandRenyiEntr)  | $\text{cl}\\{ (t, X, Y) \in \mathbb{R} \times\mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u \hat{D}_\alpha(u^{-1}X \| u^{-1}Y) \\}$ |
 
-where $S(X)=-\text{tr}[X\log(X)]$ is the quantum entropy, 
-$S(X \| Y)=\text{tr}[X\log(X) - X\log(Y)]$ is the quantum relative entropy,
-$P_g(X, Y)=X^{1/2} g(X^{-1/2} Y X^{-1/2}) X^{1/2}$ is the non-commutative or
-operator perspective, $D_\alpha(X\|Y)=\frac{1}{\alpha-1}\log(\text{tr}[ X^\alpha Y^{1-\alpha} ])$
-is the $\alpha$-Renyi entropy, and $D_\alpha(X\|Y)=\frac{1}{\alpha-1}\log(\text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ])$
-is the sandwiched $\alpha$-Renyi entropy.
+where $S(X)$ is the quantum entropy, $S(X \| Y)$ is the quantum relative entropy,
+$P_g(X, Y)$ is the non-commutative or operator perspective, $D_\alpha(X\|Y)$
+is the $\alpha$-Renyi entropy, and $\hat{D}_\alpha(X\|Y)$ is the sandwiched $\alpha$-Renyi entropy.
 
 A full list of cones which we support can be found in our
 [documentation](https://qics.readthedocs.io/en/stable/guide/reference.html#cones).

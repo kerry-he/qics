@@ -65,12 +65,10 @@ supports include:
      - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
        \mathbb{H}^n_{++} : t \geq \hat{D}_\alpha(u^{-1}X \| u^{-1}Y) \}`
 
-where :math:`S(X)=-\text{tr}[X\log(X)]` is the quantum entropy, 
-:math:`S(X \| Y)=\text{tr}[X\log(X) - X\log(Y)]` is the quantum relative 
-entropy, :math:`P_g(X, Y)=X^{1/2} g(X^{-1/2} Y X^{-1/2}) X^{1/2}` is the
-noncommutative or operator perspective, :math:`D_\alpha(X\|Y)=\frac{1}{\alpha-1}\log(\text{tr}[ X^\alpha Y^{1-\alpha} ])`
-is the :math:`\alpha`-Renyi entropy, and :math:`D_\alpha(X\|Y)=\frac{1}{\alpha-1}\log(\text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ])`
-is the sandwiched :math:`\alpha`-Renyi entropy.
+where :math:`S(X)` is the quantum entropy, :math:`S(X \| Y)` is the quantum
+relative entropy, :math:`P_g(X, Y)` is the noncommutative or operator
+perspective, :math:`D_\alpha(X\|Y)` is the :math:`\alpha`-Renyi entropy,
+and :math:`\hat{D}_\alpha(X\|Y)` is the sandwiched :math:`\alpha`-Renyi entropy.
 
 
 The full list of supported cones can be found 
