@@ -88,23 +88,26 @@ class Model:
         if self.c.shape[1] != 1 or self.b.shape[1] != 1 or self.h.shape[1] != 1:
             raise ValueError(
                 "The arrays c, b, and h should all have a dimension (-1, 1), but have "
-                "dimensions", self.c.shape, ",", self.b.shape, ", and", self.h.shape
+                "dimensions c:" + str(self.c.shape) + ", b:" + str(self.b.shape) +
+                ", and h:" + str(self.h.shape) + "."
             )  # fmt: skip
         if self.A.shape[1] != self.n or self.G.shape[1] != self.n:
             raise ValueError(
                 "The length of c should match the number of columns in A and G, but "
-                "have dimensions", self.c.shape, ",", self.A.shape, ", and", 
-                self.G.shape
+                "have dimensions c:" + str(self.c.shape) + ", A:" + str(self.A.shape) + 
+                ", and G:" + str(self.G.shape) + "."
             )  # fmt: skip
         if self.A.shape[0] != self.p:
             raise ValueError(
                 "The length of b should match the number of rows in A, but have "
-                "dimensions", self.b.shape, "and", self.A.shape
+                "dimensions b:" + str(self.b.shape) + " and A:" + str(self.A.shape) +
+                "."
             )  # fmt: skip
         if self.G.shape[0] != self.q:
             raise ValueError(
                 "The length of h should match the number of rows in G, but have "
-                "dimensions", self.b.shape, "and", self.A.shape
+                "dimensions h:" + str(self.h.shape) + " and G:" + str(self.G.shape) +
+                "."
             )  # fmt: skip
 
         # Barrier parameter
@@ -342,8 +345,8 @@ def _build_cone_idxs(q, cones):
 
     if prev_idx != q:
         raise ValueError(
-            "The dimensions of h and the cone K should be match, but are instead have ",
-            "the dimensions", q, "and", prev_idx
+            "The dimensions of h and the cone K should be match, but are instead have" +
+            " the dimensions " + str(q) + " and " + str(prev_idx) + "."
         )  # fmt: skip
 
     return cone_idxs

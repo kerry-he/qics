@@ -25,7 +25,7 @@ Ax = np.kron(X0, X1) + np.kron(X1, X0)
 Az = np.kron(Z0, Z1) + np.kron(Z1, Z0)
 A_mats = [np.eye(4), Ax, Az]
 
-A = np.block([[0., mat_to_vec(Ak).T] for Ak in A_mats])
+A = np.block([[0.0, mat_to_vec(Ak).T] for Ak in A_mats])
 b = np.array([[1.0], [qx], [qz]])
 
 # Input into model and solve

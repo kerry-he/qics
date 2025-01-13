@@ -1,8 +1,8 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
-# Based on test_examples.py from CVXOPT by M. Andersen and L. Vandenberghe.
 
 # This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
+
 
 def test_ptr_ikr():
     # Tests that p_tr and i_kr satisfy the adjoint relationship

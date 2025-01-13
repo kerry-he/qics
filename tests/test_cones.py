@@ -1,5 +1,4 @@
 # Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi
-# Based on test_examples.py from CVXOPT by M. Andersen and L. Vandenberghe.
 
 # This Python package QICS is licensed under the MIT license; see LICENSE.md
 # file in the root directory or at https://github.com/kerry-he/qics
@@ -217,3 +216,21 @@ def test_cone_oracles():
     _test_cone(qics.cones.OpPerspecEpi(3, "log", True))
     _test_cone(qics.cones.OpPerspecEpi(3, 0.3))
     _test_cone(qics.cones.OpPerspecEpi(3, 0.3, True))
+
+    _test_cone(qics.cones.RenyiEntr(3, 0.5))
+    _test_cone(qics.cones.RenyiEntr(2, 0.5, True))
+
+    _test_cone(qics.cones.SandRenyiEntr(3, 0.75))
+    _test_cone(qics.cones.SandRenyiEntr(2, 0.75, True))
+
+    _test_cone(qics.cones.QuasiEntr(3, -0.5))
+    _test_cone(qics.cones.QuasiEntr(2, -0.5, True))
+    _test_cone(qics.cones.QuasiEntr(3, 0.5))
+    _test_cone(qics.cones.QuasiEntr(2, 0.5, True))
+    _test_cone(qics.cones.QuasiEntr(3, 1.5))
+    _test_cone(qics.cones.QuasiEntr(2, 1.5, True))
+
+    _test_cone(qics.cones.SandQuasiEntr(3, 0.75))
+    _test_cone(qics.cones.SandQuasiEntr(2, 0.75, True))
+    _test_cone(qics.cones.SandQuasiEntr(3, 1.5))
+    _test_cone(qics.cones.SandQuasiEntr(2, 1.5, True))

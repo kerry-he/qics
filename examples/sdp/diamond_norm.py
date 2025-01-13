@@ -50,8 +50,8 @@ b = np.block([[np.zeros((cN, 1))], [np.zeros((cN, 1))], [1.0], [1.0]])
 # Define cones to optimize over
 cones = [
     qics.cones.PosSemidefinite(2 * N, iscomplex=True),  # M ⪰ 0
-    qics.cones.PosSemidefinite(n, iscomplex=True),      # rho ⪰ 0
-    qics.cones.PosSemidefinite(n, iscomplex=True),      # sig ⪰ 0
+    qics.cones.PosSemidefinite(n, iscomplex=True),  # rho ⪰ 0
+    qics.cones.PosSemidefinite(n, iscomplex=True),  # sig ⪰ 0
 ]
 
 # Initialize model and solver objects

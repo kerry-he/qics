@@ -441,9 +441,9 @@ def get_perspective_derivatives(func):
 
     elif isinstance(func, (int, float)):
         a = func
-        if a > 0 and a < 1:
+        if 0 < a and a < 1:
             sgn = -1
-        elif (a > 1 and a < 2) or (a >= -1 and a < 0):
+        elif (a > 1) or (a >= -1 and a < 0):
             sgn = 1
         b = 1.0 - a
 

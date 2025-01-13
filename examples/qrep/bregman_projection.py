@@ -15,7 +15,7 @@ n = 5
 vn = vec_dim(n, iscomplex=True)
 
 # Generate random positive semidefinite matrix Y to project
-Y = np.random.randn(n, n) + np.random.randn(n, n)*1j
+Y = np.random.randn(n, n) + np.random.randn(n, n) * 1j
 Y = Y @ Y.conj().T
 trY = np.trace(Y).real
 
@@ -29,7 +29,7 @@ trace = lin_to_mat(lambda X: np.trace(X), (n, 1), iscomplex=True)
 A = np.block([
     [0.0, 1.0, np.zeros((1, vn))],  # u = 1
     [0.0, 0.0, trace            ]   # tr[X] = 1
-])
+])  # fmt: skip
 
 b = np.array([[1.0], [1.0]])
 

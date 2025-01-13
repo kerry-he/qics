@@ -14,10 +14,13 @@ import scipy as sp
 from qics import __version__
 from qics._stepper import KKTSolver, NonSymStepper, SymStepper
 from qics._utils.linalg import is_full_col_rank, norm_inf
-from qics.cones import OpPerspecEpi, OpPerspecTr, QuantRelEntr
+from qics.cones import (OpPerspecEpi, OpPerspecTr, QuantRelEntr, RenyiEntr, 
+                        SandRenyiEntr, SandQuasiEntr, QuasiEntr)  # fmt: skip
 from qics.point import Point
 
-spinner = itertools.cycle(["-", "/", "|", "\\"])
+SLOW_CONES = (QuantRelEntr, OpPerspecEpi, OpPerspecTr, RenyiEntr, SandRenyiEntr, 
+              QuasiEntr, SandQuasiEntr)  # fmt: skip
+SPINNER = itertools.cycle(["-", "/", "|", "\\"])
 
 
 class Solver:
@@ -72,10 +75,10 @@ class Solver:
     use_invhess : :obj:`bool`, optional
         Whether or not to avoid using inverse Hessian product oracles by
         solving a modified cone program with
-        :math:`G^{-1}(\mathcal{K})=\{ x : Gx \in \mathcal{K} \}`. By 
+        :math:`G^{-1}(\mathcal{K})=\{ x : Gx \in \mathcal{K} \}`. By
         default, this is ``False`` if :math:`G\neq-\mathbb{I}`, :math:`G`
         is full column rank, and :math:`\mathcal{K}` mainly consists of
-        :class:`~qics.cones.QuantRelEntr`, 
+        :class:`~qics.cones.QuantRelEntr`,
         :class:`~qics.cones.OpPerspecEpi`, and
         :class:`~qics.cones.OpPerspecTr` cones, and is ``True`` otherwise.
     """
@@ -116,7 +119,6 @@ class Solver:
         cones = model.cones
         if use_invhess is None:
             # Default decision tree for whether to avoid inverse Hessian oracles
-            SLOW_CONES = (QuantRelEntr, OpPerspecEpi, OpPerspecTr)
             q_slow_cones = sum([sum(K.dim) for K in cones if isinstance(K, SLOW_CONES)])
 
             use_invhess = model.issymmetric or q_slow_cones / model.q <= 0.55 \
@@ -309,7 +311,7 @@ class Solver:
         if self.verbose >= 2:
             self.print_iter()
         elif self.verbose:
-            sys.stdout.write(next(spinner))
+            sys.stdout.write(next(SPINNER))
             sys.stdout.flush()
             sys.stdout.write("\b")
 
