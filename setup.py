@@ -26,8 +26,6 @@ if sys.version_info[:2] == (3, 13):
 else:
     NUMBA_VERSION = "numba"
 
-NUMBA_VERSION = "numba==0.61.0rc2"
-
 setuptools.setup(
     name="qics",
     version=VERSION,
