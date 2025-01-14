@@ -786,7 +786,7 @@ class RenyiEntr(Cone):
         Hxx = (Hxx + Hxx.conj().T) * 0.5
         Hyy = (Hyy + Hyy.conj().T) * 0.5
 
-        self.hess[0, 0] = Huu
+        self.hess[0, 0] = Huu[0, 0]
         self.hess[0, 1 : 1 + self.vn] = Hux
         self.hess[0, 1 + self.vn :] = Huy
         self.hess[1 : 1 + self.vn, 0] = Hux
