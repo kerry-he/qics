@@ -18,9 +18,6 @@ if mo:
 else:
     raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE,))
 
-print(sys.version_info)
-print(sys.version_info[:2])
-
 if sys.version_info[:2] == (3, 13):
     NUMBA_VERSION = "numba==0.61.0rc2"
 else:
@@ -41,6 +38,6 @@ setuptools.setup(
     },
     packages=setuptools.find_packages(include=["qics", "qics.*"]),
     python_requires=">=3.8",
-    install_requires=["numpy", "scipy", "numba==0.61.0rc2"],
+    install_requires=["numpy", "scipy", NUMBA_VERSION],
     package_data={"": ["README.md", "LICENSE.md"]},
 )
