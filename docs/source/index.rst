@@ -58,12 +58,12 @@ supports include:
        \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \}`
    * - Renyi entropy
      - :class:`qics.cones.RenyiEntr`
-     - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
-       \mathbb{H}^n_{++} : t \geq D_\alpha(u^{-1}X \| u^{-1}Y) \}`
+     - :math:`\text{cl} \{ (t, u, X, Y) \in \mathbb{R} \times \mathbb{R}_{++} \times 
+       \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u D_\alpha(u^{-1}X \| u^{-1}Y) \}`
    * - Sandwiched Renyi entropy
      - :class:`qics.cones.SandRenyiEntr`
-     - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
-       \mathbb{H}^n_{++} : t \geq \hat{D}_\alpha(u^{-1}X \| u^{-1}Y) \}`
+     - :math:`\text{cl} \{ (t, u, X, Y) \in \mathbb{R} \times \mathbb{R}_{++} \times 
+       \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u \hat{D}_\alpha(u^{-1}X \| u^{-1}Y) \}`
 
 where :math:`S(X)` is the quantum entropy, :math:`S(X \| Y)` is the quantum
 relative entropy, :math:`P_g(X, Y)` is the noncommutative or operator
