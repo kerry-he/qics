@@ -41,6 +41,25 @@ to be solved using QICS.
      - Operator convex if :math:`t\in[-1, 0]\cup[1, 2]`
        Operator concave if :math:`t\in[0, 1]`
      - :math:`X\,\#_t\,Y = X^{1/2} (X^{1/2} Y^{-1} X^{1/2})^t X^{1/2}`
+   * - Renyi entropy
+     - :func:`picos.renyientr`
+     - Operator convex for :math:`\alpha\in[0, 1)`
+     - :math:`D_\alpha(X \| Y) = \frac{1}{1-\alpha} \log(\text{tr}[X^\alpha Y^{1-\alpha}])`
+   * - Sandwiched Renyi entropy
+     - :func:`picos.sandrenyientr`
+     - Operator convex for :math:`\alpha\in[1/2, 1)`
+     - :math:`\hat{D}_\alpha(X \| Y) = \frac{1}{1-\alpha} \log(\text{tr}[ (Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}})^\alpha ])`
+   * - Quasi-relative entropy
+     - :func:`picos.quasientr`
+     - Concave for :math:`\alpha\in[0, 1]`
+       Convex for :math:`\alpha\in[-1, 0]\cup[1, 2]`
+     - :math:`\text{tr}[ X^\alpha Y^{1-\alpha} ]`
+   * - Sandwiched quasi-relative entropy
+     - :func:`picos.sandquasientr`
+     - Concave for :math:`\alpha\in[1/2, 1]`
+       Convex for :math:`\alpha\in[1, 2]`
+     - :math:`\text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ]`
+
 
 Scalar functions (i.e., quantum entropy, quantum relative entropy, quantum 
 conditional entropy, and quantum key distribution) can be used by either 
