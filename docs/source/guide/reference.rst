@@ -155,7 +155,7 @@ definitions and interfaces to all of the cones QICS currently support below.
      - :math:`\text{cl}\{ (T, X, Y) \in \mathbb{H}^n \times \mathbb{H}^n_{++}
        \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \}`
 
-.. list-table:: **Renyi entropy cones**
+.. table:: **Renyi entropy cones**
 
   +-----------------------------------+-----------------------------------+-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
   |               Cone                |            QICS class             | Range of :math:`\alpha` |                                                                                           Description                                                                                            |
