@@ -85,13 +85,13 @@ definitions and interfaces to all of the cones QICS currently support below.
    * - Cone
      - QICS class
      - Description
-   * - Nonnegative orthant
+   * - **Nonnegative orthant**
      - :class:`qics.cones.NonNegOrthant`
      - :math:`\{ x \in \mathbb{R}^n : x \geq 0 \}`
-   * - Positive semidefinite
+   * - **Positive semidefinite**
      - :class:`qics.cones.PosSemidefinite`
      - :math:`\{ X \in \mathbb{H}^n : X \succeq 0 \}`
-   * - Second order cone
+   * - **Second order cone**
      - :class:`qics.cones.SecondOrder`
      - :math:`\{(t, x) \in \mathbb{R} \times \mathbb{R}^{n} : t \geq \|x\|_2\}.`
 
@@ -104,11 +104,11 @@ definitions and interfaces to all of the cones QICS currently support below.
    * - Cone
      - QICS class
      - Description
-   * - Classical entropy
+   * - **Classical entropy**
      - :class:`qics.cones.QuantEntr`
      - :math:`\text{cl}\{ (t, u, x) \in \mathbb{R} \times \mathbb{R}_{++} 
        \times \mathbb{R}^n_{++} : t \geq -u H(u^{-1} x) \}`
-   * - Classical relative entropy
+   * - **Classical relative entropy**
      - :class:`qics.cones.QuantRelEntr`
      - :math:`\text{cl}\{ (t, x, y) \in \mathbb{R} \times \mathbb{R}^n_{++} 
        \times \mathbb{R}^n_{++} : t \geq H(x \| y) \}`
@@ -121,19 +121,19 @@ definitions and interfaces to all of the cones QICS currently support below.
    * - Cone
      - QICS class
      - Description
-   * - Quantum entropy
+   * - **Quantum entropy**
      - :class:`qics.cones.QuantEntr`
      - :math:`\text{cl}\{ (t, u, X) \in \mathbb{R} \times \mathbb{R}_{++} \times
        \mathbb{H}^n_{++} : t \geq -u S(u^{-1} X) \}`
-   * - Quantum relative entropy
+   * - **Quantum relative entropy**
      - :class:`qics.cones.QuantRelEntr`
      - :math:`\text{cl}\{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} 
        \times \mathbb{H}^n_{++} : t \geq S(X \| Y) \}`
-   * - Quantum conditional entropy
+   * - **Quantum conditional entropy**
      - :class:`qics.cones.QuantCondEntr`
      - :math:`\text{cl}\{ (t, X) \in \mathbb{R}\times\mathbb{H}^{\Pi_in_i}_{++}: 
        t \geq -S(X) + S(\text{tr}_i(X)) \}`
-   * - Quantum key distribution
+   * - **Quantum key distribution**
      - :class:`qics.cones.QuantKeyDist`
      - :math:`\text{cl}\{ (t, X) \in \mathbb{R} \times \mathbb{H}^n_{++} : 
        t \geq -S(\mathcal{G}(X)) + S(\mathcal{Z}(\mathcal{G}(X))) \}`
@@ -146,11 +146,11 @@ definitions and interfaces to all of the cones QICS currently support below.
    * - Cone
      - QICS class
      - Description
-   * - Operator perspective trace
+   * - **Operator perspective trace**
      - :class:`qics.cones.OpPerspecTr`
      - :math:`\text{cl}\{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++}
        \times \mathbb{H}^n_{++} : t \geq \text{tr}[P_g(X, Y)] \}`
-   * - Operator perspective epigraph
+   * - **Operator perspective epigraph**
      - :class:`qics.cones.OpPerspecEpi`
      - :math:`\text{cl}\{ (T, X, Y) \in \mathbb{H}^n \times \mathbb{H}^n_{++}
        \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \}`
@@ -172,7 +172,6 @@ definitions and interfaces to all of the cones QICS currently support below.
   +                                                 |                                                 +---------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
   |                                                 |                                                 |     .. centered:: :math:`[1/2,1]`     | .. centered:: :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq -\text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \}` |
   +-------------------------------------------------+-------------------------------------------------+---------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
 
 
 .. _reference solving:
