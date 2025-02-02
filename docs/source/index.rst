@@ -56,20 +56,31 @@ supports include:
      - :class:`qics.cones.OpPerspecEpi`
      - :math:`\text{cl}\{ (T, X, Y) \in \mathbb{H}^n \times \mathbb{H}^n_{++}
        \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \}`
-   * - Renyi entropy
+   * - :math:`\alpha`-Renyi entropy (for :math:`\alpha\in[0, 1)`)
      - :class:`qics.cones.RenyiEntr`
      - :math:`\text{cl} \{ (t, u, X, Y) \in \mathbb{R} \times \mathbb{R}_{++} \times 
        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u D_\alpha(u^{-1}X \| u^{-1}Y) \}`
-   * - Sandwiched Renyi entropy
-     - :class:`qics.cones.SandRenyiEntr`
+   * - Sandwiched :math:`\alpha`-Renyi entropy
+     - :class:`qics.cones.SandRenyiEntr` (for :math:`\alpha\in[1/2, 1)`)
      - :math:`\text{cl} \{ (t, u, X, Y) \in \mathbb{R} \times \mathbb{R}_{++} \times 
        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u \hat{D}_\alpha(u^{-1}X \| u^{-1}Y) \}`
+   * - :math:`\alpha`-Quasi-relative entropy
+     - :class:`qics.cones.QuasiEntr` (for :math:`\alpha\in[-1, 2]`)
+     - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times
+       \mathbb{H}^n_{++} : t \geq \pm \text{tr}[ X^\alpha Y^{1-\alpha} ] \}`
+   * - Sandwiched :math:`\alpha`-quasi-relative entropy
+     - :class:`qics.cones.SandQuasiEntr` (for :math:`\alpha\in[1/2, 2]`)
+     - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times
+       \mathbb{H}^n_{++} : t \geq \pm \text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} X 
+       Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \}`
 
-where :math:`S(X)` is the quantum entropy, :math:`S(X \| Y)` is the quantum
-relative entropy, :math:`P_g(X, Y)` is the noncommutative or operator
-perspective, :math:`D_\alpha(X\|Y)` is the :math:`\alpha`-Renyi entropy,
-and :math:`\hat{D}_\alpha(X\|Y)` is the sandwiched :math:`\alpha`-Renyi entropy.
+where we define the following functions
 
+  - Quantum entropy: :math:`S(X)=-\text{tr}[X\log(X)]`
+  - Quantum relative entropy: :math:`S(X \| Y)=\text{tr}[X\log(X) - X\log(Y)]`
+  - Noncommutative perspective: :math:`P_g(X, Y)=X^{1/2} g(X^{-1/2} Y X^{-1/2}) X^{1/2}`
+  - :math:`\alpha`-Renyi entropy: :math:`D_\alpha(X\|Y)=\frac{1}{1-\alpha} \log(\text{tr}[X^\alpha Y^{1-\alpha}])`
+  - Sandwiched :math:`\alpha`-Renyi entropy: :math:`hat{D}_\alpha(X \| Y) = \frac{1}{1-\alpha} \log(\text{tr}[ (Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}})^\alpha ])`
 
 The full list of supported cones can be found 
 :ref:`here<guide/reference:cones>`.
