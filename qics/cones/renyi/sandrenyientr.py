@@ -31,8 +31,9 @@ class SandRenyiEntr(Cone):
 
     .. math::
 
-        \mathcal{SRE}_{n} = \text{cl}\{ (t,X,Y) \in \mathbb{R} \times \mathbb{H}^n_{++}
-        \times \mathbb{H}^n_{++} : t \geq u \hat{D}_\alpha(u^{-1}X \| u^{-1}Y) \},
+        \mathcal{SRE}_{n} = \text{cl}\{ (t,u,X,Y) \in \mathbb{R} \times \mathbb{R}_{++}
+        \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++}
+        : t \geq u \hat{D}_\alpha(u^{-1}X \| u^{-1}Y) \},
 
     where
 
@@ -879,7 +880,7 @@ class SandRenyiEntr(Cone):
         Hxx = (Hxx + Hxx.conj().T) * 0.5
         Hyy = (Hyy + Hyy.conj().T) * 0.5
 
-        self.hess[0, 0] = Huu
+        self.hess[0, 0] = Huu[0, 0]
         self.hess[0, 1 : 1 + self.vn] = Hux
         self.hess[0, 1 + self.vn :] = Huy
         self.hess[1 : 1 + self.vn, 0] = Hux

@@ -156,26 +156,31 @@ definitions and interfaces to all of the cones QICS currently support below.
        \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \}`
 
 .. list-table:: **Renyi entropies**
-   :widths: 25 25 50
+   :widths: 20 15 15 50
    :header-rows: 1
    :align: center
 
    * - Cone
+     - Range of :math:`\alpha`
      - QICS class
      - Description
    * - Renyi entropy
+     - :math:`[0,1)`
      - :class:`qics.cones.RenyiEntr`
-     - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
-       \mathbb{H}^n_{++} : t \geq u D_\alpha(u^{-1}X \| u^{-1}Y) \}`
+     - :math:`\text{cl} \{ (t, u, X, Y) \in \mathbb{R} \times \mathbb{R}_{++} \times 
+       \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u D_\alpha(u^{-1}X \| u^{-1}Y) \}`
    * - Sandwiched Renyi entropy
+     - :math:`[1/2,1)`
      - :class:`qics.cones.SandRenyiEntr`
-     - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
-       \mathbb{H}^n_{++} : t \geq u \hat{D}_\alpha(u^{-1}X \| u^{-1}Y) \}`
-   * - Trace Renyi entropy
+     - :math:`\text{cl} \{ (t, u, X, Y) \in \mathbb{R} \times \mathbb{R}_{++} \times 
+       \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u \hat{D}_\alpha(u^{-1}X \| u^{-1}Y) \}`
+   * - Quasi-relative entropy
+     - :math:`[-1,2]`
      - :class:`qics.cones.QuasiEntr`
      - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
        \mathbb{H}^n_{++} : t \geq \text{tr}[ X^\alpha Y^{1-\alpha} ] \}`
-   * - Trace sandwiched Renyi entropy
+   * - Sandwiched quasi-relative entropy
+     - :math:`[1/2,2]`
      - :class:`qics.cones.SandQuasiEntr`
      - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
        \mathbb{H}^n_{++} : t \geq \text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} 
