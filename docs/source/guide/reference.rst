@@ -155,47 +155,22 @@ definitions and interfaces to all of the cones QICS currently support below.
      - :math:`\text{cl}\{ (T, X, Y) \in \mathbb{H}^n \times \mathbb{H}^n_{++}
        \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \}`
 
-.. list-table:: **Renyi entropy cones**
-   :widths: 20 15 15 50
-   :header-rows: 1
-   :align: center
+.. table:: **Renyi entropy cones**
 
-   * - Cone
-     - QICS class
-     - Range of :math:`\alpha`
-     - Description
-   * - Renyi entropy
-     - :class:`qics.cones.RenyiEntr`
-     - :math:`[0,1)`
-     - :math:`\text{cl} \{ (t, u, X, Y) \in \mathbb{R} \times \mathbb{R}_{++} \times 
-       \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u D_\alpha(u^{-1}X \| u^{-1}Y) \}`
-   * - Sandwiched Renyi entropy
-     - :class:`qics.cones.SandRenyiEntr`
-     - :math:`[1/2,1)`
-     - :math:`\text{cl} \{ (t, u, X, Y) \in \mathbb{R} \times \mathbb{R}_{++} \times 
-       \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u \hat{D}_\alpha(u^{-1}X \| u^{-1}Y) \}`
-   * - Quasi-relative entropy
-     - :class:`qics.cones.QuasiEntr`
-     - :math:`[-1,0]\cup[1,2]`
-     - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
-       \mathbb{H}^n_{++} : t \geq \text{tr}[ X^\alpha Y^{1-\alpha} ] \}`
-   * - 
-     -
-     - :math:`[0,1]`
-     - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
-       \mathbb{H}^n_{++} : t \geq -\text{tr}[ X^\alpha Y^{1-\alpha} ] \}`
-   * - Sandwiched quasi-relative entropy
-     - :class:`qics.cones.SandQuasiEntr`
-     - :math:`[1,2]`
-     - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
-       \mathbb{H}^n_{++} : t \geq \text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} 
-       X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \}`
-   * - 
-     - 
-     - :math:`[1/2,1]`
-     - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times 
-       \mathbb{H}^n_{++} : t \geq -\text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} 
-       X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \}`
+  +-----------------------------------+-----------------------------------+-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+  |               Cone                |            QICS class             | Range of :math:`\alpha` |                                                                                           Description                                                                                            |
+  +===================================+===================================+=========================+==================================================================================================================================================================================================+
+  |           Renyi entropy           |   :class:`qics.cones.RenyiEntr`   |      :math:`[0,1)`      |              :math:`\text{cl} \{ (t, u, X, Y) \in \mathbb{R} \times \mathbb{R}_{++} \times  \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u D_\alpha(u^{-1}X \| u^{-1}Y) \}`               |
+  +-----------------------------------+-----------------------------------+-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+  |     Sandwiched Renyi entropy      | :class:`qics.cones.SandRenyiEntr` |     :math:`[1/2,1)`     |           :math:`\text{cl} \{ (t, u, X, Y) \in \mathbb{R} \times \mathbb{R}_{++} \times  \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u \hat{D}_\alpha(u^{-1}X \| u^{-1}Y) \}`            |
+  +-----------------------------------+-----------------------------------+-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+  |      Quasi-relative entropy       |   :class:`qics.cones.QuasiEntr`   | :math:`[-1,0]\cup[1,2]` |                          :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[ X^\alpha Y^{1-\alpha} ] \}`                          |
+  |                                   |                                   |      :math:`[0,1]`      |                         :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq -\text{tr}[ X^\alpha Y^{1-\alpha} ] \}`                          |
+  +-----------------------------------+-----------------------------------+-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+  | Sandwiched quasi-relative entropy | :class:`qics.cones.SandQuasiEntr` |      :math:`[1,2]`      | :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \}`  |
+  |                                   |                                   |     :math:`[1/2,1]`     | :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq -\text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \}` |
+  +-----------------------------------+-----------------------------------+-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
 
 
 .. _reference solving:

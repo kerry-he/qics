@@ -60,16 +60,16 @@ supports include:
      - :class:`qics.cones.RenyiEntr`
      - :math:`\text{cl} \{ (t, u, X, Y) \in \mathbb{R} \times \mathbb{R}_{++} \times 
        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u D_\alpha(u^{-1}X \| u^{-1}Y) \}`
-   * - Sandwiched :math:`\alpha`-Renyi entropy
-     - :class:`qics.cones.SandRenyiEntr` (for :math:`\alpha\in[1/2, 1)`)
+   * - Sandwiched :math:`\alpha`-Renyi entropy (for :math:`\alpha\in[1/2, 1)`)
+     - :class:`qics.cones.SandRenyiEntr`
      - :math:`\text{cl} \{ (t, u, X, Y) \in \mathbb{R} \times \mathbb{R}_{++} \times 
        \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u \hat{D}_\alpha(u^{-1}X \| u^{-1}Y) \}`
-   * - :math:`\alpha`-Quasi-relative entropy
-     - :class:`qics.cones.QuasiEntr` (for :math:`\alpha\in[-1, 2]`)
+   * - :math:`\alpha`-Quasi-relative entropy (for :math:`\alpha\in[-1, 2]`)
+     - :class:`qics.cones.QuasiEntr`
      - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times
        \mathbb{H}^n_{++} : t \geq \pm \text{tr}[ X^\alpha Y^{1-\alpha} ] \}`
-   * - Sandwiched :math:`\alpha`-quasi-relative entropy
-     - :class:`qics.cones.SandQuasiEntr` (for :math:`\alpha\in[1/2, 2]`)
+   * - Sandwiched :math:`\alpha`-quasi-relative entropy (for :math:`\alpha\in[1/2, 2]`)
+     - :class:`qics.cones.SandQuasiEntr`
      - :math:`\text{cl} \{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times
        \mathbb{H}^n_{++} : t \geq \pm \text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} X 
        Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \}`
