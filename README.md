@@ -20,21 +20,24 @@ Some notable cones that QICS supports include
 
 | Cone           |  QICS class  |  Description  |
 |----------------|:---------------------:|:---------------:|
-| Positive semidefinite |  [`qics.cones.PosSemidefinite`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.PosSemidefinite)  | $\\{ X \in \mathbb{H}^n : X \succeq 0 \\}$ |
-| Quantum entropy |  [`qics.cones.QuantEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.QuantEntr)  | $\text{cl}\\{ (t, u, X) \in \mathbb{R} \times \mathbb{R}_{++} \times \mathbb{H}^n\_{++} : t \geq -u S(u^{-1} X) \\}$ |
-| Quantum relative entropy |  [`qics.cones.QuantRelEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.QuantRelEntr)  | $\text{cl}\\{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq S(X \\| Y) \\}$ |
-| Quantum conditional entropy |  [`qics.cones.QuantCondEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.QuantCondEntr)  | $\text{cl}\\{ (t, X) \in \mathbb{R} \times \mathbb{H}^{\Pi_in_i}_{++} : t \geq -S(X) + S(\text{tr}_i(X)) \\}$ |
-| Quantum key distribution |  [`qics.cones.QuantKeyDist`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.QuantKeyDist)  | $\text{cl}\\{ (t, X) \in \mathbb{R} \times \mathbb{H}^n_{++} : t \geq -S(\mathcal{G}(X)) + S(\mathcal{Z}(\mathcal{G}(X))) \\}$ |
-| Operator perspective epigraph |  [`qics.cones.OpPerspecEpi`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.OpPerspecEpi)  | $\text{cl}\\{ (T, X, Y) \in \mathbb{H}^n \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \\}$ |
-| Renyi entropy |  [`qics.cones.RenyiEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.RenyiEntr)  | $\text{cl}\\{ (t, X, Y) \in \mathbb{R} \times\mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u D_\alpha(u^{-1}X \| u^{-1}Y) \\}$ |
-| Sandwiched Renyi entropy |  [`qics.cones.SandRenyiEntr`](https://qics.readthedocs.io/en/stable/api/cones.html#qics.cones.SandRenyiEntr)  | $\text{cl}\\{ (t, X, Y) \in \mathbb{R} \times\mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u \hat{D}_\alpha(u^{-1}X \| u^{-1}Y) \\}$ |
+| Positive semidefinite |  [`qics.cones.PosSemidefinite`](https://qics.readthedocs.io/en/stable/api/cones/PosSemidefinite.html#qics.cones.PosSemidefinite)  | $\\{ X \in \mathbb{H}^n : X \succeq 0 \\}$ |
+| Quantum entropy |  [`qics.cones.QuantEntr`](https://qics.readthedocs.io/en/stable/api/cones/QuantEntr.html#qics.cones.QuantEntr)  | $\text{cl}\\{ (t, u, X) \in \mathbb{R} \times \mathbb{R}_{++} \times \mathbb{H}^n\_{++} : t \geq -u S(u^{-1} X) \\}$ |
+| Quantum relative entropy |  [`qics.cones.QuantRelEntr`](https://qics.readthedocs.io/en/stable/api/cones/QuantRelEntr.html#qics.cones.QuantRelEntr)  | $\text{cl}\\{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq S(X \\| Y) \\}$ |
+| Quantum conditional entropy |  [`qics.cones.QuantCondEntr`](https://qics.readthedocs.io/en/stable/api/cones/QuantCondEntr.html#qics.cones.QuantCondEntr)  | $\text{cl}\\{ (t, X) \in \mathbb{R} \times \mathbb{H}^{\Pi_in_i}_{++} : t \geq -S(X) + S(\text{tr}_i(X)) \\}$ |
+| Quantum key distribution |  [`qics.cones.QuantKeyDist`](https://qics.readthedocs.io/en/stable/api/cones/QuantKeyDist.html#qics.cones.QuantKeyDist)  | $\text{cl}\\{ (t, X) \in \mathbb{R} \times \mathbb{H}^n_{++} : t \geq -S(\mathcal{G}(X)) + S(\mathcal{Z}(\mathcal{G}(X))) \\}$ |
+| Operator perspective epigraph |  [`qics.cones.OpPerspecEpi`](https://qics.readthedocs.io/en/stable/api/cones/OpPerspecEpi.html#qics.cones.OpPerspecEpi)  | $\text{cl}\\{ (T, X, Y) \in \mathbb{H}^n \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : T \succeq P_g(X, Y) \\}$ |
+| $\alpha$-Renyi entropy (for $\alpha\in[0,1)$ )  |  [`qics.cones.RenyiEntr`](https://qics.readthedocs.io/en/stable/api/cones/RenyiEntr.html#qics.cones.RenyiEntr)  | $\text{cl}\\{ (t, u, X, Y) \in \mathbb{R} \times \mathbb{R}\_{++} \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u D_\alpha(u^{-1}X \| u^{-1}Y) \\}$ |
+| Sandwiched Renyi entropy (for $\alpha\in\[\frac{1}{2},1)$ ) |  [`qics.cones.SandRenyiEntr`](https://qics.readthedocs.io/en/stable/api/cones/SandRenyiEntr.html#qics.cones.SandRenyiEntr)  | $\text{cl}\\{ (t, u, X, Y) \in \mathbb{R} \times \mathbb{R}\_{++} \times\mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq u \hat{D}_\alpha(u^{-1}X \| u^{-1}Y) \\}$ |
+| Quasi-relative entropy (for $\alpha\in[-1,2]$ ) |  [`qics.cones.QuasiEntr`](https://qics.readthedocs.io/en/stable/api/cones/QuasiEntr.html#qics.cones.QuasiEntr)  | $\text{cl} \\{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \pm \text{tr}[ X^\alpha Y^{1-\alpha} ] \\}$ |
+| Sandwiched quasi-relative entropy (for $\alpha\in[\frac{1}{2},2]$ ) |  [`qics.cones.SandQuasiEntr`](https://qics.readthedocs.io/en/stable/api/cones/SandQuasiEntr.html#qics.cones.SandQuasiEntr)  | $\text{cl} \\{ (t, X, Y) \in \mathbb{R} \times \mathbb{H}^n_{++} \times \mathbb{H}^n_{++} : t \geq \pm \text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ] \\}$ |
 
-where $S(X)=-\text{tr}[X\log(X)]$ is the quantum entropy, 
-$S(X \| Y)=\text{tr}[X\log(X) - X\log(Y)]$ is the quantum relative entropy,
-$P_g(X, Y)=X^{1/2} g(X^{-1/2} Y X^{-1/2}) X^{1/2}$ is the non-commutative or
-operator perspective, $D_\alpha(X\|Y)=\frac{1}{\alpha-1}\log(\text{tr}[ X^\alpha Y^{1-\alpha} ])$
-is the $\alpha$-Renyi entropy, and $D_\alpha(X\|Y)=\frac{1}{\alpha-1}\log(\text{tr}[ ( Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}} )^\alpha ])$
-is the sandwiched $\alpha$-Renyi entropy.
+where we define the following functions
+
+  - Quantum entropy: $S(X)=-\text{tr}[X\log(X)]$
+  - Quantum relative entropy: $S(X \| Y)=\text{tr}[X\log(X) - X\log(Y)]$
+  - Noncommutative perspective: $P_g(X, Y)=X^{1/2} g(X^{-1/2} Y X^{-1/2}) X^{1/2}$
+  - Renyi entropy: $D_\alpha(X\|Y)=\frac{1}{1-\alpha} \log(\text{tr}[X^\alpha Y^{1-\alpha}])$
+  - Sandwiched Renyi entropy: $\hat{D}_\alpha(X \| Y) = \frac{1}{1-\alpha} \log(\text{tr}[ (Y^{\frac{1-\alpha}{2\alpha}} X Y^{\frac{1-\alpha}{2\alpha}})^\alpha ])$
 
 A full list of cones which we support can be found in our
 [documentation](https://qics.readthedocs.io/en/stable/guide/reference.html#cones).
