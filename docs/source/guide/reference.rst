@@ -321,4 +321,3 @@ following keys.
      - Relative optimality gap.
    * - ``p_feas``, ``d_feas``
      - Relative primal feasibility and dual feasiblity.
-
