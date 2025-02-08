@@ -40,7 +40,7 @@ to be solved using QICS.
      - :func:`picos.mtxgeomean`
      - Operator convex if :math:`t\in[-1, 0]\cup[1, 2]`
        Operator concave if :math:`t\in[0, 1]`
-     - :math:`X\,\#_t\,Y = X^{1/2} (X^{1/2} Y^{-1} X^{1/2})^t X^{1/2}`
+     - :math:`X\,\#_t\,Y = X^{1/2} (X^{-1/2} Y^{-1} X^{-1/2})^t X^{1/2}`
    * - Renyi entropy
      - :func:`picos.renyientr`
      - Operator convex for :math:`\alpha\in[0, 1)`
