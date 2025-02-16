@@ -211,11 +211,29 @@ using:
 
 .. code-block:: bibtex
 
-    @article{he2024qics,
-      title={{QICS}: {Q}uantum Information Conic Solver},
-      author={He, Kerry and Saunderson, James and Fawzi, Hamza},
-      journal={arXiv preprint arXiv:2410.17803},
-      year={2024}
+    @misc{he2024qicsquantuminformationconic,
+      title={{QICS}: {Q}uantum Information Conic Solver}, 
+      author={Kerry He and James Saunderson and Hamza Fawzi},
+      year={2024},
+      eprint={2410.17803},
+      archivePrefix={arXiv},
+      primaryClass={math.OC},
+      url={https://arxiv.org/abs/2410.17803}, 
+    }
+
+If you found our sandwiched Renyi and quasi-relative entropy cones useful, please cite
+out `paper <https://www.arxiv.org/abs/2502.05627>`_ using:
+
+.. code-block:: bibtex
+
+    @misc{he2025operator,
+      title={Operator convexity along lines, self-concordance, and sandwiched {R}\'enyi entropies}, 
+      author={Kerry He and James Saunderson and Hamza Fawzi},
+      year={2025},
+      eprint={2502.05627},
+      archivePrefix={arXiv},
+      primaryClass={math.OC},
+      url={https://arxiv.org/abs/2502.05627}, 
     }
 
 
