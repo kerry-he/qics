@@ -211,7 +211,7 @@ using:
 
 .. code-block:: bibtex
 
-    @misc{he2024qicsquantuminformationconic,
+    @misc{he2024qics,
       title={{QICS}: {Q}uantum Information Conic Solver}, 
       author={Kerry He and James Saunderson and Hamza Fawzi},
       year={2024},

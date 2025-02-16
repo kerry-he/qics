@@ -162,7 +162,7 @@ Additional details describing this example can be found
 If you find our work useful, please cite our [paper](http://arxiv.org/abs/2410.17803)
 using:
 
-    @misc{he2024qicsquantuminformationconic,
+    @misc{he2024qics,
       title={{QICS}: {Q}uantum Information Conic Solver}, 
       author={Kerry He and James Saunderson and Hamza Fawzi},
       year={2024},
