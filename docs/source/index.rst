@@ -206,7 +206,7 @@ Additional details explaining this example can be found
 Citing QICS
 -----------
 
-If you find our work useful, please cite our `paper <http://arxiv.org/abs/2410.17803>`_
+If you find our work useful, please cite our `paper <http://arxiv.org/abs/2410.17803>`__
 using:
 
 .. code-block:: bibtex
@@ -222,7 +222,7 @@ using:
     }
 
 If you found our sandwiched Renyi and quasi-relative entropy cones useful, please cite
-out `paper <https://www.arxiv.org/abs/2502.05627>`_ using:
+out `paper <https://www.arxiv.org/abs/2502.05627>`__ using:
 
 .. code-block:: bibtex
 
