@@ -1,0 +1,33 @@
+html[data-accent-color='teal'] {
+    --accent-9: rgb(136, 180, 167);
+    --accent-a2: rgba(136, 180, 167, 0.15);
+    --accent-a3: rgba(136, 180, 167, 0.27);
+    --accent-a9: rgba(136, 180, 167, 0.81);
+    --accent-a11: rgba(136, 180, 167, 0.92);
+}
+
+/* Add this at the top of your CSS
+html {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+.full-width-banner {
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    padding: 4rem 0;
+    background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
+    color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+} */
+
+.hero-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+    height: 100vh;
+}

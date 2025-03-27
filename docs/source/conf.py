@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from qics._version import __version__  # noqa isort:skip
 
 project = "QICS"
-copyright = "2024, Kerry He, James Saunderson, and Hamza Fawzi"
+copyright = "2025, Kerry He, James Saunderson, and Hamza Fawzi"
 author = "Kerry He, James Saunderson, and Hamza Fawzi"
 release = __version__
 
@@ -61,7 +61,65 @@ copybutton_prompt_is_regexp = True
 
 html_theme = "shibuya"
 html_static_path = ["_static"]
+html_favicon = "_static/favicon.svg"
 html_theme_options = {
+    "light_logo": "_static/logo-light.svg",
+    "dark_logo": "_static/logo-dark.svg",
+
     "github_url": "https://github.com/kerry-he/qics",
-    "accent_color": "grass",
+    "accent_color": "teal",
+
+    "nav_links": [
+        {
+            "title": "User Guide",
+            "url": "guide/index",
+            "children": [
+                {
+                    "title": "Quick reference",
+                    "url": "guide/reference",
+                },
+                {
+                    "title": "Getting started",
+                    "url": "guide/gettingstarted",
+                },
+                {
+                    "title": "Representing matrices",
+                    "url": "guide/matrices",
+                },
+                {
+                    "title": "Advanced tips",
+                    "url": "guide/advanced",
+                },
+                {
+                    "title": "Reading and writing",
+                    "url": "guide/io",
+                },
+                {
+                    "title": "PICOS interface",
+                    "url": "guide/picos",
+                },
+            ]
+        },
+        {
+            "title": "Examples",
+            "url": "examples/index",
+            "children": [
+                {
+                    "title": "Semidefinite programming",
+                    "url": "examples/sdp/index",
+                },
+                {
+                    "title": "Quantum entropy programming",
+                    "url": "examples/qrep/index",
+                },
+            ],
+        },
+        {
+            "title": "API reference",
+            "url": "api/index",
+        },
+    ]
 }
+html_css_files = [
+  'custom.css',
+]
