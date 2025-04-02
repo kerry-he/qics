@@ -84,9 +84,15 @@
             margin: 4rem 0;
         }
 
+        .features-section p {
+            font-family: "Poppins", sans-serif;
+            font-weight: 300;
+            margin-top: 3rem;
+        }
+
         .features-section h2 {
             font-family: "Poppins", sans-serif;
-            font-weight: 700;
+            font-weight: 600;
             font-size: 2.5rem;
             margin-bottom: 1.5rem;
         }
@@ -96,10 +102,14 @@
             text-align: center;
             padding: 1rem;
         }
-        .feature-logo {
-            max-width: 80px; /* Adjust size as needed */
-            margin-bottom: 1rem;
+
+        @media (max-width: 768px) {
+            .features {
+                flex-direction: column;
+                align-items: center; /* center content if desired */
+            }
         }
+
         .feature h3 {
             font-family: "Poppins", sans-serif;
             font-weight: 600;
@@ -119,9 +129,9 @@
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&display=swap" rel="stylesheet">
     </head>
 
-    <div class="full-width-banner" style="padding-top: 0px; margin-bottom: 48px; height: 675px;">
-        <div class="hero-content">
-            <img src="_static/logo.svg" alt="Description">
+    <div class="full-width-banner" style="padding: 0; margin-bottom: 48px; height: calc(100vh - 56px - 48px); box-sizing: border-box;">
+        <div class="hero-content" style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%;">
+            <img src="_static/logo.svg" alt="QICS Logo">
             <h1 style="font-size: 8rem; margin-bottom: 0px">QICS</h1>
             <p style="font-size: 1.5rem;">Quantum Information Conic Solver</p>
             <div class="container buttons" style="margin-top: 64px">
@@ -148,6 +158,25 @@
             </div>
         </div>
     </div>
+
+    <div class="features-section">
+        <h2>Performance</h2>
+        <p>QICS demonstrates comparable performance to state-of-the-art semidefinite programming software, and superior performance to existing quantum relative entropy programming software. See our <a href="https://arxiv.org/abs/2410.17803">paper</a> for additional details.</p>
+        <div class="features">
+            <div class="feature">
+                <h3>Semidefinite programming</h3>
+                <img src="_static/sdp_plots.png" alt="Semidefinite programming benchmarks." style="margin-top: 2rem; margin-bottom: 0px;">
+                <p>Comparison of relative performance ratios and solution time profiles of various semidefinite programming solvers to solve 92 problems from the SDPLIB benchmark library to full accuracy ε = 10<sup>-8</sup> and to low accuracy ε = 10<sup>-5</sup>.</p>
+            </div>
+            <div class="feature">
+                <h3>Quantum relative entropy programming</h3>
+                <img src="_static/qrep_plots.png" alt="Quantum relative entropy programming benchmarks." style="margin-top: 2rem; margin-bottom: 0px;">
+                <p>Comparison of relative performance ratios and solution time profiles of various solvers to solve 144 quantum relative entropy programs to full accuracy ε = 10<sup>-8</sup> and to low accuracy ε = 10<sup>-5</sup>. Note that QICS refers to results using the full suite of cones we implement, whereas QICS* refers to results using on the quantum entropy and quantum relative entropy cones.</p>
+            </div>
+        </div>
+    </div>
+
+
 
 
 .. toctree::
