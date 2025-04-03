@@ -171,7 +171,7 @@
             <div class="feature">
                 <h3>Quantum relative entropy programming</h3>
                 <img src="_static/qrep_plots.png" alt="Quantum relative entropy programming benchmarks." style="margin-top: 2rem; margin-bottom: 0px;">
-                <p>Comparison of relative performance ratios and solution time profiles of various solvers to solve 144 quantum relative entropy programs to full accuracy ε = 10<sup>-8</sup> and to low accuracy ε = 10<sup>-5</sup>. Note that QICS refers to results using the full suite of cones we implement, whereas QICS* refers to results using on the quantum entropy and quantum relative entropy cones.</p>
+                <p>Comparison of relative performance ratios and solution time profiles of various solvers to solve 144 quantum relative entropy programs to full accuracy ε = 10<sup>-8</sup> and to low accuracy ε = 10<sup>-5</sup>. Note that QICS refers to results using the full suite of cones we implement, whereas QICS* refers to results using only the quantum entropy and quantum relative entropy cones.</p>
             </div>
         </div>
     </div>
