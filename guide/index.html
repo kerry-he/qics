@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="teal" data-content_root="../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>User guide - QICS 1.1.3 documentation</title><link rel="shortcut icon" href="../_static/favicon.svg"/><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Quick reference" href="reference.html" /><link rel="prev" title="Quantum Information Conic Solver" href="../introduction.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=397bb51e" />
+    <link rel="stylesheet" type="text/css" href="../_static/shibuya.css?v=36d120a7" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link media="print" rel="stylesheet" type="text/css" href="../_static/print.css?v=20ff2c19" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=93a53b2b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    <meta property="og:type" content="website"/><meta property="og:title" content="User guide"/>
+<meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../index.html">
+      <img class="light-logo" src="../_static/logo-light.svg" alt="QICS" height="28" loading="lazy" />
+      <img class="dark-logo" src="../_static/logo-dark.svg" alt="QICS" height="28" loading="lazy" />
+      <strong>QICS</strong>
+    </a>
+    <div class="sy-head-nav" id="HeadNav">
+      <nav class="sy-head-links"><ul>
+      <li class="link"><a href="#">
+            <span>User Guide</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="reference.html">Quick reference</a></li><li><a href="gettingstarted.html">Getting started</a></li><li><a href="matrices.html">Representing matrices</a></li><li><a href="advanced.html">Advanced tips</a></li><li><a href="io.html">Reading and writing</a></li><li><a href="picos.html">PICOS interface</a></li></ul>
+      </li>
+      <li class="link"><a href="../examples/index.html">
+            <span>Examples</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../examples/sdp/index.html">Semidefinite programming</a></li><li><a href="../examples/qrep/index.html">Quantum entropy programming</a></li></ul>
+      </li><li class="link"><a href="../api/index.html">API reference</a></li></ul></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials">
+  <a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+    <iconify-icon icon="simple-icons:github"></iconify-icon>
+  </a></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="HeadNav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2 -translate-x-2"></span>
+          <span class="hamburger_3 -translate-x-1"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">User guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="reference.html">Quick reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gettingstarted.html">Getting started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="matrices.html">Representing matrices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced.html">Advanced tips</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html">Reading and writing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="picos.html">PICOS interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/sdp/index.html">Semidefinite programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../examples/sdp/maxcut.html">Max cut</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/sdp/product.html">Block diagonal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/sdp/quantum.html">Quantum information</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/qrep/index.html">Quantum relative entropy programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/qkd.html">Quantum key distribution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/nearest.html">Nearest matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/channel.html">Quantum channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/opper.html">Noncommutative perspective</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/renyi.html">Renyi entropy</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/qics.html">qics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/qics/Model.html">qics.Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/qics/Solver.html">qics.Solver</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/cones.html">qics.cones</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/NonNegOrthant.html">qics.cones.NonNegOrthant</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/PosSemidefinite.html">qics.cones.PosSemidefinite</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/SecondOrder.html">qics.cones.SecondOrder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/ClassEntr.html">qics.cones.ClassEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/ClassRelEntr.html">qics.cones.ClassRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/QuantEntr.html">qics.cones.QuantEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/QuantRelEntr.html">qics.cones.QuantRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/QuantCondEntr.html">qics.cones.QuantCondEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/QuantKeyDist.html">qics.cones.QuantKeyDist</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/OpPerspecTr.html">qics.cones.OpPerspecTr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/OpPerspecEpi.html">qics.cones.OpPerspecEpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/RenyiEntr.html">qics.cones.RenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/SandRenyiEntr.html">qics.cones.SandRenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/QuasiEntr.html">qics.cones.QuasiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/SandQuasiEntr.html">qics.cones.SandQuasiEntr</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/io.html">qics.io</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/read_file.html">qics.io.read_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/write_file.html">qics.io.write_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/read_sdpa.html">qics.io.read_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/write_sdpa.html">qics.io.write_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/read_cbf.html">qics.io.read_cbf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/write_cbf.html">qics.io.write_cbf</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/point.html">qics.point</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/point/Point.html">qics.point.Point</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/point/VecProduct.html">qics.point.VecProduct</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/quantum.html">qics.quantum</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/entropy.html">qics.quantum.entropy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/i_kr.html">qics.quantum.i_kr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/p_tr.html">qics.quantum.p_tr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/partial_transpose.html">qics.quantum.partial_transpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/purify.html">qics.quantum.purify</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/swap.html">qics.quantum.swap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/choi_operator.html">qics.quantum.random.choi_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/degradable_channel.html">qics.quantum.random.degradable_channel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/density_matrix.html">qics.quantum.random.density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/pure_density_matrix.html">qics.quantum.random.pure_density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/stinespring_operator.html">qics.quantum.random.stinespring_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/unitary.html">qics.quantum.random.unitary</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/vectorize.html">qics.vectorize</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/eye.html">qics.vectorize.eye</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/lin_to_mat.html">qics.vectorize.lin_to_mat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/mat_dim.html">qics.vectorize.mat_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/mat_to_vec.html">qics.vectorize.mat_to_vec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/vec_dim.html">qics.vectorize.vec_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/vec_to_mat.html">qics.vectorize.vec_to_mat</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div></div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6"><div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">QICS</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">User guide</strong>
+        <meta itemprop="position" content="2" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+        <article class="yue" role="main">
+          <section id="user-guide">
+<h1>User guide<a class="headerlink" href="#user-guide" title="Link to this heading">¶</a></h1>
+<p>This section is serve as an introductory guide and reference for how to use
+QICS, and contains the following pages.</p>
+<div class="sd-container-fluid sd-sphinx-override sd-mb-4 sd-p-0 surface docutils">
+<div class="sd-row sd-row-cols-1 sd-row-cols-xs-1 sd-row-cols-sm-1 sd-row-cols-md-2 sd-row-cols-lg-3 sd-g-2 sd-g-xs-2 sd-g-sm-2 sd-g-md-2 sd-g-lg-2 docutils">
+<div class="sd-col sd-d-flex-row docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
+<div class="sd-card-body docutils">
+<div class="sd-card-title sd-font-weight-bold docutils">
+<svg version="1.1" width="1.0em" height="1.0em" class="sd-octicon sd-octicon-zap" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.504.43a1.516 1.516 0 0 1 2.437 1.713L10.415 5.5h2.123c1.57 0 2.346 1.909 1.22 3.004l-7.34 7.142a1.249 1.249 0 0 1-.871.354h-.302a1.25 1.25 0 0 1-1.157-1.723L5.633 10.5H3.462c-1.57 0-2.346-1.909-1.22-3.004L9.503.429Zm1.047 1.074L3.286 8.571A.25.25 0 0 0 3.462 9H6.75a.75.75 0 0 1 .694 1.034l-1.713 4.188 6.982-6.793A.25.25 0 0 0 12.538 7H9.25a.75.75 0 0 1-.683-1.06l2.008-4.418.003-.006a.036.036 0 0 0-.004-.009l-.006-.006-.008-.001c-.003 0-.006.002-.009.004Z"></path></svg> Quick reference</div>
+<p class="sd-card-text">Serves as a reference point for how to initialize and use the cone,
+model, and solver classes provided by QICS.</p>
+</div>
+<a class="sd-stretched-link sd-hide-link-text reference external" href="reference.html"><span>reference.html</span></a></div>
+</div>
+<div class="sd-col sd-d-flex-row docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
+<div class="sd-card-body docutils">
+<div class="sd-card-title sd-font-weight-bold docutils">
+<svg version="1.1" width="1.0em" height="1.0em" class="sd-octicon sd-octicon-book" viewBox="0 0 16 16" aria-hidden="true"><path d="M0 1.75A.75.75 0 0 1 .75 1h4.253c1.227 0 2.317.59 3 1.501A3.743 3.743 0 0 1 11.006 1h4.245a.75.75 0 0 1 .75.75v10.5a.75.75 0 0 1-.75.75h-4.507a2.25 2.25 0 0 0-1.591.659l-.622.621a.75.75 0 0 1-1.06 0l-.622-.621A2.25 2.25 0 0 0 5.258 13H.75a.75.75 0 0 1-.75-.75Zm7.251 10.324.004-5.073-.002-2.253A2.25 2.25 0 0 0 5.003 2.5H1.5v9h3.757a3.75 3.75 0 0 1 1.994.574ZM8.755 4.75l-.004 7.322a3.752 3.752 0 0 1 1.992-.572H14.5v-9h-3.495a2.25 2.25 0 0 0-2.25 2.25Z"></path></svg> Getting started</div>
+<p class="sd-card-text">Walks through an example of how to solve a simple quantum relative
+entropy program using QICS.</p>
+</div>
+<a class="sd-stretched-link sd-hide-link-text reference external" href="gettingstarted.html"><span>gettingstarted.html</span></a></div>
+</div>
+<div class="sd-col sd-d-flex-row docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
+<div class="sd-card-body docutils">
+<div class="sd-card-title sd-font-weight-bold docutils">
+<svg version="1.1" width="1.0em" height="1.0em" class="sd-octicon sd-octicon-info" viewBox="0 0 16 16" aria-hidden="true"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg> Representing matrices</div>
+<p class="sd-card-text">Explains how symmetric and Hermitian matrix variables are represented
+as column vectors in QICS.</p>
+</div>
+<a class="sd-stretched-link sd-hide-link-text reference external" href="matrices.html"><span>matrices.html</span></a></div>
+</div>
+<div class="sd-col sd-d-flex-row docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
+<div class="sd-card-body docutils">
+<div class="sd-card-title sd-font-weight-bold docutils">
+<svg version="1.1" width="1.0em" height="1.0em" class="sd-octicon sd-octicon-mortar-board" viewBox="0 0 16 16" aria-hidden="true"><path d="M7.693 1.066a.747.747 0 0 1 .614 0l7.25 3.25a.75.75 0 0 1 0 1.368L13 6.831v2.794c0 1.024-.81 1.749-1.66 2.173-.893.447-2.075.702-3.34.702-.278 0-.55-.012-.816-.036a.75.75 0 0 1 .133-1.494c.22.02.45.03.683.03 1.082 0 2.025-.221 2.67-.543.69-.345.83-.682.83-.832V7.503L8.307 8.934a.747.747 0 0 1-.614 0L4 7.28v1.663c.296.105.575.275.812.512.438.438.688 1.059.688 1.796v3a.75.75 0 0 1-.75.75h-3a.75.75 0 0 1-.75-.75v-3c0-.737.25-1.358.688-1.796.237-.237.516-.407.812-.512V6.606L.443 5.684a.75.75 0 0 1 0-1.368ZM2.583 5 8 7.428 13.416 5 8 2.572ZM2.5 11.25v2.25H4v-2.25c0-.388-.125-.611-.25-.735a.697.697 0 0 0-.5-.203.707.707 0 0 0-.5.203c-.125.124-.25.347-.25.735Z"></path></svg> Advanced tips</div>
+<p class="sd-card-text">Tips for advanced users to obtain potentially significant speedups
+when solving problems.</p>
+</div>
+<a class="sd-stretched-link sd-hide-link-text reference external" href="advanced.html"><span>advanced.html</span></a></div>
+</div>
+<div class="sd-col sd-d-flex-row docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
+<div class="sd-card-body docutils">
+<div class="sd-card-title sd-font-weight-bold docutils">
+<svg version="1.1" width="1.0em" height="1.0em" class="sd-octicon sd-octicon-file" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"></path></svg> Reading and writing</div>
+<p class="sd-card-text">Reading and writing semidefinite and conic programs using the SDPA
+sparse and CBF formats.</p>
+</div>
+<a class="sd-stretched-link sd-hide-link-text reference external" href="io.html"><span>io.html</span></a></div>
+</div>
+<div class="sd-col sd-d-flex-row docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
+<div class="sd-card-body docutils">
+<div class="sd-card-title sd-font-weight-bold docutils">
+<svg version="1.1" width="1.0em" height="1.0em" class="sd-octicon sd-octicon-command-palette" viewBox="0 0 16 16" aria-hidden="true"><path d="m6.354 8.04-4.773 4.773a.75.75 0 1 0 1.061 1.06L7.945 8.57a.75.75 0 0 0 0-1.06L2.642 2.206a.75.75 0 0 0-1.06 1.061L6.353 8.04ZM8.75 11.5a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5h-5.5Z"></path></svg> PICOS interface</div>
+<p class="sd-card-text">Briefly introduces how QICS can be used with the PICOS
+optimization modelling interface.</p>
+</div>
+<a class="sd-stretched-link sd-hide-link-text reference external" href="picos.html"><span>picos.html</span></a></div>
+</div>
+</div>
+</div>
+<div class="toctree-wrapper compound">
+</div>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="../introduction.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">Quantum Information Conic Solver</div></div>
+    </a>
+  </div><div class="navigation-next">
+    <a href="reference.html">
+      <div class="page-info">
+        <span>Next</span>
+        <div class="title">Quick reference</div>
+      </div>
+      <i class="i-lucide chevron-right"></i>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2025, Kerry He, James Saunderson, and Hamza Fawzi</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials">
+<a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+  <iconify-icon icon="simple-icons:github"></iconify-icon>
+</a></div>
+    </div>
+  </div>
+</footer>
+      <script src="../_static/documentation_options.js?v=cb7bf70b"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=30646c52"></script>
+      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script src="../_static/shibuya.js?v=c5fc9e80"></script></body>
+</html>

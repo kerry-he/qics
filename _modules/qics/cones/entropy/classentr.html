@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="teal" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>qics.cones.entropy.classentr - QICS 1.1.3 documentation</title><link rel="shortcut icon" href="../../../../_static/favicon.svg"/><link rel="index" title="Index" href="../../../../genindex.html" /><link rel="search" title="Search" href="../../../../search.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=397bb51e" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/shibuya.css?v=36d120a7" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link media="print" rel="stylesheet" type="text/css" href="../../../../_static/print.css?v=20ff2c19" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/custom.css?v=93a53b2b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    <meta property="og:type" content="website"/><meta property="og:title" content="qics.cones.entropy.classentr"/>
+<meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../../../../index.html">
+      <img class="light-logo" src="../../../../_static/logo-light.svg" alt="QICS" height="28" loading="lazy" />
+      <img class="dark-logo" src="../../../../_static/logo-dark.svg" alt="QICS" height="28" loading="lazy" />
+      <strong>QICS</strong>
+    </a>
+    <div class="sy-head-nav" id="HeadNav">
+      <nav class="sy-head-links"><ul>
+      <li class="link"><a href="../../../../guide/index.html">
+            <span>User Guide</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../../../../guide/reference.html">Quick reference</a></li><li><a href="../../../../guide/gettingstarted.html">Getting started</a></li><li><a href="../../../../guide/matrices.html">Representing matrices</a></li><li><a href="../../../../guide/advanced.html">Advanced tips</a></li><li><a href="../../../../guide/io.html">Reading and writing</a></li><li><a href="../../../../guide/picos.html">PICOS interface</a></li></ul>
+      </li>
+      <li class="link"><a href="../../../../examples/index.html">
+            <span>Examples</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../../../../examples/sdp/index.html">Semidefinite programming</a></li><li><a href="../../../../examples/qrep/index.html">Quantum entropy programming</a></li></ul>
+      </li><li class="link"><a href="../../../../api/index.html">API reference</a></li></ul></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials">
+  <a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+    <iconify-icon icon="simple-icons:github"></iconify-icon>
+  </a></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="HeadNav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2 -translate-x-2"></span>
+          <span class="hamburger_3 -translate-x-1"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/index.html">User guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../guide/reference.html">Quick reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../guide/gettingstarted.html">Getting started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../guide/matrices.html">Representing matrices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../guide/advanced.html">Advanced tips</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../guide/io.html">Reading and writing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../guide/picos.html">PICOS interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../examples/index.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/sdp/index.html">Semidefinite programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../examples/sdp/maxcut.html">Max cut</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../examples/sdp/product.html">Block diagonal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../examples/sdp/quantum.html">Quantum information</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/qrep/index.html">Quantum relative entropy programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../examples/qrep/qkd.html">Quantum key distribution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../examples/qrep/nearest.html">Nearest matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../examples/qrep/channel.html">Quantum channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../examples/qrep/opper.html">Noncommutative perspective</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../examples/qrep/renyi.html">Renyi entropy</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/index.html">API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/qics.html">qics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/qics/Model.html">qics.Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/qics/Solver.html">qics.Solver</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/cones.html">qics.cones</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/NonNegOrthant.html">qics.cones.NonNegOrthant</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/PosSemidefinite.html">qics.cones.PosSemidefinite</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/SecondOrder.html">qics.cones.SecondOrder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/ClassEntr.html">qics.cones.ClassEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/ClassRelEntr.html">qics.cones.ClassRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/QuantEntr.html">qics.cones.QuantEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/QuantRelEntr.html">qics.cones.QuantRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/QuantCondEntr.html">qics.cones.QuantCondEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/QuantKeyDist.html">qics.cones.QuantKeyDist</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/OpPerspecTr.html">qics.cones.OpPerspecTr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/OpPerspecEpi.html">qics.cones.OpPerspecEpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/RenyiEntr.html">qics.cones.RenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/SandRenyiEntr.html">qics.cones.SandRenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/QuasiEntr.html">qics.cones.QuasiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/SandQuasiEntr.html">qics.cones.SandQuasiEntr</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/io.html">qics.io</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/io/read_file.html">qics.io.read_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/io/write_file.html">qics.io.write_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/io/read_sdpa.html">qics.io.read_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/io/write_sdpa.html">qics.io.write_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/io/read_cbf.html">qics.io.read_cbf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/io/write_cbf.html">qics.io.write_cbf</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/point.html">qics.point</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/point/Point.html">qics.point.Point</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/point/VecProduct.html">qics.point.VecProduct</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/quantum.html">qics.quantum</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/entropy.html">qics.quantum.entropy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/i_kr.html">qics.quantum.i_kr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/p_tr.html">qics.quantum.p_tr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/partial_transpose.html">qics.quantum.partial_transpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/purify.html">qics.quantum.purify</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/swap.html">qics.quantum.swap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/random/choi_operator.html">qics.quantum.random.choi_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/random/degradable_channel.html">qics.quantum.random.degradable_channel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/random/density_matrix.html">qics.quantum.random.density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/random/pure_density_matrix.html">qics.quantum.random.pure_density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/random/stinespring_operator.html">qics.quantum.random.stinespring_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/random/unitary.html">qics.quantum.random.unitary</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/vectorize.html">qics.vectorize</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/vectorize/eye.html">qics.vectorize.eye</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/vectorize/lin_to_mat.html">qics.vectorize.lin_to_mat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/vectorize/mat_dim.html">qics.vectorize.mat_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/vectorize/mat_to_vec.html">qics.vectorize.mat_to_vec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/vectorize/vec_dim.html">qics.vectorize.vec_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/vectorize/vec_to_mat.html">qics.vectorize.vec_to_mat</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div></div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6"><div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../../index.html"><span itemprop="name">QICS</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../index.html"><span itemprop="name">Module code</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">qics.cones.entropy.classentr</strong>
+        <meta itemprop="position" content="3" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+        <article class="yue" role="main">
+          <h1>Source code for qics.cones.entropy.classentr</h1><div class="highlight"><pre>
+<span></span><span data-line="1"><span class="c1"># Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="c1"># This Python package QICS is licensed under the MIT license; see LICENSE.md</span>
+</span><span data-line="4"><span class="c1"># file in the root directory or at https://github.com/kerry-he/qics</span>
+</span><span data-line="5">
+</span><span data-line="6"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="7"><span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sp</span>
+</span><span data-line="8">
+</span><span data-line="9"><span class="kn">from</span><span class="w"> </span><span class="nn">qics._utils.linalg</span><span class="w"> </span><span class="kn">import</span> <span class="n">dense_dot_x</span>
+</span><span data-line="10"><span class="kn">from</span><span class="w"> </span><span class="nn">qics.cones.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Cone</span><span class="p">,</span> <span class="n">get_central_ray_entr</span>
+</span><span data-line="11">
+</span><span data-line="12">
+<div class="viewcode-block" id="ClassEntr">
+<a class="viewcode-back" href="../../../../api/cones/ClassEntr.html#qics.cones.ClassEntr">[docs]</a>
+</span><span data-line="13"><span class="k">class</span><span class="w"> </span><span class="nc">ClassEntr</span><span class="p">(</span><span class="n">Cone</span><span class="p">):</span>
+</span><span data-line="14"><span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;A class representing a (homogenized) classical entropy cone</span>
+</span><span data-line="15">
+</span><span data-line="16"><span class="sd">    .. math::</span>
+</span><span data-line="17">
+</span><span data-line="18"><span class="sd">        \mathcal{CE}_{n} = \text{cl}\{ (t, u, x) \in \mathbb{R} \times</span>
+</span><span data-line="19"><span class="sd">        \mathbb{R}_{++} \times \mathbb{R}^n_{++} : t \geq -u H(u^{-1}x) \},</span>
+</span><span data-line="20">
+</span><span data-line="21"><span class="sd">    where</span>
+</span><span data-line="22">
+</span><span data-line="23"><span class="sd">    .. math::</span>
+</span><span data-line="24">
+</span><span data-line="25"><span class="sd">        H(x) = -\sum_{i=1}^n x_i \log(x_i),</span>
+</span><span data-line="26">
+</span><span data-line="27"><span class="sd">    is the classical (Shannon) entropy function.</span>
+</span><span data-line="28">
+</span><span data-line="29"><span class="sd">    Parameters</span>
+</span><span data-line="30"><span class="sd">    ----------</span>
+</span><span data-line="31"><span class="sd">    n : :obj:`int`</span>
+</span><span data-line="32"><span class="sd">        Dimension of the vector :math:`x`, i.e., how many terms are in the</span>
+</span><span data-line="33"><span class="sd">        classical entropy function.</span>
+</span><span data-line="34">
+</span><span data-line="35"><span class="sd">    See also</span>
+</span><span data-line="36"><span class="sd">    --------</span>
+</span><span data-line="37"><span class="sd">    ClassRelEntr : Classical relative entropy cone</span>
+</span><span data-line="38"><span class="sd">    QuantEntr : (Homogenized) quantum entropy cone</span>
+</span><span data-line="39">
+</span><span data-line="40"><span class="sd">    Notes</span>
+</span><span data-line="41"><span class="sd">    -----</span>
+</span><span data-line="42"><span class="sd">    The epigraph of the classical entropy can be obtained by enforcing the</span>
+</span><span data-line="43"><span class="sd">    linear constraint :math:`u=1`.</span>
+</span><span data-line="44">
+</span><span data-line="45"><span class="sd">    Additionally, the exponential cone</span>
+</span><span data-line="46">
+</span><span data-line="47"><span class="sd">    .. math::</span>
+</span><span data-line="48">
+</span><span data-line="49"><span class="sd">        \mathcal{E}=\{ (x,y,z)\in\mathbb{R}_+\times\mathbb{R}_+</span>
+</span><span data-line="50"><span class="sd">        \times\mathbb{R} : y \geq x \exp(z/x) \},</span>
+</span><span data-line="51">
+</span><span data-line="52"><span class="sd">    can be modelled by realizing that if :math:`(x,y,z)\in\mathcal{E}`,</span>
+</span><span data-line="53"><span class="sd">    then :math:`(-z, y, x)\in\mathcal{CE}_1`.</span>
+</span><span data-line="54"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span data-line="55">
+</span><span data-line="56">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+</span><span data-line="57">        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="n">n</span>
+</span><span data-line="58">
+</span><span data-line="59">        <span class="bp">self</span><span class="o">.</span><span class="n">nu</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span>  <span class="c1"># Barrier parameter</span>
+</span><span data-line="60">
+</span><span data-line="61">        <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="p">]</span>
+</span><span data-line="62">        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">]</span>
+</span><span data-line="63">
+</span><span data-line="64">        <span class="c1"># Update flags</span>
+</span><span data-line="65">        <span class="bp">self</span><span class="o">.</span><span class="n">feas_updated</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span data-line="66">        <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span data-line="67">        <span class="bp">self</span><span class="o">.</span><span class="n">hess_aux_updated</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span data-line="68">        <span class="bp">self</span><span class="o">.</span><span class="n">invhess_aux_updated</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span data-line="69">        <span class="bp">self</span><span class="o">.</span><span class="n">dder3_aux_updated</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span data-line="70">        <span class="bp">self</span><span class="o">.</span><span class="n">congr_aux_updated</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span data-line="71">
+</span><span data-line="72">        <span class="k">return</span>
+</span><span data-line="73">
+</span><span data-line="74">    <span class="k">def</span><span class="w"> </span><span class="nf">get_init_point</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">):</span>
+</span><span data-line="75">        <span class="p">(</span><span class="n">t0</span><span class="p">,</span> <span class="n">u0</span><span class="p">,</span> <span class="n">x0</span><span class="p">)</span> <span class="o">=</span> <span class="n">get_central_ray_entr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>
+</span><span data-line="76">
+</span><span data-line="77">        <span class="n">point</span> <span class="o">=</span> <span class="p">[</span>
+</span><span data-line="78">            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">t0</span><span class="p">]]),</span>
+</span><span data-line="79">            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">u0</span><span class="p">]]),</span>
+</span><span data-line="80">            <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="o">*</span> <span class="n">x0</span><span class="p">,</span>
+</span><span data-line="81">        <span class="p">]</span>
+</span><span data-line="82">
+</span><span data-line="83">        <span class="bp">self</span><span class="o">.</span><span class="n">set_point</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">point</span><span class="p">)</span>
+</span><span data-line="84">
+</span><span data-line="85">        <span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span data-line="86">        <span class="n">out</span><span class="p">[</span><span class="mi">1</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+</span><span data-line="87">        <span class="n">out</span><span class="p">[</span><span class="mi">2</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">point</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+</span><span data-line="88">
+</span><span data-line="89">        <span class="k">return</span> <span class="n">out</span>
+</span><span data-line="90">
+</span><span data-line="91">    <span class="k">def</span><span class="w"> </span><span class="nf">get_feas</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span data-line="92">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feas_updated</span><span class="p">:</span>
+</span><span data-line="93">            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">feas</span>
+</span><span data-line="94">
+</span><span data-line="95">        <span class="bp">self</span><span class="o">.</span><span class="n">feas_updated</span> <span class="o">=</span> <span class="kc">True</span>
+</span><span data-line="96">
+</span><span data-line="97">        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">primal</span>
+</span><span data-line="98">
+</span><span data-line="99">        <span class="c1"># Check that u and x are strictly positive</span>
+</span><span data-line="100">        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">u</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
+</span><span data-line="101">            <span class="bp">self</span><span class="o">.</span><span class="n">feas</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span data-line="102">            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">feas</span>
+</span><span data-line="103">
+</span><span data-line="104">        <span class="c1"># Check that t &gt; -u H(x/u) = Σ_i xi log(xi) - (Σ_i xi) log(u)</span>
+</span><span data-line="105">        <span class="bp">self</span><span class="o">.</span><span class="n">sum_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+</span><span data-line="106">        <span class="bp">self</span><span class="o">.</span><span class="n">log_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+</span><span data-line="107">        <span class="bp">self</span><span class="o">.</span><span class="n">log_u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+</span><span data-line="108">
+</span><span data-line="109">        <span class="n">entr_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_x</span>
+</span><span data-line="110">        <span class="n">entr_xu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sum_x</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_u</span>
+</span><span data-line="111">        <span class="bp">self</span><span class="o">.</span><span class="n">z</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">-</span> <span class="p">(</span><span class="n">entr_x</span> <span class="o">-</span> <span class="n">entr_xu</span><span class="p">))[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+</span><span data-line="112">
+</span><span data-line="113">        <span class="bp">self</span><span class="o">.</span><span class="n">feas</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">z</span> <span class="o">&gt;</span> <span class="mi">0</span>
+</span><span data-line="114">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">feas</span>
+</span><span data-line="115">
+</span><span data-line="116">    <span class="k">def</span><span class="w"> </span><span class="nf">get_val</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span data-line="117">        <span class="k">return</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_u</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_x</span><span class="p">)</span>
+</span><span data-line="118">
+</span><span data-line="119">    <span class="k">def</span><span class="w"> </span><span class="nf">update_grad</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span data-line="120">        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">feas_updated</span>
+</span><span data-line="121">        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span>
+</span><span data-line="122">
+</span><span data-line="123">        <span class="c1"># Compute gradients of classical entropy</span>
+</span><span data-line="124">        <span class="c1"># D_u H(u, x) = -Σ_i xi / u</span>
+</span><span data-line="125">        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reciprocal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="p">)</span>
+</span><span data-line="126">        <span class="bp">self</span><span class="o">.</span><span class="n">DPhiu</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">sum_x</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span>
+</span><span data-line="127">        <span class="c1"># D_x H(u, x) = log(x) + (1 - log(u))</span>
+</span><span data-line="128">        <span class="bp">self</span><span class="o">.</span><span class="n">DPhiX</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_x</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_u</span><span class="p">)</span>
+</span><span data-line="129">
+</span><span data-line="130">        <span class="c1"># Compute 1 / x</span>
+</span><span data-line="131">        <span class="bp">self</span><span class="o">.</span><span class="n">xi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reciprocal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+</span><span data-line="132">
+</span><span data-line="133">        <span class="c1"># Compute gradient of barrier function</span>
+</span><span data-line="134">        <span class="bp">self</span><span class="o">.</span><span class="n">zi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reciprocal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="p">)</span>
+</span><span data-line="135">
+</span><span data-line="136">        <span class="bp">self</span><span class="o">.</span><span class="n">grad</span> <span class="o">=</span> <span class="p">[</span>
+</span><span data-line="137">            <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">zi</span><span class="p">,</span>
+</span><span data-line="138">            <span class="bp">self</span><span class="o">.</span><span class="n">zi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiu</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="p">,</span>
+</span><span data-line="139">            <span class="bp">self</span><span class="o">.</span><span class="n">zi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiX</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi</span><span class="p">,</span>
+</span><span data-line="140">        <span class="p">]</span>
+</span><span data-line="141">
+</span><span data-line="142">        <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span> <span class="o">=</span> <span class="kc">True</span>
+</span><span data-line="143">
+</span><span data-line="144">    <span class="k">def</span><span class="w"> </span><span class="nf">hess_prod_ip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">H</span><span class="p">):</span>
+</span><span data-line="145">        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span>
+</span><span data-line="146">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">hess_aux_updated</span><span class="p">:</span>
+</span><span data-line="147">            <span class="bp">self</span><span class="o">.</span><span class="n">update_hessprod_aux</span><span class="p">()</span>
+</span><span data-line="148">
+</span><span data-line="149">        <span class="p">(</span><span class="n">Ht</span><span class="p">,</span> <span class="n">Hu</span><span class="p">,</span> <span class="n">Hx</span><span class="p">)</span> <span class="o">=</span> <span class="n">H</span>
+</span><span data-line="150">
+</span><span data-line="151">        <span class="c1"># Hessian product of classical entropy</span>
+</span><span data-line="152">        <span class="n">D2PhiuH</span> <span class="o">=</span> <span class="n">Hu</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sum_x</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui2</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Hx</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span>
+</span><span data-line="153">        <span class="n">D2PhixH</span> <span class="o">=</span> <span class="o">-</span><span class="n">Hu</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">+</span> <span class="n">Hx</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi</span>
+</span><span data-line="154">
+</span><span data-line="155">        <span class="c1"># Hessian product of barrier function</span>
+</span><span data-line="156">        <span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">][:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">Ht</span> <span class="o">-</span> <span class="n">Hu</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiu</span> <span class="o">-</span> <span class="n">Hx</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiX</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">zi2</span>
+</span><span data-line="157">        <span class="n">out</span><span class="p">[</span><span class="mi">1</span><span class="p">][:]</span> <span class="o">=</span> <span class="o">-</span><span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiu</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">zi</span> <span class="o">*</span> <span class="n">D2PhiuH</span> <span class="o">+</span> <span class="n">Hu</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui2</span>
+</span><span data-line="158">        <span class="n">out</span><span class="p">[</span><span class="mi">2</span><span class="p">][:]</span> <span class="o">=</span> <span class="o">-</span><span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiX</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">zi</span> <span class="o">*</span> <span class="n">D2PhixH</span> <span class="o">+</span> <span class="n">Hx</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi2</span>
+</span><span data-line="159">
+</span><span data-line="160">        <span class="k">return</span> <span class="n">out</span>
+</span><span data-line="161">
+</span><span data-line="162">    <span class="k">def</span><span class="w"> </span><span class="nf">hess_congr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">):</span>
+</span><span data-line="163">        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span>
+</span><span data-line="164">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">hess_aux_updated</span><span class="p">:</span>
+</span><span data-line="165">            <span class="bp">self</span><span class="o">.</span><span class="n">update_hessprod_aux</span><span class="p">()</span>
+</span><span data-line="166">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">congr_aux_updated</span><span class="p">:</span>
+</span><span data-line="167">            <span class="bp">self</span><span class="o">.</span><span class="n">congr_aux</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+</span><span data-line="168">
+</span><span data-line="169">        <span class="n">p</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span data-line="170">        <span class="n">lhs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">p</span><span class="p">,</span> <span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)))</span>
+</span><span data-line="171">
+</span><span data-line="172">        <span class="n">work1</span><span class="p">,</span> <span class="n">work2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">work1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">work2</span>
+</span><span data-line="173">
+</span><span data-line="174">        <span class="c1"># ======================================================================</span>
+</span><span data-line="175">        <span class="c1"># Hessian products with respect to t</span>
+</span><span data-line="176">        <span class="c1"># ======================================================================</span>
+</span><span data-line="177">        <span class="c1"># D2_t F(t, u, x)[Ht, Hu, Hx]</span>
+</span><span data-line="178">        <span class="c1">#         = (Ht - D_u H(u, x)[Hu] - D_x H(u, x)[Hx]) / z^2</span>
+</span><span data-line="179">        <span class="n">out_t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">At</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">Au</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiu</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+</span><span data-line="180">        <span class="n">out_t</span> <span class="o">-=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Ax</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiX</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+</span><span data-line="181">        <span class="n">out_t</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">zi2</span>
+</span><span data-line="182">
+</span><span data-line="183">        <span class="n">lhs</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">out_t</span>
+</span><span data-line="184">
+</span><span data-line="185">        <span class="c1"># ======================================================================</span>
+</span><span data-line="186">        <span class="c1"># Hessian products with respect to u</span>
+</span><span data-line="187">        <span class="c1"># ======================================================================</span>
+</span><span data-line="188">        <span class="c1"># Hessian products for classical entropy</span>
+</span><span data-line="189">        <span class="c1"># D2_uu Phi(u, x) [Hu] =  sum(x) Hu / u^2</span>
+</span><span data-line="190">        <span class="n">D2PhiuH</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Huu</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Au</span>
+</span><span data-line="191">        <span class="c1"># D2_ux Phi(u, x) [Hx] = -sum(Hx) / u</span>
+</span><span data-line="192">        <span class="n">D2PhiuH</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Hux</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Ax</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span data-line="193">
+</span><span data-line="194">        <span class="c1"># Hessian product of barrier function</span>
+</span><span data-line="195">        <span class="c1"># D2_u F(t, u, x)[Ht, Hu, Hx]</span>
+</span><span data-line="196">        <span class="c1">#         = -D2_t F(t, u, x)[Ht, Hu, Hx] * D_u H(u, x)</span>
+</span><span data-line="197">        <span class="c1">#           + (D2_uu H(u, x)[Hu] + D2_ux H(u, x)[Hx]) / z</span>
+</span><span data-line="198">        <span class="c1">#           + Hu / u^2</span>
+</span><span data-line="199">        <span class="n">out_u</span> <span class="o">=</span> <span class="o">-</span><span class="n">out_t</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiu</span>
+</span><span data-line="200">        <span class="n">out_u</span> <span class="o">+=</span> <span class="n">D2PhiuH</span>
+</span><span data-line="201">
+</span><span data-line="202">        <span class="n">lhs</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">out_u</span>
+</span><span data-line="203">
+</span><span data-line="204">        <span class="c1"># ======================================================================</span>
+</span><span data-line="205">        <span class="c1"># Hessian products with respect to x</span>
+</span><span data-line="206">        <span class="c1"># ======================================================================</span>
+</span><span data-line="207">        <span class="c1"># Hessian products for classical entropy</span>
+</span><span data-line="208">        <span class="c1"># D2_xx Phi(u, x) [Hx] =  Hx / x</span>
+</span><span data-line="209">        <span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Hxx</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Ax</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">work1</span><span class="p">)</span>
+</span><span data-line="210">        <span class="c1"># D2_xu Phi(u, x) [Hu] = -Hu / u</span>
+</span><span data-line="211">        <span class="n">work1</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Hux</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Au</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span><span data-line="212">
+</span><span data-line="213">        <span class="c1"># Hessian product of barrier function</span>
+</span><span data-line="214">        <span class="c1"># D2_x F(t, u, x)[Ht, Hu, Hx]</span>
+</span><span data-line="215">        <span class="c1">#         = -D2_t F(t, u, x)[Ht, Hu, Hx] * D_x H(u, x)</span>
+</span><span data-line="216">        <span class="c1">#           + (D2_xu H(u, x)[Hu] + D2_xx H(u, x)[Hx]) / z</span>
+</span><span data-line="217">        <span class="c1">#           + Hx / x^2</span>
+</span><span data-line="218">        <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">out_t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiX</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">work2</span><span class="p">)</span>
+</span><span data-line="219">        <span class="n">work1</span> <span class="o">-=</span> <span class="n">work2</span>
+</span><span data-line="220">
+</span><span data-line="221">        <span class="n">lhs</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">:]</span> <span class="o">=</span> <span class="n">work1</span>
+</span><span data-line="222">
+</span><span data-line="223">        <span class="c1"># Multiply A (H A&#39;)</span>
+</span><span data-line="224">        <span class="k">return</span> <span class="n">dense_dot_x</span><span class="p">(</span><span class="n">lhs</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+</span><span data-line="225">
+</span><span data-line="226">    <span class="k">def</span><span class="w"> </span><span class="nf">invhess_prod_ip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">H</span><span class="p">):</span>
+</span><span data-line="227">        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span>
+</span><span data-line="228">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">hess_aux_updated</span><span class="p">:</span>
+</span><span data-line="229">            <span class="bp">self</span><span class="o">.</span><span class="n">update_hessprod_aux</span><span class="p">()</span>
+</span><span data-line="230">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">invhess_aux_updated</span><span class="p">:</span>
+</span><span data-line="231">            <span class="bp">self</span><span class="o">.</span><span class="n">update_invhessprod_aux</span><span class="p">()</span>
+</span><span data-line="232">
+</span><span data-line="233">        <span class="p">(</span><span class="n">Ht</span><span class="p">,</span> <span class="n">Hu</span><span class="p">,</span> <span class="n">Hx</span><span class="p">)</span> <span class="o">=</span> <span class="n">H</span>
+</span><span data-line="234">
+</span><span data-line="235">        <span class="n">Wu</span> <span class="o">=</span> <span class="n">Hu</span> <span class="o">+</span> <span class="n">Ht</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiu</span>
+</span><span data-line="236">        <span class="n">Wx</span> <span class="o">=</span> <span class="n">Hx</span> <span class="o">+</span> <span class="n">Ht</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiX</span>
+</span><span data-line="237">
+</span><span data-line="238">        <span class="c1"># Inverse Hessian product of classical entropy</span>
+</span><span data-line="239">        <span class="n">out_u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rho</span> <span class="o">*</span> <span class="p">(</span><span class="n">Wu</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">Hxx_inv_Hux</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">Wx</span><span class="p">)</span>
+</span><span data-line="240">        <span class="n">out_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Hxx_inv</span> <span class="o">*</span> <span class="n">Wx</span> <span class="o">-</span> <span class="n">out_u</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Hxx_inv_Hux</span>
+</span><span data-line="241">
+</span><span data-line="242">        <span class="c1"># Inverse Hessian product of barrier function</span>
+</span><span data-line="243">        <span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">Ht</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">z2</span> <span class="o">+</span> <span class="n">out_u</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiu</span> <span class="o">+</span> <span class="n">out_x</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiX</span>
+</span><span data-line="244">        <span class="n">out</span><span class="p">[</span><span class="mi">1</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">out_u</span>
+</span><span data-line="245">        <span class="n">out</span><span class="p">[</span><span class="mi">2</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">out_x</span>
+</span><span data-line="246">
+</span><span data-line="247">        <span class="k">return</span> <span class="n">out</span>
+</span><span data-line="248">
+</span><span data-line="249">    <span class="k">def</span><span class="w"> </span><span class="nf">invhess_congr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">):</span>
+</span><span data-line="250">        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span>
+</span><span data-line="251">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">hess_aux_updated</span><span class="p">:</span>
+</span><span data-line="252">            <span class="bp">self</span><span class="o">.</span><span class="n">update_hessprod_aux</span><span class="p">()</span>
+</span><span data-line="253">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">invhess_aux_updated</span><span class="p">:</span>
+</span><span data-line="254">            <span class="bp">self</span><span class="o">.</span><span class="n">update_invhessprod_aux</span><span class="p">()</span>
+</span><span data-line="255">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">congr_aux_updated</span><span class="p">:</span>
+</span><span data-line="256">            <span class="bp">self</span><span class="o">.</span><span class="n">congr_aux</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+</span><span data-line="257">
+</span><span data-line="258">        <span class="c1"># The inverse Hessian product applied on (Ht, Hu, Hx) for the CE barrier</span>
+</span><span data-line="259">        <span class="c1"># is</span>
+</span><span data-line="260">        <span class="c1">#     (u, x) =  M \ (Wu, Wx)</span>
+</span><span data-line="261">        <span class="c1">#         t  =  z^2 Ht + &lt;DPhi(u, x), (u, x)&gt;</span>
+</span><span data-line="262">        <span class="c1"># where (Wu, Wx) = [(Hu, Hx) + Ht DPhi(u, x)]</span>
+</span><span data-line="263">        <span class="c1">#     M = [ (1 + sum(x)/z) / u^2        -1&#39; / zu       ] = [ a  b&#39;]</span>
+</span><span data-line="264">        <span class="c1">#         [        -1 / zu         diag(1/zx + 1/x^2)  ]   [ b  D ]</span>
+</span><span data-line="265">        <span class="c1">#</span>
+</span><span data-line="266">        <span class="c1"># To solve linear systems with M, we simplify it by doing block</span>
+</span><span data-line="267">        <span class="c1"># elimination, in which case we get</span>
+</span><span data-line="268">        <span class="c1">#     u = (Wu - b&#39; D^-1 Wx) / (a - b&#39; D^-1 b)</span>
+</span><span data-line="269">        <span class="c1">#     x = D^-1 (Wx - Wu b)</span>
+</span><span data-line="270">
+</span><span data-line="271">        <span class="n">p</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span data-line="272">        <span class="n">lhs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">p</span><span class="p">,</span> <span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)))</span>
+</span><span data-line="273">
+</span><span data-line="274">        <span class="c1"># Compute Wu</span>
+</span><span data-line="275">        <span class="n">Wu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Au</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">At</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiu</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+</span><span data-line="276">
+</span><span data-line="277">        <span class="c1"># Compute Wx</span>
+</span><span data-line="278">        <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">At</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiX</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">work1</span><span class="p">)</span>
+</span><span data-line="279">        <span class="bp">self</span><span class="o">.</span><span class="n">work1</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Ax</span>
+</span><span data-line="280">
+</span><span data-line="281">        <span class="c1"># ======================================================================</span>
+</span><span data-line="282">        <span class="c1"># Inverse Hessian products with respect to u</span>
+</span><span data-line="283">        <span class="c1"># ======================================================================</span>
+</span><span data-line="284">        <span class="c1"># u = (Wu - b&#39; D^-1 Wx) / (a - b&#39; D^-1 b)</span>
+</span><span data-line="285">        <span class="n">out_u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rho</span> <span class="o">*</span> <span class="p">(</span><span class="n">Wu</span> <span class="o">-</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">work1</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">Hxx_inv_Hux</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+</span><span data-line="286">        <span class="n">lhs</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">out_u</span>
+</span><span data-line="287">
+</span><span data-line="288">        <span class="c1"># ======================================================================</span>
+</span><span data-line="289">        <span class="c1"># Inverse Hessian products with respect to x</span>
+</span><span data-line="290">        <span class="c1"># ======================================================================</span>
+</span><span data-line="291">        <span class="c1"># x = D^-1 (Wx - Wu b)</span>
+</span><span data-line="292">        <span class="bp">self</span><span class="o">.</span><span class="n">work1</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Hxx_inv</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="293">        <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">out_u</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Hxx_inv_Hux</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">work2</span><span class="p">)</span>
+</span><span data-line="294">        <span class="bp">self</span><span class="o">.</span><span class="n">work1</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">work2</span>
+</span><span data-line="295">        <span class="n">lhs</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">work1</span>
+</span><span data-line="296">
+</span><span data-line="297">        <span class="c1"># ======================================================================</span>
+</span><span data-line="298">        <span class="c1"># Inverse Hessian products with respect to t</span>
+</span><span data-line="299">        <span class="c1"># ======================================================================</span>
+</span><span data-line="300">        <span class="c1"># t = z^2 Ht + &lt;DH(u, x), (u, x)&gt;</span>
+</span><span data-line="301">        <span class="n">out_t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">z2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">At</span>
+</span><span data-line="302">        <span class="n">out_t</span> <span class="o">+=</span> <span class="n">out_u</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiu</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+</span><span data-line="303">        <span class="n">out_t</span> <span class="o">+=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">work1</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiX</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+</span><span data-line="304">        <span class="n">lhs</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">out_t</span>
+</span><span data-line="305">
+</span><span data-line="306">        <span class="c1"># Multiply A (H A&#39;)</span>
+</span><span data-line="307">        <span class="k">return</span> <span class="n">dense_dot_x</span><span class="p">(</span><span class="n">lhs</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+</span><span data-line="308">
+</span><span data-line="309">    <span class="k">def</span><span class="w"> </span><span class="nf">third_dir_deriv_axpy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+</span><span data-line="310">        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span>
+</span><span data-line="311">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">hess_aux_updated</span><span class="p">:</span>
+</span><span data-line="312">            <span class="bp">self</span><span class="o">.</span><span class="n">update_hessprod_aux</span><span class="p">()</span>
+</span><span data-line="313">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">dder3_aux_updated</span><span class="p">:</span>
+</span><span data-line="314">            <span class="bp">self</span><span class="o">.</span><span class="n">update_dder3_aux</span><span class="p">()</span>
+</span><span data-line="315">
+</span><span data-line="316">        <span class="p">(</span><span class="n">Ht</span><span class="p">,</span> <span class="n">Hu</span><span class="p">,</span> <span class="n">Hx</span><span class="p">)</span> <span class="o">=</span> <span class="n">H</span>
+</span><span data-line="317">
+</span><span data-line="318">        <span class="n">Hu2</span> <span class="o">=</span> <span class="n">Hu</span> <span class="o">*</span> <span class="n">Hu</span>
+</span><span data-line="319">        <span class="n">Hx2</span> <span class="o">=</span> <span class="n">Hx</span> <span class="o">*</span> <span class="n">Hx</span>
+</span><span data-line="320">        <span class="n">sum_Hx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Hx</span><span class="p">)</span>
+</span><span data-line="321">
+</span><span data-line="322">        <span class="n">chi</span> <span class="o">=</span> <span class="p">(</span><span class="n">Ht</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiu</span> <span class="o">*</span> <span class="n">Hu</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiX</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">Hx</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+</span><span data-line="323">        <span class="n">chi2</span> <span class="o">=</span> <span class="n">chi</span> <span class="o">*</span> <span class="n">chi</span>
+</span><span data-line="324">
+</span><span data-line="325">        <span class="c1"># Classical entropy Hessians</span>
+</span><span data-line="326">        <span class="n">D2PhiuH</span> <span class="o">=</span> <span class="n">Hu</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sum_x</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui2</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Hx</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span>
+</span><span data-line="327">        <span class="n">D2PhixH</span> <span class="o">=</span> <span class="o">-</span><span class="n">Hu</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">+</span> <span class="n">Hx</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi</span>
+</span><span data-line="328">
+</span><span data-line="329">        <span class="n">D2PhiuHH</span> <span class="o">=</span> <span class="n">Hu</span> <span class="o">*</span> <span class="n">D2PhiuH</span>
+</span><span data-line="330">        <span class="n">D2PhixHH</span> <span class="o">=</span> <span class="n">Hx</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">D2PhixH</span>
+</span><span data-line="331">
+</span><span data-line="332">        <span class="c1"># Classical entropy third order derivatives</span>
+</span><span data-line="333">        <span class="n">D3PhiuHH</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">Hu2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sum_x</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui3</span>
+</span><span data-line="334">        <span class="n">D3PhiuHH</span> <span class="o">+=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">Hu</span> <span class="o">*</span> <span class="n">sum_Hx</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui2</span>
+</span><span data-line="335">
+</span><span data-line="336">        <span class="n">D3PhixHH</span> <span class="o">=</span> <span class="o">-</span><span class="n">Hx2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi2</span>
+</span><span data-line="337">        <span class="n">D3PhixHH</span> <span class="o">+=</span> <span class="n">Hu2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui2</span>
+</span><span data-line="338">
+</span><span data-line="339">        <span class="c1"># Third derivatives of barrier</span>
+</span><span data-line="340">        <span class="n">dder3_t</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">zi3</span> <span class="o">*</span> <span class="n">chi2</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">zi2</span> <span class="o">*</span> <span class="p">(</span><span class="n">D2PhixHH</span> <span class="o">+</span> <span class="n">D2PhiuHH</span><span class="p">)</span>
+</span><span data-line="341">
+</span><span data-line="342">        <span class="n">dder3_u</span> <span class="o">=</span> <span class="o">-</span><span class="n">dder3_t</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiu</span>
+</span><span data-line="343">        <span class="n">dder3_u</span> <span class="o">-=</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">zi2</span> <span class="o">*</span> <span class="n">chi</span> <span class="o">*</span> <span class="n">D2PhiuH</span>
+</span><span data-line="344">        <span class="n">dder3_u</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">zi</span> <span class="o">*</span> <span class="n">D3PhiuHH</span>
+</span><span data-line="345">        <span class="n">dder3_u</span> <span class="o">-=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">Hu2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui3</span>
+</span><span data-line="346">
+</span><span data-line="347">        <span class="n">dder3_x</span> <span class="o">=</span> <span class="o">-</span><span class="n">dder3_t</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">DPhiX</span>
+</span><span data-line="348">        <span class="n">dder3_x</span> <span class="o">-=</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">zi2</span> <span class="o">*</span> <span class="n">chi</span> <span class="o">*</span> <span class="n">D2PhixH</span>
+</span><span data-line="349">        <span class="n">dder3_x</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">zi</span> <span class="o">*</span> <span class="n">D3PhixHH</span>
+</span><span data-line="350">        <span class="n">dder3_x</span> <span class="o">-=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">Hx2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi3</span>
+</span><span data-line="351">
+</span><span data-line="352">        <span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">][:]</span> <span class="o">+=</span> <span class="n">dder3_t</span> <span class="o">*</span> <span class="n">a</span>
+</span><span data-line="353">        <span class="n">out</span><span class="p">[</span><span class="mi">1</span><span class="p">][:]</span> <span class="o">+=</span> <span class="n">dder3_u</span> <span class="o">*</span> <span class="n">a</span>
+</span><span data-line="354">        <span class="n">out</span><span class="p">[</span><span class="mi">2</span><span class="p">][:]</span> <span class="o">+=</span> <span class="n">dder3_x</span> <span class="o">*</span> <span class="n">a</span>
+</span><span data-line="355">
+</span><span data-line="356">        <span class="k">return</span> <span class="n">out</span>
+</span><span data-line="357">
+</span><span data-line="358">    <span class="c1"># ==========================================================================</span>
+</span><span data-line="359">    <span class="c1"># Auxilliary functions</span>
+</span><span data-line="360">    <span class="c1"># ==========================================================================</span>
+</span><span data-line="361">    <span class="k">def</span><span class="w"> </span><span class="nf">congr_aux</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">):</span>
+</span><span data-line="362">        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">congr_aux_updated</span>
+</span><span data-line="363">
+</span><span data-line="364">        <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+</span><span data-line="365">            <span class="n">A</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+</span><span data-line="366">
+</span><span data-line="367">        <span class="bp">self</span><span class="o">.</span><span class="n">At</span> <span class="o">=</span> <span class="n">A</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+</span><span data-line="368">        <span class="bp">self</span><span class="o">.</span><span class="n">Au</span> <span class="o">=</span> <span class="n">A</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+</span><span data-line="369">        <span class="bp">self</span><span class="o">.</span><span class="n">Ax</span> <span class="o">=</span> <span class="n">A</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">:]</span>
+</span><span data-line="370">
+</span><span data-line="371">        <span class="bp">self</span><span class="o">.</span><span class="n">work1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Ax</span><span class="p">)</span>
+</span><span data-line="372">        <span class="bp">self</span><span class="o">.</span><span class="n">work2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Ax</span><span class="p">)</span>
+</span><span data-line="373">
+</span><span data-line="374">        <span class="bp">self</span><span class="o">.</span><span class="n">congr_aux_updated</span> <span class="o">=</span> <span class="kc">True</span>
+</span><span data-line="375">
+</span><span data-line="376">    <span class="k">def</span><span class="w"> </span><span class="nf">update_hessprod_aux</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span data-line="377">        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">hess_aux_updated</span>
+</span><span data-line="378">        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span>
+</span><span data-line="379">
+</span><span data-line="380">        <span class="bp">self</span><span class="o">.</span><span class="n">zi2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">zi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">zi</span>
+</span><span data-line="381">        <span class="bp">self</span><span class="o">.</span><span class="n">ui2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span>
+</span><span data-line="382">        <span class="bp">self</span><span class="o">.</span><span class="n">xi2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi</span>
+</span><span data-line="383">
+</span><span data-line="384">        <span class="bp">self</span><span class="o">.</span><span class="n">Huu</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">zi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sum_x</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui2</span>
+</span><span data-line="385">        <span class="bp">self</span><span class="o">.</span><span class="n">Hux</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">zi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+</span><span data-line="386">        <span class="bp">self</span><span class="o">.</span><span class="n">Hxx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">zi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi2</span>
+</span><span data-line="387">
+</span><span data-line="388">        <span class="bp">self</span><span class="o">.</span><span class="n">hess_aux_updated</span> <span class="o">=</span> <span class="kc">True</span>
+</span><span data-line="389">
+</span><span data-line="390">    <span class="k">def</span><span class="w"> </span><span class="nf">update_invhessprod_aux</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span data-line="391">        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">invhess_aux_updated</span>
+</span><span data-line="392">        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span>
+</span><span data-line="393">
+</span><span data-line="394">        <span class="bp">self</span><span class="o">.</span><span class="n">Hxx_inv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reciprocal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Hxx</span><span class="p">)</span>
+</span><span data-line="395">        <span class="bp">self</span><span class="o">.</span><span class="n">Hxx_inv_Hux</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Hxx_inv</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Hux</span>
+</span><span data-line="396">        <span class="bp">self</span><span class="o">.</span><span class="n">rho</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Huu</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Hxx_inv_Hux</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Hux</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+</span><span data-line="397">
+</span><span data-line="398">        <span class="bp">self</span><span class="o">.</span><span class="n">z2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">z</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">z</span>
+</span><span data-line="399">
+</span><span data-line="400">        <span class="bp">self</span><span class="o">.</span><span class="n">invhess_aux_updated</span> <span class="o">=</span> <span class="kc">True</span>
+</span><span data-line="401">
+</span><span data-line="402">    <span class="k">def</span><span class="w"> </span><span class="nf">update_dder3_aux</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span data-line="403">        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">dder3_aux_updated</span>
+</span><span data-line="404">        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">hess_aux_updated</span>
+</span><span data-line="405">
+</span><span data-line="406">        <span class="bp">self</span><span class="o">.</span><span class="n">zi3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">zi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">zi2</span>
+</span><span data-line="407">        <span class="bp">self</span><span class="o">.</span><span class="n">ui3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui2</span>
+</span><span data-line="408">        <span class="bp">self</span><span class="o">.</span><span class="n">xi3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi2</span>
+</span><span data-line="409">
+</span><span data-line="410">        <span class="bp">self</span><span class="o">.</span><span class="n">dder3_aux_updated</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+</span></pre></div>
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2025, Kerry He, James Saunderson, and Hamza Fawzi</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials">
+<a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+  <iconify-icon icon="simple-icons:github"></iconify-icon>
+</a></div>
+    </div>
+  </div>
+</footer>
+      <script src="../../../../_static/documentation_options.js?v=cb7bf70b"></script>
+      <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../../_static/copybutton.js?v=30646c52"></script>
+      <script src="../../../../_static/tabs.js?v=3030b3cb"></script>
+      <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+      <script src="../../../../_static/shibuya.js?v=c5fc9e80"></script></body>
+</html>

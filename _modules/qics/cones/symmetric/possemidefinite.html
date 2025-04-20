@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="teal" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>qics.cones.symmetric.possemidefinite - QICS 1.1.3 documentation</title><link rel="shortcut icon" href="../../../../_static/favicon.svg"/><link rel="index" title="Index" href="../../../../genindex.html" /><link rel="search" title="Search" href="../../../../search.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=397bb51e" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/shibuya.css?v=36d120a7" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link media="print" rel="stylesheet" type="text/css" href="../../../../_static/print.css?v=20ff2c19" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/custom.css?v=93a53b2b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    <meta property="og:type" content="website"/><meta property="og:title" content="qics.cones.symmetric.possemidefinite"/>
+<meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../../../../index.html">
+      <img class="light-logo" src="../../../../_static/logo-light.svg" alt="QICS" height="28" loading="lazy" />
+      <img class="dark-logo" src="../../../../_static/logo-dark.svg" alt="QICS" height="28" loading="lazy" />
+      <strong>QICS</strong>
+    </a>
+    <div class="sy-head-nav" id="HeadNav">
+      <nav class="sy-head-links"><ul>
+      <li class="link"><a href="../../../../guide/index.html">
+            <span>User Guide</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../../../../guide/reference.html">Quick reference</a></li><li><a href="../../../../guide/gettingstarted.html">Getting started</a></li><li><a href="../../../../guide/matrices.html">Representing matrices</a></li><li><a href="../../../../guide/advanced.html">Advanced tips</a></li><li><a href="../../../../guide/io.html">Reading and writing</a></li><li><a href="../../../../guide/picos.html">PICOS interface</a></li></ul>
+      </li>
+      <li class="link"><a href="../../../../examples/index.html">
+            <span>Examples</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../../../../examples/sdp/index.html">Semidefinite programming</a></li><li><a href="../../../../examples/qrep/index.html">Quantum entropy programming</a></li></ul>
+      </li><li class="link"><a href="../../../../api/index.html">API reference</a></li></ul></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials">
+  <a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+    <iconify-icon icon="simple-icons:github"></iconify-icon>
+  </a></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="HeadNav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2 -translate-x-2"></span>
+          <span class="hamburger_3 -translate-x-1"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/index.html">User guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../guide/reference.html">Quick reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../guide/gettingstarted.html">Getting started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../guide/matrices.html">Representing matrices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../guide/advanced.html">Advanced tips</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../guide/io.html">Reading and writing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../guide/picos.html">PICOS interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../examples/index.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/sdp/index.html">Semidefinite programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../examples/sdp/maxcut.html">Max cut</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../examples/sdp/product.html">Block diagonal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../examples/sdp/quantum.html">Quantum information</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/qrep/index.html">Quantum relative entropy programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../examples/qrep/qkd.html">Quantum key distribution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../examples/qrep/nearest.html">Nearest matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../examples/qrep/channel.html">Quantum channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../examples/qrep/opper.html">Noncommutative perspective</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../examples/qrep/renyi.html">Renyi entropy</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/index.html">API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/qics.html">qics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/qics/Model.html">qics.Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/qics/Solver.html">qics.Solver</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/cones.html">qics.cones</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/NonNegOrthant.html">qics.cones.NonNegOrthant</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/PosSemidefinite.html">qics.cones.PosSemidefinite</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/SecondOrder.html">qics.cones.SecondOrder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/ClassEntr.html">qics.cones.ClassEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/ClassRelEntr.html">qics.cones.ClassRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/QuantEntr.html">qics.cones.QuantEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/QuantRelEntr.html">qics.cones.QuantRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/QuantCondEntr.html">qics.cones.QuantCondEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/QuantKeyDist.html">qics.cones.QuantKeyDist</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/OpPerspecTr.html">qics.cones.OpPerspecTr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/OpPerspecEpi.html">qics.cones.OpPerspecEpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/RenyiEntr.html">qics.cones.RenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/SandRenyiEntr.html">qics.cones.SandRenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/QuasiEntr.html">qics.cones.QuasiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/cones/SandQuasiEntr.html">qics.cones.SandQuasiEntr</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/io.html">qics.io</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/io/read_file.html">qics.io.read_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/io/write_file.html">qics.io.write_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/io/read_sdpa.html">qics.io.read_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/io/write_sdpa.html">qics.io.write_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/io/read_cbf.html">qics.io.read_cbf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/io/write_cbf.html">qics.io.write_cbf</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/point.html">qics.point</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/point/Point.html">qics.point.Point</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/point/VecProduct.html">qics.point.VecProduct</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/quantum.html">qics.quantum</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/entropy.html">qics.quantum.entropy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/i_kr.html">qics.quantum.i_kr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/p_tr.html">qics.quantum.p_tr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/partial_transpose.html">qics.quantum.partial_transpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/purify.html">qics.quantum.purify</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/swap.html">qics.quantum.swap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/random/choi_operator.html">qics.quantum.random.choi_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/random/degradable_channel.html">qics.quantum.random.degradable_channel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/random/density_matrix.html">qics.quantum.random.density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/random/pure_density_matrix.html">qics.quantum.random.pure_density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/random/stinespring_operator.html">qics.quantum.random.stinespring_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/quantum/random/unitary.html">qics.quantum.random.unitary</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/vectorize.html">qics.vectorize</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/vectorize/eye.html">qics.vectorize.eye</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/vectorize/lin_to_mat.html">qics.vectorize.lin_to_mat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/vectorize/mat_dim.html">qics.vectorize.mat_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/vectorize/mat_to_vec.html">qics.vectorize.mat_to_vec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/vectorize/vec_dim.html">qics.vectorize.vec_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../api/vectorize/vec_to_mat.html">qics.vectorize.vec_to_mat</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div></div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6"><div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../../index.html"><span itemprop="name">QICS</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../index.html"><span itemprop="name">Module code</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">qics.cones.symmetric.possemidefinite</strong>
+        <meta itemprop="position" content="3" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+        <article class="yue" role="main">
+          <h1>Source code for qics.cones.symmetric.possemidefinite</h1><div class="highlight"><pre>
+<span></span><span data-line="1"><span class="c1"># Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="c1"># This Python package QICS is licensed under the MIT license; see LICENSE.md</span>
+</span><span data-line="4"><span class="c1"># file in the root directory or at https://github.com/kerry-he/qics</span>
+</span><span data-line="5">
+</span><span data-line="6"><span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+</span><span data-line="7">
+</span><span data-line="8"><span class="kn">import</span><span class="w"> </span><span class="nn">numba</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nb</span>
+</span><span data-line="9"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="10"><span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sp</span>
+</span><span data-line="11">
+</span><span data-line="12"><span class="kn">from</span><span class="w"> </span><span class="nn">qics._utils.linalg</span><span class="w"> </span><span class="kn">import</span> <span class="n">congr_multi</span><span class="p">,</span> <span class="n">scale_axis</span><span class="p">,</span> <span class="n">x_dot_dense</span>
+</span><span data-line="13"><span class="kn">from</span><span class="w"> </span><span class="nn">qics.cones.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">SymCone</span>
+</span><span data-line="14"><span class="kn">from</span><span class="w"> </span><span class="nn">qics.vectorize</span><span class="w"> </span><span class="kn">import</span> <span class="n">vec_to_mat</span>
+</span><span data-line="15">
+</span><span data-line="16">
+<div class="viewcode-block" id="PosSemidefinite">
+<a class="viewcode-back" href="../../../../api/cones/PosSemidefinite.html#qics.cones.PosSemidefinite">[docs]</a>
+</span><span data-line="17"><span class="k">class</span><span class="w"> </span><span class="nc">PosSemidefinite</span><span class="p">(</span><span class="n">SymCone</span><span class="p">):</span>
+</span><span data-line="18"><span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;A class representing a positive semidefinite cone defined either</span>
+</span><span data-line="19"><span class="sd">    on real symmetric matrices</span>
+</span><span data-line="20">
+</span><span data-line="21"><span class="sd">    .. math::</span>
+</span><span data-line="22">
+</span><span data-line="23"><span class="sd">        \mathbb{S}^n_+ = \{ X \in \mathbb{S}^n : X \succeq 0 \},</span>
+</span><span data-line="24">
+</span><span data-line="25"><span class="sd">    or complex Hermitian matrices</span>
+</span><span data-line="26">
+</span><span data-line="27"><span class="sd">    .. math::</span>
+</span><span data-line="28">
+</span><span data-line="29"><span class="sd">        \mathbb{H}^n_+ = \{ X \in \mathbb{H}^n : X \succeq 0 \}.</span>
+</span><span data-line="30">
+</span><span data-line="31"><span class="sd">    Parameters</span>
+</span><span data-line="32"><span class="sd">    ----------</span>
+</span><span data-line="33"><span class="sd">    n : :obj:`int`</span>
+</span><span data-line="34"><span class="sd">        Dimension of the matrix :math:`X`.</span>
+</span><span data-line="35"><span class="sd">    iscomplex : :obj:`bool`</span>
+</span><span data-line="36"><span class="sd">        Whether the matrix :math:`X` is defined over :math:`\mathbb{H}^n`</span>
+</span><span data-line="37"><span class="sd">        (``True``), or restricted to :math:`\mathbb{S}^n` (``False``). The</span>
+</span><span data-line="38"><span class="sd">        default is ``False``.</span>
+</span><span data-line="39"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span data-line="40">
+</span><span data-line="41">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+</span><span data-line="42">        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="n">n</span>
+</span><span data-line="43">        <span class="bp">self</span><span class="o">.</span><span class="n">iscomplex</span> <span class="o">=</span> <span class="n">iscomplex</span>
+</span><span data-line="44">
+</span><span data-line="45">        <span class="bp">self</span><span class="o">.</span><span class="n">nu</span> <span class="o">=</span> <span class="n">n</span>  <span class="c1"># Barrier parameter</span>
+</span><span data-line="46">
+</span><span data-line="47">        <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="48">            <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n</span> <span class="o">*</span> <span class="n">n</span><span class="p">]</span>
+</span><span data-line="49">            <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;h&quot;</span><span class="p">]</span>
+</span><span data-line="50">            <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span>
+</span><span data-line="51">        <span class="k">else</span><span class="p">:</span>
+</span><span data-line="52">            <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span> <span class="o">*</span> <span class="n">n</span><span class="p">]</span>
+</span><span data-line="53">            <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;s&quot;</span><span class="p">]</span>
+</span><span data-line="54">            <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
+</span><span data-line="55">
+</span><span data-line="56">        <span class="c1"># Get LAPACK operators</span>
+</span><span data-line="57">        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+</span><span data-line="58">        <span class="bp">self</span><span class="o">.</span><span class="n">cho_fact</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lapack</span><span class="o">.</span><span class="n">get_lapack_funcs</span><span class="p">(</span><span class="s2">&quot;potrf&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">X</span><span class="p">,))</span>
+</span><span data-line="59">        <span class="bp">self</span><span class="o">.</span><span class="n">cho_inv</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lapack</span><span class="o">.</span><span class="n">get_lapack_funcs</span><span class="p">(</span><span class="s2">&quot;trtri&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">X</span><span class="p">,))</span>
+</span><span data-line="60">        <span class="bp">self</span><span class="o">.</span><span class="n">svd</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lapack</span><span class="o">.</span><span class="n">get_lapack_funcs</span><span class="p">(</span><span class="s2">&quot;gesdd&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">X</span><span class="p">,))</span>
+</span><span data-line="61">        <span class="bp">self</span><span class="o">.</span><span class="n">svd_lwork</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lapack</span><span class="o">.</span><span class="n">get_lapack_funcs</span><span class="p">(</span><span class="s2">&quot;gesdd_lwork&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">X</span><span class="p">,))(</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+</span><span data-line="62">        <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="63">            <span class="bp">self</span><span class="o">.</span><span class="n">eigvalsh</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lapack</span><span class="o">.</span><span class="n">get_lapack_funcs</span><span class="p">(</span><span class="s2">&quot;heevr&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">X</span><span class="p">,))</span>
+</span><span data-line="64">        <span class="k">else</span><span class="p">:</span>
+</span><span data-line="65">            <span class="bp">self</span><span class="o">.</span><span class="n">eigvalsh</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lapack</span><span class="o">.</span><span class="n">get_lapack_funcs</span><span class="p">(</span><span class="s2">&quot;syevr&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">X</span><span class="p">,))</span>
+</span><span data-line="66">
+</span><span data-line="67">        <span class="c1"># Update flags</span>
+</span><span data-line="68">        <span class="bp">self</span><span class="o">.</span><span class="n">feas_updated</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span data-line="69">        <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span data-line="70">        <span class="bp">self</span><span class="o">.</span><span class="n">nt_aux_updated</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span data-line="71">        <span class="bp">self</span><span class="o">.</span><span class="n">congr_aux_updated</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span data-line="72">
+</span><span data-line="73">        <span class="k">return</span>
+</span><span data-line="74">
+</span><span data-line="75">    <span class="k">def</span><span class="w"> </span><span class="nf">get_iscomplex</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span data-line="76">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">iscomplex</span>
+</span><span data-line="77">
+</span><span data-line="78">    <span class="k">def</span><span class="w"> </span><span class="nf">get_init_point</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">):</span>
+</span><span data-line="79">        <span class="n">point</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)]</span>
+</span><span data-line="80">
+</span><span data-line="81">        <span class="bp">self</span><span class="o">.</span><span class="n">set_point</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">point</span><span class="p">)</span>
+</span><span data-line="82">
+</span><span data-line="83">        <span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">][:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X</span>
+</span><span data-line="84">        <span class="k">return</span> <span class="n">out</span>
+</span><span data-line="85">
+</span><span data-line="86">    <span class="k">def</span><span class="w"> </span><span class="nf">set_point</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">primal</span><span class="p">,</span> <span class="n">dual</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+</span><span data-line="87">        <span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">=</span> <span class="n">primal</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">a</span>
+</span><span data-line="88">        <span class="bp">self</span><span class="o">.</span><span class="n">Z</span> <span class="o">=</span> <span class="n">dual</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">a</span> <span class="k">if</span> <span class="p">(</span><span class="n">dual</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+</span><span data-line="89">
+</span><span data-line="90">        <span class="bp">self</span><span class="o">.</span><span class="n">feas_updated</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span data-line="91">        <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span data-line="92">        <span class="bp">self</span><span class="o">.</span><span class="n">nt_aux_updated</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span data-line="93">
+</span><span data-line="94">    <span class="k">def</span><span class="w"> </span><span class="nf">set_dual</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dual</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+</span><span data-line="95">        <span class="bp">self</span><span class="o">.</span><span class="n">Z</span> <span class="o">=</span> <span class="n">dual</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">a</span>
+</span><span data-line="96">
+</span><span data-line="97">    <span class="k">def</span><span class="w"> </span><span class="nf">get_feas</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span data-line="98">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feas_updated</span><span class="p">:</span>
+</span><span data-line="99">            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">feas</span>
+</span><span data-line="100">
+</span><span data-line="101">        <span class="bp">self</span><span class="o">.</span><span class="n">feas_updated</span> <span class="o">=</span> <span class="kc">True</span>
+</span><span data-line="102">
+</span><span data-line="103">        <span class="c1"># Check that X is PSD by trying to Cholesky factor it</span>
+</span><span data-line="104">        <span class="bp">self</span><span class="o">.</span><span class="n">X_chol</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cho_fact</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="105">        <span class="k">if</span> <span class="n">info</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+</span><span data-line="106">            <span class="bp">self</span><span class="o">.</span><span class="n">feas</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span data-line="107">            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">feas</span>
+</span><span data-line="108">
+</span><span data-line="109">        <span class="c1"># Check that Z is PSD by trying to Cholesky factor it</span>
+</span><span data-line="110">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">Z</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span data-line="111">            <span class="bp">self</span><span class="o">.</span><span class="n">Z_chol</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cho_fact</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Z</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="112">            <span class="k">if</span> <span class="n">info</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+</span><span data-line="113">                <span class="bp">self</span><span class="o">.</span><span class="n">feas</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span data-line="114">                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">feas</span>
+</span><span data-line="115">
+</span><span data-line="116">        <span class="bp">self</span><span class="o">.</span><span class="n">feas</span> <span class="o">=</span> <span class="kc">True</span>
+</span><span data-line="117">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">feas</span>
+</span><span data-line="118">
+</span><span data-line="119">    <span class="k">def</span><span class="w"> </span><span class="nf">get_dual_feas</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span data-line="120">        <span class="bp">self</span><span class="o">.</span><span class="n">Z_chol</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cho_fact</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Z</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="121">        <span class="k">return</span> <span class="n">info</span> <span class="o">==</span> <span class="mi">0</span>
+</span><span data-line="122">
+</span><span data-line="123">    <span class="k">def</span><span class="w"> </span><span class="nf">get_val</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span data-line="124">        <span class="p">(</span><span class="n">sign</span><span class="p">,</span> <span class="n">logabsdet</span><span class="p">)</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">slogdet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+</span><span data-line="125">        <span class="k">return</span> <span class="o">-</span><span class="n">sign</span> <span class="o">*</span> <span class="n">logabsdet</span>
+</span><span data-line="126">
+</span><span data-line="127">    <span class="k">def</span><span class="w"> </span><span class="nf">update_grad</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span data-line="128">        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span>
+</span><span data-line="129">
+</span><span data-line="130">        <span class="bp">self</span><span class="o">.</span><span class="n">X_chol_inv</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cho_inv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_chol</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="131">        <span class="bp">self</span><span class="o">.</span><span class="n">X_inv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_chol_inv</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_chol_inv</span>
+</span><span data-line="132">        <span class="bp">self</span><span class="o">.</span><span class="n">grad</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">X_inv</span><span class="p">]</span>
+</span><span data-line="133">
+</span><span data-line="134">        <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span> <span class="o">=</span> <span class="kc">True</span>
+</span><span data-line="135">
+</span><span data-line="136">    <span class="k">def</span><span class="w"> </span><span class="nf">hess_prod_ip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">H</span><span class="p">):</span>
+</span><span data-line="137">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span><span class="p">:</span>
+</span><span data-line="138">            <span class="bp">self</span><span class="o">.</span><span class="n">update_grad</span><span class="p">()</span>
+</span><span data-line="139">        <span class="n">XHX</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_inv</span> <span class="o">@</span> <span class="n">H</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_inv</span>
+</span><span data-line="140">        <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">XHX</span><span class="p">,</span> <span class="n">XHX</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span><span data-line="141">        <span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*=</span> <span class="mf">0.5</span>
+</span><span data-line="142">        <span class="k">return</span> <span class="n">out</span>
+</span><span data-line="143">
+</span><span data-line="144">    <span class="k">def</span><span class="w"> </span><span class="nf">hess_congr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">):</span>
+</span><span data-line="145">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span><span class="p">:</span>
+</span><span data-line="146">            <span class="bp">self</span><span class="o">.</span><span class="n">update_grad</span><span class="p">()</span>
+</span><span data-line="147">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_congr</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_inv</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_chol_inv</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+</span><span data-line="148">
+</span><span data-line="149">    <span class="k">def</span><span class="w"> </span><span class="nf">invhess_prod_ip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">H</span><span class="p">):</span>
+</span><span data-line="150">        <span class="n">XHX</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">@</span> <span class="n">H</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">X</span>
+</span><span data-line="151">        <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">XHX</span><span class="p">,</span> <span class="n">XHX</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span><span data-line="152">        <span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*=</span> <span class="mf">0.5</span>
+</span><span data-line="153">        <span class="k">return</span> <span class="n">out</span>
+</span><span data-line="154">
+</span><span data-line="155">    <span class="k">def</span><span class="w"> </span><span class="nf">invhess_congr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">):</span>
+</span><span data-line="156">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_congr</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_chol</span><span class="p">)</span>
+</span><span data-line="157">
+</span><span data-line="158">    <span class="k">def</span><span class="w"> </span><span class="nf">base_congr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">X_rt2</span><span class="p">):</span>
+</span><span data-line="159">        <span class="c1"># Generalized function to compute the matrix [&lt;Ai, X Aj X&gt;]_ij for a</span>
+</span><span data-line="160">        <span class="c1"># a given matrix X</span>
+</span><span data-line="161">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">congr_aux_updated</span><span class="p">:</span>
+</span><span data-line="162">            <span class="bp">self</span><span class="o">.</span><span class="n">congr_aux</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+</span><span data-line="163">
+</span><span data-line="164">        <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">p_ds</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A_ds_idxs</span><span class="p">))</span>
+</span><span data-line="165">        <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">p</span><span class="p">,</span> <span class="n">p</span><span class="p">))</span>
+</span><span data-line="166">
+</span><span data-line="167">        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A_sp_idxs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+</span><span data-line="168">            <span class="c1"># Compute sparse-sparse component using Numba compiled functions</span>
+</span><span data-line="169">            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="170">                <span class="n">_sparse_congr_complex</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_rows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_cols</span><span class="p">,</span> 
+</span><span data-line="171">                                      <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_nnzs</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_idxs</span><span class="p">)</span>  <span class="c1"># fmt: skip</span>
+</span><span data-line="172">            <span class="k">else</span><span class="p">:</span>
+</span><span data-line="173">                <span class="n">_sparse_congr</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_rows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_cols</span><span class="p">,</span> 
+</span><span data-line="174">                              <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_nnzs</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_idxs</span><span class="p">)</span>  <span class="c1"># fmt: skip</span>
+</span><span data-line="175">
+</span><span data-line="176">            <span class="c1"># Compute sparse-dense and dense-dense components</span>
+</span><span data-line="177">            <span class="k">if</span> <span class="n">p_ds</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+</span><span data-line="178">                <span class="n">work</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">work</span>
+</span><span data-line="179">
+</span><span data-line="180">                <span class="c1"># Compute X Aj X for all dense Aj</span>
+</span><span data-line="181">                <span class="n">lhs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">p_ds</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+</span><span data-line="182">                <span class="n">lhs_view</span> <span class="o">=</span> <span class="n">lhs</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">p_ds</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+</span><span data-line="183">                <span class="n">congr_multi</span><span class="p">(</span><span class="n">lhs_view</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Ai_ds</span><span class="p">,</span> <span class="n">work</span><span class="o">=</span><span class="n">work</span><span class="p">)</span>
+</span><span data-line="184">
+</span><span data-line="185">                <span class="c1"># Compute inner products &lt;Ai, X Aj X&gt; for all dense Aj</span>
+</span><span data-line="186">                <span class="n">temp</span> <span class="o">=</span> <span class="n">x_dot_dense</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A_triu</span><span class="p">,</span> <span class="n">lhs</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">triu_idxs</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+</span><span data-line="187">                <span class="n">out</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_ds_idxs</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span>
+</span><span data-line="188">                <span class="n">out</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">A_ds_idxs</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">temp</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="189">        <span class="k">else</span><span class="p">:</span>
+</span><span data-line="190">            <span class="c1"># If there are no (nonzero) sparse Aj, then compute congruence using</span>
+</span><span data-line="191">            <span class="c1"># the symmetric multiplication [A (L&#39; kr L)] [A (L&#39; kr L)]&#39;</span>
+</span><span data-line="192">            <span class="n">work</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">work</span>
+</span><span data-line="193">
+</span><span data-line="194">            <span class="c1"># Compute L&#39; Aj L</span>
+</span><span data-line="195">            <span class="n">lhs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">p_ds</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+</span><span data-line="196">            <span class="n">lhs_view</span> <span class="o">=</span> <span class="n">lhs</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">p_ds</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+</span><span data-line="197">            <span class="n">congr_multi</span><span class="p">(</span><span class="n">lhs_view</span><span class="p">,</span> <span class="n">X_rt2</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Ai_ds</span><span class="p">,</span> <span class="n">work</span><span class="o">=</span><span class="n">work</span><span class="p">)</span>
+</span><span data-line="198">
+</span><span data-line="199">            <span class="c1"># Compute inner products &lt;L&#39; Ai L, L&#39; Aj L&gt;</span>
+</span><span data-line="200">            <span class="n">out</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">A_ds_ds_idxs</span><span class="p">]</span> <span class="o">=</span> <span class="n">lhs</span> <span class="o">@</span> <span class="n">lhs</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="201">
+</span><span data-line="202">        <span class="k">return</span> <span class="n">out</span>
+</span><span data-line="203">
+</span><span data-line="204">    <span class="k">def</span><span class="w"> </span><span class="nf">third_dir_deriv_axpy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+</span><span data-line="205">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">grad_updated</span><span class="p">:</span>
+</span><span data-line="206">            <span class="bp">self</span><span class="o">.</span><span class="n">update_grad</span><span class="p">()</span>
+</span><span data-line="207">
+</span><span data-line="208">        <span class="n">XHX_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_inv</span> <span class="o">@</span> <span class="n">H</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_chol_inv</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="209">        <span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">a</span> <span class="o">*</span> <span class="n">XHX_2</span> <span class="o">@</span> <span class="n">XHX_2</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="210">        <span class="k">return</span> <span class="n">out</span>
+</span><span data-line="211">
+</span><span data-line="212">    <span class="k">def</span><span class="w"> </span><span class="nf">prox</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span data-line="213">        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">feas_updated</span>
+</span><span data-line="214">        <span class="n">XZX_I</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_chol</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">Z</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_chol</span>
+</span><span data-line="215">        <span class="n">XZX_I</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
+</span><span data-line="216">        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">XZX_I</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+</span><span data-line="217">
+</span><span data-line="218">    <span class="c1"># ==========================================================================</span>
+</span><span data-line="219">    <span class="c1"># Functions specific to symmetric cones for NT scaling</span>
+</span><span data-line="220">    <span class="c1"># ==========================================================================</span>
+</span><span data-line="221">    <span class="c1"># Computes the NT scaling point W and scaled variable Lambda such that</span>
+</span><span data-line="222">    <span class="c1">#     H(W)[S] = Z  &lt;==&gt; Lambda := P^-T(S) = P(Z)</span>
+</span><span data-line="223">    <span class="c1"># where H(W) = V^T V. To obtain for for the PSD cone, first let compute the</span>
+</span><span data-line="224">    <span class="c1"># SVD</span>
+</span><span data-line="225">    <span class="c1">#     U D V^T = Z_chol^T S_chol</span>
+</span><span data-line="226">    <span class="c1"># Then compute</span>
+</span><span data-line="227">    <span class="c1">#     R    := S_chol V D^-1/2     = Z_chol^-T U D^1/2</span>
+</span><span data-line="228">    <span class="c1">#     R^-1 := D^1/2 V^T S_chol^-1 = D^-1/2 U^T Z_chol^T</span>
+</span><span data-line="229">    <span class="c1"># Then we can find the scaling point as</span>
+</span><span data-line="230">    <span class="c1">#     W    := R R^T</span>
+</span><span data-line="231">    <span class="c1">#           = S^1/2 (S^1/2 Z S^1/2)^-1/2 S^1/2</span>
+</span><span data-line="232">    <span class="c1">#           = Z^-1/2 (Z^1/2 S Z^1/2)^1/2 Z^1/2 (i.e., geo. mean of Z and S)</span>
+</span><span data-line="233">    <span class="c1">#     W^-1 := R^-T R^-1</span>
+</span><span data-line="234">    <span class="c1"># and the scaled point as</span>
+</span><span data-line="235">    <span class="c1">#     Lambda := D</span>
+</span><span data-line="236">    <span class="c1"># Also, we have the linear transformations given by</span>
+</span><span data-line="237">    <span class="c1">#     H(W)[S] = W^-1 S W^-1</span>
+</span><span data-line="238">    <span class="c1">#     P^-T(S) = R^-1 S R^-T</span>
+</span><span data-line="239">    <span class="c1">#     P(Z)    = R^T Z R</span>
+</span><span data-line="240">    <span class="c1"># See: [Section 4.3]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf</span>
+</span><span data-line="241">
+</span><span data-line="242">    <span class="k">def</span><span class="w"> </span><span class="nf">nt_aux</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span data-line="243">        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">nt_aux_updated</span>
+</span><span data-line="244">        <span class="c1"># Take the SVD of Z_chol^T S_chol to get scaled point Lambda := D</span>
+</span><span data-line="245">        <span class="n">RL</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Z_chol</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_chol</span>
+</span><span data-line="246">        <span class="n">_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Lambda</span><span class="p">,</span> <span class="n">Vt</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">RL</span><span class="p">,</span> <span class="n">lwork</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">svd_lwork</span><span class="p">)</span>
+</span><span data-line="247">        <span class="n">D_rt2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Lambda</span><span class="p">)</span>
+</span><span data-line="248">
+</span><span data-line="249">        <span class="c1"># Compute the scaling point as</span>
+</span><span data-line="250">        <span class="c1">#    R := S_chol V D^-1/2, and</span>
+</span><span data-line="251">        <span class="c1">#    W := R R^T</span>
+</span><span data-line="252">        <span class="bp">self</span><span class="o">.</span><span class="n">R</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_chol</span> <span class="o">@</span> <span class="p">(</span><span class="n">Vt</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span> <span class="o">/</span> <span class="n">D_rt2</span><span class="p">)</span>
+</span><span data-line="253">        <span class="bp">self</span><span class="o">.</span><span class="n">W</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">R</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">R</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="254">
+</span><span data-line="255">        <span class="c1"># Compute the inverse scaling point as</span>
+</span><span data-line="256">        <span class="c1">#    R^-1 := D^1/2 V^T S_chol^-1, and</span>
+</span><span data-line="257">        <span class="c1">#    W^-1 := R^-T R^-1</span>
+</span><span data-line="258">        <span class="bp">self</span><span class="o">.</span><span class="n">X_chol_inv</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cho_inv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_chol</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="259">        <span class="bp">self</span><span class="o">.</span><span class="n">R_inv</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_chol_inv</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="p">(</span><span class="n">Vt</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">D_rt2</span><span class="p">))</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="260">        <span class="bp">self</span><span class="o">.</span><span class="n">W_inv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">R_inv</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">R_inv</span>
+</span><span data-line="261">
+</span><span data-line="262">        <span class="bp">self</span><span class="o">.</span><span class="n">nt_aux_updated</span> <span class="o">=</span> <span class="kc">True</span>
+</span><span data-line="263">
+</span><span data-line="264">    <span class="k">def</span><span class="w"> </span><span class="nf">nt_prod_ip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">H</span><span class="p">):</span>
+</span><span data-line="265">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">nt_aux_updated</span><span class="p">:</span>
+</span><span data-line="266">            <span class="bp">self</span><span class="o">.</span><span class="n">nt_aux</span><span class="p">()</span>
+</span><span data-line="267">        <span class="n">WHW</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">W_inv</span> <span class="o">@</span> <span class="n">H</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">W_inv</span>
+</span><span data-line="268">        <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">WHW</span><span class="p">,</span> <span class="n">WHW</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span><span data-line="269">        <span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*=</span> <span class="mf">0.5</span>
+</span><span data-line="270">
+</span><span data-line="271">    <span class="k">def</span><span class="w"> </span><span class="nf">nt_congr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">):</span>
+</span><span data-line="272">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">nt_aux_updated</span><span class="p">:</span>
+</span><span data-line="273">            <span class="bp">self</span><span class="o">.</span><span class="n">nt_aux</span><span class="p">()</span>
+</span><span data-line="274">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_congr</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">W_inv</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">R_inv</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+</span><span data-line="275">
+</span><span data-line="276">    <span class="k">def</span><span class="w"> </span><span class="nf">invnt_prod_ip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">H</span><span class="p">):</span>
+</span><span data-line="277">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">nt_aux_updated</span><span class="p">:</span>
+</span><span data-line="278">            <span class="bp">self</span><span class="o">.</span><span class="n">nt_aux</span><span class="p">()</span>
+</span><span data-line="279">        <span class="n">WHW</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span> <span class="o">@</span> <span class="n">H</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span>
+</span><span data-line="280">        <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">WHW</span><span class="p">,</span> <span class="n">WHW</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span><span data-line="281">        <span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*=</span> <span class="mf">0.5</span>
+</span><span data-line="282">
+</span><span data-line="283">    <span class="k">def</span><span class="w"> </span><span class="nf">invnt_congr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">):</span>
+</span><span data-line="284">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">nt_aux_updated</span><span class="p">:</span>
+</span><span data-line="285">            <span class="bp">self</span><span class="o">.</span><span class="n">nt_aux</span><span class="p">()</span>
+</span><span data-line="286">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_congr</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">R</span><span class="p">)</span>
+</span><span data-line="287">
+</span><span data-line="288">    <span class="k">def</span><span class="w"> </span><span class="nf">comb_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">dS</span><span class="p">,</span> <span class="n">dZ</span><span class="p">,</span> <span class="n">sigma_mu</span><span class="p">):</span>
+</span><span data-line="289">        <span class="c1"># Compute the residual for rs where rs is given as the lhs of</span>
+</span><span data-line="290">        <span class="c1">#     Lambda o (W dz + W^-T ds) = -Lambda o Lambda - (W^-T ds_a) o (W dz_a)</span>
+</span><span data-line="291">        <span class="c1">#                                 + sigma * mu * I</span>
+</span><span data-line="292">        <span class="c1"># which is rearranged into the form H ds + dz = rs, i.e.,</span>
+</span><span data-line="293">        <span class="c1">#     rs := W^-1 [ Lambda \ (-Lambda o Lambda - (W^-T ds_a) o (W dz_a) + sigma*mu I) ]</span>
+</span><span data-line="294">        <span class="c1"># See: [Section 5.4]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf</span>
+</span><span data-line="295">
+</span><span data-line="296">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">nt_aux_updated</span><span class="p">:</span>
+</span><span data-line="297">            <span class="bp">self</span><span class="o">.</span><span class="n">nt_aux</span><span class="p">()</span>
+</span><span data-line="298">
+</span><span data-line="299">        <span class="c1"># Compute (W^-T ds_a) o (W dz_a) = (R^-1 dS R^-T) o (R^T dZ R)</span>
+</span><span data-line="300">        <span class="c1">#               = 0.5 * ([R^-1 dS dZ R] + [R^T dZ dS R^-T])</span>
+</span><span data-line="301">        <span class="n">temp1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">R_inv</span> <span class="o">@</span> <span class="n">dS</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span data-line="302">        <span class="n">temp2</span> <span class="o">=</span> <span class="n">dZ</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">R</span>
+</span><span data-line="303">        <span class="n">temp3</span> <span class="o">=</span> <span class="n">temp1</span> <span class="o">@</span> <span class="n">temp2</span>
+</span><span data-line="304">        <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">temp3</span><span class="p">,</span> <span class="n">temp3</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">temp1</span><span class="p">)</span>
+</span><span data-line="305">        <span class="n">temp1</span> <span class="o">*=</span> <span class="o">-</span><span class="mf">0.5</span>
+</span><span data-line="306">
+</span><span data-line="307">        <span class="c1"># Compute -Lambda o Lambda - [ ... ] + sigma*mu I</span>
+</span><span data-line="308">        <span class="c1"># Note that Lambda is a diagonal matrix</span>
+</span><span data-line="309">        <span class="n">temp1</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Lambda</span><span class="p">)</span>
+</span><span data-line="310">        <span class="n">temp1</span><span class="o">.</span><span class="n">flat</span><span class="p">[::</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">sigma_mu</span>
+</span><span data-line="311">
+</span><span data-line="312">        <span class="c1"># Compute Lambda \ [ ... ]</span>
+</span><span data-line="313">        <span class="c1"># Since Lambda is diagonal, the solution to the Sylvester equation</span>
+</span><span data-line="314">        <span class="c1">#     find  X  s.t.  0.5 * (Lambda X + X Lambda) = B</span>
+</span><span data-line="315">        <span class="c1"># is given by</span>
+</span><span data-line="316">        <span class="c1">#     X = B .* (2 / [Lambda_ii + Lambda_jj]_ij)</span>
+</span><span data-line="317">        <span class="n">Gamma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Lambda</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Lambda</span><span class="p">)</span>
+</span><span data-line="318">        <span class="n">temp1</span> <span class="o">/=</span> <span class="n">Gamma</span>
+</span><span data-line="319">
+</span><span data-line="320">        <span class="c1"># Compute W^-1 [ ... ] = R^-T [... ] R^-1</span>
+</span><span data-line="321">        <span class="n">temp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">R_inv</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">temp1</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">R_inv</span>
+</span><span data-line="322">        <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="n">temp</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span><span data-line="323">
+</span><span data-line="324">    <span class="k">def</span><span class="w"> </span><span class="nf">step_to_boundary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dS</span><span class="p">,</span> <span class="n">dZ</span><span class="p">):</span>
+</span><span data-line="325">        <span class="c1"># Compute the maximum step alpha in [0, 1] we can take such that</span>
+</span><span data-line="326">        <span class="c1">#     S + alpha dS &gt;= 0</span>
+</span><span data-line="327">        <span class="c1">#     Z + alpha dZ &gt;= 0</span>
+</span><span data-line="328">        <span class="c1"># See: [Section 8.3]https://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf</span>
+</span><span data-line="329">
+</span><span data-line="330">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">nt_aux_updated</span><span class="p">:</span>
+</span><span data-line="331">            <span class="bp">self</span><span class="o">.</span><span class="n">nt_aux</span><span class="p">()</span>
+</span><span data-line="332">        <span class="n">Lambda_irt2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reciprocal</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Lambda</span><span class="p">))</span>
+</span><span data-line="333">
+</span><span data-line="334">        <span class="c1"># Compute rho := H(lambda)^1/2 W^-T dS</span>
+</span><span data-line="335">        <span class="c1">#              = Lambda^-1/2 R^-1 dS R^-T Lambda^-1/2</span>
+</span><span data-line="336">        <span class="n">rho</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">R_inv</span> <span class="o">@</span> <span class="n">dS</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">R_inv</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="337">        <span class="n">rho</span> <span class="o">*=</span> <span class="n">Lambda_irt2</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</span><span data-line="338">        <span class="n">rho</span> <span class="o">*=</span> <span class="n">Lambda_irt2</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+</span><span data-line="339">
+</span><span data-line="340">        <span class="c1"># Compute sig := H(lambda)^1/2 W dS</span>
+</span><span data-line="341">        <span class="c1">#              = Lambda^-1/2 R^T dS R Lambda^-1/2</span>
+</span><span data-line="342">        <span class="n">sig</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">R</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">dZ</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">R</span>
+</span><span data-line="343">        <span class="n">sig</span> <span class="o">*=</span> <span class="n">Lambda_irt2</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</span><span data-line="344">        <span class="n">sig</span> <span class="o">*=</span> <span class="n">Lambda_irt2</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+</span><span data-line="345">
+</span><span data-line="346">        <span class="c1"># Compute minimum eigenvalues of rho and sig</span>
+</span><span data-line="347">        <span class="n">min_eig_rho</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eigvalsh</span><span class="p">(</span><span class="n">rho</span><span class="p">,</span> <span class="n">compute_v</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s2">&quot;I&quot;</span><span class="p">,</span> <span class="n">iu</span><span class="o">=</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+</span><span data-line="348">        <span class="n">min_eig_sig</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eigvalsh</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="n">compute_v</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s2">&quot;I&quot;</span><span class="p">,</span> <span class="n">iu</span><span class="o">=</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+</span><span data-line="349">
+</span><span data-line="350">        <span class="c1"># Maximum step is given by</span>
+</span><span data-line="351">        <span class="c1">#     alpha := 1 / max(0, -min(eig(rho)), -min(eig(sig)))</span>
+</span><span data-line="352">        <span class="c1"># Clamp this step between 0 and 1</span>
+</span><span data-line="353">        <span class="k">if</span> <span class="n">min_eig_rho</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">min_eig_sig</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+</span><span data-line="354">            <span class="k">return</span> <span class="mf">1.0</span>
+</span><span data-line="355">        <span class="k">else</span><span class="p">:</span>
+</span><span data-line="356">            <span class="k">return</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="o">-</span><span class="n">min_eig_rho</span><span class="p">,</span> <span class="o">-</span><span class="n">min_eig_sig</span><span class="p">)</span>
+</span><span data-line="357">
+</span><span data-line="358">    <span class="c1"># ==========================================================================</span>
+</span><span data-line="359">    <span class="c1"># Auxilliary functions</span>
+</span><span data-line="360">    <span class="c1"># ==========================================================================</span>
+</span><span data-line="361">    <span class="k">def</span><span class="w"> </span><span class="nf">congr_aux</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">):</span>
+</span><span data-line="362">        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">congr_aux_updated</span>
+</span><span data-line="363">
+</span><span data-line="364">        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span>
+</span><span data-line="365">
+</span><span data-line="366">        <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+</span><span data-line="367">            <span class="n">A</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+</span><span data-line="368">
+</span><span data-line="369">            <span class="c1"># Split A into sparse and dense groups</span>
+</span><span data-line="370">            <span class="n">A_nnz</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">getnnz</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span data-line="371">            <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_idxs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">A_nnz</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">A_nnz</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+</span><span data-line="372">            <span class="bp">self</span><span class="o">.</span><span class="n">A_ds_idxs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">A_nnz</span> <span class="o">&gt;=</span> <span class="n">n</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+</span><span data-line="373">
+</span><span data-line="374">            <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_idxs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_idxs</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">A_nnz</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">A_sp_idxs</span><span class="p">])]</span>
+</span><span data-line="375">            <span class="bp">self</span><span class="o">.</span><span class="n">A_ds_ds_idxs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ix_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A_ds_idxs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_ds_idxs</span><span class="p">)</span>
+</span><span data-line="376">
+</span><span data-line="377">            <span class="c1"># Prepare things we need for Strategy 1, i.e., sparse-sparse</span>
+</span><span data-line="378">            <span class="c1"># congruence using Numba functions</span>
+</span><span data-line="379">            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A_sp_idxs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+</span><span data-line="380">                <span class="n">A_sp</span> <span class="o">=</span> <span class="n">A</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">A_sp_idxs</span><span class="p">]</span>
+</span><span data-line="381">
+</span><span data-line="382">                <span class="n">triu_idxs</span> <span class="o">=</span> <span class="n">_get_triu_idxs</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+</span><span data-line="383">
+</span><span data-line="384">                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="385">                    <span class="n">A_sp_real</span> <span class="o">=</span> <span class="n">A_sp</span><span class="p">[:,</span> <span class="p">::</span><span class="mi">2</span><span class="p">][:,</span> <span class="n">triu_idxs</span><span class="p">]</span>
+</span><span data-line="386">                    <span class="n">A_sp_imag</span> <span class="o">=</span> <span class="n">A_sp</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">][:,</span> <span class="n">triu_idxs</span><span class="p">]</span>
+</span><span data-line="387">                    <span class="n">A_sp_lil</span> <span class="o">=</span> <span class="p">(</span><span class="n">A_sp_real</span> <span class="o">+</span> <span class="n">A_sp_imag</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">tolil</span><span class="p">()</span>
+</span><span data-line="388">                <span class="k">else</span><span class="p">:</span>
+</span><span data-line="389">                    <span class="n">A_sp_lil</span> <span class="o">=</span> <span class="n">A_sp</span><span class="p">[:,</span> <span class="n">triu_idxs</span><span class="p">]</span><span class="o">.</span><span class="n">tolil</span><span class="p">()</span>
+</span><span data-line="390">
+</span><span data-line="391">                <span class="c1"># Get number of nonzeros for each sparse Ai (to account for</span>
+</span><span data-line="392">                <span class="c1"># ragged arrays)</span>
+</span><span data-line="393">                <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_nnzs</span> <span class="o">=</span> <span class="n">A_sp_lil</span><span class="o">.</span><span class="n">getnnz</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span data-line="394">
+</span><span data-line="395">                <span class="c1"># Get rows and columns of nonzeros of sparse Ai</span>
+</span><span data-line="396">                <span class="n">rowcols</span> <span class="o">=</span> <span class="n">_lil_to_array</span><span class="p">(</span><span class="n">A_sp_lil</span><span class="o">.</span><span class="n">rows</span><span class="p">)</span>
+</span><span data-line="397">                <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_rows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_cols</span> <span class="o">=</span> <span class="n">_triu_idx_to_ij</span><span class="p">(</span><span class="n">rowcols</span><span class="p">)</span>
+</span><span data-line="398">
+</span><span data-line="399">                <span class="c1"># Get values of nonzeros of sparse Ai, and scale off-diagonal</span>
+</span><span data-line="400">                <span class="c1"># elements to account for only using upper triangular nonzeros</span>
+</span><span data-line="401">                <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_data</span> <span class="o">=</span> <span class="n">_lil_to_array</span><span class="p">(</span><span class="n">A_sp_lil</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+</span><span data-line="402">                <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">A_sp_cols</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_rows</span><span class="p">]</span> <span class="o">*=</span> <span class="mi">2</span>
+</span><span data-line="403">
+</span><span data-line="404">            <span class="c1"># Prepare things we need for Strategy 2, i.e., sparse-dense and</span>
+</span><span data-line="405">            <span class="c1"># dense-dense congruence by computing X Aj X for all dense Aj, then</span>
+</span><span data-line="406">            <span class="c1"># &lt;Ai, X Aj X&gt; for all Ai and dense Aj</span>
+</span><span data-line="407">            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A_ds_idxs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+</span><span data-line="408">                <span class="n">A_ds</span> <span class="o">=</span> <span class="n">A</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">A_ds_idxs</span><span class="p">,</span> <span class="p">:]</span>
+</span><span data-line="409">
+</span><span data-line="410">                <span class="c1"># Turn rows of A into matrices Ai</span>
+</span><span data-line="411">                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="412">                    <span class="n">A_ds</span> <span class="o">=</span> <span class="n">A_ds</span><span class="p">[:,</span> <span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">A_ds</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span>
+</span><span data-line="413">                <span class="n">A_ds</span> <span class="o">=</span> <span class="n">A_ds</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+</span><span data-line="414">
+</span><span data-line="415">                <span class="bp">self</span><span class="o">.</span><span class="n">Ai_ds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">Ai</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span> <span class="k">for</span> <span class="n">Ai</span> <span class="ow">in</span> <span class="n">A_ds</span><span class="p">])</span>
+</span><span data-line="416">                <span class="bp">self</span><span class="o">.</span><span class="n">work</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Ai_ds</span><span class="p">)</span>
+</span><span data-line="417">
+</span><span data-line="418">                <span class="c1"># Get upper triangular slices of A so we can more efficiently</span>
+</span><span data-line="419">                <span class="c1"># do the inner product &lt;Ai, X Aj X&gt; as a matrix multiplication</span>
+</span><span data-line="420">                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A_sp_idxs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+</span><span data-line="421">                    <span class="c1"># Scale upper triangular elements by 2 to account for only</span>
+</span><span data-line="422">                    <span class="c1"># using upper triangular elements</span>
+</span><span data-line="423">                    <span class="n">scale</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span><span data-line="424">                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="425">                        <span class="n">scale</span><span class="p">[::</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">n</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+</span><span data-line="426">                    <span class="k">else</span><span class="p">:</span>
+</span><span data-line="427">                        <span class="n">scale</span><span class="p">[::</span> <span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+</span><span data-line="428">                    <span class="bp">self</span><span class="o">.</span><span class="n">triu_idxs</span> <span class="o">=</span> <span class="n">_get_triu_idxs</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">iscomplex</span><span class="p">)</span>
+</span><span data-line="429">                    <span class="bp">self</span><span class="o">.</span><span class="n">A_triu</span> <span class="o">=</span> <span class="n">scale_axis</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">scale_cols</span><span class="o">=</span><span class="n">scale</span><span class="p">)</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+</span><span data-line="430">                    <span class="bp">self</span><span class="o">.</span><span class="n">A_triu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_triu</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">triu_idxs</span><span class="p">]</span><span class="o">.</span><span class="n">tocoo</span><span class="p">()</span>
+</span><span data-line="431">
+</span><span data-line="432">        <span class="k">else</span><span class="p">:</span>
+</span><span data-line="433">            <span class="c1"># A and all Ai are dense matrices</span>
+</span><span data-line="434">            <span class="c1"># Just need to convert the rows of A into dense matrices</span>
+</span><span data-line="435">            <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+</span><span data-line="436">
+</span><span data-line="437">            <span class="bp">self</span><span class="o">.</span><span class="n">A_sp_idxs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
+</span><span data-line="438">            <span class="bp">self</span><span class="o">.</span><span class="n">A_ds_idxs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span><span data-line="439">            <span class="bp">self</span><span class="o">.</span><span class="n">A_ds_ds_idxs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ix_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A_ds_idxs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A_ds_idxs</span><span class="p">)</span>
+</span><span data-line="440">
+</span><span data-line="441">            <span class="bp">self</span><span class="o">.</span><span class="n">Ai_ds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">vec_to_mat</span><span class="p">(</span><span class="n">Ak</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">iscomplex</span><span class="p">)</span> <span class="k">for</span> <span class="n">Ak</span> <span class="ow">in</span> <span class="n">A</span><span class="p">])</span>
+</span><span data-line="442">            <span class="bp">self</span><span class="o">.</span><span class="n">work</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Ai_ds</span><span class="p">)</span>
+</span><span data-line="443">
+</span><span data-line="444">        <span class="bp">self</span><span class="o">.</span><span class="n">congr_aux_updated</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+</span><span data-line="445">
+</span><span data-line="446">
+</span><span data-line="447"><span class="k">def</span><span class="w"> </span><span class="nf">_lil_to_array</span><span class="p">(</span><span class="n">ragged</span><span class="p">):</span>
+</span><span data-line="448">    <span class="c1"># Converts a list of lists (with possibly different lengths) into a numpy</span>
+</span><span data-line="449">    <span class="c1"># array padded with zeros</span>
+</span><span data-line="450">    <span class="n">padded_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">zip_longest</span><span class="p">(</span><span class="o">*</span><span class="n">ragged</span><span class="p">,</span> <span class="n">fillvalue</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+</span><span data-line="451">    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">padded_list</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="452">
+</span><span data-line="453">
+</span><span data-line="454"><span class="k">def</span><span class="w"> </span><span class="nf">_triu_idx_to_ij</span><span class="p">(</span><span class="n">idx</span><span class="p">):</span>
+</span><span data-line="455">    <span class="c1"># Converts upper triangular indices to (i,j) coordinates</span>
+</span><span data-line="456">    <span class="c1">#     [ 0  1  3       ]         [ (0,0)  (0,1)  (0,2)       ]</span>
+</span><span data-line="457">    <span class="c1">#     [    2  4  ...  ]   --&gt;   [        (1,1)  (1,2)  ...  ]</span>
+</span><span data-line="458">    <span class="c1">#     [       5       ]         [               (2,2)       ]</span>
+</span><span data-line="459">    <span class="c1"># See: https://stackoverflow.com/questions/40950460/</span>
+</span><span data-line="460">    <span class="n">j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="mf">0.25</span><span class="p">)</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+</span><span data-line="461">    <span class="n">i</span> <span class="o">=</span> <span class="n">idx</span> <span class="o">-</span> <span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">j</span> <span class="o">/</span> <span class="mi">2</span>
+</span><span data-line="462">    <span class="k">return</span> <span class="n">i</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;int32&quot;</span><span class="p">),</span> <span class="n">j</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;int32&quot;</span><span class="p">)</span>
+</span><span data-line="463">
+</span><span data-line="464">
+</span><span data-line="465"><span class="k">def</span><span class="w"> </span><span class="nf">_get_triu_idxs</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+</span><span data-line="466">    <span class="c1"># Gets indices of a vectorized matrix corresponding to the upper triangular</span>
+</span><span data-line="467">    <span class="c1"># elements of the matrix</span>
+</span><span data-line="468">    <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="469">        <span class="n">diag</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)]</span>
+</span><span data-line="470">        <span class="n">triu_real</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">j</span><span class="p">)]</span>
+</span><span data-line="471">        <span class="n">triu_imag</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">j</span><span class="p">)]</span>
+</span><span data-line="472">        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">diag</span> <span class="o">+</span> <span class="n">triu_real</span> <span class="o">+</span> <span class="n">triu_imag</span><span class="p">)</span>
+</span><span data-line="473">    <span class="k">else</span><span class="p">:</span>
+</span><span data-line="474">        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">j</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">n</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
+</span><span data-line="475">
+</span><span data-line="476">
+</span><span data-line="477"><span class="c1"># ============================================================================</span>
+</span><span data-line="478"><span class="c1"># Numba functions for computing Schur complement matrix when A is very sparse</span>
+</span><span data-line="479"><span class="c1"># ============================================================================</span>
+</span><span data-line="480">
+</span><span data-line="481">
+</span><span data-line="482"><span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="483"><span class="k">def</span><span class="w"> </span><span class="nf">_sparse_congr</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">A_rows</span><span class="p">,</span> <span class="n">A_cols</span><span class="p">,</span> <span class="n">A_vals</span><span class="p">,</span> <span class="n">A_nnz</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">indices</span><span class="p">):</span>
+</span><span data-line="484">    <span class="c1"># Computes the congruence transform A (X kron X) A&#39; when A is very sparse</span>
+</span><span data-line="485">    <span class="c1"># See https://link.springer.com/article/10.1007/BF02614319</span>
+</span><span data-line="486">
+</span><span data-line="487">    <span class="c1"># We can cut the amount of operations in half by exploiting symetry of A and</span>
+</span><span data-line="488">    <span class="c1"># X as follows</span>
+</span><span data-line="489">    <span class="c1"># (AHA)_ij = Σ_a,b (Ai)_ab (Σ_c,d (Aj)_cd X_ac X_db)</span>
+</span><span data-line="490">    <span class="c1">#          = Σ_a,b (Ai)_ab (  [Σ_c=d (Aj)_cd X_ac X_db]</span>
+</span><span data-line="491">    <span class="c1">#                             + [Σ_c&lt;d (Aj)_cd X_ac X_db]</span>
+</span><span data-line="492">    <span class="c1">#                             + [Σ_c&gt;d (Aj)_cd X_ac X_db]  )</span>
+</span><span data-line="493">    <span class="c1">#          = Σ_a,b (Ai)_ab (  [Σ_c=d (Aj)_cd X_ac X_db]</span>
+</span><span data-line="494">    <span class="c1">#                             + [Σ_c&lt;d (Aj)_cd (X_ac X_db + X_ad X_cb)]  )</span>
+</span><span data-line="495">    <span class="c1">#          = [Σ_a=b (Ai)_ab ( ... )] + [Σ_a&lt;b (Ai)_ab ( ... )] + [Σ_a&gt;b (Ai)_ab ( ... )]</span>
+</span><span data-line="496">    <span class="c1">#          = [Σ_a=b (Ai)_ab ( ... )] + 2 [Σ_a&lt;b (Ai)_ab ( ... )]</span>
+</span><span data-line="497">    <span class="c1"># Note that we assume off-diagonal entries of Ai have been scaled by 2.</span>
+</span><span data-line="498">    <span class="c1"># Also note that we assume only upper triangular elements are given to us so</span>
+</span><span data-line="499">    <span class="c1"># c &lt; d.</span>
+</span><span data-line="500">
+</span><span data-line="501">    <span class="n">n</span> <span class="o">=</span> <span class="n">A_rows</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span data-line="502">
+</span><span data-line="503">    <span class="c1"># Loop through upper triangular entries of the Schur complement matrix (AHA)_ij</span>
+</span><span data-line="504">    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+</span><span data-line="505">        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+</span><span data-line="506">            <span class="n">i_AHA</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+</span><span data-line="507">            <span class="n">j_AHA</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+</span><span data-line="508">
+</span><span data-line="509">            <span class="n">tmp1</span> <span class="o">=</span> <span class="mf">0.0</span>
+</span><span data-line="510">
+</span><span data-line="511">            <span class="c1"># Loop over nonzero entries of Ai</span>
+</span><span data-line="512">            <span class="k">for</span> <span class="n">alpha</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">A_nnz</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+</span><span data-line="513">                <span class="n">a</span> <span class="o">=</span> <span class="n">A_rows</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">alpha</span><span class="p">]</span>
+</span><span data-line="514">                <span class="n">b</span> <span class="o">=</span> <span class="n">A_cols</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">alpha</span><span class="p">]</span>
+</span><span data-line="515">
+</span><span data-line="516">                <span class="n">tmp2</span> <span class="o">=</span> <span class="mf">0.0</span>
+</span><span data-line="517">                <span class="n">tmp3</span> <span class="o">=</span> <span class="mf">0.0</span>
+</span><span data-line="518">
+</span><span data-line="519">                <span class="c1"># Loop over nonzero entries of Aj</span>
+</span><span data-line="520">                <span class="k">for</span> <span class="n">beta</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">A_nnz</span><span class="p">[</span><span class="n">j</span><span class="p">]):</span>
+</span><span data-line="521">                    <span class="n">c</span> <span class="o">=</span> <span class="n">A_rows</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">beta</span><span class="p">]</span>
+</span><span data-line="522">                    <span class="n">d</span> <span class="o">=</span> <span class="n">A_cols</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">beta</span><span class="p">]</span>
+</span><span data-line="523">
+</span><span data-line="524">                    <span class="k">if</span> <span class="n">c</span> <span class="o">&lt;</span> <span class="n">d</span><span class="p">:</span>
+</span><span data-line="525">                        <span class="n">tmp2</span> <span class="o">+=</span> <span class="n">A_vals</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">beta</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+</span><span data-line="526">                            <span class="n">X</span><span class="p">[</span><span class="n">a</span><span class="p">,</span> <span class="n">c</span><span class="p">]</span> <span class="o">*</span> <span class="n">X</span><span class="p">[</span><span class="n">d</span><span class="p">,</span> <span class="n">b</span><span class="p">]</span> <span class="o">+</span> <span class="n">X</span><span class="p">[</span><span class="n">a</span><span class="p">,</span> <span class="n">d</span><span class="p">]</span> <span class="o">*</span> <span class="n">X</span><span class="p">[</span><span class="n">c</span><span class="p">,</span> <span class="n">b</span><span class="p">]</span>
+</span><span data-line="527">                        <span class="p">)</span>
+</span><span data-line="528">                    <span class="k">else</span><span class="p">:</span>
+</span><span data-line="529">                        <span class="n">tmp3</span> <span class="o">+=</span> <span class="n">A_vals</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">beta</span><span class="p">]</span> <span class="o">*</span> <span class="n">X</span><span class="p">[</span><span class="n">a</span><span class="p">,</span> <span class="n">c</span><span class="p">]</span> <span class="o">*</span> <span class="n">X</span><span class="p">[</span><span class="n">d</span><span class="p">,</span> <span class="n">b</span><span class="p">]</span>
+</span><span data-line="530">
+</span><span data-line="531">                <span class="n">tmp1</span> <span class="o">+=</span> <span class="n">A_vals</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">alpha</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">tmp2</span> <span class="o">+</span> <span class="n">tmp3</span><span class="p">)</span>
+</span><span data-line="532">
+</span><span data-line="533">            <span class="k">if</span> <span class="n">i_AHA</span> <span class="o">&lt;=</span> <span class="n">j_AHA</span><span class="p">:</span>
+</span><span data-line="534">                <span class="n">out</span><span class="p">[</span><span class="n">i_AHA</span><span class="p">,</span> <span class="n">j_AHA</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp1</span>
+</span><span data-line="535">            <span class="k">else</span><span class="p">:</span>
+</span><span data-line="536">                <span class="n">out</span><span class="p">[</span><span class="n">j_AHA</span><span class="p">,</span> <span class="n">i_AHA</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp1</span>
+</span><span data-line="537">
+</span><span data-line="538">
+</span><span data-line="539"><span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="540"><span class="k">def</span><span class="w"> </span><span class="nf">_sparse_congr_complex</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">A_rows</span><span class="p">,</span> <span class="n">A_cols</span><span class="p">,</span> <span class="n">A_vals</span><span class="p">,</span> <span class="n">A_nnz</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">indices</span><span class="p">):</span>
+</span><span data-line="541">    <span class="c1"># Computes the congruence transform A (X kron X) A&#39; when A is very sparse</span>
+</span><span data-line="542">    <span class="c1"># See https://link.springer.com/article/10.1007/BF02614319</span>
+</span><span data-line="543">
+</span><span data-line="544">    <span class="c1"># We can cut the amount of operations in half by exploiting symetry of A and</span>
+</span><span data-line="545">    <span class="c1"># X as follows</span>
+</span><span data-line="546">    <span class="c1"># (AHA)_ij = Σ_a,b (Ai)_ab* (Σ_c,d (Aj)_cd X_ac X_db)</span>
+</span><span data-line="547">    <span class="c1">#          = Σ_a,b (Ai)_ab* (  [Σ_c=d (Aj)_cd X_ac X_db]</span>
+</span><span data-line="548">    <span class="c1">#                              + [Σ_c&gt;d (Aj)_cd X_ac X_db]</span>
+</span><span data-line="549">    <span class="c1">#                              + [Σ_c&lt;d (Aj)_cd X_ac X_db]  )</span>
+</span><span data-line="550">    <span class="c1">#          = Σ_a,b (Ai)_ab* (  [Σ_c=d (Aj)_cd X_ac X_db]</span>
+</span><span data-line="551">    <span class="c1">#                              + [Σ_c&lt;d (Aj)_cd X_ac X_db + (Aj)_cd* X_ad X_cb]  )</span>
+</span><span data-line="552">    <span class="c1">#          = [Σ_a=b (Ai)_ab ( ... )] + [Σ_a&lt;b (Ai)_ab ( ... )] + [Σ_a&gt;b (Ai)_ab ( ... )]</span>
+</span><span data-line="553">    <span class="c1">#          = [Σ_a=b (Ai)_ab ( ... )] + [Σ_a&gt;b (Ai)_ab ( ... ) + (Ai)_ab* ( ... )]</span>
+</span><span data-line="554">    <span class="c1"># Also note that off-diagonal entries of Ai have been scaled by 2</span>
+</span><span data-line="555">
+</span><span data-line="556">    <span class="n">n</span> <span class="o">=</span> <span class="n">A_rows</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span data-line="557">
+</span><span data-line="558">    <span class="c1"># Loop through each entry of the Schur complement matrix (AHA)_ij</span>
+</span><span data-line="559">    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+</span><span data-line="560">        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+</span><span data-line="561">            <span class="n">i_AHA</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+</span><span data-line="562">            <span class="n">j_AHA</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+</span><span data-line="563">
+</span><span data-line="564">            <span class="n">tmp1</span> <span class="o">=</span> <span class="mf">0.0</span>
+</span><span data-line="565">            <span class="k">for</span> <span class="n">alpha</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">A_nnz</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+</span><span data-line="566">                <span class="n">a</span> <span class="o">=</span> <span class="n">A_rows</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">alpha</span><span class="p">]</span>
+</span><span data-line="567">                <span class="n">b</span> <span class="o">=</span> <span class="n">A_cols</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">alpha</span><span class="p">]</span>
+</span><span data-line="568">
+</span><span data-line="569">                <span class="n">tmp2</span> <span class="o">=</span> <span class="mf">0.0</span>
+</span><span data-line="570">                <span class="n">tmp3</span> <span class="o">=</span> <span class="mf">0.0</span>
+</span><span data-line="571">                <span class="k">for</span> <span class="n">beta</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">A_nnz</span><span class="p">[</span><span class="n">j</span><span class="p">]):</span>
+</span><span data-line="572">                    <span class="n">c</span> <span class="o">=</span> <span class="n">A_rows</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">beta</span><span class="p">]</span>
+</span><span data-line="573">                    <span class="n">d</span> <span class="o">=</span> <span class="n">A_cols</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">beta</span><span class="p">]</span>
+</span><span data-line="574">
+</span><span data-line="575">                    <span class="k">if</span> <span class="n">c</span> <span class="o">&lt;</span> <span class="n">d</span><span class="p">:</span>
+</span><span data-line="576">                        <span class="n">tmp2</span> <span class="o">+=</span> <span class="n">A_vals</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">beta</span><span class="p">]</span> <span class="o">*</span> <span class="n">X</span><span class="p">[</span><span class="n">a</span><span class="p">,</span> <span class="n">c</span><span class="p">]</span> <span class="o">*</span> <span class="n">X</span><span class="p">[</span><span class="n">d</span><span class="p">,</span> <span class="n">b</span><span class="p">]</span>
+</span><span data-line="577">                        <span class="n">tmp2</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">A_vals</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">beta</span><span class="p">])</span> <span class="o">*</span> <span class="n">X</span><span class="p">[</span><span class="n">a</span><span class="p">,</span> <span class="n">d</span><span class="p">]</span> <span class="o">*</span> <span class="n">X</span><span class="p">[</span><span class="n">c</span><span class="p">,</span> <span class="n">b</span><span class="p">]</span>
+</span><span data-line="578">                    <span class="k">else</span><span class="p">:</span>
+</span><span data-line="579">                        <span class="n">tmp3</span> <span class="o">+=</span> <span class="n">A_vals</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">beta</span><span class="p">]</span><span class="o">.</span><span class="n">real</span> <span class="o">*</span> <span class="n">X</span><span class="p">[</span><span class="n">a</span><span class="p">,</span> <span class="n">c</span><span class="p">]</span> <span class="o">*</span> <span class="n">X</span><span class="p">[</span><span class="n">d</span><span class="p">,</span> <span class="n">b</span><span class="p">]</span>
+</span><span data-line="580">
+</span><span data-line="581">                <span class="c1"># Do addition slightly differently to guarantee a real number</span>
+</span><span data-line="582">                <span class="c1"># i.e., just take the inner product between Ai and X Aj X by</span>
+</span><span data-line="583">                <span class="c1">#     Σ_ab Re[(X Aj X)_ab] * Re[(Ai)_ab] + 2 Im[(X Aj X)_ab] * Im[(Ai)_ab]</span>
+</span><span data-line="584">                <span class="n">tmp3</span> <span class="o">+=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">tmp2</span>
+</span><span data-line="585">                <span class="n">tmp1</span> <span class="o">+=</span> <span class="n">A_vals</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">alpha</span><span class="p">]</span><span class="o">.</span><span class="n">real</span> <span class="o">*</span> <span class="n">tmp3</span><span class="o">.</span><span class="n">real</span>
+</span><span data-line="586">                <span class="n">tmp1</span> <span class="o">+=</span> <span class="n">A_vals</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">alpha</span><span class="p">]</span><span class="o">.</span><span class="n">imag</span> <span class="o">*</span> <span class="n">tmp3</span><span class="o">.</span><span class="n">imag</span>
+</span><span data-line="587">
+</span><span data-line="588">            <span class="k">if</span> <span class="n">i_AHA</span> <span class="o">&lt;=</span> <span class="n">j_AHA</span><span class="p">:</span>
+</span><span data-line="589">                <span class="n">out</span><span class="p">[</span><span class="n">i_AHA</span><span class="p">,</span> <span class="n">j_AHA</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp1</span>
+</span><span data-line="590">            <span class="k">else</span><span class="p">:</span>
+</span><span data-line="591">                <span class="n">out</span><span class="p">[</span><span class="n">j_AHA</span><span class="p">,</span> <span class="n">i_AHA</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp1</span>
+</span></pre></div>
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2025, Kerry He, James Saunderson, and Hamza Fawzi</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials">
+<a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+  <iconify-icon icon="simple-icons:github"></iconify-icon>
+</a></div>
+    </div>
+  </div>
+</footer>
+      <script src="../../../../_static/documentation_options.js?v=cb7bf70b"></script>
+      <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../../_static/copybutton.js?v=30646c52"></script>
+      <script src="../../../../_static/tabs.js?v=3030b3cb"></script>
+      <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+      <script src="../../../../_static/shibuya.js?v=c5fc9e80"></script></body>
+</html>

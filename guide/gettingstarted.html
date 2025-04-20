@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="teal" data-content_root="../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Getting started - QICS 1.1.3 documentation</title><link rel="shortcut icon" href="../_static/favicon.svg"/><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Representing matrices" href="matrices.html" /><link rel="prev" title="Quick reference" href="reference.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=397bb51e" />
+    <link rel="stylesheet" type="text/css" href="../_static/shibuya.css?v=36d120a7" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link media="print" rel="stylesheet" type="text/css" href="../_static/print.css?v=20ff2c19" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=93a53b2b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    <meta property="og:type" content="website"/><meta property="og:title" content="Getting started"/>
+<meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../index.html">
+      <img class="light-logo" src="../_static/logo-light.svg" alt="QICS" height="28" loading="lazy" />
+      <img class="dark-logo" src="../_static/logo-dark.svg" alt="QICS" height="28" loading="lazy" />
+      <strong>QICS</strong>
+    </a>
+    <div class="sy-head-nav" id="HeadNav">
+      <nav class="sy-head-links"><ul>
+      <li class="link"><a href="index.html">
+            <span>User Guide</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="reference.html">Quick reference</a></li><li><a href="#">Getting started</a></li><li><a href="matrices.html">Representing matrices</a></li><li><a href="advanced.html">Advanced tips</a></li><li><a href="io.html">Reading and writing</a></li><li><a href="picos.html">PICOS interface</a></li></ul>
+      </li>
+      <li class="link"><a href="../examples/index.html">
+            <span>Examples</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../examples/sdp/index.html">Semidefinite programming</a></li><li><a href="../examples/qrep/index.html">Quantum entropy programming</a></li></ul>
+      </li><li class="link"><a href="../api/index.html">API reference</a></li></ul></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials">
+  <a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+    <iconify-icon icon="simple-icons:github"></iconify-icon>
+  </a></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="HeadNav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2 -translate-x-2"></span>
+          <span class="hamburger_3 -translate-x-1"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">User guide</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="reference.html">Quick reference</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Getting started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="matrices.html">Representing matrices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced.html">Advanced tips</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html">Reading and writing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="picos.html">PICOS interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/sdp/index.html">Semidefinite programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../examples/sdp/maxcut.html">Max cut</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/sdp/product.html">Block diagonal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/sdp/quantum.html">Quantum information</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/qrep/index.html">Quantum relative entropy programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/qkd.html">Quantum key distribution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/nearest.html">Nearest matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/channel.html">Quantum channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/opper.html">Noncommutative perspective</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/renyi.html">Renyi entropy</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/qics.html">qics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/qics/Model.html">qics.Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/qics/Solver.html">qics.Solver</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/cones.html">qics.cones</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/NonNegOrthant.html">qics.cones.NonNegOrthant</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/PosSemidefinite.html">qics.cones.PosSemidefinite</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/SecondOrder.html">qics.cones.SecondOrder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/ClassEntr.html">qics.cones.ClassEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/ClassRelEntr.html">qics.cones.ClassRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/QuantEntr.html">qics.cones.QuantEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/QuantRelEntr.html">qics.cones.QuantRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/QuantCondEntr.html">qics.cones.QuantCondEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/QuantKeyDist.html">qics.cones.QuantKeyDist</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/OpPerspecTr.html">qics.cones.OpPerspecTr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/OpPerspecEpi.html">qics.cones.OpPerspecEpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/RenyiEntr.html">qics.cones.RenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/SandRenyiEntr.html">qics.cones.SandRenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/QuasiEntr.html">qics.cones.QuasiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/SandQuasiEntr.html">qics.cones.SandQuasiEntr</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/io.html">qics.io</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/read_file.html">qics.io.read_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/write_file.html">qics.io.write_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/read_sdpa.html">qics.io.read_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/write_sdpa.html">qics.io.write_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/read_cbf.html">qics.io.read_cbf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/write_cbf.html">qics.io.write_cbf</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/point.html">qics.point</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/point/Point.html">qics.point.Point</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/point/VecProduct.html">qics.point.VecProduct</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/quantum.html">qics.quantum</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/entropy.html">qics.quantum.entropy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/i_kr.html">qics.quantum.i_kr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/p_tr.html">qics.quantum.p_tr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/partial_transpose.html">qics.quantum.partial_transpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/purify.html">qics.quantum.purify</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/swap.html">qics.quantum.swap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/choi_operator.html">qics.quantum.random.choi_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/degradable_channel.html">qics.quantum.random.degradable_channel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/density_matrix.html">qics.quantum.random.density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/pure_density_matrix.html">qics.quantum.random.pure_density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/stinespring_operator.html">qics.quantum.random.stinespring_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/unitary.html">qics.quantum.random.unitary</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/vectorize.html">qics.vectorize</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/eye.html">qics.vectorize.eye</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/lin_to_mat.html">qics.vectorize.lin_to_mat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/mat_dim.html">qics.vectorize.mat_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/mat_to_vec.html">qics.vectorize.mat_to_vec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/vec_dim.html">qics.vectorize.vec_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/vec_to_mat.html">qics.vectorize.vec_to_mat</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div></div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#modelling">Modelling</a></li>
+<li><a class="reference internal" href="#solving">Solving</a></li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6"><div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">QICS</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="index.html"><span itemprop="name">User guide</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">Getting started</strong>
+        <meta itemprop="position" content="3" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+        <article class="yue" role="main">
+          <section id="getting-started">
+<h1>Getting started<a class="headerlink" href="#getting-started" title="Link to this heading">¶</a></h1>
+<p>In this guide, we will use the following quantum relative entropy program</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\min_{Y \in \mathbb{S}^2} \quad S( X \| Y ) \quad \text{s.t.} \quad Y_{11}
+= Y_{22} = 1, \ Y \succeq 0,\]</div>
+</div>
+<p>where</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}X = \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{bmatrix},\end{split}\]</div>
+</div>
+<p>as a running example to see how we can solve problems in <strong>QICS</strong>. This is a
+simple example of the a <a class="reference internal" href="../examples/qrep/nearest.html#nearest-correlation-matrix"><span class="std std-ref">nearest correlation matrix</span></a> problem. Further examples
+showing how QICS can be used to solve semidefinite and quantum relative entropy
+programs can be found in <a class="reference internal" href="../examples/index.html"><span class="doc">Examples</span></a>.</p>
+<section id="modelling">
+<h2>Modelling<a class="headerlink" href="#modelling" title="Link to this heading">¶</a></h2>
+<p>First, we need to reformulate the above problem as a standard form conic
+program. We can do this by rewriting the problem as</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}\min_{t, X, Y} \quad &amp; t \\
+\text{s.t.} \quad &amp; \langle A_i, X \rangle = 2, \quad i=1,2,3\\
+&amp; \langle B_j, Y \rangle = 1, \quad j=1,2 \\
+&amp; (t, X, Y) \in \mathcal{QRE}_2,\end{split}\]</div>
+</div>
+<p>where</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}A_1 = \begin{bmatrix} 1 &amp; 0 \\ 0 &amp; 0 \end{bmatrix}, \quad
+A_2 = \begin{bmatrix} 0 &amp; 1 \\ 1 &amp; 0 \end{bmatrix}, \quad
+A_3 = \begin{bmatrix} 0 &amp; 0 \\ 0 &amp; 1 \end{bmatrix}, \quad
+B_1 = \begin{bmatrix} 1 &amp; 0 \\ 0 &amp; 0 \end{bmatrix}, \quad
+B_2 = \begin{bmatrix} 0 &amp; 0 \\ 0 &amp; 1 \end{bmatrix}.\end{split}\]</div>
+</div>
+<p>In <strong>QICS</strong>, we represent our variables <span class="math notranslate nohighlight">\((t, X, Y)\in\mathbb{R}\times
+\mathbb{S}^2\times\mathbb{S}^2\)</span> as a vector <span class="math notranslate nohighlight">\(x\in\mathbb{R}^9\)</span>, with
+lements represented by</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}x &amp;= \begin{bmatrix}
+       t &amp; \text{vec}(X)^\top &amp; \text{vec}(Y)^\top
+     \end{bmatrix}^\top\\
+  &amp;= \begin{bmatrix}
+       t &amp;
+       X_{11} &amp; X_{12} &amp; X_{21} &amp; X_{22} &amp;
+       Y_{11} &amp; Y_{12} &amp; Y_{21} &amp; Y_{22}
+     \end{bmatrix}^\top.\end{split}\]</div>
+</div>
+<p>See <a class="reference internal" href="matrices.html"><span class="doc">here</span></a> for additional details about how QICS vectorizes
+matrices. We can now represent our linear objective function as
+<span class="math notranslate nohighlight">\(c^\top x\)</span>, where</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[c = \begin{bmatrix} 1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \end{bmatrix}^\top.\]</div>
+</div>
+<p>In Python, we represent this using a <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a> array.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span>
+</span><span data-line="2"><span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span>
+</span></pre></div>
+</div>
+<p>Additionaly, we represent our linear equality constraints using <span class="math notranslate nohighlight">\(Ax=b\)</span>,
+where</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}A = \begin{bmatrix}
+    0 &amp; \text{vec}(A_1)^\top &amp; \text{vec}(0)^\top \\
+    0 &amp; \text{vec}(A_2)^\top &amp; \text{vec}(0)^\top \\
+    0 &amp; \text{vec}(A_3)^\top &amp; \text{vec}(0)^\top \\
+    0 &amp; \text{vec}(0)^\top &amp; \text{vec}(B_1)^\top \\
+    0 &amp; \text{vec}(0)^\top &amp; \text{vec}(B_2)^\top
+\end{bmatrix} = \begin{bmatrix}
+    0 &amp; 1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\
+    0 &amp; 0 &amp; 1 &amp; 1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\
+    0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\
+    0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 &amp; 0 \\
+    0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1
+\end{bmatrix},\end{split}\]</div>
+</div>
+<p>and</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[b = \begin{bmatrix} 2 &amp; 2 &amp; 2 &amp; 1 &amp; 1 \end{bmatrix}^\top,\]</div>
+</div>
+<p>Again, in Python we represent this using <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a> arrays.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="n">A</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>                           \
+</span><span data-line="2"><span class="gp">... </span>    <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>   \
+</span><span data-line="3"><span class="gp">... </span>    <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>   \
+</span><span data-line="4"><span class="gp">... </span>    <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>   \
+</span><span data-line="5"><span class="gp">... </span>    <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>   \
+</span><span data-line="6"><span class="gp">... </span>    <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">]</span>    \
+</span><span data-line="7"><span class="gp">... </span><span class="p">])</span>
+</span><span data-line="8"><span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">2.</span><span class="p">,</span> <span class="mf">2.</span><span class="p">,</span> <span class="mf">2.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span>
+</span></pre></div>
+</div>
+<p>Finally, we want to tell <strong>QICS</strong> that <span class="math notranslate nohighlight">\(x\)</span> must be constrained in the
+quantum relative entropy cone <span class="math notranslate nohighlight">\(\mathcal{QRE}_2\)</span>. We do this by using the
+<a class="reference internal" href="../api/cones/QuantRelEntr.html#qics.cones.QuantRelEntr" title="qics.cones.QuantRelEntr"><code class="xref py py-class docutils literal notranslate"><span class="pre">qics.cones.QuantRelEntr</span></code></a> class.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">qics</span>
+</span><span data-line="2"><span class="gp">&gt;&gt;&gt; </span><span class="n">cones</span> <span class="o">=</span> <span class="p">[</span><span class="n">qics</span><span class="o">.</span><span class="n">cones</span><span class="o">.</span><span class="n">QuantRelEntr</span><span class="p">(</span><span class="mi">2</span><span class="p">)]</span>
+</span></pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>We define <code class="docutils literal notranslate"><span class="pre">cones</span></code> as a list of cones, as often we solve conic programs
+involving a Cartesian product of cones.</p>
+</div>
+<p>Finally, we initialize a <a class="reference internal" href="../api/qics/Model.html#qics.Model" title="qics.Model"><code class="xref py py-class docutils literal notranslate"><span class="pre">qics.Model</span></code></a> class to represent our conic
+program using the matrices and cones we have defined.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Model</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="n">b</span><span class="p">,</span> <span class="n">cones</span><span class="o">=</span><span class="n">cones</span><span class="p">)</span>
+</span></pre></div>
+</div>
+</section>
+<section id="solving">
+<h2>Solving<a class="headerlink" href="#solving" title="Link to this heading">¶</a></h2>
+<p>Now that we have built our model, solving the conic program is fairly
+straightforward. First, we initialize a <a class="reference internal" href="../api/qics/Solver.html#qics.Solver" title="qics.Solver"><code class="xref py py-class docutils literal notranslate"><span class="pre">qics.Solver</span></code></a> class with the
+model we have defined.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="n">solver</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Solver</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</span></pre></div>
+</div>
+<p>Optionally, there are also many solver settings we can specify when initializing
+the <a class="reference internal" href="../api/qics/Solver.html#qics.Solver" title="qics.Solver"><code class="xref py py-class docutils literal notranslate"><span class="pre">qics.Solver</span></code></a>. A list of these options can be found
+<a class="reference internal" href="reference.html#input-parameters"><span class="std std-ref">here</span></a>. Once we have initialized our
+<a class="reference internal" href="../api/qics/Solver.html#qics.Solver" title="qics.Solver"><code class="xref py py-class docutils literal notranslate"><span class="pre">qics.Solver</span></code></a>, we then solve the conic program by calling</p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="n">info</span> <span class="o">=</span> <span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+</span><span data-line="2"><span class="go">====================================================================</span>
+</span><span data-line="3"><span class="go">           QICS v1.0.0 - Quantum Information Conic Solver</span>
+</span><span data-line="4"><span class="go">              by K. He, J. Saunderson, H. Fawzi (2024)</span>
+</span><span data-line="5"><span class="go">====================================================================</span>
+</span><span data-line="6"><span class="go">Problem summary:</span>
+</span><span data-line="7"><span class="go">    no. vars:     9                         barr. par:    6</span>
+</span><span data-line="8"><span class="go">    no. constr:   5                         symmetric:    False</span>
+</span><span data-line="9"><span class="go">    cone dim:     9                         complex:      False</span>
+</span><span data-line="10"><span class="go">    no. cones:    1                         sparse:       False</span>
+</span><span data-line="11"><span class="go">...</span>
+</span><span data-line="12"><span class="go">Solution summary</span>
+</span><span data-line="13"><span class="go">    sol. status:  optimal                   num. iter:    7</span>
+</span><span data-line="14"><span class="go">    exit status:  solved                    solve time:   ...</span>
+</span><span data-line="15"><span class="go">    primal obj:   2.772588704718e+00        primal feas:  6.28e-09</span>
+</span><span data-line="16"><span class="go">    dual obj:     2.772588709215e+00        dual feas:    3.14e-09</span>
+</span></pre></div>
+</div>
+<p>The solver returns a dictionary <code class="docutils literal notranslate"><span class="pre">info</span></code> containing additional information about
+the solution. A list of all keys contained in this dictionary can be found
+<a class="reference internal" href="reference.html#output-parameters"><span class="std std-ref">here</span></a>. For example, we can access the
+optimal variable <span class="math notranslate nohighlight">\(Y\)</span> by using</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;s_opt&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span>
+</span><span data-line="2"><span class="go">[[1.  0.5]</span>
+</span><span data-line="3"><span class="go"> [0.5 1. ]]</span>
+</span></pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">info[&quot;s_opt&quot;]</span></code> object is a <a class="reference internal" href="../api/point/VecProduct.html#qics.point.VecProduct" title="qics.point.VecProduct"><code class="xref py py-class docutils literal notranslate"><span class="pre">qics.point.VecProduct</span></code></a>, which
+represents a Cartesian product of real vectors, symmetric matrices, and
+Hermitian matrices. To access arrays corresponding to these vectors, we use
+<code class="docutils literal notranslate"><span class="pre">info[&quot;s_opt&quot;][i][j]</span></code> to access the <span class="math notranslate nohighlight">\(j\)</span>-th variable corresponding to
+the <span class="math notranslate nohighlight">\(i\)</span>-th cone.</p>
+</div>
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="reference.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">Quick reference</div></div>
+    </a>
+  </div><div class="navigation-next">
+    <a href="matrices.html">
+      <div class="page-info">
+        <span>Next</span>
+        <div class="title">Representing matrices</div>
+      </div>
+      <i class="i-lucide chevron-right"></i>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2025, Kerry He, James Saunderson, and Hamza Fawzi</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials">
+<a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+  <iconify-icon icon="simple-icons:github"></iconify-icon>
+</a></div>
+    </div>
+  </div>
+</footer>
+      <script src="../_static/documentation_options.js?v=cb7bf70b"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=30646c52"></script>
+      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script src="../_static/shibuya.js?v=c5fc9e80"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></body>
+</html>

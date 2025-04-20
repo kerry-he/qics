@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="teal" data-content_root="../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Block diagonal - QICS 1.1.3 documentation</title><link rel="shortcut icon" href="../../_static/favicon.svg"/><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Quantum information" href="quantum.html" /><link rel="prev" title="Max cut" href="maxcut.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=397bb51e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/shibuya.css?v=36d120a7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link media="print" rel="stylesheet" type="text/css" href="../../_static/print.css?v=20ff2c19" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=93a53b2b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    <meta property="og:type" content="website"/><meta property="og:title" content="Block diagonal"/>
+<meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../../index.html">
+      <img class="light-logo" src="../../_static/logo-light.svg" alt="QICS" height="28" loading="lazy" />
+      <img class="dark-logo" src="../../_static/logo-dark.svg" alt="QICS" height="28" loading="lazy" />
+      <strong>QICS</strong>
+    </a>
+    <div class="sy-head-nav" id="HeadNav">
+      <nav class="sy-head-links"><ul>
+      <li class="link"><a href="../../guide/index.html">
+            <span>User Guide</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../../guide/reference.html">Quick reference</a></li><li><a href="../../guide/gettingstarted.html">Getting started</a></li><li><a href="../../guide/matrices.html">Representing matrices</a></li><li><a href="../../guide/advanced.html">Advanced tips</a></li><li><a href="../../guide/io.html">Reading and writing</a></li><li><a href="../../guide/picos.html">PICOS interface</a></li></ul>
+      </li>
+      <li class="link"><a href="../index.html">
+            <span>Examples</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="index.html">Semidefinite programming</a></li><li><a href="../qrep/index.html">Quantum entropy programming</a></li></ul>
+      </li><li class="link"><a href="../../api/index.html">API reference</a></li></ul></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials">
+  <a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+    <iconify-icon icon="simple-icons:github"></iconify-icon>
+  </a></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="HeadNav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2 -translate-x-2"></span>
+          <span class="hamburger_3 -translate-x-1"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/index.html">User guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/reference.html">Quick reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/gettingstarted.html">Getting started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/matrices.html">Representing matrices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/advanced.html">Advanced tips</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/io.html">Reading and writing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/picos.html">PICOS interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Examples</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="index.html">Semidefinite programming</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="maxcut.html">Max cut</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Block diagonal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quantum.html">Quantum information</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../qrep/index.html">Quantum relative entropy programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../qrep/qkd.html">Quantum key distribution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../qrep/nearest.html">Nearest matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../qrep/channel.html">Quantum channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../qrep/opper.html">Noncommutative perspective</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../qrep/renyi.html">Renyi entropy</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/qics.html">qics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/qics/Model.html">qics.Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/qics/Solver.html">qics.Solver</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/cones.html">qics.cones</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/NonNegOrthant.html">qics.cones.NonNegOrthant</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/PosSemidefinite.html">qics.cones.PosSemidefinite</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/SecondOrder.html">qics.cones.SecondOrder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/ClassEntr.html">qics.cones.ClassEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/ClassRelEntr.html">qics.cones.ClassRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantEntr.html">qics.cones.QuantEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantRelEntr.html">qics.cones.QuantRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantCondEntr.html">qics.cones.QuantCondEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantKeyDist.html">qics.cones.QuantKeyDist</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/OpPerspecTr.html">qics.cones.OpPerspecTr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/OpPerspecEpi.html">qics.cones.OpPerspecEpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/RenyiEntr.html">qics.cones.RenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/SandRenyiEntr.html">qics.cones.SandRenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuasiEntr.html">qics.cones.QuasiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/SandQuasiEntr.html">qics.cones.SandQuasiEntr</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/io.html">qics.io</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/read_file.html">qics.io.read_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/write_file.html">qics.io.write_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/read_sdpa.html">qics.io.read_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/write_sdpa.html">qics.io.write_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/read_cbf.html">qics.io.read_cbf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/write_cbf.html">qics.io.write_cbf</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/point.html">qics.point</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/point/Point.html">qics.point.Point</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/point/VecProduct.html">qics.point.VecProduct</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/quantum.html">qics.quantum</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/entropy.html">qics.quantum.entropy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/i_kr.html">qics.quantum.i_kr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/p_tr.html">qics.quantum.p_tr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/partial_transpose.html">qics.quantum.partial_transpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/purify.html">qics.quantum.purify</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/swap.html">qics.quantum.swap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/choi_operator.html">qics.quantum.random.choi_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/degradable_channel.html">qics.quantum.random.degradable_channel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/density_matrix.html">qics.quantum.random.density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/pure_density_matrix.html">qics.quantum.random.pure_density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/stinespring_operator.html">qics.quantum.random.stinespring_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/unitary.html">qics.quantum.random.unitary</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/vectorize.html">qics.vectorize</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/eye.html">qics.vectorize.eye</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/lin_to_mat.html">qics.vectorize.lin_to_mat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/mat_dim.html">qics.vectorize.mat_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/mat_to_vec.html">qics.vectorize.mat_to_vec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/vec_dim.html">qics.vectorize.vec_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/vec_to_mat.html">qics.vectorize.vec_to_mat</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div></div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#references">References</a></li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6"><div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../index.html"><span itemprop="name">QICS</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">Examples</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="index.html"><span itemprop="name">Semidefinite programming</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="3" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">Block diagonal</strong>
+        <meta itemprop="position" content="4" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+        <article class="yue" role="main">
+          <section id="block-diagonal">
+<h1>Block diagonal<a class="headerlink" href="#block-diagonal" title="Link to this heading">¶</a></h1>
+<p><strong>QICS</strong> is designed to solve conic programs involving Cartesian products of
+cones. This makes it easy to take advantage of block-diagonal structures arising
+in semidefeinite programs. As an example, consider the semidefinite program from
+Example 2 of <a class="reference internal" href="#blockdiag-refs"><span class="std std-ref">[1]</span></a></p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[ \begin{align}\begin{aligned}\min_{x \in \mathbb{R}^5} &amp;&amp;&amp; 1.1x_1 - 10x_2 + 6.6x_3 + 19x_4 + 4.1x_5\\\text{subj. to} &amp;&amp;&amp; \sum_{i=1}^5 F_ix_i - F_0 \succeq_{\mathbb{S}^7_+} 0,\end{aligned}\end{align} \]</div>
+</div>
+<p>where</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{gather}
+    F_0 = \begin{bmatrix}
+            -1.4 &amp; -3.2 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 \\
+            -3.2 &amp;  -28 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 \\
+             0.0 &amp;  0.0 &amp;   15 &amp;  -12 &amp;  2.1 &amp;  0.0 &amp;  0.0 \\
+             0.0 &amp;  0.0 &amp;  -12 &amp;   16 &amp; -3.8 &amp;  0.0 &amp;  0.0 \\
+             0.0 &amp;  0.0 &amp;  2.1 &amp; -3.8 &amp;   15 &amp;  0.0 &amp;  0.0 \\
+             0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  1.8 &amp;  0.0 \\
+             0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp; -4.0
+        \end{bmatrix}\\ \\
+    F_1 = \begin{bmatrix}
+             0.5 &amp;  5.2 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 \\
+             5.2 &amp; -5.3 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 \\
+             0.0 &amp;  0.0 &amp;  7.8 &amp; -2.4 &amp;  6.0 &amp;  0.0 &amp;  0.0 \\
+             0.0 &amp;  0.0 &amp; -2.4 &amp;  4.2 &amp;  6.5 &amp;  0.0 &amp;  0.0 \\
+             0.0 &amp;  0.0 &amp;  6.0 &amp;  6.5 &amp;  2.1 &amp;  0.0 &amp;  0.0 \\
+             0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp; -4.5 &amp;  0.0 \\
+             0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp; -3.5
+        \end{bmatrix}\\ \\
+    \vdots\\ \\
+    F_5 = \begin{bmatrix}
+            -6.5 &amp; -5.4 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 \\
+            -5.4 &amp; -6.6 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 \\
+             0.0 &amp;  0.0 &amp;  6.7 &amp; -7.2 &amp; -3.6 &amp;  0.0 &amp;  0.0 \\
+             0.0 &amp;  0.0 &amp; -7.2 &amp;  7.3 &amp; -3.0 &amp;  0.0 &amp;  0.0 \\
+             0.0 &amp;  0.0 &amp; -3.6 &amp; -3.0 &amp; -1.4 &amp;  0.0 &amp;  0.0 \\
+             0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  6.1 &amp;  0.0 \\
+             0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp;  0.0 &amp; -1.5
+        \end{bmatrix}.
+\end{gather}\end{split}\]</div>
+</div>
+<p>It is possible to model this problem using a single <span class="math notranslate nohighlight">\(7\times7\)</span> dimensional
+positive semidefinite cone <span class="math notranslate nohighlight">\(\mathbb{S}^7_+\)</span>. However, it is
+computationally advantageous to take advantage of the block diagonal structure
+of the matrices <span class="math notranslate nohighlight">\(F_i\)</span> and model the problem using the Cartesian product of
+cones <span class="math notranslate nohighlight">\(\mathbb{S}^2_+\times\mathbb{S}^3_+\times\mathbb{R}^2_+\)</span>, i.e., the
+semidefinite program is equivalent to</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[ \begin{align}\begin{aligned}\min_{x \in \mathbb{R}^5} &amp;&amp;&amp; 1.1x_1 - 10x_2 + 6.6x_3 + 19x_4 + 4.1x_5\\\text{subj. to} &amp;&amp;&amp; \sum_{i=1}^5 F_{i0}x_i - F_{00} \succeq_{\mathbb{S}^2_+} 0,\\&amp;&amp;&amp; \sum_{i=1}^5 F_{i1}x_i - F_{01} \succeq_{\mathbb{S}^3_+} 0,\\&amp;&amp;&amp; \sum_{i=1}^5 F_{i2}x_i - F_{02} \geq_{\mathbb{R}^2_+} 0,\end{aligned}\end{align} \]</div>
+</div>
+<p>where <span class="math notranslate nohighlight">\(F_{i0}\in\mathbb{S}^2\)</span>, <span class="math notranslate nohighlight">\(F_{i1}\in\mathbb{S}^3\)</span>, and
+<span class="math notranslate nohighlight">\(F_{i2}\in\mathbb{R}^2\)</span> represent the first, second, and third blocks of
+<span class="math notranslate nohighlight">\(F_{i}\)</span>, respectively, e.g.,</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{gather}
+    F_{00} = \begin{bmatrix}
+            -1.4 &amp; -3.2 \\
+            -3.2 &amp;  -28
+        \end{bmatrix}, \quad
+    F_{01} = \begin{bmatrix}
+             15 &amp;  -12 &amp;  2.1 \\
+            -12 &amp;   16 &amp; -3.8 \\
+            2.1 &amp; -3.8 &amp;   15
+        \end{bmatrix}, \quad
+    F_{02} = \begin{bmatrix}
+             1.8 \\
+            -4.0
+        \end{bmatrix}.
+\end{gather}\end{split}\]</div>
+</div>
+<p>We can easily solve this problem involving a Cartesian product of positive
+semidefinite cones and nonnegative orthants in <strong>QICS</strong> by defining an
+appropriate <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a> of <a class="reference internal" href="../../api/cones.html#module-qics.cones" title="qics.cones"><code class="xref py py-mod docutils literal notranslate"><span class="pre">qics.cones</span></code></a>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="kn">import</span><span class="w"> </span><span class="nn">qics</span>
+</span><span data-line="4">
+</span><span data-line="5"><span class="c1"># Define objective function</span>
+</span><span data-line="6"><span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.1</span><span class="p">,</span> <span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mf">6.6</span><span class="p">,</span> <span class="mi">19</span><span class="p">,</span> <span class="mf">4.1</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="7">
+</span><span data-line="8"><span class="c1"># Define linear constraints. Note that we have defined pre-vectorized</span>
+</span><span data-line="9"><span class="c1"># the matrices for convenience</span>
+</span><span data-line="10"><span class="n">F</span> <span class="o">=</span> <span class="p">[</span>
+</span><span data-line="11">    <span class="p">[</span>   <span class="c1"># F0</span>
+</span><span data-line="12">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="o">-</span><span class="mf">1.4</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.2</span><span class="p">,</span> <span class="o">-</span><span class="mi">28</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+</span><span data-line="13">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">15</span><span class="p">,</span> <span class="o">-</span><span class="mi">12</span><span class="p">,</span> <span class="mf">2.1</span><span class="p">,</span> <span class="o">-</span><span class="mi">12</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.8</span><span class="p">,</span> <span class="mf">2.1</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.8</span><span class="p">,</span> <span class="mi">15</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+</span><span data-line="14">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.8</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.0</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="15">    <span class="p">],</span>
+</span><span data-line="16">    <span class="p">[</span>   <span class="c1"># F1</span>
+</span><span data-line="17">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">5.2</span><span class="p">,</span> <span class="mf">5.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">5.3</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+</span><span data-line="18">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">7.8</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.4</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.4</span><span class="p">,</span> <span class="mf">4.2</span><span class="p">,</span> <span class="mf">6.5</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">,</span> <span class="mf">6.5</span><span class="p">,</span> <span class="mf">2.1</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+</span><span data-line="19">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="o">-</span><span class="mf">4.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.5</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="20">    <span class="p">],</span>
+</span><span data-line="21">    <span class="p">[</span>   <span class="c1">#F2</span>
+</span><span data-line="22">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.7</span><span class="p">,</span> <span class="mf">7.0</span><span class="p">,</span> <span class="mf">7.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">9.3</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+</span><span data-line="23">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="o">-</span><span class="mf">1.9</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.9</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.3</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.9</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.8</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.1</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.3</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.1</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+</span><span data-line="24">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="o">-</span><span class="mf">0.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.7</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="25">    <span class="p">],</span>
+</span><span data-line="26">    <span class="p">[</span>   <span class="c1">#F3</span>
+</span><span data-line="27">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">6.3</span><span class="p">,</span> <span class="o">-</span><span class="mf">7.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">7.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.3</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+</span><span data-line="28">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">8.8</span><span class="p">,</span> <span class="mf">5.4</span><span class="p">,</span> <span class="mf">8.8</span><span class="p">,</span> <span class="mf">3.4</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.4</span><span class="p">,</span> <span class="mf">5.4</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.4</span><span class="p">,</span> <span class="mf">7.5</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+</span><span data-line="29">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="o">-</span><span class="mf">3.3</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.0</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="30">    <span class="p">],</span>
+</span><span data-line="31">    <span class="p">[</span>   <span class="c1">#F4</span>
+</span><span data-line="32">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="o">-</span><span class="mf">2.4</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.9</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+</span><span data-line="33">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">3.4</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.2</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.8</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.8</span><span class="p">,</span> <span class="mf">3.6</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+</span><span data-line="34">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">4.8</span><span class="p">,</span> <span class="mf">9.7</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="35">    <span class="p">],</span>
+</span><span data-line="36">    <span class="p">[</span>   <span class="c1">#F5</span>
+</span><span data-line="37">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="o">-</span><span class="mf">6.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">5.4</span><span class="p">,</span> <span class="o">-</span><span class="mf">5.4</span><span class="p">,</span> <span class="o">-</span><span class="mf">6.6</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+</span><span data-line="38">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">6.7</span><span class="p">,</span> <span class="o">-</span><span class="mf">7.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.6</span><span class="p">,</span> <span class="o">-</span><span class="mf">7.2</span><span class="p">,</span> <span class="mf">7.3</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.6</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.4</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+</span><span data-line="39">        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">6.1</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.5</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="40">    <span class="p">]</span>
+</span><span data-line="41"><span class="p">]</span>
+</span><span data-line="42">
+</span><span data-line="43"><span class="n">h</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">F</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span><span data-line="44"><span class="n">G</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">Fi</span><span class="p">)</span> <span class="k">for</span> <span class="n">Fi</span> <span class="ow">in</span> <span class="n">F</span><span class="p">[</span><span class="mi">1</span><span class="p">:]])</span>
+</span><span data-line="45">
+</span><span data-line="46"><span class="c1"># Define cones to optimize over</span>
+</span><span data-line="47"><span class="n">cones</span> <span class="o">=</span> <span class="p">[</span>
+</span><span data-line="48">    <span class="n">qics</span><span class="o">.</span><span class="n">cones</span><span class="o">.</span><span class="n">PosSemidefinite</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span>
+</span><span data-line="49">    <span class="n">qics</span><span class="o">.</span><span class="n">cones</span><span class="o">.</span><span class="n">PosSemidefinite</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span>
+</span><span data-line="50">    <span class="n">qics</span><span class="o">.</span><span class="n">cones</span><span class="o">.</span><span class="n">NonNegOrthant</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span>
+</span><span data-line="51"><span class="p">]</span>
+</span><span data-line="52">
+</span><span data-line="53"><span class="c1"># Initialize model and solver objects</span>
+</span><span data-line="54"><span class="n">model</span>  <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Model</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">G</span><span class="o">=</span><span class="n">G</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="n">h</span><span class="p">,</span> <span class="n">cones</span><span class="o">=</span><span class="n">cones</span><span class="p">)</span>
+</span><span data-line="55"><span class="n">solver</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Solver</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</span><span data-line="56">
+</span><span data-line="57"><span class="c1"># Solve problem</span>
+</span><span data-line="58"><span class="n">info</span> <span class="o">=</span> <span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+</span><span data-line="59">
+</span><span data-line="60"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Optimal variable x is: &quot;</span><span class="p">)</span>
+</span><span data-line="61"><span class="nb">print</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;x_opt&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+</span></pre></div>
+</div>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><span data-line="1">Optimal variable x is:
+</span><span data-line="2">[1.55164255 0.67096851 0.98149139 1.40657036 0.94216841]
+</span></pre></div>
+</div>
+<section id="references">
+<span id="blockdiag-refs"></span><h2>References<a class="headerlink" href="#references" title="Link to this heading">¶</a></h2>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>“SDPA (SemiDefinite Programming Algorithm) User’s Manual – Version 6.2.0.”,
+K. Fujisawa, M. Kojima, K. Nakata, and M. Yamashita,
+<em>Research Reports on Mathematical and Computing Sciences Series B : Operations Research</em>, 2002.</p></li>
+</ol>
+</div></blockquote>
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="maxcut.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">Max cut</div></div>
+    </a>
+  </div><div class="navigation-next">
+    <a href="quantum.html">
+      <div class="page-info">
+        <span>Next</span>
+        <div class="title">Quantum information</div>
+      </div>
+      <i class="i-lucide chevron-right"></i>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2025, Kerry He, James Saunderson, and Hamza Fawzi</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials">
+<a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+  <iconify-icon icon="simple-icons:github"></iconify-icon>
+</a></div>
+    </div>
+  </div>
+</footer>
+      <script src="../../_static/documentation_options.js?v=cb7bf70b"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=30646c52"></script>
+      <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+      <script src="../../_static/shibuya.js?v=c5fc9e80"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></body>
+</html>

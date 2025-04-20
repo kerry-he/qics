@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="teal" data-content_root="../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Reading and writing (qics.io) - QICS 1.1.3 documentation</title><link rel="shortcut icon" href="../_static/favicon.svg"/><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="qics.io.read_file" href="io/read_file.html" /><link rel="prev" title="qics.cones.SandQuasiEntr" href="cones/SandQuasiEntr.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=397bb51e" />
+    <link rel="stylesheet" type="text/css" href="../_static/shibuya.css?v=36d120a7" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link media="print" rel="stylesheet" type="text/css" href="../_static/print.css?v=20ff2c19" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=93a53b2b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    <meta property="og:type" content="website"/><meta property="og:title" content="Reading and writing (qics.io)"/>
+<meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../index.html">
+      <img class="light-logo" src="../_static/logo-light.svg" alt="QICS" height="28" loading="lazy" />
+      <img class="dark-logo" src="../_static/logo-dark.svg" alt="QICS" height="28" loading="lazy" />
+      <strong>QICS</strong>
+    </a>
+    <div class="sy-head-nav" id="HeadNav">
+      <nav class="sy-head-links"><ul>
+      <li class="link"><a href="../guide/index.html">
+            <span>User Guide</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../guide/reference.html">Quick reference</a></li><li><a href="../guide/gettingstarted.html">Getting started</a></li><li><a href="../guide/matrices.html">Representing matrices</a></li><li><a href="../guide/advanced.html">Advanced tips</a></li><li><a href="../guide/io.html">Reading and writing</a></li><li><a href="../guide/picos.html">PICOS interface</a></li></ul>
+      </li>
+      <li class="link"><a href="../examples/index.html">
+            <span>Examples</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../examples/sdp/index.html">Semidefinite programming</a></li><li><a href="../examples/qrep/index.html">Quantum entropy programming</a></li></ul>
+      </li><li class="link"><a href="index.html">API reference</a></li></ul></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials">
+  <a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+    <iconify-icon icon="simple-icons:github"></iconify-icon>
+  </a></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="HeadNav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2 -translate-x-2"></span>
+          <span class="hamburger_3 -translate-x-1"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/index.html">User guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../guide/reference.html">Quick reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../guide/gettingstarted.html">Getting started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../guide/matrices.html">Representing matrices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../guide/advanced.html">Advanced tips</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../guide/io.html">Reading and writing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../guide/picos.html">PICOS interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/sdp/index.html">Semidefinite programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../examples/sdp/maxcut.html">Max cut</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/sdp/product.html">Block diagonal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/sdp/quantum.html">Quantum information</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/qrep/index.html">Quantum relative entropy programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/qkd.html">Quantum key distribution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/nearest.html">Nearest matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/channel.html">Quantum channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/opper.html">Noncommutative perspective</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/renyi.html">Renyi entropy</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="qics.html">qics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="qics/Model.html">qics.Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="qics/Solver.html">qics.Solver</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="cones.html">qics.cones</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="cones/NonNegOrthant.html">qics.cones.NonNegOrthant</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cones/PosSemidefinite.html">qics.cones.PosSemidefinite</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cones/SecondOrder.html">qics.cones.SecondOrder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cones/ClassEntr.html">qics.cones.ClassEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cones/ClassRelEntr.html">qics.cones.ClassRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cones/QuantEntr.html">qics.cones.QuantEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cones/QuantRelEntr.html">qics.cones.QuantRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cones/QuantCondEntr.html">qics.cones.QuantCondEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cones/QuantKeyDist.html">qics.cones.QuantKeyDist</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cones/OpPerspecTr.html">qics.cones.OpPerspecTr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cones/OpPerspecEpi.html">qics.cones.OpPerspecEpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cones/RenyiEntr.html">qics.cones.RenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cones/SandRenyiEntr.html">qics.cones.SandRenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cones/QuasiEntr.html">qics.cones.QuasiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cones/SandQuasiEntr.html">qics.cones.SandQuasiEntr</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">qics.io</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="io/read_file.html">qics.io.read_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="io/write_file.html">qics.io.write_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="io/read_sdpa.html">qics.io.read_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="io/write_sdpa.html">qics.io.write_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="io/read_cbf.html">qics.io.read_cbf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="io/write_cbf.html">qics.io.write_cbf</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="point.html">qics.point</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="point/Point.html">qics.point.Point</a></li>
+<li class="toctree-l3"><a class="reference internal" href="point/VecProduct.html">qics.point.VecProduct</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="quantum.html">qics.quantum</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="quantum/entropy.html">qics.quantum.entropy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quantum/i_kr.html">qics.quantum.i_kr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quantum/p_tr.html">qics.quantum.p_tr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quantum/partial_transpose.html">qics.quantum.partial_transpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quantum/purify.html">qics.quantum.purify</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quantum/swap.html">qics.quantum.swap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quantum/random/choi_operator.html">qics.quantum.random.choi_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quantum/random/degradable_channel.html">qics.quantum.random.degradable_channel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quantum/random/density_matrix.html">qics.quantum.random.density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quantum/random/pure_density_matrix.html">qics.quantum.random.pure_density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quantum/random/stinespring_operator.html">qics.quantum.random.stinespring_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quantum/random/unitary.html">qics.quantum.random.unitary</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="vectorize.html">qics.vectorize</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="vectorize/eye.html">qics.vectorize.eye</a></li>
+<li class="toctree-l3"><a class="reference internal" href="vectorize/lin_to_mat.html">qics.vectorize.lin_to_mat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="vectorize/mat_dim.html">qics.vectorize.mat_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="vectorize/mat_to_vec.html">qics.vectorize.mat_to_vec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="vectorize/vec_dim.html">qics.vectorize.vec_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="vectorize/vec_to_mat.html">qics.vectorize.vec_to_mat</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div></div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#sdpa-sparse-format">SDPA sparse format</a></li>
+<li><a class="reference internal" href="#conic-benchmark-format">Conic Benchmark Format</a></li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6"><div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">QICS</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="index.html"><span itemprop="name">API reference</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">Reading and writing (<code class="xref py py-mod docutils literal notranslate"><span class="pre">qics.io</span></code>)</strong>
+        <meta itemprop="position" content="3" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+        <article class="yue" role="main">
+          <section id="reading-and-writing-qics-io">
+<span id="module-qics.io"></span><h1>Reading and writing (<a class="reference internal" href="#module-qics.io" title="qics.io"><code class="xref py py-mod docutils literal notranslate"><span class="pre">qics.io</span></code></a>)<a class="headerlink" href="#reading-and-writing-qics-io" title="Link to this heading">¶</a></h1>
+<p>This module contains functions used to read and write conic programs
+represented by a <a class="reference internal" href="qics/Model.html#qics.Model" title="qics.Model"><code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></a> to a file of a specified format.
+Currently, we support the following file formats</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">*.dat-s</span></code>: SDPA sparse format</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">*.dat-c</span></code>: Complex SDPA sparse format</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">*.cbf</span></code>: Conic Benchmark Format</p></li>
+</ul>
+<p>Further details about these file formats can be found in the
+<a class="reference internal" href="../guide/io.html"><span class="doc">user guide</span></a>.</p>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 40.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="io/read_file.html#qics.io.read_file" title="qics.io.read_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_file</span></code></a>(filename)</p></td>
+<td><p>Reads a conic program from a file of a specified format.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="io/write_file.html#qics.io.write_file" title="qics.io.write_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_file</span></code></a>(model, filename)</p></td>
+<td><p>Write a conic program to a file of a specified format</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<section id="sdpa-sparse-format">
+<h2>SDPA sparse format<a class="headerlink" href="#sdpa-sparse-format" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 40.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="io/read_sdpa.html#qics.io.read_sdpa" title="qics.io.read_sdpa"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_sdpa</span></code></a>(filename)</p></td>
+<td><p>Reads a semidefinite program in the SDPA sparse format.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="io/write_sdpa.html#qics.io.write_sdpa" title="qics.io.write_sdpa"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_sdpa</span></code></a>(model, filename)</p></td>
+<td><p>Write a semidefinite program to a SDPA sparse file.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="conic-benchmark-format">
+<h2>Conic Benchmark Format<a class="headerlink" href="#conic-benchmark-format" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 40.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="io/read_cbf.html#qics.io.read_cbf" title="qics.io.read_cbf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_cbf</span></code></a>(filename)</p></td>
+<td><p>Reads a conic program in the CBF format.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="io/write_cbf.html#qics.io.write_cbf" title="qics.io.write_cbf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_cbf</span></code></a>(model, filename)</p></td>
+<td><p>Write a conic program to a CBF file.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="toctree-wrapper compound">
+</div>
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="cones/SandQuasiEntr.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">qics.cones.SandQuasiEntr</div></div>
+    </a>
+  </div><div class="navigation-next">
+    <a href="io/read_file.html">
+      <div class="page-info">
+        <span>Next</span>
+        <div class="title">qics.io.read_file</div>
+      </div>
+      <i class="i-lucide chevron-right"></i>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2025, Kerry He, James Saunderson, and Hamza Fawzi</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials">
+<a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+  <iconify-icon icon="simple-icons:github"></iconify-icon>
+</a></div>
+    </div>
+  </div>
+</footer>
+      <script src="../_static/documentation_options.js?v=cb7bf70b"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=30646c52"></script>
+      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script src="../_static/shibuya.js?v=c5fc9e80"></script></body>
+</html>

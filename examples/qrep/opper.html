@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="teal" data-content_root="../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Noncommutative perspective - QICS 1.1.3 documentation</title><link rel="shortcut icon" href="../../_static/favicon.svg"/><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Renyi entropy" href="renyi.html" /><link rel="prev" title="Quantum channels" href="channel.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=397bb51e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/shibuya.css?v=36d120a7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link media="print" rel="stylesheet" type="text/css" href="../../_static/print.css?v=20ff2c19" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=93a53b2b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    <meta property="og:type" content="website"/><meta property="og:title" content="Noncommutative perspective"/>
+<meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../../index.html">
+      <img class="light-logo" src="../../_static/logo-light.svg" alt="QICS" height="28" loading="lazy" />
+      <img class="dark-logo" src="../../_static/logo-dark.svg" alt="QICS" height="28" loading="lazy" />
+      <strong>QICS</strong>
+    </a>
+    <div class="sy-head-nav" id="HeadNav">
+      <nav class="sy-head-links"><ul>
+      <li class="link"><a href="../../guide/index.html">
+            <span>User Guide</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../../guide/reference.html">Quick reference</a></li><li><a href="../../guide/gettingstarted.html">Getting started</a></li><li><a href="../../guide/matrices.html">Representing matrices</a></li><li><a href="../../guide/advanced.html">Advanced tips</a></li><li><a href="../../guide/io.html">Reading and writing</a></li><li><a href="../../guide/picos.html">PICOS interface</a></li></ul>
+      </li>
+      <li class="link"><a href="../index.html">
+            <span>Examples</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../sdp/index.html">Semidefinite programming</a></li><li><a href="index.html">Quantum entropy programming</a></li></ul>
+      </li><li class="link"><a href="../../api/index.html">API reference</a></li></ul></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials">
+  <a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+    <iconify-icon icon="simple-icons:github"></iconify-icon>
+  </a></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="HeadNav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2 -translate-x-2"></span>
+          <span class="hamburger_3 -translate-x-1"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/index.html">User guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/reference.html">Quick reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/gettingstarted.html">Getting started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/matrices.html">Representing matrices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/advanced.html">Advanced tips</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/io.html">Reading and writing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/picos.html">PICOS interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../sdp/index.html">Semidefinite programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../sdp/maxcut.html">Max cut</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../sdp/product.html">Block diagonal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../sdp/quantum.html">Quantum information</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html">Quantum relative entropy programming</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="qkd.html">Quantum key distribution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nearest.html">Nearest matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="channel.html">Quantum channels</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Noncommutative perspective</a></li>
+<li class="toctree-l3"><a class="reference internal" href="renyi.html">Renyi entropy</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/qics.html">qics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/qics/Model.html">qics.Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/qics/Solver.html">qics.Solver</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/cones.html">qics.cones</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/NonNegOrthant.html">qics.cones.NonNegOrthant</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/PosSemidefinite.html">qics.cones.PosSemidefinite</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/SecondOrder.html">qics.cones.SecondOrder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/ClassEntr.html">qics.cones.ClassEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/ClassRelEntr.html">qics.cones.ClassRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantEntr.html">qics.cones.QuantEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantRelEntr.html">qics.cones.QuantRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantCondEntr.html">qics.cones.QuantCondEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantKeyDist.html">qics.cones.QuantKeyDist</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/OpPerspecTr.html">qics.cones.OpPerspecTr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/OpPerspecEpi.html">qics.cones.OpPerspecEpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/RenyiEntr.html">qics.cones.RenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/SandRenyiEntr.html">qics.cones.SandRenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuasiEntr.html">qics.cones.QuasiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/SandQuasiEntr.html">qics.cones.SandQuasiEntr</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/io.html">qics.io</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/read_file.html">qics.io.read_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/write_file.html">qics.io.write_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/read_sdpa.html">qics.io.read_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/write_sdpa.html">qics.io.write_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/read_cbf.html">qics.io.read_cbf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/write_cbf.html">qics.io.write_cbf</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/point.html">qics.point</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/point/Point.html">qics.point.Point</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/point/VecProduct.html">qics.point.VecProduct</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/quantum.html">qics.quantum</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/entropy.html">qics.quantum.entropy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/i_kr.html">qics.quantum.i_kr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/p_tr.html">qics.quantum.p_tr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/partial_transpose.html">qics.quantum.partial_transpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/purify.html">qics.quantum.purify</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/swap.html">qics.quantum.swap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/choi_operator.html">qics.quantum.random.choi_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/degradable_channel.html">qics.quantum.random.degradable_channel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/density_matrix.html">qics.quantum.random.density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/pure_density_matrix.html">qics.quantum.random.pure_density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/stinespring_operator.html">qics.quantum.random.stinespring_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/unitary.html">qics.quantum.random.unitary</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/vectorize.html">qics.vectorize</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/eye.html">qics.vectorize.eye</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/lin_to_mat.html">qics.vectorize.lin_to_mat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/mat_dim.html">qics.vectorize.mat_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/mat_to_vec.html">qics.vectorize.mat_to_vec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/vec_dim.html">qics.vectorize.vec_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/vec_to_mat.html">qics.vectorize.vec_to_mat</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div></div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#measured-relative-entropy">Measured relative entropy</a></li>
+<li><a class="reference internal" href="#d-optimal-design">D-optimal design</a></li>
+<li><a class="reference internal" href="#references">References</a></li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6"><div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../index.html"><span itemprop="name">QICS</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">Examples</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="index.html"><span itemprop="name">Quantum relative entropy programming</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="3" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">Noncommutative perspective</strong>
+        <meta itemprop="position" content="4" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+        <article class="yue" role="main">
+          <section id="noncommutative-perspective">
+<h1>Noncommutative perspective<a class="headerlink" href="#noncommutative-perspective" title="Link to this heading">¶</a></h1>
+<section id="measured-relative-entropy">
+<h2>Measured relative entropy<a class="headerlink" href="#measured-relative-entropy" title="Link to this heading">¶</a></h2>
+<p>Measured relative entropies are functions used to measure the amount of
+dissimilarity between two quantum states which arise in quantum hypothesis
+testing tasks. In <a class="reference internal" href="#opper-refs"><span class="std std-ref">[1]</span></a>, it was shown that the measured Renyi
+relative entropy of states  <span class="math notranslate nohighlight">\(Q_\alpha^M(\rho \| \sigma)\)</span> could be computed
+using the epigraph of the operator perspective function.</p>
+<p>For example, for <span class="math notranslate nohighlight">\(\alpha\in(0, 1/2)\)</span>, we have</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[ \begin{align}\begin{aligned}Q_\alpha^M(\rho \| \sigma) \quad = &amp;&amp;\min_{\omega, \theta \in \mathbb{H}^n}
+&amp;&amp;&amp; \alpha\,\text{tr}[\omega \rho] + (1 - \alpha) \text{tr}[\theta \sigma]\\&amp;&amp;\text{subj. to} &amp;&amp;&amp; \theta \succeq \omega^{\frac{\alpha}{\alpha-1}}\\&amp;&amp;&amp;&amp;&amp; \omega, \theta \succeq 0,\end{aligned}\end{align} \]</div>
+</div>
+<p>which we can model using a constraint of the form
+<span class="math notranslate nohighlight">\((\theta, \mathbb{I}, \omega)\in\mathcal{OPE}\)</span>. We can solve this in
+<strong>QICS</strong> using <a class="reference internal" href="../../api/cones/OpPerspecEpi.html#qics.cones.OpPerspecEpi" title="qics.cones.OpPerspecEpi"><code class="xref py py-class docutils literal notranslate"><span class="pre">qics.cones.OpPerspecEpi</span></code></a> below.</p>
+<div class="sphinx-tabs docutils container">
+<div aria-label="Tabbed content" class="closeable" role="tablist"><button aria-controls="panel-0-TmF0aXZl" aria-selected="true" class="sphinx-tabs-tab code-tab group-tab" id="tab-0-TmF0aXZl" name="TmF0aXZl" role="tab" tabindex="0">Native</button><button aria-controls="panel-0-UElDT1M=" aria-selected="false" class="sphinx-tabs-tab code-tab group-tab" id="tab-0-UElDT1M=" name="UElDT1M=" role="tab" tabindex="-1">PICOS</button></div><div aria-labelledby="tab-0-TmF0aXZl" class="sphinx-tabs-panel code-tab group-tab" id="panel-0-TmF0aXZl" name="TmF0aXZl" role="tabpanel" tabindex="0"><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="kn">import</span><span class="w"> </span><span class="nn">qics</span>
+</span><span data-line="4"><span class="kn">from</span><span class="w"> </span><span class="nn">qics.quantum.random</span><span class="w"> </span><span class="kn">import</span> <span class="n">density_matrix</span>
+</span><span data-line="5"><span class="kn">from</span><span class="w"> </span><span class="nn">qics.vectorize</span><span class="w"> </span><span class="kn">import</span> <span class="n">eye</span><span class="p">,</span> <span class="n">mat_to_vec</span><span class="p">,</span> <span class="n">vec_dim</span>
+</span><span data-line="6">
+</span><span data-line="7"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span data-line="8">
+</span><span data-line="9"><span class="n">n</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="10"><span class="n">vn</span> <span class="o">=</span> <span class="n">vec_dim</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="11"><span class="n">cn</span> <span class="o">=</span> <span class="n">vec_dim</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="12">
+</span><span data-line="13"><span class="c1"># Model problem using primal variables (T, X, Y)</span>
+</span><span data-line="14"><span class="c1"># Define random problem data</span>
+</span><span data-line="15"><span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.25</span>
+</span><span data-line="16"><span class="n">rho</span> <span class="o">=</span> <span class="n">density_matrix</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="17"><span class="n">sigma</span> <span class="o">=</span> <span class="n">density_matrix</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="18">
+</span><span data-line="19"><span class="c1"># Define objective function</span>
+</span><span data-line="20"><span class="n">c_T</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">alpha</span><span class="p">)</span> <span class="o">*</span> <span class="n">mat_to_vec</span><span class="p">(</span><span class="n">sigma</span><span class="p">)</span>
+</span><span data-line="21"><span class="n">c_X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vn</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</span><span data-line="22"><span class="n">c_Y</span> <span class="o">=</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">mat_to_vec</span><span class="p">(</span><span class="n">rho</span><span class="p">)</span>
+</span><span data-line="23"><span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([[</span><span class="n">c_T</span><span class="p">],</span> <span class="p">[</span><span class="n">c_X</span><span class="p">],</span> <span class="p">[</span><span class="n">c_Y</span><span class="p">]])</span>
+</span><span data-line="24">
+</span><span data-line="25"><span class="c1"># Build linear constraint X = I</span>
+</span><span data-line="26"><span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">cn</span><span class="p">,</span> <span class="n">vn</span><span class="p">)),</span> <span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">cn</span><span class="p">,</span> <span class="n">vn</span><span class="p">))]])</span>
+</span><span data-line="27"><span class="n">b</span> <span class="o">=</span> <span class="n">mat_to_vec</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">),</span> <span class="n">compact</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="28">
+</span><span data-line="29"><span class="c1"># Define cones to optimize over</span>
+</span><span data-line="30"><span class="n">cones</span> <span class="o">=</span> <span class="p">[</span><span class="n">qics</span><span class="o">.</span><span class="n">cones</span><span class="o">.</span><span class="n">OpPerspecEpi</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">alpha</span> <span class="o">/</span> <span class="p">(</span><span class="n">alpha</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)]</span>
+</span><span data-line="31">
+</span><span data-line="32"><span class="c1"># Initialize model and solver objects</span>
+</span><span data-line="33"><span class="n">model</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Model</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="n">b</span><span class="p">,</span> <span class="n">cones</span><span class="o">=</span><span class="n">cones</span><span class="p">)</span>
+</span><span data-line="34"><span class="n">solver</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Solver</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</span><span data-line="35">
+</span><span data-line="36"><span class="c1"># Solve problem</span>
+</span><span data-line="37"><span class="n">info</span> <span class="o">=</span> <span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+</span></pre></div>
+</div>
+</div><div aria-labelledby="tab-0-UElDT1M=" class="sphinx-tabs-panel code-tab group-tab" hidden="true" id="panel-0-UElDT1M=" name="UElDT1M=" role="tabpanel" tabindex="0"><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="kn">import</span><span class="w"> </span><span class="nn">picos</span>
+</span><span data-line="4"><span class="kn">import</span><span class="w"> </span><span class="nn">qics</span>
+</span><span data-line="5">
+</span><span data-line="6"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span data-line="7">
+</span><span data-line="8"><span class="n">n</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="9"><span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.25</span>
+</span><span data-line="10">
+</span><span data-line="11"><span class="n">rho</span>   <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">density_matrix</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="12"><span class="n">sigma</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">density_matrix</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="13">
+</span><span data-line="14"><span class="c1"># Define problem</span>
+</span><span data-line="15"><span class="n">P</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">Problem</span><span class="p">()</span>
+</span><span data-line="16"><span class="n">omega</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">HermitianVariable</span><span class="p">(</span><span class="s2">&quot;omega&quot;</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+</span><span data-line="17"><span class="n">theta</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">HermitianVariable</span><span class="p">(</span><span class="s2">&quot;theta&quot;</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+</span><span data-line="18">
+</span><span data-line="19"><span class="n">P</span><span class="o">.</span><span class="n">set_objective</span><span class="p">(</span><span class="s2">&quot;min&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">*</span><span class="p">(</span><span class="n">omega</span> <span class="o">|</span> <span class="n">rho</span><span class="p">)</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">alpha</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">theta</span> <span class="o">|</span> <span class="n">sigma</span><span class="p">)</span><span class="o">.</span><span class="n">real</span><span class="p">)</span>
+</span><span data-line="20"><span class="n">P</span><span class="o">.</span><span class="n">add_constraint</span><span class="p">(</span><span class="n">theta</span> <span class="o">&gt;&gt;</span> <span class="n">picos</span><span class="o">.</span><span class="n">mtxgeomean</span><span class="p">(</span><span class="n">picos</span><span class="o">.</span><span class="n">I</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="n">omega</span><span class="p">,</span> <span class="n">alpha</span><span class="o">/</span><span class="p">(</span><span class="n">alpha</span><span class="o">-</span><span class="mi">1</span><span class="p">)))</span>
+</span><span data-line="21">
+</span><span data-line="22"><span class="c1"># Solve problem</span>
+</span><span data-line="23"><span class="n">P</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">solver</span><span class="o">=</span><span class="s2">&quot;qics&quot;</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span></pre></div>
+</div>
+</div></div>
+</section>
+<section id="d-optimal-design">
+<h2>D-optimal design<a class="headerlink" href="#d-optimal-design" title="Link to this heading">¶</a></h2>
+<p>In <a class="reference internal" href="#opper-refs"><span class="std std-ref">[2]</span></a>, a matrix perspective reformulation technique is proposed to
+obtain a relaxation of the D-optimal design problem by solving the following conic
+optimization problem</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[ \begin{align}\begin{aligned}\max_{z\in\mathbb{R}^m, Y\in\mathbb{H}^n} &amp;&amp;&amp;
+\text{tr}[P_{\log}(Y, A \text{diag}(z) A^\top + \varepsilon Y)]
++ (n - \text{tr})\log(\varepsilon)\\\text{subj. to} &amp;&amp;&amp; \sum_{i=1}^m z_i = k\\&amp;&amp;&amp; \text{tr}[Y] \leq k\\&amp;&amp;&amp; 0 \leq z \leq 1\\&amp;&amp;&amp; 0 \preceq Y \preceq \mathbb{I}.\end{aligned}\end{align} \]</div>
+</div>
+<p>where <span class="math notranslate nohighlight">\(A\in\mathbb{R}^{n\times m}\)</span> is a matrix of linear measurements, and
+<span class="math notranslate nohighlight">\(k\)</span> is the number of experiments we select. This was shown to achieve empirically
+tighter bounds compared to other relaxation strategies. We show how we can solve this
+in QICS below.</p>
+<div class="sphinx-tabs docutils container">
+<div aria-label="Tabbed content" class="closeable" role="tablist"><button aria-controls="panel-1-TmF0aXZl" aria-selected="true" class="sphinx-tabs-tab code-tab group-tab" id="tab-1-TmF0aXZl" name="TmF0aXZl" role="tab" tabindex="0">Native</button><button aria-controls="panel-1-UElDT1M=" aria-selected="false" class="sphinx-tabs-tab code-tab group-tab" id="tab-1-UElDT1M=" name="UElDT1M=" role="tab" tabindex="-1">PICOS</button></div><div aria-labelledby="tab-1-TmF0aXZl" class="sphinx-tabs-panel code-tab group-tab" id="panel-1-TmF0aXZl" name="TmF0aXZl" role="tabpanel" tabindex="0"><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="kn">import</span><span class="w"> </span><span class="nn">qics</span>
+</span><span data-line="4"><span class="kn">from</span><span class="w"> </span><span class="nn">qics.vectorize</span><span class="w"> </span><span class="kn">import</span> <span class="n">eye</span><span class="p">,</span> <span class="n">lin_to_mat</span><span class="p">,</span> <span class="n">mat_to_vec</span><span class="p">,</span> <span class="n">vec_dim</span>
+</span><span data-line="5">
+</span><span data-line="6"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span data-line="7">
+</span><span data-line="8"><span class="n">n</span> <span class="o">=</span> <span class="mi">5</span>
+</span><span data-line="9"><span class="n">m</span> <span class="o">=</span> <span class="mi">10</span>
+</span><span data-line="10"><span class="n">k</span> <span class="o">=</span> <span class="mi">2</span>
+</span><span data-line="11"><span class="n">eps</span> <span class="o">=</span> <span class="mf">1e-6</span>
+</span><span data-line="12">
+</span><span data-line="13"><span class="n">vn</span> <span class="o">=</span> <span class="n">vec_dim</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+</span><span data-line="14"><span class="n">cn</span> <span class="o">=</span> <span class="n">vec_dim</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="15">
+</span><span data-line="16"><span class="c1"># Define random problem data</span>
+</span><span data-line="17"><span class="n">A_dat</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">n</span><span class="o">**</span><span class="mf">0.25</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+</span><span data-line="18">
+</span><span data-line="19"><span class="c1"># Model problem using primal variables (t, z, cvec(Y))</span>
+</span><span data-line="20"><span class="c1"># Define objective function</span>
+</span><span data-line="21"><span class="n">c_t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</span><span data-line="22"><span class="n">c_z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">m</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</span><span data-line="23"><span class="n">c_Y</span> <span class="o">=</span> <span class="n">mat_to_vec</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="n">compact</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">eps</span><span class="p">)</span>
+</span><span data-line="24"><span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([[</span><span class="n">c_t</span><span class="p">],</span> <span class="p">[</span><span class="n">c_z</span><span class="p">],</span> <span class="p">[</span><span class="n">c_Y</span><span class="p">]])</span>
+</span><span data-line="25">
+</span><span data-line="26"><span class="c1"># Build linear constraint Σ_i zi = k</span>
+</span><span data-line="27"><span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">m</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">cn</span><span class="p">))])</span>
+</span><span data-line="28"><span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">k</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+</span><span data-line="29">
+</span><span data-line="30"><span class="c1"># Build linear cone constraints</span>
+</span><span data-line="31"><span class="n">trace</span> <span class="o">=</span> <span class="n">lin_to_mat</span><span class="p">(</span><span class="k">lambda</span> <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">compact</span><span class="o">=</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+</span><span data-line="32"><span class="n">AdiagA</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">mat_to_vec</span><span class="p">(</span><span class="n">A_dat</span><span class="p">[:,</span> <span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">@</span> <span class="n">A_dat</span><span class="p">[:,</span> <span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">m</span><span class="p">)])</span>
+</span><span data-line="33">
+</span><span data-line="34"><span class="n">G</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([</span>
+</span><span data-line="35">    <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span>               <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">m</span><span class="p">)),</span>  <span class="n">trace</span>            <span class="p">],</span>  <span class="c1"># x_nn1 = k - tr[Y]</span>
+</span><span data-line="36">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">m</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span>  <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">m</span><span class="p">),</span>        <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">m</span><span class="p">,</span> <span class="n">cn</span><span class="p">))],</span>  <span class="c1"># x_nn2 = z</span>
+</span><span data-line="37">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">m</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span>  <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">m</span><span class="p">),</span>         <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">m</span><span class="p">,</span> <span class="n">cn</span><span class="p">))],</span>  <span class="c1"># x_nn3 = 1 - z</span>
+</span><span data-line="38">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vn</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vn</span><span class="p">,</span> <span class="n">m</span><span class="p">)),</span> <span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>         <span class="p">],</span>  <span class="c1"># X_psd = I - Y</span>
+</span><span data-line="39">    <span class="p">[</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>              <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">m</span><span class="p">)),</span>  <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">cn</span><span class="p">))],</span>  <span class="c1"># t_ore = t</span>
+</span><span data-line="40">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vn</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vn</span><span class="p">,</span> <span class="n">m</span><span class="p">)),</span> <span class="o">-</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>        <span class="p">],</span>  <span class="c1"># X_ore = Y</span>
+</span><span data-line="41">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vn</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="o">-</span><span class="n">AdiagA</span><span class="p">,</span>           <span class="o">-</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">eps</span>  <span class="p">]</span>   <span class="c1"># Y_ore = Adiag(z)A&#39; + eY</span>
+</span><span data-line="42"><span class="p">])</span>  <span class="c1"># fmt: skip</span>
+</span><span data-line="43">
+</span><span data-line="44"><span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([</span>
+</span><span data-line="45">    <span class="p">[</span><span class="n">k</span><span class="p">],</span>
+</span><span data-line="46">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">m</span><span class="p">,</span> <span class="mi">1</span><span class="p">))],</span>
+</span><span data-line="47">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">m</span><span class="p">,</span> <span class="mi">1</span><span class="p">))],</span>
+</span><span data-line="48">    <span class="p">[</span><span class="n">mat_to_vec</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">))],</span>
+</span><span data-line="49">    <span class="p">[</span><span class="mf">0.0</span><span class="p">],</span>
+</span><span data-line="50">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vn</span><span class="p">,</span> <span class="mi">1</span><span class="p">))],</span>
+</span><span data-line="51">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vn</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+</span><span data-line="52"><span class="p">])</span>  <span class="c1"># fmt: skip</span>
+</span><span data-line="53">
+</span><span data-line="54"><span class="c1"># Define cones to optimize over</span>
+</span><span data-line="55"><span class="n">cones</span> <span class="o">=</span> <span class="p">[</span>
+</span><span data-line="56">    <span class="n">qics</span><span class="o">.</span><span class="n">cones</span><span class="o">.</span><span class="n">NonNegOrthant</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">m</span> <span class="o">+</span> <span class="n">m</span><span class="p">),</span>  <span class="c1"># (k - tr[Y], -z, z - 1) &gt;= 0</span>
+</span><span data-line="57">    <span class="n">qics</span><span class="o">.</span><span class="n">cones</span><span class="o">.</span><span class="n">PosSemidefinite</span><span class="p">(</span><span class="n">n</span><span class="p">),</span>  <span class="c1"># I - Y ⪰ 0</span>
+</span><span data-line="58">    <span class="n">qics</span><span class="o">.</span><span class="n">cones</span><span class="o">.</span><span class="n">OpPerspecTr</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="s2">&quot;log&quot;</span><span class="p">),</span>  <span class="c1"># (t, Y, Adiag(z)A&#39; + eY) ∈ ORE</span>
+</span><span data-line="59"><span class="p">]</span>
+</span><span data-line="60">
+</span><span data-line="61"><span class="c1"># Initialize model and solver objects</span>
+</span><span data-line="62"><span class="n">model</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Model</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="n">b</span><span class="p">,</span> <span class="n">G</span><span class="o">=</span><span class="n">G</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="n">h</span><span class="p">,</span> <span class="n">cones</span><span class="o">=</span><span class="n">cones</span><span class="p">,</span> <span class="n">offset</span><span class="o">=-</span><span class="n">n</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">eps</span><span class="p">))</span>
+</span><span data-line="63"><span class="n">solver</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Solver</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</span><span data-line="64">
+</span><span data-line="65"><span class="c1"># Solve problem</span>
+</span><span data-line="66"><span class="n">info</span> <span class="o">=</span> <span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+</span></pre></div>
+</div>
+</div><div aria-labelledby="tab-1-UElDT1M=" class="sphinx-tabs-panel code-tab group-tab" hidden="true" id="panel-1-UElDT1M=" name="UElDT1M=" role="tabpanel" tabindex="0"><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="kn">import</span><span class="w"> </span><span class="nn">picos</span>
+</span><span data-line="4">
+</span><span data-line="5"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span data-line="6">
+</span><span data-line="7"><span class="n">n</span> <span class="o">=</span> <span class="mi">5</span>
+</span><span data-line="8"><span class="n">m</span> <span class="o">=</span> <span class="mi">10</span>
+</span><span data-line="9"><span class="n">k</span> <span class="o">=</span> <span class="mi">2</span>
+</span><span data-line="10"><span class="n">eps</span> <span class="o">=</span> <span class="mf">1e-6</span>
+</span><span data-line="11">
+</span><span data-line="12"><span class="c1"># Define random problem data</span>
+</span><span data-line="13"><span class="n">A</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">n</span><span class="o">**</span><span class="mf">0.25</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+</span><span data-line="14">
+</span><span data-line="15"><span class="c1"># Define problem</span>
+</span><span data-line="16"><span class="n">P</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">Problem</span><span class="p">()</span>
+</span><span data-line="17"><span class="n">z</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">RealVariable</span><span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+</span><span data-line="18"><span class="n">Y</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">SymmetricVariable</span><span class="p">(</span><span class="s2">&quot;Y&quot;</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+</span><span data-line="19">
+</span><span data-line="20"><span class="n">AzA</span> <span class="o">=</span> <span class="n">A</span> <span class="o">*</span> <span class="n">picos</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">z</span><span class="p">)</span> <span class="o">*</span> <span class="n">A</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">eps</span> <span class="o">*</span> <span class="n">picos</span><span class="o">.</span><span class="n">I</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+</span><span data-line="21">
+</span><span data-line="22"><span class="n">obj1</span> <span class="o">=</span> <span class="o">-</span><span class="n">picos</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">picos</span><span class="o">.</span><span class="n">oprelentr</span><span class="p">(</span><span class="n">Y</span><span class="p">,</span> <span class="n">AzA</span><span class="p">))</span>
+</span><span data-line="23"><span class="n">obj2</span> <span class="o">=</span> <span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="n">picos</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">Y</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">eps</span><span class="p">)</span>
+</span><span data-line="24">
+</span><span data-line="25"><span class="n">P</span><span class="o">.</span><span class="n">set_objective</span><span class="p">(</span><span class="s2">&quot;max&quot;</span><span class="p">,</span> <span class="n">obj1</span> <span class="o">+</span> <span class="n">obj2</span><span class="p">)</span>
+</span><span data-line="26"><span class="n">P</span><span class="o">.</span><span class="n">add_constraint</span><span class="p">(</span><span class="n">picos</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span><span class="p">)</span> <span class="o">==</span> <span class="n">k</span><span class="p">)</span>
+</span><span data-line="27"><span class="n">P</span><span class="o">.</span><span class="n">add_constraint</span><span class="p">(</span><span class="n">picos</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">Y</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">k</span><span class="p">)</span>
+</span><span data-line="28"><span class="n">P</span><span class="o">.</span><span class="n">add_constraint</span><span class="p">(</span><span class="mi">0</span> <span class="o">&lt;</span> <span class="n">z</span><span class="p">)</span>
+</span><span data-line="29"><span class="n">P</span><span class="o">.</span><span class="n">add_constraint</span><span class="p">(</span><span class="n">z</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span>
+</span><span data-line="30"><span class="n">P</span><span class="o">.</span><span class="n">add_constraint</span><span class="p">(</span><span class="n">Y</span> <span class="o">&lt;&lt;</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">))</span>
+</span><span data-line="31">
+</span><span data-line="32"><span class="c1"># Solve problem</span>
+</span><span data-line="33"><span class="n">P</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">solver</span><span class="o">=</span><span class="s2">&quot;qics&quot;</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span></pre></div>
+</div>
+</div></div>
+</section>
+<section id="references">
+<span id="opper-refs"></span><h2>References<a class="headerlink" href="#references" title="Link to this heading">¶</a></h2>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>M. Berta, O. Fawzi, and M. Tomamichel, “On variational expressions for quantum
+relative entropies,” Letters in Mathematical Physics, vol. 107, pp. 2239–2265,
+2017.</p></li>
+<li><p>D. Bertsimas, R. Cory-Wright, and J. Pauphilet, “A new perspective on low-rank
+optimization,” Mathematical Programming, vol. 202, no. 1, pp. 47–92, 2023.</p></li>
+</ol>
+</div></blockquote>
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="channel.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">Quantum channels</div></div>
+    </a>
+  </div><div class="navigation-next">
+    <a href="renyi.html">
+      <div class="page-info">
+        <span>Next</span>
+        <div class="title">Renyi entropy</div>
+      </div>
+      <i class="i-lucide chevron-right"></i>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2025, Kerry He, James Saunderson, and Hamza Fawzi</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials">
+<a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+  <iconify-icon icon="simple-icons:github"></iconify-icon>
+</a></div>
+    </div>
+  </div>
+</footer>
+      <script src="../../_static/documentation_options.js?v=cb7bf70b"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=30646c52"></script>
+      <script src="../../_static/tabs.js?v=3030b3cb"></script>
+      <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+      <script src="../../_static/shibuya.js?v=c5fc9e80"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></body>
+</html>

@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="teal" data-content_root="../../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>qics.quantum.random - QICS 1.1.3 documentation</title><link rel="shortcut icon" href="../../../_static/favicon.svg"/><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=397bb51e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/shibuya.css?v=36d120a7" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link media="print" rel="stylesheet" type="text/css" href="../../../_static/print.css?v=20ff2c19" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=93a53b2b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    <meta property="og:type" content="website"/><meta property="og:title" content="qics.quantum.random"/>
+<meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../../../index.html">
+      <img class="light-logo" src="../../../_static/logo-light.svg" alt="QICS" height="28" loading="lazy" />
+      <img class="dark-logo" src="../../../_static/logo-dark.svg" alt="QICS" height="28" loading="lazy" />
+      <strong>QICS</strong>
+    </a>
+    <div class="sy-head-nav" id="HeadNav">
+      <nav class="sy-head-links"><ul>
+      <li class="link"><a href="../../../guide/index.html">
+            <span>User Guide</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../../../guide/reference.html">Quick reference</a></li><li><a href="../../../guide/gettingstarted.html">Getting started</a></li><li><a href="../../../guide/matrices.html">Representing matrices</a></li><li><a href="../../../guide/advanced.html">Advanced tips</a></li><li><a href="../../../guide/io.html">Reading and writing</a></li><li><a href="../../../guide/picos.html">PICOS interface</a></li></ul>
+      </li>
+      <li class="link"><a href="../../../examples/index.html">
+            <span>Examples</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../../../examples/sdp/index.html">Semidefinite programming</a></li><li><a href="../../../examples/qrep/index.html">Quantum entropy programming</a></li></ul>
+      </li><li class="link"><a href="../../../api/index.html">API reference</a></li></ul></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials">
+  <a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+    <iconify-icon icon="simple-icons:github"></iconify-icon>
+  </a></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="HeadNav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2 -translate-x-2"></span>
+          <span class="hamburger_3 -translate-x-1"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/index.html">User guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../guide/reference.html">Quick reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../guide/gettingstarted.html">Getting started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../guide/matrices.html">Representing matrices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../guide/advanced.html">Advanced tips</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../guide/io.html">Reading and writing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../guide/picos.html">PICOS interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples/index.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/sdp/index.html">Semidefinite programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../examples/sdp/maxcut.html">Max cut</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../examples/sdp/product.html">Block diagonal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../examples/sdp/quantum.html">Quantum information</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/qrep/index.html">Quantum relative entropy programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../examples/qrep/qkd.html">Quantum key distribution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../examples/qrep/nearest.html">Nearest matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../examples/qrep/channel.html">Quantum channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../examples/qrep/opper.html">Noncommutative perspective</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../examples/qrep/renyi.html">Renyi entropy</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/qics.html">qics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/qics/Model.html">qics.Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/qics/Solver.html">qics.Solver</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/cones.html">qics.cones</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/cones/NonNegOrthant.html">qics.cones.NonNegOrthant</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/cones/PosSemidefinite.html">qics.cones.PosSemidefinite</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/cones/SecondOrder.html">qics.cones.SecondOrder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/cones/ClassEntr.html">qics.cones.ClassEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/cones/ClassRelEntr.html">qics.cones.ClassRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/cones/QuantEntr.html">qics.cones.QuantEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/cones/QuantRelEntr.html">qics.cones.QuantRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/cones/QuantCondEntr.html">qics.cones.QuantCondEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/cones/QuantKeyDist.html">qics.cones.QuantKeyDist</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/cones/OpPerspecTr.html">qics.cones.OpPerspecTr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/cones/OpPerspecEpi.html">qics.cones.OpPerspecEpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/cones/RenyiEntr.html">qics.cones.RenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/cones/SandRenyiEntr.html">qics.cones.SandRenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/cones/QuasiEntr.html">qics.cones.QuasiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/cones/SandQuasiEntr.html">qics.cones.SandQuasiEntr</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/io.html">qics.io</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/io/read_file.html">qics.io.read_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/io/write_file.html">qics.io.write_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/io/read_sdpa.html">qics.io.read_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/io/write_sdpa.html">qics.io.write_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/io/read_cbf.html">qics.io.read_cbf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/io/write_cbf.html">qics.io.write_cbf</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/point.html">qics.point</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/point/Point.html">qics.point.Point</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/point/VecProduct.html">qics.point.VecProduct</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/quantum.html">qics.quantum</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/quantum/entropy.html">qics.quantum.entropy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/quantum/i_kr.html">qics.quantum.i_kr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/quantum/p_tr.html">qics.quantum.p_tr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/quantum/partial_transpose.html">qics.quantum.partial_transpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/quantum/purify.html">qics.quantum.purify</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/quantum/swap.html">qics.quantum.swap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/quantum/random/choi_operator.html">qics.quantum.random.choi_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/quantum/random/degradable_channel.html">qics.quantum.random.degradable_channel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/quantum/random/density_matrix.html">qics.quantum.random.density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/quantum/random/pure_density_matrix.html">qics.quantum.random.pure_density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/quantum/random/stinespring_operator.html">qics.quantum.random.stinespring_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/quantum/random/unitary.html">qics.quantum.random.unitary</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/vectorize.html">qics.vectorize</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/vectorize/eye.html">qics.vectorize.eye</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/vectorize/lin_to_mat.html">qics.vectorize.lin_to_mat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/vectorize/mat_dim.html">qics.vectorize.mat_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/vectorize/mat_to_vec.html">qics.vectorize.mat_to_vec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/vectorize/vec_dim.html">qics.vectorize.vec_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/vectorize/vec_to_mat.html">qics.vectorize.vec_to_mat</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div></div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6"><div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../index.html"><span itemprop="name">QICS</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../index.html"><span itemprop="name">Module code</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">qics.quantum.random</strong>
+        <meta itemprop="position" content="3" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+        <article class="yue" role="main">
+          <h1>Source code for qics.quantum.random</h1><div class="highlight"><pre>
+<span></span><span data-line="1"><span class="c1"># Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="c1"># This Python package QICS is licensed under the MIT license; see LICENSE.md</span>
+</span><span data-line="4"><span class="c1"># file in the root directory or at https://github.com/kerry-he/qics</span>
+</span><span data-line="5">
+</span><span data-line="6"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="7"><span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sp</span>
+</span><span data-line="8">
+</span><span data-line="9"><span class="kn">from</span><span class="w"> </span><span class="nn">qics.quantum</span><span class="w"> </span><span class="kn">import</span> <span class="n">i_kr</span><span class="p">,</span> <span class="n">p_tr</span>
+</span><span data-line="10">
+</span><span data-line="11">
+<div class="viewcode-block" id="density_matrix">
+<a class="viewcode-back" href="../../../api/quantum/random/density_matrix.html#qics.quantum.random.density_matrix">[docs]</a>
+</span><span data-line="12"><span class="k">def</span><span class="w"> </span><span class="nf">density_matrix</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+</span><span data-line="13"><span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Generate a random density matrix, i.e., positive semidefinite</span>
+</span><span data-line="14"><span class="sd">    matrix :math:`X\in\mathbb{H}^n` satisfying :math:`\text{tr}[X] = 1`,</span>
+</span><span data-line="15"><span class="sd">    uniformly on the on the Haar measure.</span>
+</span><span data-line="16">
+</span><span data-line="17"><span class="sd">    Parameters</span>
+</span><span data-line="18"><span class="sd">    ----------</span>
+</span><span data-line="19"><span class="sd">    n : :obj:`int`</span>
+</span><span data-line="20"><span class="sd">        Dimension of random density matrix :math:`X`.</span>
+</span><span data-line="21"><span class="sd">    iscomplex : :obj:`bool`, optional</span>
+</span><span data-line="22"><span class="sd">        Whether the matrix is real (``False``) or complex (``True``).</span>
+</span><span data-line="23"><span class="sd">        The default is ``False``.</span>
+</span><span data-line="24">
+</span><span data-line="25"><span class="sd">    Returns</span>
+</span><span data-line="26"><span class="sd">    -------</span>
+</span><span data-line="27"><span class="sd">    :class:`~numpy.ndarray`</span>
+</span><span data-line="28"><span class="sd">        Random density matrix of dimension ``(n, n)``.</span>
+</span><span data-line="29"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span data-line="30">    <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="31">        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span>
+</span><span data-line="32">    <span class="k">else</span><span class="p">:</span>
+</span><span data-line="33">        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span>
+</span><span data-line="34">    <span class="n">rho</span> <span class="o">=</span> <span class="n">X</span> <span class="o">@</span> <span class="n">X</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="35">    <span class="k">return</span> <span class="n">rho</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">rho</span><span class="p">)</span></div>
+
+</span><span data-line="36">
+</span><span data-line="37">
+<div class="viewcode-block" id="pure_density_matrix">
+<a class="viewcode-back" href="../../../api/quantum/random/pure_density_matrix.html#qics.quantum.random.pure_density_matrix">[docs]</a>
+</span><span data-line="38"><span class="k">def</span><span class="w"> </span><span class="nf">pure_density_matrix</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+</span><span data-line="39"><span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Generate a random pure density matrix i.e., rank 1 positive</span>
+</span><span data-line="40"><span class="sd">    semidefinite matrix :math:`X\in\mathbb{H}^n` satisfying</span>
+</span><span data-line="41"><span class="sd">    :math:`\text{tr}[X] = 1`.</span>
+</span><span data-line="42">
+</span><span data-line="43"><span class="sd">    Parameters</span>
+</span><span data-line="44"><span class="sd">    ----------</span>
+</span><span data-line="45"><span class="sd">    n : :obj:`int`</span>
+</span><span data-line="46"><span class="sd">        Dimension of random pure density matrix :math:`X`.</span>
+</span><span data-line="47"><span class="sd">    iscomplex : :obj:`bool`, optional</span>
+</span><span data-line="48"><span class="sd">        Whether the matrix is real (``False``) or complex (``True``).</span>
+</span><span data-line="49"><span class="sd">        The default is ``False``.</span>
+</span><span data-line="50">
+</span><span data-line="51"><span class="sd">    Returns</span>
+</span><span data-line="52"><span class="sd">    -------</span>
+</span><span data-line="53"><span class="sd">    :class:`~numpy.ndarray`</span>
+</span><span data-line="54"><span class="sd">        Random pure density matrix of dimension ``(n, n)``.</span>
+</span><span data-line="55">
+</span><span data-line="56"><span class="sd">    Notes</span>
+</span><span data-line="57"><span class="sd">    -----</span>
+</span><span data-line="58"><span class="sd">    See [1]_ for additional details.</span>
+</span><span data-line="59">
+</span><span data-line="60"><span class="sd">    .. [1] Khatri, S. (2020) &quot;Random Pure States&quot;.</span>
+</span><span data-line="61"><span class="sd">           https://sumeetkhatri.com/wp-content/uploads/2020/05/random_pure_states.pdf</span>
+</span><span data-line="62"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span data-line="63">    <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="64">        <span class="n">psi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">))</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">))</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span>
+</span><span data-line="65">    <span class="k">else</span><span class="p">:</span>
+</span><span data-line="66">        <span class="n">psi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">))</span>
+</span><span data-line="67">    <span class="n">psi</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span>
+</span><span data-line="68">    <span class="n">rho</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">psi</span><span class="p">,</span> <span class="n">psi</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span>
+</span><span data-line="69">    <span class="n">rho</span> <span class="o">=</span> <span class="p">(</span><span class="n">rho</span> <span class="o">+</span> <span class="n">rho</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span>
+</span><span data-line="70">    <span class="k">return</span> <span class="n">rho</span></div>
+
+</span><span data-line="71">
+</span><span data-line="72">
+<div class="viewcode-block" id="unitary">
+<a class="viewcode-back" href="../../../api/quantum/random/unitary.html#qics.quantum.random.unitary">[docs]</a>
+</span><span data-line="73"><span class="k">def</span><span class="w"> </span><span class="nf">unitary</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+</span><span data-line="74"><span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Generate a random unitary matrix, i.e., matrix :math:`U` satisfying</span>
+</span><span data-line="75"><span class="sd">    :math:`U^\dagger U = UU^\dagger = \mathbb{I}`, uniformly distributed on</span>
+</span><span data-line="76"><span class="sd">    Haar measure.</span>
+</span><span data-line="77">
+</span><span data-line="78"><span class="sd">    Parameters</span>
+</span><span data-line="79"><span class="sd">    ----------</span>
+</span><span data-line="80"><span class="sd">    n : :obj:`int`</span>
+</span><span data-line="81"><span class="sd">        Dimension of random unitary matrix :math:`U`.</span>
+</span><span data-line="82"><span class="sd">    iscomplex : :obj:`bool`, optional</span>
+</span><span data-line="83"><span class="sd">        Whether the unitary matrix is real (``False``) or complex</span>
+</span><span data-line="84"><span class="sd">        (``True``). The default is ``False``.</span>
+</span><span data-line="85">
+</span><span data-line="86"><span class="sd">    Returns</span>
+</span><span data-line="87"><span class="sd">    -------</span>
+</span><span data-line="88"><span class="sd">    :class:`~numpy.ndarray`</span>
+</span><span data-line="89"><span class="sd">        Random unitary matrix of dimension ``(n, n)``.</span>
+</span><span data-line="90">
+</span><span data-line="91"><span class="sd">    Notes</span>
+</span><span data-line="92"><span class="sd">    -----</span>
+</span><span data-line="93"><span class="sd">    See [1]_ for additional details.</span>
+</span><span data-line="94">
+</span><span data-line="95"><span class="sd">    .. [1] Meckes, E. (2013) &quot;Random Unitary Matrices and Friends&quot;.</span>
+</span><span data-line="96"><span class="sd">           https://case.edu/artsci/math/esmeckes/Meckes_SAMSI_Lecture2.pdf</span>
+</span><span data-line="97">
+</span><span data-line="98"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span data-line="99">    <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="100">        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span>
+</span><span data-line="101">    <span class="k">else</span><span class="p">:</span>
+</span><span data-line="102">        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span>
+</span><span data-line="103">    <span class="n">U</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+</span><span data-line="104">    <span class="k">return</span> <span class="n">U</span></div>
+
+</span><span data-line="105">
+</span><span data-line="106">
+<div class="viewcode-block" id="stinespring_operator">
+<a class="viewcode-back" href="../../../api/quantum/random/stinespring_operator.html#qics.quantum.random.stinespring_operator">[docs]</a>
+</span><span data-line="107"><span class="k">def</span><span class="w"> </span><span class="nf">stinespring_operator</span><span class="p">(</span><span class="n">nin</span><span class="p">,</span> <span class="n">nout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nenv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+</span><span data-line="108"><span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Generate a random Stinespring operator, i.e., isometry :math:`V`</span>
+</span><span data-line="109"><span class="sd">    corresponding to a quantum channel :math:`\mathcal{N}(X)=</span>
+</span><span data-line="110"><span class="sd">    \text{tr}_E[VXV^\dagger]`, uniformly distributed on Hilbert-Schmidt</span>
+</span><span data-line="111"><span class="sd">    measure.</span>
+</span><span data-line="112">
+</span><span data-line="113"><span class="sd">    Parameters</span>
+</span><span data-line="114"><span class="sd">    ----------</span>
+</span><span data-line="115"><span class="sd">    nin : :obj:`int`</span>
+</span><span data-line="116"><span class="sd">        Dimension of the input system.</span>
+</span><span data-line="117"><span class="sd">    nout : :obj:`int`, optional</span>
+</span><span data-line="118"><span class="sd">        Dimension of the output system. The default is ``nin``.</span>
+</span><span data-line="119"><span class="sd">    nenv : :obj:`int`, optional</span>
+</span><span data-line="120"><span class="sd">        Dimension of the environment system. The default is ``nout``.</span>
+</span><span data-line="121"><span class="sd">    iscomplex : :obj:`bool`, optional</span>
+</span><span data-line="122"><span class="sd">        Whether the Stinespring operator is real (``False``) or complex</span>
+</span><span data-line="123"><span class="sd">        (``True``). The default is ``False``.</span>
+</span><span data-line="124">
+</span><span data-line="125"><span class="sd">    Returns</span>
+</span><span data-line="126"><span class="sd">    -------</span>
+</span><span data-line="127"><span class="sd">    :class:`~numpy.ndarray`</span>
+</span><span data-line="128"><span class="sd">        Random Stinespring operator of dimension ``(nout*nenv, nin)``</span>
+</span><span data-line="129">
+</span><span data-line="130"><span class="sd">    Notes</span>
+</span><span data-line="131"><span class="sd">    -----</span>
+</span><span data-line="132"><span class="sd">    See [1]_ for additional details.</span>
+</span><span data-line="133">
+</span><span data-line="134"><span class="sd">    .. [1] Kukulski, Ryszard, et al. &quot;Generating random quantum channels.&quot;</span>
+</span><span data-line="135"><span class="sd">           Journal of Mathematical Physics 62.6 (2021).</span>
+</span><span data-line="136"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span data-line="137">    <span class="n">nout</span> <span class="o">=</span> <span class="n">nout</span> <span class="k">if</span> <span class="p">(</span><span class="n">nout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="k">else</span> <span class="n">nin</span>
+</span><span data-line="138">    <span class="n">nenv</span> <span class="o">=</span> <span class="n">nenv</span> <span class="k">if</span> <span class="p">(</span><span class="n">nenv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="k">else</span> <span class="n">nout</span>
+</span><span data-line="139">    <span class="n">U</span> <span class="o">=</span> <span class="n">unitary</span><span class="p">(</span><span class="n">nout</span> <span class="o">*</span> <span class="n">nenv</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="n">iscomplex</span><span class="p">)</span>
+</span><span data-line="140">    <span class="k">return</span> <span class="n">U</span><span class="p">[:,</span> <span class="p">:</span><span class="n">nin</span><span class="p">]</span></div>
+
+</span><span data-line="141">
+</span><span data-line="142">
+<div class="viewcode-block" id="degradable_channel">
+<a class="viewcode-back" href="../../../api/quantum/random/degradable_channel.html#qics.quantum.random.degradable_channel">[docs]</a>
+</span><span data-line="143"><span class="k">def</span><span class="w"> </span><span class="nf">degradable_channel</span><span class="p">(</span><span class="n">nin</span><span class="p">,</span> <span class="n">nout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nenv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+</span><span data-line="144"><span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Generate random degradable channel :math:`\mathcal{N}`, represented</span>
+</span><span data-line="145"><span class="sd">    as a Stinespring isometry :math:`V` such that</span>
+</span><span data-line="146">
+</span><span data-line="147"><span class="sd">    .. math::</span>
+</span><span data-line="148">
+</span><span data-line="149"><span class="sd">        \mathcal{N}(X) = \text{tr}_2[V X V^\dagger]</span>
+</span><span data-line="150">
+</span><span data-line="151"><span class="sd">    Also returns Stinespring isometry :math:`W` corresponding to the</span>
+</span><span data-line="152"><span class="sd">    complementary channel :math:`\mathcal{N}_\text{c}` such that</span>
+</span><span data-line="153">
+</span><span data-line="154"><span class="sd">    .. math::</span>
+</span><span data-line="155">
+</span><span data-line="156"><span class="sd">        \mathcal{N}_\text{c}(X) = \text{tr}_1[V X V^\dagger]</span>
+</span><span data-line="157"><span class="sd">          = \text{tr}_2[W \mathcal{N}(X) W^\dagger].</span>
+</span><span data-line="158">
+</span><span data-line="159"><span class="sd">    Parameters</span>
+</span><span data-line="160"><span class="sd">    ----------</span>
+</span><span data-line="161"><span class="sd">    nin : :obj:`int`</span>
+</span><span data-line="162"><span class="sd">        Dimension of the input system.</span>
+</span><span data-line="163"><span class="sd">    nout : :obj:`int`, optional</span>
+</span><span data-line="164"><span class="sd">        Dimension of the output system. The default is ``nin``.</span>
+</span><span data-line="165"><span class="sd">    nenv : :obj:`int`, optional</span>
+</span><span data-line="166"><span class="sd">        Dimension of the environment system. The default is ``nout``.</span>
+</span><span data-line="167"><span class="sd">    iscomplex : :obj:`bool`, optional</span>
+</span><span data-line="168"><span class="sd">        Whether the Stinespring operators are real (``False``) or complex</span>
+</span><span data-line="169"><span class="sd">        (``True``). The default is ``False``.</span>
+</span><span data-line="170">
+</span><span data-line="171"><span class="sd">    Returns</span>
+</span><span data-line="172"><span class="sd">    -------</span>
+</span><span data-line="173"><span class="sd">    :class:`~numpy.ndarray`</span>
+</span><span data-line="174"><span class="sd">        Stinespring operator :math:`V` of dimension ``(nout*nenv, nin)``</span>
+</span><span data-line="175"><span class="sd">        corresponding to :math:`\mathcal{N}(X)=\text{tr}_2[V X V^\dagger]`.</span>
+</span><span data-line="176"><span class="sd">    :class:`~numpy.ndarray`</span>
+</span><span data-line="177"><span class="sd">        Stinespring operator :math:`W` of dimension ``(nin*nenv, nout)``</span>
+</span><span data-line="178"><span class="sd">        corresponding to :math:`\mathcal{N}_\text{c}(X)=</span>
+</span><span data-line="179"><span class="sd">        \text{tr}_2[W \mathcal{N}(X) W^\dagger]`.</span>
+</span><span data-line="180">
+</span><span data-line="181"><span class="sd">    Notes</span>
+</span><span data-line="182"><span class="sd">    -----</span>
+</span><span data-line="183"><span class="sd">    See [1]_ for additional details.</span>
+</span><span data-line="184">
+</span><span data-line="185"><span class="sd">    .. [1] Cubitt, Toby S., Mary Beth Ruskai, and Graeme Smith.</span>
+</span><span data-line="186"><span class="sd">           &quot;The structure of degradable quantum channels.&quot;</span>
+</span><span data-line="187"><span class="sd">           Journal of Mathematical Physics 49.10 (2008).</span>
+</span><span data-line="188"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span data-line="189">    <span class="n">nout</span> <span class="o">=</span> <span class="n">nout</span> <span class="k">if</span> <span class="p">(</span><span class="n">nout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="k">else</span> <span class="n">nin</span>
+</span><span data-line="190">    <span class="n">nenv</span> <span class="o">=</span> <span class="n">nenv</span> <span class="k">if</span> <span class="p">(</span><span class="n">nenv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="k">else</span> <span class="n">nout</span>
+</span><span data-line="191">
+</span><span data-line="192">    <span class="k">assert</span> <span class="n">nenv</span> <span class="o">&lt;=</span> <span class="n">nin</span>
+</span><span data-line="193">    <span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span> <span class="k">if</span> <span class="n">iscomplex</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
+</span><span data-line="194">
+</span><span data-line="195">    <span class="n">V</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nout</span> <span class="o">*</span> <span class="n">nenv</span><span class="p">,</span> <span class="n">nin</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>  <span class="c1"># N Stinespring isometry</span>
+</span><span data-line="196">    <span class="n">W</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nin</span> <span class="o">*</span> <span class="n">nenv</span><span class="p">,</span> <span class="n">nout</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>  <span class="c1"># Ξ Stinespring isometry</span>
+</span><span data-line="197">
+</span><span data-line="198">    <span class="n">U</span> <span class="o">=</span> <span class="n">unitary</span><span class="p">(</span><span class="n">nin</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="n">iscomplex</span><span class="p">)</span>
+</span><span data-line="199">    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nout</span><span class="p">):</span>
+</span><span data-line="200">        <span class="c1"># Generate random vector</span>
+</span><span data-line="201">        <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="202">            <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">nenv</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">nenv</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span>
+</span><span data-line="203">        <span class="k">else</span><span class="p">:</span>
+</span><span data-line="204">            <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">nenv</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</span><span data-line="205">        <span class="n">v</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+</span><span data-line="206">
+</span><span data-line="207">        <span class="c1"># Make Kraus operator and insert into N Stinespring isometry</span>
+</span><span data-line="208">        <span class="n">K</span> <span class="o">=</span> <span class="n">v</span> <span class="o">@</span> <span class="n">U</span><span class="p">[[</span><span class="n">k</span><span class="p">],</span> <span class="p">:]</span>
+</span><span data-line="209">        <span class="n">V</span><span class="p">[</span><span class="n">k</span> <span class="o">*</span> <span class="n">nenv</span> <span class="p">:</span> <span class="p">(</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">nenv</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">K</span>
+</span><span data-line="210">
+</span><span data-line="211">        <span class="c1"># Make Kraus operator and insert into Ξ Stinespring isometry</span>
+</span><span data-line="212">        <span class="n">W</span><span class="p">[</span><span class="n">k</span><span class="p">::</span><span class="n">nin</span><span class="p">,</span> <span class="p">[</span><span class="n">k</span><span class="p">]]</span> <span class="o">=</span> <span class="n">v</span>
+</span><span data-line="213">
+</span><span data-line="214">    <span class="k">return</span> <span class="n">V</span><span class="p">,</span> <span class="n">W</span></div>
+
+</span><span data-line="215">
+</span><span data-line="216">
+<div class="viewcode-block" id="choi_operator">
+<a class="viewcode-back" href="../../../api/quantum/random/choi_operator.html#qics.quantum.random.choi_operator">[docs]</a>
+</span><span data-line="217"><span class="k">def</span><span class="w"> </span><span class="nf">choi_operator</span><span class="p">(</span><span class="n">nin</span><span class="p">,</span> <span class="n">nout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">M</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+</span><span data-line="218"><span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Generate a random Choi operator :math:`\mathcal{J}_\mathcal{N}`</span>
+</span><span data-line="219"><span class="sd">    representing a quantum channel :math:`\mathcal{N}`, i.e.,</span>
+</span><span data-line="220">
+</span><span data-line="221"><span class="sd">    .. math::</span>
+</span><span data-line="222">
+</span><span data-line="223"><span class="sd">        \mathcal{J}_\mathcal{N} = \sum_{i,j}^n</span>
+</span><span data-line="224"><span class="sd">        \mathcal{N}(| i \rangle\langle j |) \otimes | i \rangle\langle j |,</span>
+</span><span data-line="225">
+</span><span data-line="226"><span class="sd">    uniformly distributed on the Hilbert-Schmidt measure.</span>
+</span><span data-line="227">
+</span><span data-line="228"><span class="sd">    Parameters</span>
+</span><span data-line="229"><span class="sd">    ----------</span>
+</span><span data-line="230"><span class="sd">    nin : :obj:`int`</span>
+</span><span data-line="231"><span class="sd">        Dimension of the input system.</span>
+</span><span data-line="232"><span class="sd">    nout : :obj:`int`, optional</span>
+</span><span data-line="233"><span class="sd">        Dimension of the output system. The default is ``nin``.</span>
+</span><span data-line="234"><span class="sd">    M : :obj:`int`, optional</span>
+</span><span data-line="235"><span class="sd">        Dimension used to determine the rank of the random Choi operator.</span>
+</span><span data-line="236"><span class="sd">        The default is ``nout*nin``.</span>
+</span><span data-line="237"><span class="sd">    iscomplex : :obj:`bool`, optional</span>
+</span><span data-line="238"><span class="sd">        Whether the Choi operator is real (``False``) or complex</span>
+</span><span data-line="239"><span class="sd">        (``True``). The default is ``False``.</span>
+</span><span data-line="240">
+</span><span data-line="241"><span class="sd">    Returns</span>
+</span><span data-line="242"><span class="sd">    -------</span>
+</span><span data-line="243"><span class="sd">    :class:`~numpy.ndarray`</span>
+</span><span data-line="244"><span class="sd">        Random Choi operator corresponding to matrix of size</span>
+</span><span data-line="245"><span class="sd">        ``(nout*nin, nout*nin)``.</span>
+</span><span data-line="246">
+</span><span data-line="247"><span class="sd">    Notes</span>
+</span><span data-line="248"><span class="sd">    -----</span>
+</span><span data-line="249"><span class="sd">    See [1]_ for additional details.</span>
+</span><span data-line="250">
+</span><span data-line="251"><span class="sd">    .. [1] Kukulski, Ryszard, et al. &quot;Generating random quantum channels.&quot;</span>
+</span><span data-line="252"><span class="sd">           Journal of Mathematical Physics 62.6 (2021).</span>
+</span><span data-line="253"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span data-line="254">
+</span><span data-line="255">    <span class="n">nout</span> <span class="o">=</span> <span class="n">nout</span> <span class="k">if</span> <span class="p">(</span><span class="n">nout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="k">else</span> <span class="n">nin</span>
+</span><span data-line="256">    <span class="n">M</span> <span class="o">=</span> <span class="n">M</span> <span class="k">if</span> <span class="p">(</span><span class="n">M</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="k">else</span> <span class="n">nout</span> <span class="o">*</span> <span class="n">nin</span>
+</span><span data-line="257">
+</span><span data-line="258">    <span class="c1"># Sample random Wishart ensemble</span>
+</span><span data-line="259">    <span class="n">nio</span> <span class="o">=</span> <span class="n">nin</span> <span class="o">*</span> <span class="n">nout</span>
+</span><span data-line="260">    <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="261">        <span class="n">G</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">nio</span><span class="p">,</span> <span class="n">M</span><span class="p">))</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">nio</span><span class="p">,</span> <span class="n">M</span><span class="p">))</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span>
+</span><span data-line="262">        <span class="n">G</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)</span>
+</span><span data-line="263">    <span class="k">else</span><span class="p">:</span>
+</span><span data-line="264">        <span class="n">G</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">nio</span><span class="p">,</span> <span class="n">M</span><span class="p">))</span>
+</span><span data-line="265">    <span class="n">W</span> <span class="o">=</span> <span class="n">G</span> <span class="o">@</span> <span class="n">G</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="266">
+</span><span data-line="267">    <span class="c1"># Obtain normalization required for trace preserving property</span>
+</span><span data-line="268">    <span class="n">H</span> <span class="o">=</span> <span class="n">p_tr</span><span class="p">(</span><span class="n">W</span><span class="p">,</span> <span class="p">(</span><span class="n">nout</span><span class="p">,</span> <span class="n">nin</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+</span><span data-line="269">    <span class="n">I_H_irt2</span> <span class="o">=</span> <span class="n">i_kr</span><span class="p">(</span><span class="n">sp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">sqrtm</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">H</span><span class="p">)),</span> <span class="p">(</span><span class="n">nout</span><span class="p">,</span> <span class="n">nin</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+</span><span data-line="270">
+</span><span data-line="271">    <span class="c1"># Return normalized Choi matrix</span>
+</span><span data-line="272">    <span class="n">J</span> <span class="o">=</span> <span class="n">I_H_irt2</span> <span class="o">@</span> <span class="n">W</span> <span class="o">@</span> <span class="n">I_H_irt2</span>
+</span><span data-line="273">    <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">J</span> <span class="o">+</span> <span class="n">J</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">)</span></div>
+
+</span></pre></div>
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2025, Kerry He, James Saunderson, and Hamza Fawzi</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials">
+<a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+  <iconify-icon icon="simple-icons:github"></iconify-icon>
+</a></div>
+    </div>
+  </div>
+</footer>
+      <script src="../../../_static/documentation_options.js?v=cb7bf70b"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../_static/copybutton.js?v=30646c52"></script>
+      <script src="../../../_static/tabs.js?v=3030b3cb"></script>
+      <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+      <script src="../../../_static/shibuya.js?v=c5fc9e80"></script></body>
+</html>

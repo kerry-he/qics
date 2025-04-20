@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="teal" data-content_root="../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>qics.vectorize - QICS 1.1.3 documentation</title><link rel="shortcut icon" href="../../_static/favicon.svg"/><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=397bb51e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/shibuya.css?v=36d120a7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link media="print" rel="stylesheet" type="text/css" href="../../_static/print.css?v=20ff2c19" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=93a53b2b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    <meta property="og:type" content="website"/><meta property="og:title" content="qics.vectorize"/>
+<meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../../index.html">
+      <img class="light-logo" src="../../_static/logo-light.svg" alt="QICS" height="28" loading="lazy" />
+      <img class="dark-logo" src="../../_static/logo-dark.svg" alt="QICS" height="28" loading="lazy" />
+      <strong>QICS</strong>
+    </a>
+    <div class="sy-head-nav" id="HeadNav">
+      <nav class="sy-head-links"><ul>
+      <li class="link"><a href="../../guide/index.html">
+            <span>User Guide</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../../guide/reference.html">Quick reference</a></li><li><a href="../../guide/gettingstarted.html">Getting started</a></li><li><a href="../../guide/matrices.html">Representing matrices</a></li><li><a href="../../guide/advanced.html">Advanced tips</a></li><li><a href="../../guide/io.html">Reading and writing</a></li><li><a href="../../guide/picos.html">PICOS interface</a></li></ul>
+      </li>
+      <li class="link"><a href="../../examples/index.html">
+            <span>Examples</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../../examples/sdp/index.html">Semidefinite programming</a></li><li><a href="../../examples/qrep/index.html">Quantum entropy programming</a></li></ul>
+      </li><li class="link"><a href="../../api/index.html">API reference</a></li></ul></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials">
+  <a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+    <iconify-icon icon="simple-icons:github"></iconify-icon>
+  </a></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="HeadNav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2 -translate-x-2"></span>
+          <span class="hamburger_3 -translate-x-1"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/index.html">User guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/reference.html">Quick reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/gettingstarted.html">Getting started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/matrices.html">Representing matrices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/advanced.html">Advanced tips</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/io.html">Reading and writing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/picos.html">PICOS interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/index.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/sdp/index.html">Semidefinite programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/sdp/maxcut.html">Max cut</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/sdp/product.html">Block diagonal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/sdp/quantum.html">Quantum information</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/qrep/index.html">Quantum relative entropy programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/qrep/qkd.html">Quantum key distribution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/qrep/nearest.html">Nearest matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/qrep/channel.html">Quantum channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/qrep/opper.html">Noncommutative perspective</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/qrep/renyi.html">Renyi entropy</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/qics.html">qics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/qics/Model.html">qics.Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/qics/Solver.html">qics.Solver</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/cones.html">qics.cones</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/NonNegOrthant.html">qics.cones.NonNegOrthant</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/PosSemidefinite.html">qics.cones.PosSemidefinite</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/SecondOrder.html">qics.cones.SecondOrder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/ClassEntr.html">qics.cones.ClassEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/ClassRelEntr.html">qics.cones.ClassRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantEntr.html">qics.cones.QuantEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantRelEntr.html">qics.cones.QuantRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantCondEntr.html">qics.cones.QuantCondEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantKeyDist.html">qics.cones.QuantKeyDist</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/OpPerspecTr.html">qics.cones.OpPerspecTr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/OpPerspecEpi.html">qics.cones.OpPerspecEpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/RenyiEntr.html">qics.cones.RenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/SandRenyiEntr.html">qics.cones.SandRenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuasiEntr.html">qics.cones.QuasiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/SandQuasiEntr.html">qics.cones.SandQuasiEntr</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/io.html">qics.io</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/read_file.html">qics.io.read_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/write_file.html">qics.io.write_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/read_sdpa.html">qics.io.read_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/write_sdpa.html">qics.io.write_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/read_cbf.html">qics.io.read_cbf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/write_cbf.html">qics.io.write_cbf</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/point.html">qics.point</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/point/Point.html">qics.point.Point</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/point/VecProduct.html">qics.point.VecProduct</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/quantum.html">qics.quantum</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/entropy.html">qics.quantum.entropy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/i_kr.html">qics.quantum.i_kr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/p_tr.html">qics.quantum.p_tr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/partial_transpose.html">qics.quantum.partial_transpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/purify.html">qics.quantum.purify</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/swap.html">qics.quantum.swap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/choi_operator.html">qics.quantum.random.choi_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/degradable_channel.html">qics.quantum.random.degradable_channel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/density_matrix.html">qics.quantum.random.density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/pure_density_matrix.html">qics.quantum.random.pure_density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/stinespring_operator.html">qics.quantum.random.stinespring_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/unitary.html">qics.quantum.random.unitary</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/vectorize.html">qics.vectorize</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/eye.html">qics.vectorize.eye</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/lin_to_mat.html">qics.vectorize.lin_to_mat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/mat_dim.html">qics.vectorize.mat_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/mat_to_vec.html">qics.vectorize.mat_to_vec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/vec_dim.html">qics.vectorize.vec_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/vec_to_mat.html">qics.vectorize.vec_to_mat</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div></div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6"><div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../index.html"><span itemprop="name">QICS</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">Module code</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">qics.vectorize</strong>
+        <meta itemprop="position" content="3" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+        <article class="yue" role="main">
+          <h1>Source code for qics.vectorize</h1><div class="highlight"><pre>
+<span></span><span data-line="1"><span class="c1"># Copyright (c) 2024, Kerry He, James Saunderson, and Hamza Fawzi</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="c1"># This Python package QICS is licensed under the MIT license; see LICENSE.md</span>
+</span><span data-line="4"><span class="c1"># file in the root directory or at https://github.com/kerry-he/qics</span>
+</span><span data-line="5">
+</span><span data-line="6"><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+</span><span data-line="7">
+</span><span data-line="8"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="9">
+</span><span data-line="10">
+<div class="viewcode-block" id="vec_dim">
+<a class="viewcode-back" href="../../api/vectorize/vec_dim.html#qics.vectorize.vec_dim">[docs]</a>
+</span><span data-line="11"><span class="k">def</span><span class="w"> </span><span class="nf">vec_dim</span><span class="p">(</span><span class="n">side</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+</span><span data-line="12"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes the dimension of a vectorized matrix.</span>
+</span><span data-line="13">
+</span><span data-line="14"><span class="sd">    Parameters</span>
+</span><span data-line="15"><span class="sd">    ----------</span>
+</span><span data-line="16"><span class="sd">    side : :obj:`int`</span>
+</span><span data-line="17"><span class="sd">        The dimension of the matrix.</span>
+</span><span data-line="18"><span class="sd">    iscomplex : :obj:`bool`, optional</span>
+</span><span data-line="19"><span class="sd">        Whether the matrix is Hermitian (``True``) or symmetric</span>
+</span><span data-line="20"><span class="sd">        (``False``). The default is ``False``.</span>
+</span><span data-line="21"><span class="sd">    compact : :obj:`bool`, optional</span>
+</span><span data-line="22"><span class="sd">        Whether to assume a compact vector representation or not. The</span>
+</span><span data-line="23"><span class="sd">        default is ``False``.</span>
+</span><span data-line="24">
+</span><span data-line="25"><span class="sd">    Returns</span>
+</span><span data-line="26"><span class="sd">    -------</span>
+</span><span data-line="27"><span class="sd">    :obj:`int`</span>
+</span><span data-line="28"><span class="sd">        The dimension of the vector.</span>
+</span><span data-line="29"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span data-line="30">    <span class="k">if</span> <span class="n">compact</span><span class="p">:</span>
+</span><span data-line="31">        <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="32">            <span class="k">return</span> <span class="n">side</span> <span class="o">*</span> <span class="n">side</span>
+</span><span data-line="33">        <span class="k">else</span><span class="p">:</span>
+</span><span data-line="34">            <span class="k">return</span> <span class="n">side</span> <span class="o">*</span> <span class="p">(</span><span class="n">side</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+</span><span data-line="35">    <span class="k">else</span><span class="p">:</span>
+</span><span data-line="36">        <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="37">            <span class="k">return</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">side</span> <span class="o">*</span> <span class="n">side</span>
+</span><span data-line="38">        <span class="k">else</span><span class="p">:</span>
+</span><span data-line="39">            <span class="k">return</span> <span class="n">side</span> <span class="o">*</span> <span class="n">side</span></div>
+
+</span><span data-line="40">
+</span><span data-line="41">
+<div class="viewcode-block" id="mat_dim">
+<a class="viewcode-back" href="../../api/vectorize/mat_dim.html#qics.vectorize.mat_dim">[docs]</a>
+</span><span data-line="42"><span class="k">def</span><span class="w"> </span><span class="nf">mat_dim</span><span class="p">(</span><span class="nb">len</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+</span><span data-line="43"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes the dimension of the matrix correpsonding to a vector.</span>
+</span><span data-line="44">
+</span><span data-line="45"><span class="sd">    Parameters</span>
+</span><span data-line="46"><span class="sd">    ----------</span>
+</span><span data-line="47"><span class="sd">    len : :obj:`int`</span>
+</span><span data-line="48"><span class="sd">        The dimension of the vector.</span>
+</span><span data-line="49"><span class="sd">    iscomplex : :obj:`bool`, optional</span>
+</span><span data-line="50"><span class="sd">        Whether the matrix is Hermitian (``True``) or symmetric</span>
+</span><span data-line="51"><span class="sd">        (``False``). The default is ``False``.</span>
+</span><span data-line="52"><span class="sd">    compact : :obj:`bool`, optional</span>
+</span><span data-line="53"><span class="sd">        Whether to assume a compact vector representation or not. The</span>
+</span><span data-line="54"><span class="sd">        default is ``False``.</span>
+</span><span data-line="55">
+</span><span data-line="56"><span class="sd">    Returns</span>
+</span><span data-line="57"><span class="sd">    -------</span>
+</span><span data-line="58"><span class="sd">    :obj:`int`</span>
+</span><span data-line="59"><span class="sd">        The dimension of the matrix.</span>
+</span><span data-line="60"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span data-line="61">    <span class="k">if</span> <span class="n">compact</span><span class="p">:</span>
+</span><span data-line="62">        <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="63">            <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">isqrt</span><span class="p">(</span><span class="nb">len</span><span class="p">)</span>
+</span><span data-line="64">        <span class="k">else</span><span class="p">:</span>
+</span><span data-line="65">            <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">isqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">*</span> <span class="nb">len</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+</span><span data-line="66">    <span class="k">else</span><span class="p">:</span>
+</span><span data-line="67">        <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="68">            <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">isqrt</span><span class="p">(</span><span class="nb">len</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+</span><span data-line="69">        <span class="k">else</span><span class="p">:</span>
+</span><span data-line="70">            <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">isqrt</span><span class="p">(</span><span class="nb">len</span><span class="p">)</span></div>
+
+</span><span data-line="71">
+</span><span data-line="72">
+<div class="viewcode-block" id="mat_to_vec">
+<a class="viewcode-back" href="../../api/vectorize/mat_to_vec.html#qics.vectorize.mat_to_vec">[docs]</a>
+</span><span data-line="73"><span class="k">def</span><span class="w"> </span><span class="nf">mat_to_vec</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+</span><span data-line="74"><span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Reshapes a symmetric or Hermitian matrix into a column vector.</span>
+</span><span data-line="75">
+</span><span data-line="76"><span class="sd">    If ``mat`` is of type :obj:`~numpy.float64` and ``compact=False``, then</span>
+</span><span data-line="77"><span class="sd">    this performs the vectorization</span>
+</span><span data-line="78">
+</span><span data-line="79"><span class="sd">    .. math::</span>
+</span><span data-line="80">
+</span><span data-line="81"><span class="sd">        \begin{bmatrix}a &amp; b &amp; d \\ b &amp; c &amp; e \\ d &amp; e &amp; f\end{bmatrix}</span>
+</span><span data-line="82"><span class="sd">        \mapsto</span>
+</span><span data-line="83"><span class="sd">        \begin{bmatrix}a &amp; b &amp; d &amp; b &amp; c &amp; e &amp; d &amp; e &amp; f\end{bmatrix}^\top.</span>
+</span><span data-line="84">
+</span><span data-line="85"><span class="sd">    If ``mat`` is of type :obj:`~numpy.float64` and ``compact=True``, then</span>
+</span><span data-line="86"><span class="sd">    this performs the vectorization</span>
+</span><span data-line="87">
+</span><span data-line="88"><span class="sd">    .. math::</span>
+</span><span data-line="89">
+</span><span data-line="90"><span class="sd">        \begin{bmatrix}a &amp; b &amp; d \\ b &amp; c &amp; e \\ d &amp; e &amp; f\end{bmatrix}</span>
+</span><span data-line="91"><span class="sd">        \mapsto\begin{bmatrix}</span>
+</span><span data-line="92"><span class="sd">            a &amp; \sqrt{2} b &amp; c &amp; \sqrt{2} d &amp; \sqrt{2}e &amp; f</span>
+</span><span data-line="93"><span class="sd">        \end{bmatrix}^{\top}.</span>
+</span><span data-line="94">
+</span><span data-line="95"><span class="sd">    If ``mat`` is of type :obj:`~numpy.complex128` and ``compact=False``,</span>
+</span><span data-line="96"><span class="sd">    then this performs the vectorization</span>
+</span><span data-line="97">
+</span><span data-line="98"><span class="sd">    .. math::</span>
+</span><span data-line="99">
+</span><span data-line="100"><span class="sd">        \begin{bmatrix}</span>
+</span><span data-line="101"><span class="sd">            a &amp; b+ci &amp; e+fi \\ b-ci &amp; d &amp; g+hi \\ e-fi &amp; g-hi &amp; k</span>
+</span><span data-line="102"><span class="sd">        \end{bmatrix}\mapsto</span>
+</span><span data-line="103"><span class="sd">        \begin{bmatrix}</span>
+</span><span data-line="104"><span class="sd">            a &amp; 0 &amp; b &amp; c &amp; e &amp; f &amp; b &amp; -c &amp; d &amp; 0</span>
+</span><span data-line="105"><span class="sd">            &amp; g &amp; h &amp; e &amp; -f &amp; g &amp; -h &amp; k &amp; 0</span>
+</span><span data-line="106"><span class="sd">        \end{bmatrix}^{\top}.</span>
+</span><span data-line="107">
+</span><span data-line="108"><span class="sd">    If ``mat`` is of type :obj:`~numpy.complex128` and ``compact=True``,</span>
+</span><span data-line="109"><span class="sd">    then this performs the vectorization</span>
+</span><span data-line="110">
+</span><span data-line="111"><span class="sd">    .. math::</span>
+</span><span data-line="112">
+</span><span data-line="113"><span class="sd">        \begin{bmatrix}</span>
+</span><span data-line="114"><span class="sd">            a &amp; b+ci &amp; e+fi \\ b-ci &amp; d &amp; g+hi \\ e-fi &amp; g-hi &amp; k</span>
+</span><span data-line="115"><span class="sd">        \end{bmatrix}\mapsto</span>
+</span><span data-line="116"><span class="sd">        \begin{bmatrix}</span>
+</span><span data-line="117"><span class="sd">            a &amp; \sqrt{2} b &amp; \sqrt{2} c &amp; d &amp; \sqrt{2} e &amp; \sqrt{2} f &amp;</span>
+</span><span data-line="118"><span class="sd">            \sqrt{2} g &amp; \sqrt{2} h &amp; k</span>
+</span><span data-line="119"><span class="sd">        \end{bmatrix}^{\top}.</span>
+</span><span data-line="120">
+</span><span data-line="121"><span class="sd">    Parameters</span>
+</span><span data-line="122"><span class="sd">    ----------</span>
+</span><span data-line="123"><span class="sd">    mat : :class:`~numpy.ndarray`</span>
+</span><span data-line="124"><span class="sd">        Input matrix to vectorize, either of type :obj:`~numpy.float64`</span>
+</span><span data-line="125"><span class="sd">        or :obj:`~numpy.complex128`.</span>
+</span><span data-line="126"><span class="sd">    compact : :obj:`bool`, optional</span>
+</span><span data-line="127"><span class="sd">        Whether to convert to a compact vector representation or not.</span>
+</span><span data-line="128"><span class="sd">        The default is ``False``.</span>
+</span><span data-line="129">
+</span><span data-line="130"><span class="sd">    Returns</span>
+</span><span data-line="131"><span class="sd">    -------</span>
+</span><span data-line="132"><span class="sd">    :class:`~numpy.ndarray`</span>
+</span><span data-line="133"><span class="sd">        The resulting vectorized matrix.</span>
+</span><span data-line="134"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span data-line="135">    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">mat</span><span class="p">):</span>
+</span><span data-line="136">        <span class="n">mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">mat</span><span class="p">]])</span>
+</span><span data-line="137">
+</span><span data-line="138">    <span class="n">iscomplex</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">iscomplexobj</span><span class="p">(</span><span class="n">mat</span><span class="p">)</span>
+</span><span data-line="139">
+</span><span data-line="140">    <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="141">        <span class="n">mat</span> <span class="o">=</span> <span class="n">mat</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span><span data-line="142">    <span class="k">else</span><span class="p">:</span>
+</span><span data-line="143">        <span class="n">mat</span> <span class="o">=</span> <span class="n">mat</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span><span data-line="144">
+</span><span data-line="145">    <span class="n">n</span> <span class="o">=</span> <span class="n">mat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span data-line="146">    <span class="n">vn</span> <span class="o">=</span> <span class="n">vec_dim</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="n">iscomplex</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="n">compact</span><span class="p">)</span>
+</span><span data-line="147">
+</span><span data-line="148">    <span class="k">if</span> <span class="n">compact</span><span class="p">:</span>
+</span><span data-line="149">        <span class="n">rt2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)</span>
+</span><span data-line="150">        <span class="n">vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">vn</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</span><span data-line="151">
+</span><span data-line="152">        <span class="n">k</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span data-line="153">        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+</span><span data-line="154">            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">j</span><span class="p">):</span>
+</span><span data-line="155">                <span class="n">vec</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">mat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">real</span> <span class="o">*</span> <span class="n">rt2</span>
+</span><span data-line="156">                <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
+</span><span data-line="157">                <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="158">                    <span class="n">vec</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">mat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">imag</span> <span class="o">*</span> <span class="n">rt2</span>
+</span><span data-line="159">                    <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
+</span><span data-line="160">            <span class="n">vec</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">mat</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">real</span>
+</span><span data-line="161">            <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
+</span><span data-line="162">
+</span><span data-line="163">        <span class="k">return</span> <span class="n">vec</span>
+</span><span data-line="164">    <span class="k">else</span><span class="p">:</span>
+</span><span data-line="165">        <span class="n">mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">mat</span><span class="p">)</span>
+</span><span data-line="166">        <span class="k">return</span> <span class="n">mat</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
+
+</span><span data-line="167">
+</span><span data-line="168">
+<div class="viewcode-block" id="vec_to_mat">
+<a class="viewcode-back" href="../../api/vectorize/vec_to_mat.html#qics.vectorize.vec_to_mat">[docs]</a>
+</span><span data-line="169"><span class="k">def</span><span class="w"> </span><span class="nf">vec_to_mat</span><span class="p">(</span><span class="n">vec</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+</span><span data-line="170"><span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Reshapes a column vector into a symmetric or Hermitian matrix.</span>
+</span><span data-line="171">
+</span><span data-line="172"><span class="sd">    If ``iscomplex=False`` and ``compact=False``, then this returns the</span>
+</span><span data-line="173"><span class="sd">    matrix</span>
+</span><span data-line="174">
+</span><span data-line="175"><span class="sd">    .. math::</span>
+</span><span data-line="176">
+</span><span data-line="177"><span class="sd">        \begin{bmatrix}a &amp; b &amp; d &amp; b &amp; c &amp; e &amp; d &amp; e &amp; f\end{bmatrix}^\top</span>
+</span><span data-line="178"><span class="sd">        \mapsto</span>
+</span><span data-line="179"><span class="sd">        \begin{bmatrix}a &amp; b &amp; d \\ b &amp; c &amp; e \\ d &amp; e &amp; f\end{bmatrix}.</span>
+</span><span data-line="180">
+</span><span data-line="181"><span class="sd">    If ``iscomplex=False`` and ``compact=True``, then this performs the</span>
+</span><span data-line="182"><span class="sd">    matrix</span>
+</span><span data-line="183">
+</span><span data-line="184"><span class="sd">    .. math::</span>
+</span><span data-line="185">
+</span><span data-line="186"><span class="sd">        \begin{bmatrix}</span>
+</span><span data-line="187"><span class="sd">            a &amp; \sqrt{2} b &amp; c &amp; \sqrt{2} d &amp; \sqrt{2}e &amp; f</span>
+</span><span data-line="188"><span class="sd">        \end{bmatrix}^{\top}\mapsto</span>
+</span><span data-line="189"><span class="sd">        \begin{bmatrix}a &amp; b &amp; d \\ b &amp; c &amp; e \\ d &amp; e &amp; f\end{bmatrix}.</span>
+</span><span data-line="190">
+</span><span data-line="191"><span class="sd">    If ``iscomplex=True`` and ``compact=False``, then this returns the</span>
+</span><span data-line="192"><span class="sd">    matrix</span>
+</span><span data-line="193">
+</span><span data-line="194"><span class="sd">    .. math::</span>
+</span><span data-line="195">
+</span><span data-line="196"><span class="sd">        \begin{bmatrix}</span>
+</span><span data-line="197"><span class="sd">            a &amp; 0 &amp; b &amp; c &amp; e &amp; f &amp; b &amp; -c &amp; d &amp; 0</span>
+</span><span data-line="198"><span class="sd">            &amp; g &amp; h &amp; e &amp; -f &amp; g &amp; -h &amp; k &amp; 0</span>
+</span><span data-line="199"><span class="sd">        \end{bmatrix}^{\top}\mapsto</span>
+</span><span data-line="200"><span class="sd">        \begin{bmatrix}</span>
+</span><span data-line="201"><span class="sd">            a &amp; b+ci &amp; e+fi \\ b-ci &amp; d &amp; g+hi \\ e-fi &amp; g-hi &amp; k</span>
+</span><span data-line="202"><span class="sd">        \end{bmatrix}.</span>
+</span><span data-line="203">
+</span><span data-line="204"><span class="sd">    If ``iscomplex=True`` and ``compact=True``, then this returns the</span>
+</span><span data-line="205"><span class="sd">    matrix</span>
+</span><span data-line="206">
+</span><span data-line="207"><span class="sd">    .. math::</span>
+</span><span data-line="208">
+</span><span data-line="209"><span class="sd">        \begin{bmatrix}</span>
+</span><span data-line="210"><span class="sd">            a &amp; \sqrt{2} b &amp; \sqrt{2} c &amp; d &amp; \sqrt{2} e &amp; \sqrt{2} f &amp;</span>
+</span><span data-line="211"><span class="sd">            \sqrt{2} g &amp; \sqrt{2} h &amp; k</span>
+</span><span data-line="212"><span class="sd">        \end{bmatrix}^{\top}\mapsto</span>
+</span><span data-line="213"><span class="sd">        \begin{bmatrix}</span>
+</span><span data-line="214"><span class="sd">            a &amp; b+ci &amp; e+fi \\ b-ci &amp; d &amp; g+hi \\ e-fi &amp; g-hi &amp; k</span>
+</span><span data-line="215"><span class="sd">        \end{bmatrix}.</span>
+</span><span data-line="216">
+</span><span data-line="217">
+</span><span data-line="218"><span class="sd">    Parameters</span>
+</span><span data-line="219"><span class="sd">    ----------</span>
+</span><span data-line="220"><span class="sd">    mat : :class:`~numpy.ndarray`</span>
+</span><span data-line="221"><span class="sd">        Input vector to reshape into a matrix.</span>
+</span><span data-line="222"><span class="sd">    iscomplex : :obj:`bool`, optional</span>
+</span><span data-line="223"><span class="sd">        Whether the resulting matrix is Hermitian (``True``) or symmetric</span>
+</span><span data-line="224"><span class="sd">        (``False``). The default is ``False``.</span>
+</span><span data-line="225"><span class="sd">    compact : :obj:`bool`, optional</span>
+</span><span data-line="226"><span class="sd">        Whether to convert from a compact vector representation or not.</span>
+</span><span data-line="227"><span class="sd">        The default is ``False``.</span>
+</span><span data-line="228">
+</span><span data-line="229"><span class="sd">    Returns</span>
+</span><span data-line="230"><span class="sd">    -------</span>
+</span><span data-line="231"><span class="sd">    :class:`~numpy.ndarray`</span>
+</span><span data-line="232"><span class="sd">        The resulting vector.</span>
+</span><span data-line="233"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span data-line="234">    <span class="n">vn</span> <span class="o">=</span> <span class="n">vec</span><span class="o">.</span><span class="n">size</span>
+</span><span data-line="235">    <span class="n">n</span> <span class="o">=</span> <span class="n">mat_dim</span><span class="p">(</span><span class="n">vn</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="n">iscomplex</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="n">compact</span><span class="p">)</span>
+</span><span data-line="236">    <span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span> <span class="k">if</span> <span class="n">iscomplex</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
+</span><span data-line="237">
+</span><span data-line="238">    <span class="k">if</span> <span class="n">compact</span><span class="p">:</span>
+</span><span data-line="239">        <span class="n">irt2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+</span><span data-line="240">        <span class="n">mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+</span><span data-line="241">
+</span><span data-line="242">        <span class="n">k</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span data-line="243">        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+</span><span data-line="244">            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">j</span><span class="p">):</span>
+</span><span data-line="245">                <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="246">                    <span class="n">mat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">vec</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span><span class="p">)</span> <span class="o">*</span> <span class="n">irt2</span>
+</span><span data-line="247">                    <span class="n">k</span> <span class="o">+=</span> <span class="mi">2</span>
+</span><span data-line="248">                <span class="k">else</span><span class="p">:</span>
+</span><span data-line="249">                    <span class="n">mat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">vec</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">irt2</span>
+</span><span data-line="250">                    <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
+</span><span data-line="251">                <span class="n">mat</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">mat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">conjugate</span><span class="p">()</span>
+</span><span data-line="252">
+</span><span data-line="253">            <span class="n">mat</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">vec</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+</span><span data-line="254">            <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
+</span><span data-line="255">
+</span><span data-line="256">        <span class="k">return</span> <span class="n">mat</span>
+</span><span data-line="257">    <span class="k">else</span><span class="p">:</span>
+</span><span data-line="258">        <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="259">            <span class="n">n</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">isqrt</span><span class="p">(</span><span class="n">vn</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+</span><span data-line="260">            <span class="n">mat</span> <span class="o">=</span> <span class="n">vec</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+</span><span data-line="261">            <span class="k">return</span> <span class="p">(</span><span class="n">mat</span> <span class="o">+</span> <span class="n">mat</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span>
+</span><span data-line="262">        <span class="k">else</span><span class="p">:</span>
+</span><span data-line="263">            <span class="n">n</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">isqrt</span><span class="p">(</span><span class="n">vn</span><span class="p">)</span>
+</span><span data-line="264">            <span class="n">mat</span> <span class="o">=</span> <span class="n">vec</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span>
+</span><span data-line="265">            <span class="k">return</span> <span class="p">(</span><span class="n">mat</span> <span class="o">+</span> <span class="n">mat</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span></div>
+
+</span><span data-line="266">
+</span><span data-line="267">
+<div class="viewcode-block" id="lin_to_mat">
+<a class="viewcode-back" href="../../api/vectorize/lin_to_mat.html#qics.vectorize.lin_to_mat">[docs]</a>
+</span><span data-line="268"><span class="k">def</span><span class="w"> </span><span class="nf">lin_to_mat</span><span class="p">(</span><span class="n">lin</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">)):</span>
+</span><span data-line="269"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes the matrix corresponding to a linear map from vectorized</span>
+</span><span data-line="270"><span class="sd">    symmetric matrices to vectorized symmetric matrices.</span>
+</span><span data-line="271">
+</span><span data-line="272"><span class="sd">    Parameters</span>
+</span><span data-line="273"><span class="sd">    ----------</span>
+</span><span data-line="274"><span class="sd">    lin : :obj:`callable`</span>
+</span><span data-line="275"><span class="sd">        Linear operator sending symmetric matrices to symmetric matrices.</span>
+</span><span data-line="276"><span class="sd">    dims : :obj:`tuple` of :obj:`int`</span>
+</span><span data-line="277"><span class="sd">        The dimensions ``(ni, no)`` of the input and output matrices of the</span>
+</span><span data-line="278"><span class="sd">        linear operator.</span>
+</span><span data-line="279"><span class="sd">    iscomplex : :obj:`bool`, optional</span>
+</span><span data-line="280"><span class="sd">        Whether the matrix to vectorize is Hermitian (``True``) or</span>
+</span><span data-line="281"><span class="sd">        symmetric (``False``). Default is ``False``.</span>
+</span><span data-line="282"><span class="sd">    compact : :obj:`tuple` of :obj:`bool`, optional</span>
+</span><span data-line="283"><span class="sd">        Whether to use a compact vector representation or not for the input</span>
+</span><span data-line="284"><span class="sd">        and output matrices, respectively. Default is ``(False, True)``.</span>
+</span><span data-line="285">
+</span><span data-line="286"><span class="sd">    Returns</span>
+</span><span data-line="287"><span class="sd">    -------</span>
+</span><span data-line="288"><span class="sd">    :class:`~numpy.ndarray`</span>
+</span><span data-line="289"><span class="sd">        The matrix representation of the given linear operator.</span>
+</span><span data-line="290"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span data-line="291">    <span class="n">vni</span> <span class="o">=</span> <span class="n">vec_dim</span><span class="p">(</span><span class="n">dims</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">iscomplex</span><span class="o">=</span><span class="n">iscomplex</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="n">compact</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span><span data-line="292">    <span class="n">vno</span> <span class="o">=</span> <span class="n">vec_dim</span><span class="p">(</span><span class="n">dims</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">iscomplex</span><span class="o">=</span><span class="n">iscomplex</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="n">compact</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+</span><span data-line="293">    <span class="n">mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vno</span><span class="p">,</span> <span class="n">vni</span><span class="p">))</span>
+</span><span data-line="294">
+</span><span data-line="295">    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">vni</span><span class="p">):</span>
+</span><span data-line="296">        <span class="n">H</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vni</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</span><span data-line="297">        <span class="n">H</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+</span><span data-line="298">        <span class="n">H_mat</span> <span class="o">=</span> <span class="n">vec_to_mat</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="n">iscomplex</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="n">compact</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span><span data-line="299">        <span class="n">lin_H</span> <span class="o">=</span> <span class="n">lin</span><span class="p">(</span><span class="n">H_mat</span><span class="p">)</span>
+</span><span data-line="300">        <span class="n">vec_out</span> <span class="o">=</span> <span class="n">mat_to_vec</span><span class="p">(</span><span class="n">lin_H</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="n">compact</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+</span><span data-line="301">        <span class="n">mat</span><span class="p">[:,</span> <span class="p">[</span><span class="n">k</span><span class="p">]]</span> <span class="o">=</span> <span class="n">vec_out</span>
+</span><span data-line="302">
+</span><span data-line="303">    <span class="k">return</span> <span class="n">mat</span></div>
+
+</span><span data-line="304">
+</span><span data-line="305">
+<div class="viewcode-block" id="eye">
+<a class="viewcode-back" href="../../api/vectorize/eye.html#qics.vectorize.eye">[docs]</a>
+</span><span data-line="306"><span class="k">def</span><span class="w"> </span><span class="nf">eye</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">)):</span>
+</span><span data-line="307"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes the matrix representation of the identity map for</span>
+</span><span data-line="308"><span class="sd">    vectorized symmetric or Hermitian matrices.</span>
+</span><span data-line="309">
+</span><span data-line="310"><span class="sd">    Parameters</span>
+</span><span data-line="311"><span class="sd">    ----------</span>
+</span><span data-line="312"><span class="sd">    n : :obj:`int`</span>
+</span><span data-line="313"><span class="sd">        The dimensions of the ``(n, n)`` matrix the identity is acting on.</span>
+</span><span data-line="314"><span class="sd">    iscomplex : :obj:`bool`, optional</span>
+</span><span data-line="315"><span class="sd">        Whether the matrix to vectorize is Hermitian (``True``) or</span>
+</span><span data-line="316"><span class="sd">        symmetric (``False``). Default is ``False``.</span>
+</span><span data-line="317"><span class="sd">    compact : :obj:`tuple` of :obj:`bool`, optional</span>
+</span><span data-line="318"><span class="sd">        Whether to use a compact vector representation or not for the input</span>
+</span><span data-line="319"><span class="sd">        and output matrices, respectively. Default is ``(False, True)``.</span>
+</span><span data-line="320">
+</span><span data-line="321"><span class="sd">    Returns</span>
+</span><span data-line="322"><span class="sd">    -------</span>
+</span><span data-line="323"><span class="sd">    :class:`~numpy.ndarray`</span>
+</span><span data-line="324"><span class="sd">        The matrix representation of the identity superoperator.</span>
+</span><span data-line="325"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span data-line="326">    <span class="k">return</span> <span class="n">lin_to_mat</span><span class="p">(</span><span class="k">lambda</span> <span class="n">X</span><span class="p">:</span> <span class="n">X</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span> <span class="n">iscomplex</span><span class="o">=</span><span class="n">iscomplex</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="n">compact</span><span class="p">)</span></div>
+
+</span><span data-line="327">
+</span><span data-line="328">
+</span><span data-line="329"><span class="k">def</span><span class="w"> </span><span class="nf">get_full_to_compact_op</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+</span><span data-line="330">    <span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span>
+</span><span data-line="331">
+</span><span data-line="332">    <span class="n">dim_compact</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">n</span> <span class="k">if</span> <span class="n">iscomplex</span> <span class="k">else</span> <span class="n">n</span> <span class="o">*</span> <span class="p">(</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+</span><span data-line="333">    <span class="n">dim_full</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">n</span> <span class="o">*</span> <span class="n">n</span> <span class="k">if</span> <span class="n">iscomplex</span> <span class="k">else</span> <span class="n">n</span> <span class="o">*</span> <span class="n">n</span>
+</span><span data-line="334">
+</span><span data-line="335">    <span class="n">rows</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">dim_full</span><span class="p">)</span>
+</span><span data-line="336">    <span class="n">cols</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">dim_full</span><span class="p">)</span>
+</span><span data-line="337">    <span class="n">vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">dim_full</span><span class="p">)</span>
+</span><span data-line="338">
+</span><span data-line="339">    <span class="n">irt2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+</span><span data-line="340">
+</span><span data-line="341">    <span class="n">row</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span data-line="342">    <span class="n">k</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span data-line="343">    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+</span><span data-line="344">        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">j</span><span class="p">):</span>
+</span><span data-line="345">            <span class="n">rows</span><span class="p">[</span><span class="n">k</span> <span class="p">:</span> <span class="n">k</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">row</span>
+</span><span data-line="346">            <span class="n">cols</span><span class="p">[</span><span class="n">k</span> <span class="p">:</span> <span class="n">k</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+</span><span data-line="347">                <span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="n">j</span> <span class="o">*</span> <span class="n">n</span><span class="p">),</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">n</span><span class="p">)]</span>
+</span><span data-line="348">                <span class="k">if</span> <span class="n">iscomplex</span>
+</span><span data-line="349">                <span class="k">else</span> <span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="n">j</span> <span class="o">*</span> <span class="n">n</span><span class="p">,</span> <span class="n">j</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">n</span><span class="p">]</span>
+</span><span data-line="350">            <span class="p">)</span>
+</span><span data-line="351">            <span class="n">vals</span><span class="p">[</span><span class="n">k</span> <span class="p">:</span> <span class="n">k</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">irt2</span>
+</span><span data-line="352">            <span class="n">k</span> <span class="o">+=</span> <span class="mi">2</span>
+</span><span data-line="353">            <span class="n">row</span> <span class="o">+=</span> <span class="mi">1</span>
+</span><span data-line="354">
+</span><span data-line="355">            <span class="k">if</span> <span class="n">iscomplex</span><span class="p">:</span>
+</span><span data-line="356">                <span class="n">rows</span><span class="p">[</span><span class="n">k</span> <span class="p">:</span> <span class="n">k</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">row</span>
+</span><span data-line="357">                <span class="n">cols</span><span class="p">[</span><span class="n">k</span> <span class="p">:</span> <span class="n">k</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="n">j</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+</span><span data-line="358">                <span class="n">vals</span><span class="p">[</span><span class="n">k</span> <span class="p">:</span> <span class="n">k</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="n">irt2</span><span class="p">,</span> <span class="n">irt2</span><span class="p">]</span>
+</span><span data-line="359">                <span class="n">k</span> <span class="o">+=</span> <span class="mi">2</span>
+</span><span data-line="360">                <span class="n">row</span> <span class="o">+=</span> <span class="mi">1</span>
+</span><span data-line="361">
+</span><span data-line="362">        <span class="n">rows</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">row</span>
+</span><span data-line="363">        <span class="n">cols</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">iscomplex</span> <span class="k">else</span> <span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+</span><span data-line="364">        <span class="n">vals</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+</span><span data-line="365">        <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
+</span><span data-line="366">        <span class="n">row</span> <span class="o">+=</span> <span class="mi">1</span>
+</span><span data-line="367">
+</span><span data-line="368">    <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">dim_compact</span><span class="p">,</span> <span class="n">dim_full</span><span class="p">)</span>
+</span><span data-line="369">    <span class="k">return</span> <span class="n">scipy</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">coo_matrix</span><span class="p">((</span><span class="n">vals</span><span class="p">,</span> <span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">)),</span> <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">)</span>
+</span></pre></div>
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2025, Kerry He, James Saunderson, and Hamza Fawzi</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials">
+<a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+  <iconify-icon icon="simple-icons:github"></iconify-icon>
+</a></div>
+    </div>
+  </div>
+</footer>
+      <script src="../../_static/documentation_options.js?v=cb7bf70b"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=30646c52"></script>
+      <script src="../../_static/tabs.js?v=3030b3cb"></script>
+      <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+      <script src="../../_static/shibuya.js?v=c5fc9e80"></script></body>
+</html>

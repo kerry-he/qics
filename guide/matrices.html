@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="teal" data-content_root="../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Representing matrices - QICS 1.1.3 documentation</title><link rel="shortcut icon" href="../_static/favicon.svg"/><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Advanced tips" href="advanced.html" /><link rel="prev" title="Getting started" href="gettingstarted.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=397bb51e" />
+    <link rel="stylesheet" type="text/css" href="../_static/shibuya.css?v=36d120a7" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link media="print" rel="stylesheet" type="text/css" href="../_static/print.css?v=20ff2c19" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=93a53b2b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    <meta property="og:type" content="website"/><meta property="og:title" content="Representing matrices"/>
+<meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../index.html">
+      <img class="light-logo" src="../_static/logo-light.svg" alt="QICS" height="28" loading="lazy" />
+      <img class="dark-logo" src="../_static/logo-dark.svg" alt="QICS" height="28" loading="lazy" />
+      <strong>QICS</strong>
+    </a>
+    <div class="sy-head-nav" id="HeadNav">
+      <nav class="sy-head-links"><ul>
+      <li class="link"><a href="index.html">
+            <span>User Guide</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="reference.html">Quick reference</a></li><li><a href="gettingstarted.html">Getting started</a></li><li><a href="#">Representing matrices</a></li><li><a href="advanced.html">Advanced tips</a></li><li><a href="io.html">Reading and writing</a></li><li><a href="picos.html">PICOS interface</a></li></ul>
+      </li>
+      <li class="link"><a href="../examples/index.html">
+            <span>Examples</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../examples/sdp/index.html">Semidefinite programming</a></li><li><a href="../examples/qrep/index.html">Quantum entropy programming</a></li></ul>
+      </li><li class="link"><a href="../api/index.html">API reference</a></li></ul></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials">
+  <a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+    <iconify-icon icon="simple-icons:github"></iconify-icon>
+  </a></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="HeadNav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2 -translate-x-2"></span>
+          <span class="hamburger_3 -translate-x-1"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">User guide</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="reference.html">Quick reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gettingstarted.html">Getting started</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Representing matrices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced.html">Advanced tips</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html">Reading and writing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="picos.html">PICOS interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/sdp/index.html">Semidefinite programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../examples/sdp/maxcut.html">Max cut</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/sdp/product.html">Block diagonal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/sdp/quantum.html">Quantum information</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/qrep/index.html">Quantum relative entropy programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/qkd.html">Quantum key distribution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/nearest.html">Nearest matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/channel.html">Quantum channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/opper.html">Noncommutative perspective</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/qrep/renyi.html">Renyi entropy</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/qics.html">qics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/qics/Model.html">qics.Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/qics/Solver.html">qics.Solver</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/cones.html">qics.cones</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/NonNegOrthant.html">qics.cones.NonNegOrthant</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/PosSemidefinite.html">qics.cones.PosSemidefinite</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/SecondOrder.html">qics.cones.SecondOrder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/ClassEntr.html">qics.cones.ClassEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/ClassRelEntr.html">qics.cones.ClassRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/QuantEntr.html">qics.cones.QuantEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/QuantRelEntr.html">qics.cones.QuantRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/QuantCondEntr.html">qics.cones.QuantCondEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/QuantKeyDist.html">qics.cones.QuantKeyDist</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/OpPerspecTr.html">qics.cones.OpPerspecTr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/OpPerspecEpi.html">qics.cones.OpPerspecEpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/RenyiEntr.html">qics.cones.RenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/SandRenyiEntr.html">qics.cones.SandRenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/QuasiEntr.html">qics.cones.QuasiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/cones/SandQuasiEntr.html">qics.cones.SandQuasiEntr</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/io.html">qics.io</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/read_file.html">qics.io.read_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/write_file.html">qics.io.write_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/read_sdpa.html">qics.io.read_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/write_sdpa.html">qics.io.write_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/read_cbf.html">qics.io.read_cbf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/io/write_cbf.html">qics.io.write_cbf</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/point.html">qics.point</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/point/Point.html">qics.point.Point</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/point/VecProduct.html">qics.point.VecProduct</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/quantum.html">qics.quantum</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/entropy.html">qics.quantum.entropy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/i_kr.html">qics.quantum.i_kr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/p_tr.html">qics.quantum.p_tr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/partial_transpose.html">qics.quantum.partial_transpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/purify.html">qics.quantum.purify</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/swap.html">qics.quantum.swap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/choi_operator.html">qics.quantum.random.choi_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/degradable_channel.html">qics.quantum.random.degradable_channel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/density_matrix.html">qics.quantum.random.density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/pure_density_matrix.html">qics.quantum.random.pure_density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/stinespring_operator.html">qics.quantum.random.stinespring_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/quantum/random/unitary.html">qics.quantum.random.unitary</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/vectorize.html">qics.vectorize</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/eye.html">qics.vectorize.eye</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/lin_to_mat.html">qics.vectorize.lin_to_mat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/mat_dim.html">qics.vectorize.mat_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/mat_to_vec.html">qics.vectorize.mat_to_vec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/vec_dim.html">qics.vectorize.vec_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/vectorize/vec_to_mat.html">qics.vectorize.vec_to_mat</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div></div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#symmetric-matrices">Symmetric matrices</a></li>
+<li><a class="reference internal" href="#hermitian-matrices">Hermitian matrices</a></li>
+<li><a class="reference internal" href="#modelling-constraints">Modelling constraints</a></li>
+<li><a class="reference internal" href="#superoperators">Superoperators</a></li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6"><div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">QICS</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="index.html"><span itemprop="name">User guide</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">Representing matrices</strong>
+        <meta itemprop="position" content="3" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+        <article class="yue" role="main">
+          <section id="representing-matrices">
+<h1>Representing matrices<a class="headerlink" href="#representing-matrices" title="Link to this heading">¶</a></h1>
+<p>To supply a conic program model to <strong>QICS</strong>, users are reqired to express the
+linear constraints <span class="math notranslate nohighlight">\(A\)</span> and <span class="math notranslate nohighlight">\(G\)</span> in matrix form. This is
+straightforward when variables correspond to real vectors. For variables
+corresponding to symmetric or Hermitian matrices, we need to first vectorize
+these matrices. QICS provides functions to perform these operations in the
+<a class="reference internal" href="../api/vectorize.html#module-qics.vectorize" title="qics.vectorize"><code class="xref py py-mod docutils literal notranslate"><span class="pre">qics.vectorize</span></code></a> module, which we describe in more detail below.</p>
+<section id="symmetric-matrices">
+<h2>Symmetric matrices<a class="headerlink" href="#symmetric-matrices" title="Link to this heading">¶</a></h2>
+<p>Consider a real symmetric matrix <span class="math notranslate nohighlight">\(X \in \mathbb{S}^n\)</span>. We can vectorize
+the matrices <span class="math notranslate nohighlight">\(A_i\)</span> by stacking the rows of the matrix side-by-side, i.e.,</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}\text{vec}(X) = \text{vec}\left(\begin{bmatrix}
+      \;\; — &amp; x_{1}^\top &amp; — \;\;  \\
+      \;\; — &amp; x_{2}^\top &amp; — \;\;  \\
+        &amp; \vdots     &amp;          \\
+      \;\; — &amp; x_{n}^\top &amp; — \;\;
+   \end{bmatrix}\right) = \begin{bmatrix}
+                              x_{1} \\
+                              x_{2} \\
+                              \vdots \\
+                              x_{n}
+                          \end{bmatrix} \in \mathbb{R}^{n^2}.\end{split}\]</div>
+</div>
+<p>Using QICS, this operation can be performed using
+<a class="reference internal" href="../api/vectorize/mat_to_vec.html#qics.vectorize.mat_to_vec" title="qics.vectorize.mat_to_vec"><code class="xref py py-obj docutils literal notranslate"><span class="pre">qics.vectorize.mat_to_vec</span></code></a> on matrices of the type <a class="reference external" href="https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.float64" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.float64</span></code></a>. An
+example of this is shown below.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="o">,</span><span class="w"> </span><span class="nn">qics</span>
+</span><span data-line="2"><span class="gp">&gt;&gt;&gt; </span><span class="n">X</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">2.</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">3.</span><span class="p">,</span> <span class="mf">4.</span><span class="p">],</span> <span class="p">[</span><span class="mf">2.</span><span class="p">,</span> <span class="mf">4.</span><span class="p">,</span> <span class="mf">5.</span><span class="p">]])</span>
+</span><span data-line="3"><span class="gp">&gt;&gt;&gt; </span><span class="n">X</span>
+</span><span data-line="4"><span class="go">array([[0., 1., 2.],</span>
+</span><span data-line="5"><span class="go">       [1., 3., 4.],</span>
+</span><span data-line="6"><span class="go">       [2., 4., 5.]])</span>
+</span><span data-line="7"><span class="gp">&gt;&gt;&gt; </span><span class="n">qics</span><span class="o">.</span><span class="n">vectorize</span><span class="o">.</span><span class="n">mat_to_vec</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="8"><span class="go">array([[0., 1., 2., 1., 3., 4., 2., 4., 5.]])</span>
+</span></pre></div>
+</div>
+<p>This is equivalent to using <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.reshape.html#numpy.reshape" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.reshape</span></code></a> to reshape the matrix into a
+vector, i.e., <code class="docutils literal notranslate"><span class="pre">X.reshape(-1,</span> <span class="pre">1).T</span></code>.</p>
+<p>Sometimes it is also useful to vectorize matrices in a more compact fashion
+which only includes a single copy of elements in the off-diagonals. This is
+done in the following fashion</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}\text{cvec}(X) = \text{cvec}\left(\begin{bmatrix}
+   x_{11} &amp; x_{12} &amp; x_{13} &amp; \\
+          &amp; x_{22} &amp; x_{23} &amp; \\
+          &amp;        &amp; x_{33} &amp; \\
+          &amp;        &amp;        &amp; \ddots
+\end{bmatrix}\right) = \begin{bmatrix}
+                           x_{11} \\
+                           \sqrt{2}x_{12} \\
+                           x_{22} \\
+                           \sqrt{2}x_{13} \\
+                           \sqrt{2}x_{23} \\
+                           x_{33} \\
+                           \vdots
+                        \end{bmatrix} \in \mathbb{R}^{n(n-1)/2}.\end{split}\]</div>
+</div>
+<p>Note the scaling of the off-diagonals is to make sure the inner product is
+consistent between the two reprsentations. This compact representation is useful
+when defining linear constraints to avoid duplicate constraints (see
+<a class="reference internal" href="#subsec-superoperator"><span class="std std-ref">Superoperators</span></a>). This compact vectorization can also be performed
+in <strong>QICS</strong> by specifying the optional <code class="docutils literal notranslate"><span class="pre">compact</span></code> argument, which is <code class="docutils literal notranslate"><span class="pre">False</span></code>
+by default.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="n">qics</span><span class="o">.</span><span class="n">vectorize</span><span class="o">.</span><span class="n">mat_to_vec</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="2"><span class="go">array([[0.        , 1.41421356, 3.        , 2.82842712, 5.65685425,</span>
+</span><span data-line="3"><span class="go">        5.        ]])</span>
+</span></pre></div>
+</div>
+</section>
+<section id="hermitian-matrices">
+<h2>Hermitian matrices<a class="headerlink" href="#hermitian-matrices" title="Link to this heading">¶</a></h2>
+<p>Now instead consider a complex Hermitian matrix <span class="math notranslate nohighlight">\(X \in \mathbb{H}^n\)</span>. To
+vectorize this matrix, we first convert each row <span class="math notranslate nohighlight">\(x_i\in\mathbb{C}^n\)</span> of
+<span class="math notranslate nohighlight">\(X\)</span> into a real vector by splitting the real and imaginary components of
+each entry as follows</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}\text{split}(x_i) = \text{split}\!\left( \begin{bmatrix}
+   x_{i1} \\
+   x_{i2} \\
+   \vdots \\
+   x_{in}
+\end{bmatrix} \right) = \begin{bmatrix}
+      \text{Re}(x_{i1}) \\
+      \text{Im}(x_{i1}) \\
+      \text{Re}(x_{i2}) \\
+      \text{Im}(x_{i2}) \\
+      \vdots            \\
+      \text{Re}(x_{in}) \\
+      \text{Im}(x_{in}) \\
+   \end{bmatrix} \in \mathbb{R}^{2n}.\end{split}\]</div>
+</div>
+<p>Using this, Hermitian matrices are vectorized in a similar fashion as symmetric
+matrices.</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}\text{vec}(X) = \text{vec}\!\left(\begin{bmatrix}
+   \;\; — &amp; x_{1}^\top &amp; — \;\; \\
+   \;\; — &amp; x_{2}^\top &amp; — \;\; \\
+     &amp; \vdots     &amp;   \\
+   \;\; — &amp; x_{3}^\top &amp; — \;\;
+\end{bmatrix}\right) = \begin{bmatrix}
+                           \text{split}(x_{1}) \\
+                           \text{split}(x_{2}) \\
+                           \vdots \\
+                           \text{split}(x_{n})
+                        \end{bmatrix} \in \mathbb{R}^{2n^2}.\end{split}\]</div>
+</div>
+<p>In practice, we can perform this operation using the same
+<a class="reference internal" href="../api/vectorize/mat_to_vec.html#qics.vectorize.mat_to_vec" title="qics.vectorize.mat_to_vec"><code class="xref py py-obj docutils literal notranslate"><span class="pre">qics.vectorize.mat_to_vec</span></code></a> function as for the real symmetric case,
+except when the argument <code class="docutils literal notranslate"><span class="pre">X</span></code> is an array of type <code class="docutils literal notranslate"><span class="pre">numpy.complex128</span></code>.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="n">X</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="o">+</span><span class="mf">1.</span><span class="n">j</span><span class="p">,</span> <span class="mf">2.</span><span class="o">+</span><span class="mf">2.</span><span class="n">j</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.</span><span class="o">-</span><span class="mf">1.</span><span class="n">j</span><span class="p">,</span> <span class="mf">3.</span><span class="p">,</span> <span class="mf">4.</span><span class="o">+</span><span class="mf">4.</span><span class="n">j</span><span class="p">],</span> <span class="p">[</span><span class="mf">2.</span><span class="o">-</span><span class="mf">2.</span><span class="n">j</span><span class="p">,</span> <span class="mf">4.</span><span class="o">-</span><span class="mf">4.</span><span class="n">j</span><span class="p">,</span> <span class="mf">5.</span><span class="p">]])</span>
+</span><span data-line="2"><span class="gp">&gt;&gt;&gt; </span><span class="n">X</span>
+</span><span data-line="3"><span class="go">array([[0.+0.j, 1.+1.j, 2.+2.j],</span>
+</span><span data-line="4"><span class="go">       [1.-1.j, 3.+0.j, 4.+4.j],</span>
+</span><span data-line="5"><span class="go">       [2.-2.j, 4.-4.j, 5.+0.j]])</span>
+</span><span data-line="6"><span class="gp">&gt;&gt;&gt; </span><span class="n">qics</span><span class="o">.</span><span class="n">vectorize</span><span class="o">.</span><span class="n">mat_to_vec</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="7"><span class="go">array([[ 0.,  0.,  1.,  1.,  2.,  2.,  1., -1.,  3.,  0.,  4.,  4.,  2.,</span>
+</span><span data-line="8"><span class="go">        -2.,  4., -4.,  5.,  0.]])</span>
+</span></pre></div>
+</div>
+<p>This is equivalent to taking a <a class="reference external" href="https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.float64" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.float64</span></code></a> view of a
+<a class="reference external" href="https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.complex128" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.complex128</span></code></a> array, then using <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.reshape.html#numpy.reshape" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.reshape</span></code></a> to reshape the
+matrix into a vector, i.e., <code class="docutils literal notranslate"><span class="pre">X.view(numpy.float64).reshape(-1,</span> <span class="pre">1).T</span></code>.</p>
+<p>Like the symmetric case, we can also define a compact vectorization for
+Hermitian matrices which only stores a single copy of the real and imaginary
+off-diagonal components.</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}\text{cvec}(X) = \text{cvec}\left(\begin{bmatrix}
+   x_{11} &amp; x_{12} &amp; x_{13} &amp; \\
+          &amp; x_{22} &amp; x_{23} &amp; \\
+          &amp;        &amp; x_{33} &amp; \\
+          &amp;        &amp;        &amp; \ddots
+\end{bmatrix}\right) = \begin{bmatrix}
+                           x_{11} \\
+                           \sqrt{2}\text{Re}(x_{12}) \\
+                           \sqrt{2}\text{Im}(x_{12}) \\
+                           x_{22} \\
+                           \sqrt{2}\text{Re}(x_{13}) \\
+                           \sqrt{2}\text{Im}(x_{13}) \\
+                           \sqrt{2}\text{Re}(x_{23}) \\
+                           \sqrt{2}\text{Im}(x_{23}) \\
+                           x_{33} \\
+                           \vdots
+                        \end{bmatrix} \in \mathbb{R}^{n^2},\end{split}\]</div>
+</div>
+<p>which can be done in <strong>QICS</strong> as follows</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="n">qics</span><span class="o">.</span><span class="n">vectorize</span><span class="o">.</span><span class="n">mat_to_vec</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="2"><span class="go">array([[0.        , 1.41421356, 1.41421356, 3.        , 2.82842712,</span>
+</span><span data-line="3"><span class="go">        2.82842712, 5.65685425, 5.65685425, 5.        ]])</span>
+</span></pre></div>
+</div>
+</section>
+<section id="modelling-constraints">
+<h2>Modelling constraints<a class="headerlink" href="#modelling-constraints" title="Link to this heading">¶</a></h2>
+<p>To see how we use can use these vectorizations to represent linear constraints,
+consider the linear constraints</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\text{tr}[A_i X] = b_i, \qquad \forall\ i=1,\ldots,p,\]</div>
+</div>
+<p>where <span class="math notranslate nohighlight">\(X \in \mathbb{H}^n\)</span> is our matrix variable, and
+<span class="math notranslate nohighlight">\(A_i \in \mathbb{H}^n\)</span> and <span class="math notranslate nohighlight">\(b_i \in \mathbb{R}\)</span> encode linear
+constraints for <span class="math notranslate nohighlight">\(i=1,\ldots,p\)</span>. We can represent this constraint as</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}A\text{vec}(X) = b, \quad \text{where} \quad
+A =  \begin{bmatrix}
+   \;\; — &amp; \text{vec}(A_1)^\top &amp; — \;\; \\
+   \;\; — &amp; \text{vec}(A_2)^\top &amp; — \;\; \\
+          &amp; \vdots               &amp;        \\
+   \;\; — &amp; \text{vec}(A_p)^\top &amp; — \;\;
+\end{bmatrix} \in\mathbb{R}^{p \times n^2}.\end{split}\]</div>
+</div>
+<p>Alternatively, if we have linear constraints of the form</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\sum_{i=1}^q x_i G_i = H,\]</div>
+</div>
+<p>where <span class="math notranslate nohighlight">\(x \in \mathbb{R}^q\)</span> is a variable, and <span class="math notranslate nohighlight">\(G_i \in \mathbb{S}^n\)</span>
+and <span class="math notranslate nohighlight">\(H \in \mathbb{H}^n\)</span> encode linear constraints for
+<span class="math notranslate nohighlight">\(i=1,\ldots,q\)</span>, then this is equivalent to</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}G x = \text{vec}(H), \quad \text{where} \quad
+G =  \begin{bmatrix}
+   \mid &amp; \mid &amp;        &amp; \mid \\
+   \text{vec}(G_1)      &amp; \text{vec}(G_2) &amp; \cdots &amp; \text{vec}(G_q) \\
+   \mid &amp; \mid &amp;        &amp; \mid
+\end{bmatrix} \in \mathbb{R}^{n^2 \times q}.\end{split}\]</div>
+</div>
+</section>
+<section id="superoperators">
+<span id="subsec-superoperator"></span><h2>Superoperators<a class="headerlink" href="#superoperators" title="Link to this heading">¶</a></h2>
+<p>Often, we need to model linear operators which map matrices to matrices. In
+<strong>QICS</strong>, we will need to find the correct matrix representation for these
+operators. To do this, we simply recognize that each column of the matrix
+representation should correspond to the linear operator acting on a
+computational basis element.</p>
+<p>For example, we can represent a superoperator
+<span class="math notranslate nohighlight">\(\mathcal{A}:\mathbb{S}^2\rightarrow\mathbb{S}^2\)</span> as the matrix</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}A =  \begin{bmatrix}
+   \mid &amp; \mid &amp; \mid &amp; \mid \\
+   \text{cvec}(\mathcal{A}(E_{11})) &amp; \text{cvec}(\mathcal{A}(E_{12}))
+   &amp; \text{cvec}(\mathcal{A}(E_{21})) &amp; \text{cvec}(\mathcal{A}(E_{22})) \\
+   \mid &amp; \mid &amp; \mid &amp; \mid
+\end{bmatrix}\end{split}\]</div>
+</div>
+<p>where</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}E_{11} = \begin{bmatrix} 1 &amp; 0 \\ 0 &amp; 0 \end{bmatrix}, \quad
+E_{12} = E_{21} =
+\frac{1}{2} \begin{bmatrix} 0 &amp; 1 \\ 1 &amp; 0 \end{bmatrix}, \quad
+E_{22} = \begin{bmatrix} 0 &amp; 0 \\ 0 &amp; 1 \end{bmatrix}.\end{split}\]</div>
+</div>
+<p>Using this, we can model a linear constraint</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\mathcal{A}(X) = B,\]</div>
+</div>
+<p>as</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[A \text{vec}(X) = \text{cvec}(B),\]</div>
+</div>
+<p>Note that we use compact vectorizations for the columns of <span class="math notranslate nohighlight">\(A\)</span> and for
+<span class="math notranslate nohighlight">\(B\)</span> to avoid redundant equality constraints already enforced by symmetry
+of the matrices.</p>
+<p>In <strong>QICS</strong>, we provide the helper function <a class="reference internal" href="../api/vectorize/lin_to_mat.html#qics.vectorize.lin_to_mat" title="qics.vectorize.lin_to_mat"><code class="xref py py-obj docutils literal notranslate"><span class="pre">qics.vectorize.lin_to_mat</span></code></a>
+which does this. Below is an example for showing how a matrix representation for
+the identity superoperator on <span class="math notranslate nohighlight">\(2\times2\)</span> symmetric matrices can be
+generated.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="n">qics</span><span class="o">.</span><span class="n">vectorize</span><span class="o">.</span><span class="n">lin_to_mat</span><span class="p">(</span><span class="k">lambda</span> <span class="n">X</span> <span class="p">:</span> <span class="n">X</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+</span><span data-line="2"><span class="go">array([[1.        , 0.        , 0.        , 0.        ],</span>
+</span><span data-line="3"><span class="go">       [0.        , 0.70710678, 0.70710678, 0.        ],</span>
+</span><span data-line="4"><span class="go">       [0.        , 0.        , 0.        , 1.        ]])</span>
+</span></pre></div>
+</div>
+<p>Alternatively, we can use <a class="reference internal" href="../api/vectorize/eye.html#qics.vectorize.eye" title="qics.vectorize.eye"><code class="xref py py-obj docutils literal notranslate"><span class="pre">qics.vectorize.eye</span></code></a> to directly generate this
+matrix.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="n">qics</span><span class="o">.</span><span class="n">vectorize</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</span><span data-line="2"><span class="go">array([[1.        , 0.        , 0.        , 0.        ],</span>
+</span><span data-line="3"><span class="go">       [0.        , 0.70710678, 0.70710678, 0.        ],</span>
+</span><span data-line="4"><span class="go">       [0.        , 0.        , 0.        , 1.        ]])</span>
+</span></pre></div>
+</div>
+<p>As another example, we show below how to generate the (transposed) matrix
+corresponding to the partial trace.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="n">qics</span><span class="o">.</span><span class="n">vectorize</span><span class="o">.</span><span class="n">lin_to_mat</span><span class="p">(</span><span class="k">lambda</span> <span class="n">X</span> <span class="p">:</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="2"><span class="go">array([[1.        , 0.        , 0.        ],</span>
+</span><span data-line="3"><span class="go">       [0.        , 0.70710678, 0.        ],</span>
+</span><span data-line="4"><span class="go">       [0.        , 0.        , 0.        ],</span>
+</span><span data-line="5"><span class="go">       [0.        , 0.        , 0.        ],</span>
+</span><span data-line="6"><span class="go">       [0.        , 0.70710678, 0.        ],</span>
+</span><span data-line="7"><span class="go">       [0.        , 0.        , 1.        ],</span>
+</span><span data-line="8"><span class="go">       [0.        , 0.        , 0.        ],</span>
+</span><span data-line="9"><span class="go">       [0.        , 0.        , 0.        ],</span>
+</span><span data-line="10"><span class="go">       [0.        , 0.        , 0.        ],</span>
+</span><span data-line="11"><span class="go">       [0.        , 0.        , 0.        ],</span>
+</span><span data-line="12"><span class="go">       [1.        , 0.        , 0.        ],</span>
+</span><span data-line="13"><span class="go">       [0.        , 0.70710678, 0.        ],</span>
+</span><span data-line="14"><span class="go">       [0.        , 0.        , 0.        ],</span>
+</span><span data-line="15"><span class="go">       [0.        , 0.        , 0.        ],</span>
+</span><span data-line="16"><span class="go">       [0.        , 0.70710678, 0.        ],</span>
+</span><span data-line="17"><span class="go">       [0.        , 0.        , 1.        ]])</span>
+</span></pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Many of these functions are not optimized, and can be slow for large
+matrices. Users working with medium to large scale problems should implement
+a custom function for generating these matrix representations of
+superoperators.</p>
+</div>
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="gettingstarted.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">Getting started</div></div>
+    </a>
+  </div><div class="navigation-next">
+    <a href="advanced.html">
+      <div class="page-info">
+        <span>Next</span>
+        <div class="title">Advanced tips</div>
+      </div>
+      <i class="i-lucide chevron-right"></i>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2025, Kerry He, James Saunderson, and Hamza Fawzi</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials">
+<a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+  <iconify-icon icon="simple-icons:github"></iconify-icon>
+</a></div>
+    </div>
+  </div>
+</footer>
+      <script src="../_static/documentation_options.js?v=cb7bf70b"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=30646c52"></script>
+      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script src="../_static/shibuya.js?v=c5fc9e80"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></body>
+</html>

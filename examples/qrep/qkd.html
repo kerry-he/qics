@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="teal" data-content_root="../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Quantum key distribution - QICS 1.1.3 documentation</title><link rel="shortcut icon" href="../../_static/favicon.svg"/><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Nearest matrix" href="nearest.html" /><link rel="prev" title="Quantum relative entropy programming" href="index.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=397bb51e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/shibuya.css?v=36d120a7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link media="print" rel="stylesheet" type="text/css" href="../../_static/print.css?v=20ff2c19" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=93a53b2b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    <meta property="og:type" content="website"/><meta property="og:title" content="Quantum key distribution"/>
+<meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../../index.html">
+      <img class="light-logo" src="../../_static/logo-light.svg" alt="QICS" height="28" loading="lazy" />
+      <img class="dark-logo" src="../../_static/logo-dark.svg" alt="QICS" height="28" loading="lazy" />
+      <strong>QICS</strong>
+    </a>
+    <div class="sy-head-nav" id="HeadNav">
+      <nav class="sy-head-links"><ul>
+      <li class="link"><a href="../../guide/index.html">
+            <span>User Guide</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../../guide/reference.html">Quick reference</a></li><li><a href="../../guide/gettingstarted.html">Getting started</a></li><li><a href="../../guide/matrices.html">Representing matrices</a></li><li><a href="../../guide/advanced.html">Advanced tips</a></li><li><a href="../../guide/io.html">Reading and writing</a></li><li><a href="../../guide/picos.html">PICOS interface</a></li></ul>
+      </li>
+      <li class="link"><a href="../index.html">
+            <span>Examples</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../sdp/index.html">Semidefinite programming</a></li><li><a href="index.html">Quantum entropy programming</a></li></ul>
+      </li><li class="link"><a href="../../api/index.html">API reference</a></li></ul></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials">
+  <a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+    <iconify-icon icon="simple-icons:github"></iconify-icon>
+  </a></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="HeadNav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2 -translate-x-2"></span>
+          <span class="hamburger_3 -translate-x-1"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/index.html">User guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/reference.html">Quick reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/gettingstarted.html">Getting started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/matrices.html">Representing matrices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/advanced.html">Advanced tips</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/io.html">Reading and writing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/picos.html">PICOS interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../sdp/index.html">Semidefinite programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../sdp/maxcut.html">Max cut</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../sdp/product.html">Block diagonal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../sdp/quantum.html">Quantum information</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html">Quantum relative entropy programming</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Quantum key distribution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nearest.html">Nearest matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="channel.html">Quantum channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opper.html">Noncommutative perspective</a></li>
+<li class="toctree-l3"><a class="reference internal" href="renyi.html">Renyi entropy</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/qics.html">qics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/qics/Model.html">qics.Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/qics/Solver.html">qics.Solver</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/cones.html">qics.cones</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/NonNegOrthant.html">qics.cones.NonNegOrthant</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/PosSemidefinite.html">qics.cones.PosSemidefinite</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/SecondOrder.html">qics.cones.SecondOrder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/ClassEntr.html">qics.cones.ClassEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/ClassRelEntr.html">qics.cones.ClassRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantEntr.html">qics.cones.QuantEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantRelEntr.html">qics.cones.QuantRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantCondEntr.html">qics.cones.QuantCondEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantKeyDist.html">qics.cones.QuantKeyDist</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/OpPerspecTr.html">qics.cones.OpPerspecTr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/OpPerspecEpi.html">qics.cones.OpPerspecEpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/RenyiEntr.html">qics.cones.RenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/SandRenyiEntr.html">qics.cones.SandRenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuasiEntr.html">qics.cones.QuasiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/SandQuasiEntr.html">qics.cones.SandQuasiEntr</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/io.html">qics.io</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/read_file.html">qics.io.read_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/write_file.html">qics.io.write_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/read_sdpa.html">qics.io.read_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/write_sdpa.html">qics.io.write_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/read_cbf.html">qics.io.read_cbf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/write_cbf.html">qics.io.write_cbf</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/point.html">qics.point</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/point/Point.html">qics.point.Point</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/point/VecProduct.html">qics.point.VecProduct</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/quantum.html">qics.quantum</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/entropy.html">qics.quantum.entropy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/i_kr.html">qics.quantum.i_kr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/p_tr.html">qics.quantum.p_tr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/partial_transpose.html">qics.quantum.partial_transpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/purify.html">qics.quantum.purify</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/swap.html">qics.quantum.swap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/choi_operator.html">qics.quantum.random.choi_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/degradable_channel.html">qics.quantum.random.degradable_channel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/density_matrix.html">qics.quantum.random.density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/pure_density_matrix.html">qics.quantum.random.pure_density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/stinespring_operator.html">qics.quantum.random.stinespring_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/unitary.html">qics.quantum.random.unitary</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/vectorize.html">qics.vectorize</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/eye.html">qics.vectorize.eye</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/lin_to_mat.html">qics.vectorize.lin_to_mat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/mat_dim.html">qics.vectorize.mat_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/mat_to_vec.html">qics.vectorize.mat_to_vec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/vec_dim.html">qics.vectorize.vec_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/vec_to_mat.html">qics.vectorize.vec_to_mat</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div></div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#entanglement-based-bb84">Entanglement based BB84</a></li>
+<li><a class="reference internal" href="#reading-protocols-from-files">Reading protocols from files</a></li>
+<li><a class="reference internal" href="#references">References</a></li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6"><div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../index.html"><span itemprop="name">QICS</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">Examples</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="index.html"><span itemprop="name">Quantum relative entropy programming</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="3" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">Quantum key distribution</strong>
+        <meta itemprop="position" content="4" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+        <article class="yue" role="main">
+          <section id="quantum-key-distribution">
+<h1>Quantum key distribution<a class="headerlink" href="#quantum-key-distribution" title="Link to this heading">¶</a></h1>
+<p>Quantum key distribution is an important application in quantum cryptography, in
+which a private key is securely generated and communicated between two parties
+using a quantum protocol. The quantum key rate is a quantity which characterizes
+the security of a given quantum protocol.</p>
+<p>The quantum key rate can be computed using using the following
+quantum relative entropy program from <a class="reference internal" href="#qkd-refs"><span class="std std-ref">[1,2]</span></a></p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[ \begin{align}\begin{aligned}\min_{X\in\mathbb{H}^n} &amp;&amp;&amp; S(\mathcal{G}(X) \| \mathcal{Z}(\mathcal{G}(X)))\\\text{s.t.} &amp;&amp;&amp; \langle A_i, X \rangle = b_i, \quad \forall i,\ldots,p\\&amp;&amp;&amp; X \succeq 0,\end{aligned}\end{align} \]</div>
+</div>
+<p>where <span class="math notranslate nohighlight">\(\mathcal{G}:\mathbb{H}^n\rightarrow\mathbb{H}^{mr}\)</span> is a positive
+linear map related to the quantum protocol, and is usually described using
+Kraus operators <span class="math notranslate nohighlight">\(K_i\in\mathbb{C}^{mr\times n}\)</span></p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\mathcal{G}(X) = \sum_{i=1}^l K_i X K_i^\dagger,\]</div>
+</div>
+<p>and <span class="math notranslate nohighlight">\(\mathcal{Z}:\mathbb{H}^{mr}\rightarrow\mathbb{H}^{mr}\)</span> is
+the pinching map which zeros off-diagonal blocks of a block matrix</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\mathcal{Z}(X) = \sum_{i=1}^r (| i \rangle \langle i | \otimes \mathbb{I}_m)
+X (| i \rangle \langle i | \otimes \mathbb{I}_m).\]</div>
+</div>
+<p><strong>QICS</strong> provides the cone <a class="reference internal" href="../../api/cones/QuantKeyDist.html#qics.cones.QuantKeyDist" title="qics.cones.QuantKeyDist"><code class="xref py py-class docutils literal notranslate"><span class="pre">qics.cones.QuantKeyDist</span></code></a> to represent this
+slice of the quantum relative entropy.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>We provide several ways to define the linear maps <span class="math notranslate nohighlight">\(\mathcal{G}\)</span> and
+<span class="math notranslate nohighlight">\(\mathcal{Z}\)</span> when initializing a <a class="reference internal" href="../../api/cones/QuantKeyDist.html#qics.cones.QuantKeyDist" title="qics.cones.QuantKeyDist"><code class="xref py py-class docutils literal notranslate"><span class="pre">qics.cones.QuantKeyDist</span></code></a>.
+See the API documentation for further details.</p>
+</div>
+<section id="entanglement-based-bb84">
+<h2>Entanglement based BB84<a class="headerlink" href="#entanglement-based-bb84" title="Link to this heading">¶</a></h2>
+<p>As a concrete example, we consider the entanglement based BB84 protocol
+described in <a class="reference internal" href="#qkd-refs"><span class="std std-ref">[3]</span></a> where only the Z basis is used to
+measure the key. In this case, we have <span class="math notranslate nohighlight">\(\mathcal{G}(X) = X\)</span>, dimensions
+<span class="math notranslate nohighlight">\(n=m=r=2\)</span>, and we have the three linear constraints defined by</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}A_1 &amp;= \mathbb{I}\\ \\
+A_2 &amp;= \frac{1}{4} \left(\begin{bmatrix} 1 &amp; 1 \\ 1 &amp; 1 \end{bmatrix}
+\otimes \begin{bmatrix} 1 &amp; -1 \\ -1 &amp; 1 \end{bmatrix}
++ \begin{bmatrix} 1 &amp; -1 \\ -1 &amp; 1 \end{bmatrix} \otimes
+\begin{bmatrix} 1 &amp; 1 \\ 1 &amp; 1 \end{bmatrix}  \right) \\ \\
+A_3 &amp;= \begin{bmatrix} 1 &amp; 0 \\ 0 &amp; 0 \end{bmatrix} \otimes
+\begin{bmatrix} 0 &amp; 0 \\ 0 &amp; 1 \end{bmatrix}
++ \begin{bmatrix} 0 &amp; 0 \\ 0 &amp; 1 \end{bmatrix} \otimes
+\begin{bmatrix} 1 &amp; 0 \\ 0 &amp; 0 \end{bmatrix}  ,\end{split}\]</div>
+</div>
+<p>and <span class="math notranslate nohighlight">\(b = (1, q_x, q_z)\)</span>. The closed form solution for this quantum key
+rate is</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\log(2) + q_x \log(q_x) + (1 - q_x) \log(1 - q_x)\]</div>
+</div>
+<p>which we use to confirm that <strong>QICS</strong> gives the correct solution.</p>
+<div class="sphinx-tabs docutils container">
+<div aria-label="Tabbed content" class="closeable" role="tablist"><button aria-controls="panel-0-TmF0aXZl" aria-selected="true" class="sphinx-tabs-tab code-tab group-tab" id="tab-0-TmF0aXZl" name="TmF0aXZl" role="tab" tabindex="0">Native</button><button aria-controls="panel-0-UElDT1M=" aria-selected="false" class="sphinx-tabs-tab code-tab group-tab" id="tab-0-UElDT1M=" name="UElDT1M=" role="tab" tabindex="-1">PICOS</button></div><div aria-labelledby="tab-0-TmF0aXZl" class="sphinx-tabs-panel code-tab group-tab" id="panel-0-TmF0aXZl" name="TmF0aXZl" role="tabpanel" tabindex="0"><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="kn">import</span><span class="w"> </span><span class="nn">qics</span>
+</span><span data-line="4"><span class="kn">from</span><span class="w"> </span><span class="nn">qics.vectorize</span><span class="w"> </span><span class="kn">import</span> <span class="n">mat_to_vec</span>
+</span><span data-line="5">
+</span><span data-line="6"><span class="n">qx</span> <span class="o">=</span> <span class="mf">0.25</span>
+</span><span data-line="7"><span class="n">qz</span> <span class="o">=</span> <span class="mf">0.75</span>
+</span><span data-line="8">
+</span><span data-line="9"><span class="n">X0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">]])</span>
+</span><span data-line="10"><span class="n">X1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">]])</span>
+</span><span data-line="11"><span class="n">Z0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]])</span>
+</span><span data-line="12"><span class="n">Z1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]])</span>
+</span><span data-line="13">
+</span><span data-line="14"><span class="c1"># Model problem using primal variables (t, X)</span>
+</span><span data-line="15"><span class="c1"># Define objective function</span>
+</span><span data-line="16"><span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]]),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">16</span><span class="p">,</span> <span class="mi">1</span><span class="p">))))</span>
+</span><span data-line="17">
+</span><span data-line="18"><span class="c1"># Build linear constraints &lt;Ai, X&gt; = bi for all i</span>
+</span><span data-line="19"><span class="n">Ax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">X0</span><span class="p">,</span> <span class="n">X1</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">X1</span><span class="p">,</span> <span class="n">X0</span><span class="p">)</span>
+</span><span data-line="20"><span class="n">Az</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">Z0</span><span class="p">,</span> <span class="n">Z1</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">Z1</span><span class="p">,</span> <span class="n">Z0</span><span class="p">)</span>
+</span><span data-line="21"><span class="n">A_mats</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span> <span class="n">Ax</span><span class="p">,</span> <span class="n">Az</span><span class="p">]</span>
+</span><span data-line="22">
+</span><span data-line="23"><span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span> <span class="n">mat_to_vec</span><span class="p">(</span><span class="n">Ak</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">]</span> <span class="k">for</span> <span class="n">Ak</span> <span class="ow">in</span> <span class="n">A_mats</span><span class="p">])</span>
+</span><span data-line="24"><span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="n">qx</span><span class="p">],</span> <span class="p">[</span><span class="n">qz</span><span class="p">]])</span>
+</span><span data-line="25">
+</span><span data-line="26"><span class="c1"># Input into model and solve</span>
+</span><span data-line="27"><span class="n">cones</span> <span class="o">=</span> <span class="p">[</span><span class="n">qics</span><span class="o">.</span><span class="n">cones</span><span class="o">.</span><span class="n">QuantKeyDist</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)]</span>
+</span><span data-line="28">
+</span><span data-line="29"><span class="c1"># Initialize model and solver objects</span>
+</span><span data-line="30"><span class="n">model</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Model</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="n">b</span><span class="p">,</span> <span class="n">cones</span><span class="o">=</span><span class="n">cones</span><span class="p">)</span>
+</span><span data-line="31"><span class="n">solver</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Solver</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</span><span data-line="32">
+</span><span data-line="33"><span class="c1"># Solve problem</span>
+</span><span data-line="34"><span class="n">info</span> <span class="o">=</span> <span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+</span><span data-line="35">
+</span><span data-line="36"><span class="n">analytic_rate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">qx</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">qx</span><span class="p">)</span> <span class="o">+</span> <span class="n">qz</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">qz</span><span class="p">))</span>
+</span><span data-line="37"><span class="n">numerical_rate</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;opt_val&quot;</span><span class="p">]</span>
+</span><span data-line="38">
+</span><span data-line="39"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Analytic key rate: &quot;</span><span class="p">,</span> <span class="n">analytic_rate</span><span class="p">)</span>
+</span><span data-line="40"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Numerical key rate:&quot;</span><span class="p">,</span> <span class="n">numerical_rate</span><span class="p">)</span>
+</span></pre></div>
+</div>
+</div><div aria-labelledby="tab-0-UElDT1M=" class="sphinx-tabs-panel code-tab group-tab" hidden="true" id="panel-0-UElDT1M=" name="UElDT1M=" role="tabpanel" tabindex="0"><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="kn">import</span><span class="w"> </span><span class="nn">picos</span>
+</span><span data-line="4">
+</span><span data-line="5"><span class="n">qx</span> <span class="o">=</span> <span class="mf">0.25</span>
+</span><span data-line="6"><span class="n">qz</span> <span class="o">=</span> <span class="mf">0.75</span>
+</span><span data-line="7">
+</span><span data-line="8"><span class="n">X0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">.5</span><span class="p">,</span>  <span class="mf">.5</span><span class="p">],</span> <span class="p">[</span> <span class="mf">.5</span><span class="p">,</span> <span class="mf">.5</span><span class="p">]])</span>
+</span><span data-line="9"><span class="n">X1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">.5</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mf">.5</span><span class="p">,</span> <span class="mf">.5</span><span class="p">]])</span>
+</span><span data-line="10"><span class="n">Z0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span>  <span class="mf">0.</span><span class="p">],</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]])</span>
+</span><span data-line="11"><span class="n">Z1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span>  <span class="mf">0.</span><span class="p">],</span> <span class="p">[</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">]])</span>
+</span><span data-line="12">
+</span><span data-line="13"><span class="n">Ax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">X0</span><span class="p">,</span> <span class="n">X1</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">X1</span><span class="p">,</span> <span class="n">X0</span><span class="p">)</span>
+</span><span data-line="14"><span class="n">Az</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">Z0</span><span class="p">,</span> <span class="n">Z1</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">Z1</span><span class="p">,</span> <span class="n">Z0</span><span class="p">)</span>
+</span><span data-line="15">
+</span><span data-line="16"><span class="c1"># Define problem</span>
+</span><span data-line="17"><span class="n">P</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">Problem</span><span class="p">()</span>
+</span><span data-line="18"><span class="n">X</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">SymmetricVariable</span><span class="p">(</span><span class="s2">&quot;X&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+</span><span data-line="19">
+</span><span data-line="20"><span class="n">P</span><span class="o">.</span><span class="n">set_objective</span><span class="p">(</span><span class="s2">&quot;min&quot;</span><span class="p">,</span> <span class="n">picos</span><span class="o">.</span><span class="n">quantkeydist</span><span class="p">(</span><span class="n">X</span><span class="p">))</span>
+</span><span data-line="21"><span class="n">P</span><span class="o">.</span><span class="n">add_constraint</span><span class="p">(</span><span class="n">picos</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+</span><span data-line="22"><span class="n">P</span><span class="o">.</span><span class="n">add_constraint</span><span class="p">((</span><span class="n">X</span> <span class="o">|</span> <span class="n">Ax</span><span class="p">)</span> <span class="o">==</span> <span class="n">qx</span><span class="p">)</span>
+</span><span data-line="23"><span class="n">P</span><span class="o">.</span><span class="n">add_constraint</span><span class="p">((</span><span class="n">X</span> <span class="o">|</span> <span class="n">Az</span><span class="p">)</span> <span class="o">==</span> <span class="n">qz</span><span class="p">)</span>
+</span><span data-line="24">
+</span><span data-line="25"><span class="c1"># Solve problem</span>
+</span><span data-line="26"><span class="n">P</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">solver</span><span class="o">=</span><span class="s2">&quot;qics&quot;</span><span class="p">)</span>
+</span><span data-line="27">
+</span><span data-line="28"><span class="n">analytic_rate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">qx</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">qx</span><span class="p">)</span> <span class="o">+</span> <span class="n">qz</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">qz</span><span class="p">))</span>
+</span><span data-line="29"><span class="n">numerical_rate</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">value</span>
+</span><span data-line="30">
+</span><span data-line="31"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Analytic key rate: &quot;</span><span class="p">,</span> <span class="n">analytic_rate</span><span class="p">)</span>
+</span><span data-line="32"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Numerical key rate:&quot;</span><span class="p">,</span> <span class="n">numerical_rate</span><span class="p">)</span>
+</span></pre></div>
+</div>
+</div></div>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><span data-line="1">Analytic key rate:  0.130812035941137
+</span><span data-line="2">Numerical key rate: 0.1308120333864307
+</span></pre></div>
+</div>
+</section>
+<section id="reading-protocols-from-files">
+<h2>Reading protocols from files<a class="headerlink" href="#reading-protocols-from-files" title="Link to this heading">¶</a></h2>
+<p>It is also fairly straightforward to solve quantum key rates from
+<code class="docutils literal notranslate"><span class="pre">.mat</span></code> files from, e.g., <a class="reference external" href="https://www.math.uwaterloo.ca/~hwolkowi/henry/reports/ZGNQKDmainsolverUSEDforPUBLCNJuly31/">here</a> or
+<a class="reference external" href="https://github.com/kerry-he/qrep-structure/tree/main/data">here</a>.
+We supply some sample code for how to do this below.</p>
+<div class="literal-block-wrapper docutils container" id="id1">
+<div class="code-block-caption"><span class="caption-text">read_qkd_file.py</span><a class="headerlink" href="#id1" title="Link to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="2"><span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sp</span>
+</span><span data-line="3">
+</span><span data-line="4"><span class="kn">import</span><span class="w"> </span><span class="nn">qics</span>
+</span><span data-line="5">
+</span><span data-line="6"><span class="c1"># Read file</span>
+</span><span data-line="7"><span class="n">data</span>   <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">loadmat</span><span class="p">(</span><span class="s1">&#39;filename.mat&#39;</span><span class="p">)</span>
+</span><span data-line="8"><span class="n">gamma</span>  <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;gamma&#39;</span><span class="p">]</span>
+</span><span data-line="9"><span class="n">Gamma</span>  <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;Gamma&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+</span><span data-line="10"><span class="n">K_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;Klist&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+</span><span data-line="11"><span class="n">Z_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;Zlist&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+</span><span data-line="12">
+</span><span data-line="13"><span class="n">iscomplex</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">iscomplexobj</span><span class="p">(</span><span class="n">Gamma</span><span class="p">)</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">iscomplexobj</span><span class="p">(</span><span class="n">K_list</span><span class="p">)</span>
+</span><span data-line="14"><span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span> <span class="k">if</span> <span class="n">iscomplex</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
+</span><span data-line="15">
+</span><span data-line="16"><span class="n">no</span><span class="p">,</span> <span class="n">ni</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">K_list</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span><span data-line="17"><span class="n">nc</span>     <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">gamma</span><span class="p">)</span>
+</span><span data-line="18"><span class="n">vni</span>    <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">vectorize</span><span class="o">.</span><span class="n">vec_dim</span><span class="p">(</span><span class="n">ni</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="n">iscomplex</span><span class="p">)</span>
+</span><span data-line="19">
+</span><span data-line="20"><span class="c1"># Define objective function</span>
+</span><span data-line="21"><span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.</span><span class="p">]]),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vni</span><span class="p">,</span> <span class="mi">1</span><span class="p">))))</span>
+</span><span data-line="22">
+</span><span data-line="23"><span class="c1"># Build linear constraints</span>
+</span><span data-line="24"><span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nc</span><span class="p">,</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">vni</span><span class="p">))</span>
+</span><span data-line="25"><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nc</span><span class="p">):</span>
+</span><span data-line="26">    <span class="n">A</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">vectorize</span><span class="o">.</span><span class="n">mat_to_vec</span><span class="p">(</span><span class="n">Gamma</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">))</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+</span><span data-line="27"><span class="n">b</span> <span class="o">=</span> <span class="n">gamma</span>
+</span><span data-line="28">
+</span><span data-line="29"><span class="c1"># Input into model and solve</span>
+</span><span data-line="30"><span class="n">cones</span> <span class="o">=</span> <span class="p">[</span><span class="n">qics</span><span class="o">.</span><span class="n">cones</span><span class="o">.</span><span class="n">QuantKeyDist</span><span class="p">(</span><span class="n">K_list</span><span class="p">,</span> <span class="n">Z_list</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="n">iscomplex</span><span class="p">)]</span>
+</span><span data-line="31">
+</span><span data-line="32"><span class="c1"># Initialize model and solver objects</span>
+</span><span data-line="33"><span class="n">model</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Model</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="n">b</span><span class="p">,</span> <span class="n">cones</span><span class="o">=</span><span class="n">cones</span><span class="p">)</span>
+</span><span data-line="34"><span class="n">solver</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Solver</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</span><span data-line="35">
+</span><span data-line="36"><span class="c1"># Solve problem</span>
+</span><span data-line="37"><span class="n">info</span> <span class="o">=</span> <span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+</span></pre></div>
+</div>
+</div>
+</section>
+<section id="references">
+<span id="qkd-refs"></span><h2>References<a class="headerlink" href="#references" title="Link to this heading">¶</a></h2>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>“Reliable numerical key rates for quantum key distribution”,
+A. Winick, N. L ̈utkenhaus, and P. J. Coles.
+<em>Quantum</em>, vol. 2, p. 77, 2018.</p></li>
+<li><p>“Numerical approach for unstructured quantum key distribution”,
+P. J. Coles, E. M. Metodiev, and N. L ̈utkenhaus.
+<em>Nature Communications</em>, vol. 7, no. 1, p. 11712, 2016</p></li>
+<li><p>“Quantum key distribution rates from non-symmetric conic optimization”,
+L. A. González, et al. <em>arXiv preprint</em> arXiv:2407.00152, 2024.</p></li>
+</ol>
+</div></blockquote>
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="index.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">Quantum relative entropy programming</div></div>
+    </a>
+  </div><div class="navigation-next">
+    <a href="nearest.html">
+      <div class="page-info">
+        <span>Next</span>
+        <div class="title">Nearest matrix</div>
+      </div>
+      <i class="i-lucide chevron-right"></i>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2025, Kerry He, James Saunderson, and Hamza Fawzi</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials">
+<a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+  <iconify-icon icon="simple-icons:github"></iconify-icon>
+</a></div>
+    </div>
+  </div>
+</footer>
+      <script src="../../_static/documentation_options.js?v=cb7bf70b"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=30646c52"></script>
+      <script src="../../_static/tabs.js?v=3030b3cb"></script>
+      <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+      <script src="../../_static/shibuya.js?v=c5fc9e80"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></body>
+</html>

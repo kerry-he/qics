@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="teal" data-content_root="./">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>QICS 1.1.3 documentation</title><link rel="shortcut icon" href="_static/favicon.svg"/><link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Quantum Information Conic Solver" href="introduction.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="_static/pygments.css?v=397bb51e" />
+    <link rel="stylesheet" type="text/css" href="_static/shibuya.css?v=36d120a7" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link media="print" rel="stylesheet" type="text/css" href="_static/print.css?v=20ff2c19" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=93a53b2b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    
+<style>
+  .yue {
+    padding-bottom: 2rem;
+  }
+  .yue section:first-of-type h1 {
+    font-size: 4.2rem;
+    margin-top: 3.4rem;
+    margin-bottom: 1rem;
+  }
+
+  .injected,
+  .yue a.headerlink {
+    display: none;
+  }
+</style>
+
+  <meta property="og:type" content="website"/><meta property="og:title" content="&lt;no title&gt;"/>
+<meta name="twitter:card" content="summary"/></head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="#">
+      <img class="light-logo" src="_static/logo-light.svg" alt="QICS" height="28" loading="lazy" />
+      <img class="dark-logo" src="_static/logo-dark.svg" alt="QICS" height="28" loading="lazy" />
+      <strong>QICS</strong>
+    </a>
+    <div class="sy-head-nav" id="HeadNav">
+      <nav class="sy-head-links"><ul>
+      <li class="link"><a href="guide/index.html">
+            <span>User Guide</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="guide/reference.html">Quick reference</a></li><li><a href="guide/gettingstarted.html">Getting started</a></li><li><a href="guide/matrices.html">Representing matrices</a></li><li><a href="guide/advanced.html">Advanced tips</a></li><li><a href="guide/io.html">Reading and writing</a></li><li><a href="guide/picos.html">PICOS interface</a></li></ul>
+      </li>
+      <li class="link"><a href="examples/index.html">
+            <span>Examples</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="examples/sdp/index.html">Semidefinite programming</a></li><li><a href="examples/qrep/index.html">Quantum entropy programming</a></li></ul>
+      </li><li class="link"><a href="api/index.html">API reference</a></li></ul></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials">
+  <a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+    <iconify-icon icon="simple-icons:github"></iconify-icon>
+  </a></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="HeadNav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2 -translate-x-2"></span>
+          <span class="hamburger_3 -translate-x-1"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div><div class="sy-container mx-auto body">
+    <main class="sy-content mx-auto pt-12 px-6 xl:px-12 break-words">
+      <article class="yue" role="main">
+        <style>
+    .full-width-banner {
+        width: 100vw;
+        position: relative;
+        left: 50%;
+        right: 50%;
+        margin-left: -50vw;
+        margin-right: -50vw;
+        padding: 4rem 0;
+        background: linear-gradient(0deg,
+            rgba(136, 180, 167, 0.5) 50%,
+            transparent 100%
+        );
+    }
+
+
+    html {
+        overflow-x: hidden;
+        width: 100%;
+    }
+
+    .full-width-banner h1 {
+        font-family: "Poppins", sans-serif;
+        font-weight: 600;
+        font-style: normal;
+        color: #36454fff; /* default for light mode */
+    }
+
+    html.dark .full-width-banner h1 {
+        color: #88b4a7ff; /* dark mode color */
+    }
+
+    .full-width-banner p {
+        font-family: "Poppins", sans-serif;
+        font-weight: 300;
+        font-style: normal;
+        color: #36454fff; /* default for light mode */
+    }
+
+    html.dark .full-width-banner p {
+        color: #88b4a7ff; /* dark mode color */
+    }
+
+    .button {
+        margin-left: 5px;
+        margin-right: 5px; /* Adds 10px space to the right of the button */
+    }
+
+    a.button.reference.internal:hover {
+        color: #88b4a7ff;
+    }
+
+    a.button.reference.external {
+        /* Additional external link styling */
+        background-color: #36454fff;
+        color: #ffffff;
+        border: 2px solid #36454fff;
+    }
+
+    a.button.reference.external:hover {
+        background-color: #ffffff;
+        color: #36454fff;
+        border:2px solid #36454fff;
+    }
+
+    html.dark a.button.reference.external:hover {
+        background-color: #000000;
+    }
+
+    .features {
+        display: flex;
+        justify-content: space-around;
+        align-items: flex-start;
+        gap: 2rem;
+        margin: 2rem 0;
+    }
+
+    .features-section {
+        text-align: center;
+        margin: 4rem 0;
+    }
+
+    .features-section p {
+        font-family: "Poppins", sans-serif;
+        font-weight: 300;
+        margin-top: 3rem;
+    }
+
+    .features-section h2 {
+        font-family: "Poppins", sans-serif;
+        font-weight: 600;
+        font-size: 2.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .feature {
+        flex: 1;
+        text-align: center;
+        padding: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .features {
+            flex-direction: column;
+            align-items: center; /* center content if desired */
+        }
+    }
+
+    .feature h3 {
+        font-family: "Poppins", sans-serif;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    .feature p {
+        font-family: "Poppins", sans-serif;
+        font-weight: 300;
+        margin-bottom: 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    html .light-img {
+        display: block;
+    }
+
+    html .dark-img {
+        display: none;
+    }
+
+    html.dark .dark-img {
+        display: block;
+    }
+
+    html.dark .light-img {
+        display: none;
+    }
+</style>
+
+<head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&display=swap" rel="stylesheet">
+</head>
+
+<div class="full-width-banner" style="padding: 0; margin-bottom: 48px; height: calc(100vh - 56px - 48px); box-sizing: border-box;">
+    <div class="hero-content" style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%;">
+        <img src="_static/logo.svg" alt="QICS Logo">
+        <h1 style="font-size: 8rem; margin-bottom: 0px">QICS</h1>
+        <p style="font-size: 1.5rem;">Quantum Information Conic Solver</p>
+        <div class="container buttons" style="margin-top: 64px">
+            <a href="introduction.html" class="button reference internal">Docs</a>
+            <a href="https://github.com/kerry-he/qics" class="button reference external">GitHub</a>
+        </div>
+    </div>
+</div>
+
+<div class="features-section">
+    <h2>Features</h2>
+    <div class="features">
+        <div class="feature">
+            <h3>Quantum entropy programming</h3>
+            <p>Supports quantum relative entropies, (sandwiched) Rényi entropies, matrix geometric means, and more.</p>
+        </div>
+        <div class="feature">
+            <h3>Semidefinite programming</h3>
+            <p>Achieves comparable performance to state-of-the-art semidefinite programming software.</p>
+        </div>
+        <div class="feature">
+            <h3>Complex-valued matrices</h3>
+            <p>Hermitian matrices are directly supported without needing to reformulate the problem.</p>
+        </div>
+    </div>
+</div>
+
+<div class="features-section">
+    <h2>Performance</h2>
+    <p>QICS demonstrates comparable performance to state-of-the-art semidefinite programming software, and superior performance to existing quantum relative entropy programming software. See our <a href="https://arxiv.org/abs/2410.17803">paper</a> for additional details.</p>
+    <div class="features">
+        <div class="feature">
+            <h3>Semidefinite programming</h3>
+            <div class="image-container">
+                <img src="_static/sdp_plots.png" class="light-img" alt="Semidefinite programming benchmarks." style="margin-top: 2rem; margin-bottom: 0px;">
+                <img src="_static/sdp_plots_dark.png" class="dark-img" alt="Semidefinite programming benchmarks." style="margin-top: 2rem; margin-bottom: 0px;">
+            </div>
+            <p>Comparison of relative performance ratios and solution time profiles of various semidefinite programming solvers to solve 92 problems from the SDPLIB benchmark library to full accuracy ε = 10<sup>-8</sup> and to low accuracy ε = 10<sup>-5</sup>.</p>
+        </div>
+        <div class="feature">
+            <h3>Quantum relative entropy programming</h3>
+            <div class="image-container">
+                <img src="_static/qrep_plots.png" class="light-img" alt="Quantum relative entropy programming benchmarks." style="margin-top: 2rem; margin-bottom: 0px;">
+                <img src="_static/qrep_plots_dark.png" class="dark-img" alt="Quantum relative entropy programming benchmarks." style="margin-top: 2rem; margin-bottom: 0px;">
+            </div>
+            <p>Comparison of relative performance ratios and solution time profiles of various solvers to solve 144 quantum relative entropy programs to full accuracy ε = 10<sup>-8</sup> and to low accuracy ε = 10<sup>-5</sup>. Note that QICS refers to results using the full suite of cones we implement, whereas QICS* refers to results using only the quantum entropy and quantum relative entropy cones.</p>
+        </div>
+    </div>
+</div><div class="toctree-wrapper compound">
+</div>
+
+      </article>
+      
+
+
+    </main>
+  </div><footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2025, Kerry He, James Saunderson, and Hamza Fawzi</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials">
+<a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+  <iconify-icon icon="simple-icons:github"></iconify-icon>
+</a></div>
+    </div>
+  </div>
+</footer>
+      <script src="_static/documentation_options.js?v=cb7bf70b"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="_static/copybutton.js?v=30646c52"></script>
+      <script src="_static/design-tabs.js?v=f930bc37"></script>
+      <script src="_static/shibuya.js?v=c5fc9e80"></script></body>
+</html>

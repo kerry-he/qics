@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="teal" data-content_root="../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Renyi entropy - QICS 1.1.3 documentation</title><link rel="shortcut icon" href="../../_static/favicon.svg"/><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="API reference" href="../../api/index.html" /><link rel="prev" title="Noncommutative perspective" href="opper.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=397bb51e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/shibuya.css?v=36d120a7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link media="print" rel="stylesheet" type="text/css" href="../../_static/print.css?v=20ff2c19" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=93a53b2b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    <meta property="og:type" content="website"/><meta property="og:title" content="Renyi entropy"/>
+<meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../../index.html">
+      <img class="light-logo" src="../../_static/logo-light.svg" alt="QICS" height="28" loading="lazy" />
+      <img class="dark-logo" src="../../_static/logo-dark.svg" alt="QICS" height="28" loading="lazy" />
+      <strong>QICS</strong>
+    </a>
+    <div class="sy-head-nav" id="HeadNav">
+      <nav class="sy-head-links"><ul>
+      <li class="link"><a href="../../guide/index.html">
+            <span>User Guide</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../../guide/reference.html">Quick reference</a></li><li><a href="../../guide/gettingstarted.html">Getting started</a></li><li><a href="../../guide/matrices.html">Representing matrices</a></li><li><a href="../../guide/advanced.html">Advanced tips</a></li><li><a href="../../guide/io.html">Reading and writing</a></li><li><a href="../../guide/picos.html">PICOS interface</a></li></ul>
+      </li>
+      <li class="link"><a href="../index.html">
+            <span>Examples</span>
+            <i class="i-lucide chevron-down"></i>
+          </a>
+        <ul><li><a href="../sdp/index.html">Semidefinite programming</a></li><li><a href="index.html">Quantum entropy programming</a></li></ul>
+      </li><li class="link"><a href="../../api/index.html">API reference</a></li></ul></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials">
+  <a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+    <iconify-icon icon="simple-icons:github"></iconify-icon>
+  </a></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="HeadNav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2 -translate-x-2"></span>
+          <span class="hamburger_3 -translate-x-1"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/index.html">User guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/reference.html">Quick reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/gettingstarted.html">Getting started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/matrices.html">Representing matrices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/advanced.html">Advanced tips</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/io.html">Reading and writing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../guide/picos.html">PICOS interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../sdp/index.html">Semidefinite programming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../sdp/maxcut.html">Max cut</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../sdp/product.html">Block diagonal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../sdp/quantum.html">Quantum information</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html">Quantum relative entropy programming</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="qkd.html">Quantum key distribution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nearest.html">Nearest matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="channel.html">Quantum channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opper.html">Noncommutative perspective</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Renyi entropy</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/qics.html">qics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/qics/Model.html">qics.Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/qics/Solver.html">qics.Solver</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/cones.html">qics.cones</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/NonNegOrthant.html">qics.cones.NonNegOrthant</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/PosSemidefinite.html">qics.cones.PosSemidefinite</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/SecondOrder.html">qics.cones.SecondOrder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/ClassEntr.html">qics.cones.ClassEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/ClassRelEntr.html">qics.cones.ClassRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantEntr.html">qics.cones.QuantEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantRelEntr.html">qics.cones.QuantRelEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantCondEntr.html">qics.cones.QuantCondEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuantKeyDist.html">qics.cones.QuantKeyDist</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/OpPerspecTr.html">qics.cones.OpPerspecTr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/OpPerspecEpi.html">qics.cones.OpPerspecEpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/RenyiEntr.html">qics.cones.RenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/SandRenyiEntr.html">qics.cones.SandRenyiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/QuasiEntr.html">qics.cones.QuasiEntr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/cones/SandQuasiEntr.html">qics.cones.SandQuasiEntr</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/io.html">qics.io</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/read_file.html">qics.io.read_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/write_file.html">qics.io.write_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/read_sdpa.html">qics.io.read_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/write_sdpa.html">qics.io.write_sdpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/read_cbf.html">qics.io.read_cbf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/io/write_cbf.html">qics.io.write_cbf</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/point.html">qics.point</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/point/Point.html">qics.point.Point</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/point/VecProduct.html">qics.point.VecProduct</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/quantum.html">qics.quantum</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/entropy.html">qics.quantum.entropy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/i_kr.html">qics.quantum.i_kr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/p_tr.html">qics.quantum.p_tr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/partial_transpose.html">qics.quantum.partial_transpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/purify.html">qics.quantum.purify</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/swap.html">qics.quantum.swap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/choi_operator.html">qics.quantum.random.choi_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/degradable_channel.html">qics.quantum.random.degradable_channel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/density_matrix.html">qics.quantum.random.density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/pure_density_matrix.html">qics.quantum.random.pure_density_matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/stinespring_operator.html">qics.quantum.random.stinespring_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/quantum/random/unitary.html">qics.quantum.random.unitary</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/vectorize.html">qics.vectorize</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/eye.html">qics.vectorize.eye</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/lin_to_mat.html">qics.vectorize.lin_to_mat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/mat_dim.html">qics.vectorize.mat_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/mat_to_vec.html">qics.vectorize.mat_to_vec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/vec_dim.html">qics.vectorize.vec_dim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/vectorize/vec_to_mat.html">qics.vectorize.vec_to_mat</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div></div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#renyi-mutual-information">Renyi mutual information</a></li>
+<li><a class="reference internal" href="#sandwiched-renyi-mutual-information">Sandwiched Renyi mutual information</a></li>
+<li><a class="reference internal" href="#references">References</a></li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6"><div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../index.html"><span itemprop="name">QICS</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">Examples</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="index.html"><span itemprop="name">Quantum relative entropy programming</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="3" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">Renyi entropy</strong>
+        <meta itemprop="position" content="4" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+        <article class="yue" role="main">
+          <section id="renyi-entropy">
+<h1>Renyi entropy<a class="headerlink" href="#renyi-entropy" title="Link to this heading">¶</a></h1>
+<p>Here we provide some examples of how to use <strong>QICS</strong> to solve optimization problems
+involving Renyi entropies.</p>
+<section id="renyi-mutual-information">
+<h2>Renyi mutual information<a class="headerlink" href="#renyi-mutual-information" title="Link to this heading">¶</a></h2>
+<p>Let <span class="math notranslate nohighlight">\(D_\alpha\)</span> denote the <span class="math notranslate nohighlight">\(\alpha\)</span>-Renyi entropy. The Renyi mutual
+information for a bipartite quantum state <span class="math notranslate nohighlight">\(\rho_{AB}\)</span> is</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[I_{\alpha}(A;B)_\rho \quad=\quad \min_{\sigma_B} \quad
+D_\alpha(\rho_{AB} \| \rho_A \otimes \sigma_B) \quad
+\text{subj. to} \quad \text{tr}[\sigma_B] = 1.,\]</div>
+</div>
+<p>In <a class="reference internal" href="#renyi-refs"><span class="std std-ref">[1]</span></a>, it was shown that the optimal <span class="math notranslate nohighlight">\(\sigma_B^*\)</span> is given by</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\sigma_B^* = \frac{(\text{tr}_A((\rho_A^{1-\alpha}\otimes\mathbb{I})\rho_{AB}^\alpha))^{1/\alpha}}
+{\text{tr}[(\text{tr}_A((\rho_A^{1-\alpha}\otimes\mathbb{I})\rho_{AB}^\alpha))^{1/\alpha}]}.\]</div>
+</div>
+<p>We can verify this by using <strong>QICS</strong> as follows.</p>
+<div class="sphinx-tabs docutils container">
+<div aria-label="Tabbed content" class="closeable" role="tablist"><button aria-controls="panel-0-TmF0aXZl" aria-selected="true" class="sphinx-tabs-tab code-tab group-tab" id="tab-0-TmF0aXZl" name="TmF0aXZl" role="tab" tabindex="0">Native</button><button aria-controls="panel-0-UElDT1M=" aria-selected="false" class="sphinx-tabs-tab code-tab group-tab" id="tab-0-UElDT1M=" name="UElDT1M=" role="tab" tabindex="-1">PICOS</button></div><div aria-labelledby="tab-0-TmF0aXZl" class="sphinx-tabs-panel code-tab group-tab" id="panel-0-TmF0aXZl" name="TmF0aXZl" role="tabpanel" tabindex="0"><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="kn">import</span><span class="w"> </span><span class="nn">qics</span>
+</span><span data-line="4"><span class="kn">import</span><span class="w"> </span><span class="nn">qics.quantum</span>
+</span><span data-line="5"><span class="kn">from</span><span class="w"> </span><span class="nn">qics.quantum.random</span><span class="w"> </span><span class="kn">import</span> <span class="n">density_matrix</span>
+</span><span data-line="6"><span class="kn">from</span><span class="w"> </span><span class="nn">qics.vectorize</span><span class="w"> </span><span class="kn">import</span> <span class="n">lin_to_mat</span><span class="p">,</span> <span class="n">vec_dim</span><span class="p">,</span> <span class="n">mat_to_vec</span><span class="p">,</span> <span class="n">vec_to_mat</span>
+</span><span data-line="7">
+</span><span data-line="8"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span data-line="9">
+</span><span data-line="10"><span class="n">n</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="11"><span class="n">m</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="12"><span class="n">N</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">m</span>
+</span><span data-line="13"><span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.5</span>
+</span><span data-line="14">
+</span><span data-line="15"><span class="n">vN</span> <span class="o">=</span> <span class="n">vec_dim</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="16"><span class="n">cm</span> <span class="o">=</span> <span class="n">vec_dim</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="17">
+</span><span data-line="18"><span class="c1"># Define random problem data</span>
+</span><span data-line="19"><span class="n">rhoAB</span> <span class="o">=</span> <span class="n">density_matrix</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="20"><span class="n">rhoA</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+</span><span data-line="21">
+</span><span data-line="22"><span class="c1"># Model problem using primal variables (t, sigB)</span>
+</span><span data-line="23"><span class="c1"># Define objective function</span>
+</span><span data-line="24"><span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]]),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">cm</span><span class="p">,</span> <span class="mi">1</span><span class="p">))))</span>
+</span><span data-line="25">
+</span><span data-line="26"><span class="c1"># Build linear constraint tr[X] = 1</span>
+</span><span data-line="27"><span class="n">trace</span> <span class="o">=</span> <span class="n">lin_to_mat</span><span class="p">(</span><span class="k">lambda</span> <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">compact</span><span class="o">=</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="28"><span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([[</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">trace</span><span class="p">]])</span>
+</span><span data-line="29"><span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]])</span>
+</span><span data-line="30">
+</span><span data-line="31"><span class="c1"># Build conic linear constraints</span>
+</span><span data-line="32"><span class="n">rhoA_kron</span> <span class="o">=</span> <span class="n">lin_to_mat</span><span class="p">(</span><span class="k">lambda</span> <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">rhoA</span><span class="p">,</span> <span class="n">X</span><span class="p">),</span> <span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">N</span><span class="p">),</span> <span class="n">compact</span><span class="o">=</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+</span><span data-line="33">                        <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="34">
+</span><span data-line="35"><span class="n">G</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([</span>
+</span><span data-line="36">    <span class="p">[</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>              <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">cm</span><span class="p">))</span> <span class="p">],</span>  <span class="c1"># t_re = t</span>
+</span><span data-line="37">    <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span>               <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">cm</span><span class="p">))</span> <span class="p">],</span>  <span class="c1"># u_re = 1</span>
+</span><span data-line="38">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vN</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vN</span><span class="p">,</span> <span class="n">cm</span><span class="p">))],</span>  <span class="c1"># X_re = rhoAB</span>
+</span><span data-line="39">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vN</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="o">-</span><span class="n">rhoA_kron</span>        <span class="p">],</span>  <span class="c1"># Y_re = rhoA x sigB</span>
+</span><span data-line="40"><span class="p">])</span>
+</span><span data-line="41">
+</span><span data-line="42"><span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([</span>
+</span><span data-line="43">    <span class="p">[</span><span class="mf">0.0</span>              <span class="p">],</span>
+</span><span data-line="44">    <span class="p">[</span><span class="mf">1.0</span>              <span class="p">],</span>
+</span><span data-line="45">    <span class="p">[</span><span class="n">mat_to_vec</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">)],</span>
+</span><span data-line="46">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vN</span><span class="p">,</span> <span class="mi">1</span><span class="p">))],</span>
+</span><span data-line="47"><span class="p">])</span>
+</span><span data-line="48">
+</span><span data-line="49"><span class="c1"># Define cones to optimize over</span>
+</span><span data-line="50"><span class="n">cones</span> <span class="o">=</span> <span class="p">[</span><span class="n">qics</span><span class="o">.</span><span class="n">cones</span><span class="o">.</span><span class="n">RenyiEntr</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="kc">True</span><span class="p">)]</span>
+</span><span data-line="51">
+</span><span data-line="52"><span class="c1"># Initialize model and solver objects</span>
+</span><span data-line="53"><span class="n">model</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Model</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="n">b</span><span class="p">,</span> <span class="n">G</span><span class="o">=</span><span class="n">G</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="n">h</span><span class="p">,</span> <span class="n">cones</span><span class="o">=</span><span class="n">cones</span><span class="p">)</span>
+</span><span data-line="54"><span class="n">solver</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Solver</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</span><span data-line="55">
+</span><span data-line="56"><span class="c1"># Solve problem</span>
+</span><span data-line="57"><span class="n">info</span> <span class="o">=</span> <span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+</span><span data-line="58">
+</span><span data-line="59">
+</span><span data-line="60"><span class="c1"># Check if solution satisfies identity</span>
+</span><span data-line="61"><span class="k">def</span><span class="w"> </span><span class="nf">mpower</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+</span><span data-line="62">    <span class="n">D</span><span class="p">,</span> <span class="n">U</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+</span><span data-line="63">    <span class="k">return</span> <span class="p">(</span><span class="n">U</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">p</span><span class="p">))</span> <span class="o">@</span> <span class="n">U</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="64">
+</span><span data-line="65"><span class="n">sigB_numeric</span> <span class="o">=</span> <span class="n">vec_to_mat</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;x_opt&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">:],</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="66">
+</span><span data-line="67"><span class="n">temp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">mpower</span><span class="p">(</span><span class="n">rhoA</span><span class="p">,</span> <span class="mi">1</span><span class="o">-</span><span class="n">alpha</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">m</span><span class="p">))</span> <span class="o">@</span> <span class="n">mpower</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+</span><span data-line="68"><span class="n">temp</span> <span class="o">=</span> <span class="n">mpower</span><span class="p">(</span><span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">alpha</span><span class="p">)</span>
+</span><span data-line="69"><span class="n">sigB_analytic</span> <span class="o">=</span> <span class="n">temp</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+</span><span data-line="70">
+</span><span data-line="71"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Analytic solution:&quot;</span><span class="p">)</span>
+</span><span data-line="72"><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">sigB_numeric</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</span><span data-line="73"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Numerical solution:&quot;</span><span class="p">)</span>
+</span><span data-line="74"><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">sigB_analytic</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</span></pre></div>
+</div>
+</div><div aria-labelledby="tab-0-UElDT1M=" class="sphinx-tabs-panel code-tab group-tab" hidden="true" id="panel-0-UElDT1M=" name="UElDT1M=" role="tabpanel" tabindex="0"><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="kn">import</span><span class="w"> </span><span class="nn">picos</span>
+</span><span data-line="4"><span class="kn">import</span><span class="w"> </span><span class="nn">qics</span>
+</span><span data-line="5">
+</span><span data-line="6"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span data-line="7">
+</span><span data-line="8"><span class="c1"># Generate problem data</span>
+</span><span data-line="9"><span class="n">n</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="10"><span class="n">m</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="11"><span class="n">N</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">m</span>
+</span><span data-line="12"><span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.75</span>
+</span><span data-line="13">
+</span><span data-line="14"><span class="n">rhoAB</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">density_matrix</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="15"><span class="n">rhoA</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+</span><span data-line="16">
+</span><span data-line="17"><span class="c1"># Define problem</span>
+</span><span data-line="18"><span class="n">P</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">Problem</span><span class="p">()</span>
+</span><span data-line="19"><span class="n">sigB</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">HermitianVariable</span><span class="p">(</span><span class="s2">&quot;sigB&quot;</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+</span><span data-line="20">
+</span><span data-line="21"><span class="n">obj</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">renyientr</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">,</span> <span class="n">rhoA</span> <span class="o">@</span> <span class="n">sigB</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+</span><span data-line="22"><span class="n">P</span><span class="o">.</span><span class="n">set_objective</span><span class="p">(</span><span class="s2">&quot;min&quot;</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+</span><span data-line="23"><span class="n">P</span><span class="o">.</span><span class="n">add_constraint</span><span class="p">(</span><span class="n">picos</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">sigB</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+</span><span data-line="24">
+</span><span data-line="25"><span class="c1"># Solve problem</span>
+</span><span data-line="26"><span class="n">P</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">solver</span><span class="o">=</span><span class="s2">&quot;qics&quot;</span><span class="p">)</span>
+</span><span data-line="27">
+</span><span data-line="28">
+</span><span data-line="29"><span class="c1"># Check if solution satisfies identity</span>
+</span><span data-line="30"><span class="k">def</span><span class="w"> </span><span class="nf">mpower</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+</span><span data-line="31">    <span class="n">D</span><span class="p">,</span> <span class="n">U</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+</span><span data-line="32">    <span class="k">return</span> <span class="p">(</span><span class="n">U</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">p</span><span class="p">))</span> <span class="o">@</span> <span class="n">U</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="33">
+</span><span data-line="34"><span class="n">sigB_numeric</span> <span class="o">=</span> <span class="n">sigB</span>
+</span><span data-line="35">
+</span><span data-line="36"><span class="n">temp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">mpower</span><span class="p">(</span><span class="n">rhoA</span><span class="p">,</span> <span class="mi">1</span><span class="o">-</span><span class="n">alpha</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">m</span><span class="p">))</span> <span class="o">@</span> <span class="n">mpower</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+</span><span data-line="37"><span class="n">temp</span> <span class="o">=</span> <span class="n">mpower</span><span class="p">(</span><span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">alpha</span><span class="p">)</span>
+</span><span data-line="38"><span class="n">sigB_analytic</span> <span class="o">=</span> <span class="n">temp</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+</span><span data-line="39">
+</span><span data-line="40"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Analytic solution:&quot;</span><span class="p">)</span>
+</span><span data-line="41"><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">sigB_numeric</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</span><span data-line="42"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Numerical solution:&quot;</span><span class="p">)</span>
+</span><span data-line="43"><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">sigB_analytic</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</span></pre></div>
+</div>
+</div></div>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><span data-line="1">Analytic solution:
+</span><span data-line="2">[[ 0.257+0.j     0.016+0.021j -0.007-0.031j -0.008+0.026j]
+</span><span data-line="3"> [ 0.016-0.021j  0.247+0.j    -0.02 +0.05j  -0.033+0.025j]
+</span><span data-line="4"> [-0.007+0.031j -0.02 -0.05j   0.251+0.j    -0.008+0.017j]
+</span><span data-line="5"> [-0.008-0.026j -0.033-0.025j -0.008-0.017j  0.245+0.j   ]]
+</span><span data-line="6">Numerical solution:
+</span><span data-line="7">[[ 0.257+0.j     0.016+0.021j -0.007-0.031j -0.008+0.026j]
+</span><span data-line="8"> [ 0.016-0.021j  0.247-0.j    -0.02 +0.05j  -0.033+0.025j]
+</span><span data-line="9"> [-0.007+0.031j -0.02 -0.05j   0.251+0.j    -0.008+0.017j]
+</span><span data-line="10"> [-0.008-0.026j -0.033-0.025j -0.008-0.017j  0.245+0.j   ]]
+</span></pre></div>
+</div>
+<p>Due to monotonicity of the logarithm, when <span class="math notranslate nohighlight">\(\alpha\in[0, 1)\)</span>, we can equivalently
+compute the Renyi mutual information as</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[I_{\alpha}(A;B)_\rho \quad=\quad \frac{1}{\alpha - 1}
+\log\left( \max_{\text{tr}[\sigma_B] = 1} \Psi_\alpha(\rho_{AB},
+\rho_A\otimes\sigma_B) \right),\]</div>
+</div>
+<p>where</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\Psi_\alpha(X, Y) = \text{tr}[ X^\alpha Y^{1-\alpha} ],\]</div>
+</div>
+<p>see <a class="reference internal" href="../../api/cones/QuasiEntr.html#qics.cones.QuasiEntr" title="qics.cones.QuasiEntr"><code class="xref py py-class docutils literal notranslate"><span class="pre">QuasiEntr</span></code></a>. We can check the same identity by minimizing
+the trace function <span class="math notranslate nohighlight">\(\Psi_\alpha\)</span> instead of directly minimizing the Renyi entropy
+by using nearly the same code.</p>
+<div class="sphinx-tabs docutils container">
+<div aria-label="Tabbed content" class="closeable" role="tablist"><button aria-controls="panel-1-TmF0aXZl" aria-selected="true" class="sphinx-tabs-tab code-tab group-tab" id="tab-1-TmF0aXZl" name="TmF0aXZl" role="tab" tabindex="0">Native</button><button aria-controls="panel-1-UElDT1M=" aria-selected="false" class="sphinx-tabs-tab code-tab group-tab" id="tab-1-UElDT1M=" name="UElDT1M=" role="tab" tabindex="-1">PICOS</button></div><div aria-labelledby="tab-1-TmF0aXZl" class="sphinx-tabs-panel code-tab group-tab" id="panel-1-TmF0aXZl" name="TmF0aXZl" role="tabpanel" tabindex="0"><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="kn">import</span><span class="w"> </span><span class="nn">qics</span>
+</span><span data-line="4"><span class="kn">import</span><span class="w"> </span><span class="nn">qics.quantum</span>
+</span><span data-line="5"><span class="kn">from</span><span class="w"> </span><span class="nn">qics.quantum.random</span><span class="w"> </span><span class="kn">import</span> <span class="n">density_matrix</span>
+</span><span data-line="6"><span class="kn">from</span><span class="w"> </span><span class="nn">qics.vectorize</span><span class="w"> </span><span class="kn">import</span> <span class="n">lin_to_mat</span><span class="p">,</span> <span class="n">vec_dim</span><span class="p">,</span> <span class="n">mat_to_vec</span><span class="p">,</span> <span class="n">vec_to_mat</span>
+</span><span data-line="7">
+</span><span data-line="8"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span data-line="9">
+</span><span data-line="10"><span class="n">n</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="11"><span class="n">m</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="12"><span class="n">N</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">m</span>
+</span><span data-line="13"><span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.5</span>
+</span><span data-line="14">
+</span><span data-line="15"><span class="n">vN</span> <span class="o">=</span> <span class="n">vec_dim</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="16"><span class="n">cm</span> <span class="o">=</span> <span class="n">vec_dim</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="17">
+</span><span data-line="18"><span class="c1"># Define random problem data</span>
+</span><span data-line="19"><span class="n">rhoAB</span> <span class="o">=</span> <span class="n">density_matrix</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="20"><span class="n">rhoA</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+</span><span data-line="21">
+</span><span data-line="22"><span class="c1"># Model problem using primal variables (t, sigB)</span>
+</span><span data-line="23"><span class="c1"># Define objective function</span>
+</span><span data-line="24"><span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]]),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">cm</span><span class="p">,</span> <span class="mi">1</span><span class="p">))))</span>
+</span><span data-line="25">
+</span><span data-line="26"><span class="c1"># Build linear constraint tr[X] = 1</span>
+</span><span data-line="27"><span class="n">trace</span> <span class="o">=</span> <span class="n">lin_to_mat</span><span class="p">(</span><span class="k">lambda</span> <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">compact</span><span class="o">=</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="28"><span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([[</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">trace</span><span class="p">]])</span>
+</span><span data-line="29"><span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]])</span>
+</span><span data-line="30">
+</span><span data-line="31"><span class="c1"># Build conic linear constraints</span>
+</span><span data-line="32"><span class="n">rhoA_kron</span> <span class="o">=</span> <span class="n">lin_to_mat</span><span class="p">(</span><span class="k">lambda</span> <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">rhoA</span><span class="p">,</span> <span class="n">X</span><span class="p">),</span> <span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">N</span><span class="p">),</span> <span class="n">compact</span><span class="o">=</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+</span><span data-line="33">                        <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="34">
+</span><span data-line="35"><span class="n">G</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([</span>
+</span><span data-line="36">    <span class="p">[</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>              <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">cm</span><span class="p">))</span> <span class="p">],</span>  <span class="c1"># t_tre = t</span>
+</span><span data-line="37">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vN</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vN</span><span class="p">,</span> <span class="n">cm</span><span class="p">))],</span>  <span class="c1"># X_tre = rhoAB</span>
+</span><span data-line="38">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vN</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="o">-</span><span class="n">rhoA_kron</span>        <span class="p">],</span>  <span class="c1"># Y_tre = rhoA x sigB</span>
+</span><span data-line="39"><span class="p">])</span>
+</span><span data-line="40">
+</span><span data-line="41"><span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([</span>
+</span><span data-line="42">    <span class="p">[</span><span class="mf">0.0</span>              <span class="p">],</span>
+</span><span data-line="43">    <span class="p">[</span><span class="n">mat_to_vec</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">)],</span>
+</span><span data-line="44">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vN</span><span class="p">,</span> <span class="mi">1</span><span class="p">))],</span>
+</span><span data-line="45"><span class="p">])</span>
+</span><span data-line="46">
+</span><span data-line="47"><span class="c1"># Define cones to optimize over</span>
+</span><span data-line="48"><span class="n">cones</span> <span class="o">=</span> <span class="p">[</span><span class="n">qics</span><span class="o">.</span><span class="n">cones</span><span class="o">.</span><span class="n">QuasiEntr</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="kc">True</span><span class="p">)]</span>
+</span><span data-line="49">
+</span><span data-line="50"><span class="c1"># Initialize model and solver objects</span>
+</span><span data-line="51"><span class="n">model</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Model</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="n">b</span><span class="p">,</span> <span class="n">G</span><span class="o">=</span><span class="n">G</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="n">h</span><span class="p">,</span> <span class="n">cones</span><span class="o">=</span><span class="n">cones</span><span class="p">)</span>
+</span><span data-line="52"><span class="n">solver</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Solver</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</span><span data-line="53">
+</span><span data-line="54"><span class="c1"># Solve problem</span>
+</span><span data-line="55"><span class="n">info</span> <span class="o">=</span> <span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+</span><span data-line="56">
+</span><span data-line="57">
+</span><span data-line="58"><span class="c1"># Check if solution satisfies identity</span>
+</span><span data-line="59"><span class="k">def</span><span class="w"> </span><span class="nf">mpower</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+</span><span data-line="60">    <span class="n">D</span><span class="p">,</span> <span class="n">U</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+</span><span data-line="61">    <span class="k">return</span> <span class="p">(</span><span class="n">U</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">p</span><span class="p">))</span> <span class="o">@</span> <span class="n">U</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="62">
+</span><span data-line="63"><span class="n">sigB_numeric</span> <span class="o">=</span> <span class="n">vec_to_mat</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;x_opt&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">:],</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="64">
+</span><span data-line="65"><span class="n">temp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">mpower</span><span class="p">(</span><span class="n">rhoA</span><span class="p">,</span> <span class="mi">1</span><span class="o">-</span><span class="n">alpha</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">m</span><span class="p">))</span> <span class="o">@</span> <span class="n">mpower</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+</span><span data-line="66"><span class="n">temp</span> <span class="o">=</span> <span class="n">mpower</span><span class="p">(</span><span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">alpha</span><span class="p">)</span>
+</span><span data-line="67"><span class="n">sigB_analytic</span> <span class="o">=</span> <span class="n">temp</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+</span><span data-line="68">
+</span><span data-line="69"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Analytic solution:&quot;</span><span class="p">)</span>
+</span><span data-line="70"><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">sigB_numeric</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</span><span data-line="71"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Numerical solution:&quot;</span><span class="p">)</span>
+</span><span data-line="72"><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">sigB_analytic</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</span></pre></div>
+</div>
+</div><div aria-labelledby="tab-1-UElDT1M=" class="sphinx-tabs-panel code-tab group-tab" hidden="true" id="panel-1-UElDT1M=" name="UElDT1M=" role="tabpanel" tabindex="0"><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="kn">import</span><span class="w"> </span><span class="nn">picos</span>
+</span><span data-line="4"><span class="kn">import</span><span class="w"> </span><span class="nn">qics</span>
+</span><span data-line="5">
+</span><span data-line="6"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span data-line="7">
+</span><span data-line="8"><span class="c1"># Generate problem data</span>
+</span><span data-line="9"><span class="n">n</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="10"><span class="n">m</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="11"><span class="n">N</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">m</span>
+</span><span data-line="12"><span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.75</span>
+</span><span data-line="13">
+</span><span data-line="14"><span class="n">rhoAB</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">density_matrix</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="15"><span class="n">rhoA</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+</span><span data-line="16">
+</span><span data-line="17"><span class="c1"># Define problem</span>
+</span><span data-line="18"><span class="n">P</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">Problem</span><span class="p">()</span>
+</span><span data-line="19"><span class="n">sigB</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">HermitianVariable</span><span class="p">(</span><span class="s2">&quot;sigB&quot;</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+</span><span data-line="20">
+</span><span data-line="21"><span class="n">obj</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">quasientr</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">,</span> <span class="n">rhoA</span> <span class="o">@</span> <span class="n">sigB</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+</span><span data-line="22"><span class="n">P</span><span class="o">.</span><span class="n">set_objective</span><span class="p">(</span><span class="s2">&quot;max&quot;</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+</span><span data-line="23"><span class="n">P</span><span class="o">.</span><span class="n">add_constraint</span><span class="p">(</span><span class="n">picos</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">sigB</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+</span><span data-line="24">
+</span><span data-line="25"><span class="c1"># Solve problem</span>
+</span><span data-line="26"><span class="n">P</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">solver</span><span class="o">=</span><span class="s2">&quot;qics&quot;</span><span class="p">)</span>
+</span><span data-line="27">
+</span><span data-line="28">
+</span><span data-line="29"><span class="c1"># Check if solution satisfies identity</span>
+</span><span data-line="30"><span class="k">def</span><span class="w"> </span><span class="nf">mpower</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+</span><span data-line="31">    <span class="n">D</span><span class="p">,</span> <span class="n">U</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+</span><span data-line="32">    <span class="k">return</span> <span class="p">(</span><span class="n">U</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">p</span><span class="p">))</span> <span class="o">@</span> <span class="n">U</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="33">
+</span><span data-line="34"><span class="n">sigB_numeric</span> <span class="o">=</span> <span class="n">sigB</span>
+</span><span data-line="35">
+</span><span data-line="36"><span class="n">temp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">mpower</span><span class="p">(</span><span class="n">rhoA</span><span class="p">,</span> <span class="mi">1</span><span class="o">-</span><span class="n">alpha</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">m</span><span class="p">))</span> <span class="o">@</span> <span class="n">mpower</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+</span><span data-line="37"><span class="n">temp</span> <span class="o">=</span> <span class="n">mpower</span><span class="p">(</span><span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">alpha</span><span class="p">)</span>
+</span><span data-line="38"><span class="n">sigB_analytic</span> <span class="o">=</span> <span class="n">temp</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+</span><span data-line="39">
+</span><span data-line="40"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Analytic solution:&quot;</span><span class="p">)</span>
+</span><span data-line="41"><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">sigB_numeric</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</span><span data-line="42"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Numerical solution:&quot;</span><span class="p">)</span>
+</span><span data-line="43"><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">sigB_analytic</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</span></pre></div>
+</div>
+</div></div>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><span data-line="1">Analytic solution:
+</span><span data-line="2">[[ 0.257+0.j     0.016+0.021j -0.007-0.031j -0.008+0.026j]
+</span><span data-line="3"> [ 0.016-0.021j  0.247+0.j    -0.02 +0.05j  -0.033+0.025j]
+</span><span data-line="4"> [-0.007+0.031j -0.02 -0.05j   0.251+0.j    -0.008+0.017j]
+</span><span data-line="5"> [-0.008-0.026j -0.033-0.025j -0.008-0.017j  0.245+0.j   ]]
+</span><span data-line="6">Numerical solution:
+</span><span data-line="7">[[ 0.257+0.j     0.016+0.021j -0.007-0.031j -0.008+0.026j]
+</span><span data-line="8"> [ 0.016-0.021j  0.247-0.j    -0.02 +0.05j  -0.033+0.025j]
+</span><span data-line="9"> [-0.007+0.031j -0.02 -0.05j   0.251+0.j    -0.008+0.017j]
+</span><span data-line="10"> [-0.008-0.026j -0.033-0.025j -0.008-0.017j  0.245+0.j   ]]
+</span></pre></div>
+</div>
+<p>The advantage of optimizing the trace function is that <span class="math notranslate nohighlight">\(\Psi_\alpha\)</span> is
+jointly concave for <span class="math notranslate nohighlight">\(\alpha\in[1/2, 1]\)</span>, and jointly convex for
+<span class="math notranslate nohighlight">\(\alpha\in[-1, 0] \cup [1, 2]\)</span>, whereas <span class="math notranslate nohighlight">\(D_\alpha\)</span> is jointly convex for
+<span class="math notranslate nohighlight">\(\alpha\in[0, 1)\)</span>, but is neither convex nor concave for
+<span class="math notranslate nohighlight">\(\alpha\in[-1, 0) \cup (1, 2]\)</span>. Therefore, QICS supports <span class="math notranslate nohighlight">\(\Psi_\alpha\)</span>
+for a wider range of <span class="math notranslate nohighlight">\(\alpha\)</span>. However, sometimes it is not straightforward to
+reformulate an optimization problem involving the Renyi entropy into an equivalent
+convex problem involving the trace function.</p>
+</section>
+<section id="sandwiched-renyi-mutual-information">
+<h2>Sandwiched Renyi mutual information<a class="headerlink" href="#sandwiched-renyi-mutual-information" title="Link to this heading">¶</a></h2>
+<p>Similarly, let <span class="math notranslate nohighlight">\(\hat{D}_\alpha\)</span> denote the sandwiched <span class="math notranslate nohighlight">\(\alpha\)</span>-Renyi entropy. The sandwiched Renyi mutual
+information for a bipartite quantum state <span class="math notranslate nohighlight">\(\rho_{AB}\)</span> is</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\hat{I}_{\alpha}(A;B)_\rho \quad=\quad \min_{\sigma_B} \quad
+\hat{D}_\alpha(\rho_{AB} \| \rho_A \otimes \sigma_B) \quad
+\text{subj. to} \quad \text{tr}[\sigma_B] = 1.\]</div>
+</div>
+<p>In <a class="reference internal" href="#renyi-refs"><span class="std std-ref">[1]</span></a>, it was shown that the optimal <span class="math notranslate nohighlight">\(\sigma_B^*\)</span> satisfies</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\sigma_B^* = \frac{\text{tr}_A(((\rho_A \otimes \sigma_B^*)^{\frac{1-\alpha}{2\alpha}} \rho_{AB} (\rho_A \otimes \sigma_B^*)^{\frac{1-\alpha}{2\alpha}})^{1/\alpha})}
+{\text{tr}[((\rho_A \otimes \sigma_B^*)^{\frac{1-\alpha}{2\alpha}} \rho_{AB} (\rho_A \otimes \sigma_B^*)^{\frac{1-\alpha}{2\alpha}})^{1/\alpha}]}.\]</div>
+</div>
+<p>We can verify this by using <strong>QICS</strong> as follows.</p>
+<div class="sphinx-tabs docutils container">
+<div aria-label="Tabbed content" class="closeable" role="tablist"><button aria-controls="panel-2-TmF0aXZl" aria-selected="true" class="sphinx-tabs-tab code-tab group-tab" id="tab-2-TmF0aXZl" name="TmF0aXZl" role="tab" tabindex="0">Native</button><button aria-controls="panel-2-UElDT1M=" aria-selected="false" class="sphinx-tabs-tab code-tab group-tab" id="tab-2-UElDT1M=" name="UElDT1M=" role="tab" tabindex="-1">PICOS</button></div><div aria-labelledby="tab-2-TmF0aXZl" class="sphinx-tabs-panel code-tab group-tab" id="panel-2-TmF0aXZl" name="TmF0aXZl" role="tabpanel" tabindex="0"><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="kn">import</span><span class="w"> </span><span class="nn">qics</span>
+</span><span data-line="4"><span class="kn">import</span><span class="w"> </span><span class="nn">qics.quantum</span>
+</span><span data-line="5"><span class="kn">from</span><span class="w"> </span><span class="nn">qics.quantum.random</span><span class="w"> </span><span class="kn">import</span> <span class="n">density_matrix</span>
+</span><span data-line="6"><span class="kn">from</span><span class="w"> </span><span class="nn">qics.vectorize</span><span class="w"> </span><span class="kn">import</span> <span class="n">lin_to_mat</span><span class="p">,</span> <span class="n">vec_dim</span><span class="p">,</span> <span class="n">mat_to_vec</span><span class="p">,</span> <span class="n">vec_to_mat</span>
+</span><span data-line="7">
+</span><span data-line="8"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span data-line="9">
+</span><span data-line="10"><span class="n">n</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="11"><span class="n">m</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="12"><span class="n">N</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">m</span>
+</span><span data-line="13"><span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.75</span>
+</span><span data-line="14">
+</span><span data-line="15"><span class="n">vN</span> <span class="o">=</span> <span class="n">vec_dim</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="16"><span class="n">cm</span> <span class="o">=</span> <span class="n">vec_dim</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="17">
+</span><span data-line="18"><span class="c1"># Define random problem data</span>
+</span><span data-line="19"><span class="n">rhoAB</span> <span class="o">=</span> <span class="n">density_matrix</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="20"><span class="n">rhoA</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+</span><span data-line="21">
+</span><span data-line="22"><span class="c1"># Model problem using primal variables (t, sigB)</span>
+</span><span data-line="23"><span class="c1"># Define objective function</span>
+</span><span data-line="24"><span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]]),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">cm</span><span class="p">,</span> <span class="mi">1</span><span class="p">))))</span>
+</span><span data-line="25">
+</span><span data-line="26"><span class="c1"># Build linear constraint tr[X] = 1</span>
+</span><span data-line="27"><span class="n">trace</span> <span class="o">=</span> <span class="n">lin_to_mat</span><span class="p">(</span><span class="k">lambda</span> <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">compact</span><span class="o">=</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="28"><span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([[</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">trace</span><span class="p">]])</span>
+</span><span data-line="29"><span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]])</span>
+</span><span data-line="30">
+</span><span data-line="31"><span class="c1"># Build conic linear constraints</span>
+</span><span data-line="32"><span class="n">rhoA_kron</span> <span class="o">=</span> <span class="n">lin_to_mat</span><span class="p">(</span><span class="k">lambda</span> <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">rhoA</span><span class="p">,</span> <span class="n">X</span><span class="p">),</span> <span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">N</span><span class="p">),</span> <span class="n">compact</span><span class="o">=</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+</span><span data-line="33">                       <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="34">
+</span><span data-line="35"><span class="n">G</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([</span>
+</span><span data-line="36">    <span class="p">[</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>              <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">cm</span><span class="p">))</span> <span class="p">],</span>   <span class="c1"># t_sre = t</span>
+</span><span data-line="37">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vN</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vN</span><span class="p">,</span> <span class="n">cm</span><span class="p">))],</span>   <span class="c1"># X_sre = rhoAB</span>
+</span><span data-line="38">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vN</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="o">-</span><span class="n">rhoA_kron</span>         <span class="p">],</span>  <span class="c1"># Y_sre = rhoA x sigB</span>
+</span><span data-line="39"><span class="p">])</span>
+</span><span data-line="40">
+</span><span data-line="41"><span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([</span>
+</span><span data-line="42">    <span class="p">[</span><span class="mf">0.0</span>              <span class="p">],</span>
+</span><span data-line="43">    <span class="p">[</span><span class="n">mat_to_vec</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">)],</span>
+</span><span data-line="44">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vN</span><span class="p">,</span> <span class="mi">1</span><span class="p">))],</span>
+</span><span data-line="45"><span class="p">])</span>
+</span><span data-line="46">
+</span><span data-line="47"><span class="c1"># Define cones to optimize over</span>
+</span><span data-line="48"><span class="n">cones</span> <span class="o">=</span> <span class="p">[</span><span class="n">qics</span><span class="o">.</span><span class="n">cones</span><span class="o">.</span><span class="n">SandQuasiEntr</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="kc">True</span><span class="p">)]</span>
+</span><span data-line="49">
+</span><span data-line="50"><span class="c1"># Initialize model and solver objects</span>
+</span><span data-line="51"><span class="n">model</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Model</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="n">b</span><span class="p">,</span> <span class="n">G</span><span class="o">=</span><span class="n">G</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="n">h</span><span class="p">,</span> <span class="n">cones</span><span class="o">=</span><span class="n">cones</span><span class="p">)</span>
+</span><span data-line="52"><span class="n">solver</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Solver</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+</span><span data-line="53">
+</span><span data-line="54"><span class="c1"># Solve problem</span>
+</span><span data-line="55"><span class="n">info</span> <span class="o">=</span> <span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+</span><span data-line="56">
+</span><span data-line="57">
+</span><span data-line="58"><span class="c1"># Check if solution satisfies identity</span>
+</span><span data-line="59"><span class="k">def</span><span class="w"> </span><span class="nf">mpower</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+</span><span data-line="60">    <span class="n">D</span><span class="p">,</span> <span class="n">U</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+</span><span data-line="61">    <span class="k">return</span> <span class="p">(</span><span class="n">U</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">p</span><span class="p">))</span> <span class="o">@</span> <span class="n">U</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="62">
+</span><span data-line="63"><span class="n">LHS</span> <span class="o">=</span> <span class="n">vec_to_mat</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;x_opt&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">:],</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="64">
+</span><span data-line="65"><span class="n">temp</span> <span class="o">=</span> <span class="n">mpower</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">rhoA</span><span class="p">,</span> <span class="n">LHS</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">alpha</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">alpha</span><span class="p">))</span>
+</span><span data-line="66"><span class="n">temp</span> <span class="o">=</span> <span class="n">mpower</span><span class="p">(</span><span class="n">temp</span> <span class="o">@</span> <span class="n">rhoAB</span> <span class="o">@</span> <span class="n">temp</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+</span><span data-line="67"><span class="n">RHS</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+</span><span data-line="68">
+</span><span data-line="69"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;LHS of identity is:&quot;</span><span class="p">)</span>
+</span><span data-line="70"><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">LHS</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</span><span data-line="71"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;RHS of identity is:&quot;</span><span class="p">)</span>
+</span><span data-line="72"><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">RHS</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</span></pre></div>
+</div>
+</div><div aria-labelledby="tab-2-UElDT1M=" class="sphinx-tabs-panel code-tab group-tab" hidden="true" id="panel-2-UElDT1M=" name="UElDT1M=" role="tabpanel" tabindex="0"><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="kn">import</span><span class="w"> </span><span class="nn">picos</span>
+</span><span data-line="4"><span class="kn">import</span><span class="w"> </span><span class="nn">qics</span>
+</span><span data-line="5">
+</span><span data-line="6"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span data-line="7">
+</span><span data-line="8"><span class="c1"># Generate problem data</span>
+</span><span data-line="9"><span class="n">n</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="10"><span class="n">m</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="11"><span class="n">N</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">m</span>
+</span><span data-line="12"><span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.75</span>
+</span><span data-line="13">
+</span><span data-line="14"><span class="n">rhoAB</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">density_matrix</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="15"><span class="n">rhoA</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+</span><span data-line="16">
+</span><span data-line="17"><span class="c1"># Define problem</span>
+</span><span data-line="18"><span class="n">P</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">Problem</span><span class="p">()</span>
+</span><span data-line="19"><span class="n">sigB</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">HermitianVariable</span><span class="p">(</span><span class="s2">&quot;sigB&quot;</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+</span><span data-line="20">
+</span><span data-line="21"><span class="n">obj</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">renyientr</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">,</span> <span class="n">rhoA</span> <span class="o">@</span> <span class="n">sigB</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+</span><span data-line="22"><span class="n">P</span><span class="o">.</span><span class="n">set_objective</span><span class="p">(</span><span class="s2">&quot;min&quot;</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+</span><span data-line="23"><span class="n">P</span><span class="o">.</span><span class="n">add_constraint</span><span class="p">(</span><span class="n">picos</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">sigB</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+</span><span data-line="24">
+</span><span data-line="25"><span class="c1"># Solve problem</span>
+</span><span data-line="26"><span class="n">P</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">solver</span><span class="o">=</span><span class="s2">&quot;qics&quot;</span><span class="p">)</span>
+</span><span data-line="27">
+</span><span data-line="28">
+</span><span data-line="29"><span class="c1"># Check if solution satisfies identity</span>
+</span><span data-line="30"><span class="k">def</span><span class="w"> </span><span class="nf">mpower</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+</span><span data-line="31">    <span class="n">D</span><span class="p">,</span> <span class="n">U</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+</span><span data-line="32">    <span class="k">return</span> <span class="p">(</span><span class="n">U</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">p</span><span class="p">))</span> <span class="o">@</span> <span class="n">U</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="33">
+</span><span data-line="34"><span class="n">LHS</span> <span class="o">=</span> <span class="n">sigB</span>
+</span><span data-line="35">
+</span><span data-line="36"><span class="n">temp</span> <span class="o">=</span> <span class="n">mpower</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">rhoA</span><span class="p">,</span> <span class="n">LHS</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">alpha</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">alpha</span><span class="p">))</span>
+</span><span data-line="37"><span class="n">temp</span> <span class="o">=</span> <span class="n">mpower</span><span class="p">(</span><span class="n">temp</span> <span class="o">@</span> <span class="n">rhoAB</span> <span class="o">@</span> <span class="n">temp</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+</span><span data-line="38"><span class="n">RHS</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+</span><span data-line="39">
+</span><span data-line="40"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;LHS of identity is:&quot;</span><span class="p">)</span>
+</span><span data-line="41"><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">LHS</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</span><span data-line="42"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;RHS of identity is:&quot;</span><span class="p">)</span>
+</span><span data-line="43"><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">RHS</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</span></pre></div>
+</div>
+</div></div>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><span data-line="1">LHS of identity is:
+</span><span data-line="2">[[ 0.258+0.j     0.01 +0.019j -0.009-0.026j -0.007+0.023j]
+</span><span data-line="3"> [ 0.01 -0.019j  0.247+0.j    -0.018+0.046j -0.031+0.025j]
+</span><span data-line="4"> [-0.009+0.026j -0.018-0.046j  0.246+0.j    -0.008+0.013j]
+</span><span data-line="5"> [-0.007-0.023j -0.031-0.025j -0.008-0.013j  0.249+0.j   ]]
+</span><span data-line="6">RHS of identity is:
+</span><span data-line="7">[[ 0.258+0.j     0.01 +0.019j -0.009-0.026j -0.007+0.023j]
+</span><span data-line="8"> [ 0.01 -0.019j  0.247-0.j    -0.018+0.046j -0.031+0.025j]
+</span><span data-line="9"> [-0.009+0.026j -0.018-0.046j  0.246+0.j    -0.008+0.013j]
+</span><span data-line="10"> [-0.007-0.023j -0.031-0.025j -0.008-0.013j  0.249+0.j   ]]
+</span></pre></div>
+</div>
+<p>Just as for the Renyi entropy, due to monotonicity of the logarithm, when
+<span class="math notranslate nohighlight">\(\alpha\in[1/2, 1)\)</span>, we can equivalently compute the sandwiched Renyi mutual
+information as</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\hat{I}_{\alpha}(A;B)_\rho \quad=\quad \frac{1}{\alpha - 1}
+\log\left( \max_{\text{tr}[\sigma_B] = 1} \hat{\Psi}_\alpha(\rho_{AB},
+\rho_A\otimes\sigma_B) \right),\]</div>
+</div>
+<p>where</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\hat{\Psi}_\alpha(X, Y) = \text{tr}\!\left[ \left(Y^\frac{1-\alpha}{2\alpha} X
+Y^\frac{1-\alpha}{2\alpha} \right)^\alpha \right].\]</div>
+</div>
+<p>see <a class="reference internal" href="../../api/cones/SandQuasiEntr.html#qics.cones.SandQuasiEntr" title="qics.cones.SandQuasiEntr"><code class="xref py py-class docutils literal notranslate"><span class="pre">SandQuasiEntr</span></code></a>. We can check the same identity by minimizing
+the trace function <span class="math notranslate nohighlight">\(\\hat{Psi}_\alpha\)</span> instead of directly minimizing the
+sandwiched Renyi entropy by using nearly the same code.</p>
+<div class="sphinx-tabs docutils container">
+<div aria-label="Tabbed content" class="closeable" role="tablist"><button aria-controls="panel-3-TmF0aXZl" aria-selected="true" class="sphinx-tabs-tab code-tab group-tab" id="tab-3-TmF0aXZl" name="TmF0aXZl" role="tab" tabindex="0">Native</button><button aria-controls="panel-3-UElDT1M=" aria-selected="false" class="sphinx-tabs-tab code-tab group-tab" id="tab-3-UElDT1M=" name="UElDT1M=" role="tab" tabindex="-1">PICOS</button></div><div aria-labelledby="tab-3-TmF0aXZl" class="sphinx-tabs-panel code-tab group-tab" id="panel-3-TmF0aXZl" name="TmF0aXZl" role="tabpanel" tabindex="0"><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="kn">import</span><span class="w"> </span><span class="nn">qics</span>
+</span><span data-line="4"><span class="kn">import</span><span class="w"> </span><span class="nn">qics.quantum</span>
+</span><span data-line="5"><span class="kn">from</span><span class="w"> </span><span class="nn">qics.quantum.random</span><span class="w"> </span><span class="kn">import</span> <span class="n">density_matrix</span>
+</span><span data-line="6"><span class="kn">from</span><span class="w"> </span><span class="nn">qics.vectorize</span><span class="w"> </span><span class="kn">import</span> <span class="n">lin_to_mat</span><span class="p">,</span> <span class="n">vec_dim</span><span class="p">,</span> <span class="n">mat_to_vec</span><span class="p">,</span> <span class="n">vec_to_mat</span>
+</span><span data-line="7">
+</span><span data-line="8"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span data-line="9">
+</span><span data-line="10"><span class="n">n</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="11"><span class="n">m</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="12"><span class="n">N</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">m</span>
+</span><span data-line="13"><span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.75</span>
+</span><span data-line="14">
+</span><span data-line="15"><span class="n">vN</span> <span class="o">=</span> <span class="n">vec_dim</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="16"><span class="n">cm</span> <span class="o">=</span> <span class="n">vec_dim</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="17">
+</span><span data-line="18"><span class="c1"># Define random problem data</span>
+</span><span data-line="19"><span class="n">rhoAB</span> <span class="o">=</span> <span class="n">density_matrix</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="20"><span class="n">rhoA</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+</span><span data-line="21">
+</span><span data-line="22"><span class="c1"># Model problem using primal variables (t, sigB)</span>
+</span><span data-line="23"><span class="c1"># Define objective function</span>
+</span><span data-line="24"><span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]]),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">cm</span><span class="p">,</span> <span class="mi">1</span><span class="p">))))</span>
+</span><span data-line="25">
+</span><span data-line="26"><span class="c1"># Build linear constraint tr[X] = 1</span>
+</span><span data-line="27"><span class="n">trace</span> <span class="o">=</span> <span class="n">lin_to_mat</span><span class="p">(</span><span class="k">lambda</span> <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">compact</span><span class="o">=</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="28"><span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([[</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">trace</span><span class="p">]])</span>
+</span><span data-line="29"><span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]])</span>
+</span><span data-line="30">
+</span><span data-line="31"><span class="c1"># Build conic linear constraints</span>
+</span><span data-line="32"><span class="n">rhoA_kron</span> <span class="o">=</span> <span class="n">lin_to_mat</span><span class="p">(</span><span class="k">lambda</span> <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">rhoA</span><span class="p">,</span> <span class="n">X</span><span class="p">),</span> <span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">N</span><span class="p">),</span> <span class="n">compact</span><span class="o">=</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+</span><span data-line="33">                        <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="34">
+</span><span data-line="35"><span class="n">G</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([</span>
+</span><span data-line="36">    <span class="p">[</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>              <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">cm</span><span class="p">))</span> <span class="p">],</span>  <span class="c1"># t_tre = t</span>
+</span><span data-line="37">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vN</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vN</span><span class="p">,</span> <span class="n">cm</span><span class="p">))],</span>  <span class="c1"># X_tre = rhoAB</span>
+</span><span data-line="38">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vN</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="o">-</span><span class="n">rhoA_kron</span>        <span class="p">],</span>  <span class="c1"># Y_tre = rhoA x sigB</span>
+</span><span data-line="39"><span class="p">])</span>
+</span><span data-line="40">
+</span><span data-line="41"><span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([</span>
+</span><span data-line="42">    <span class="p">[</span><span class="mf">0.0</span>              <span class="p">],</span>
+</span><span data-line="43">    <span class="p">[</span><span class="n">mat_to_vec</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">)],</span>
+</span><span data-line="44">    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">vN</span><span class="p">,</span> <span class="mi">1</span><span class="p">))],</span>
+</span><span data-line="45"><span class="p">])</span>
+</span><span data-line="46">
+</span><span data-line="47"><span class="c1"># Define cones to optimize over</span>
+</span><span data-line="48"><span class="n">cones</span> <span class="o">=</span> <span class="p">[</span><span class="n">qics</span><span class="o">.</span><span class="n">cones</span><span class="o">.</span><span class="n">SandQuasiEntr</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="kc">True</span><span class="p">)]</span>
+</span><span data-line="49">
+</span><span data-line="50"><span class="c1"># Initialize model and solver objects</span>
+</span><span data-line="51"><span class="n">model</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Model</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="n">b</span><span class="p">,</span> <span class="n">G</span><span class="o">=</span><span class="n">G</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="n">h</span><span class="p">,</span> <span class="n">cones</span><span class="o">=</span><span class="n">cones</span><span class="p">)</span>
+</span><span data-line="52"><span class="n">solver</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">Solver</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</span><span data-line="53">
+</span><span data-line="54"><span class="c1"># Solve problem</span>
+</span><span data-line="55"><span class="n">info</span> <span class="o">=</span> <span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+</span><span data-line="56">
+</span><span data-line="57">
+</span><span data-line="58"><span class="c1"># Check if solution satisfies identity</span>
+</span><span data-line="59"><span class="k">def</span><span class="w"> </span><span class="nf">mpower</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+</span><span data-line="60">    <span class="n">D</span><span class="p">,</span> <span class="n">U</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+</span><span data-line="61">    <span class="k">return</span> <span class="p">(</span><span class="n">U</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">p</span><span class="p">))</span> <span class="o">@</span> <span class="n">U</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="62">
+</span><span data-line="63"><span class="n">LHS</span> <span class="o">=</span> <span class="n">vec_to_mat</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;x_opt&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">:],</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="64">
+</span><span data-line="65"><span class="n">temp</span> <span class="o">=</span> <span class="n">mpower</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">rhoA</span><span class="p">,</span> <span class="n">LHS</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">alpha</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">alpha</span><span class="p">))</span>
+</span><span data-line="66"><span class="n">temp</span> <span class="o">=</span> <span class="n">mpower</span><span class="p">(</span><span class="n">temp</span> <span class="o">@</span> <span class="n">rhoAB</span> <span class="o">@</span> <span class="n">temp</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+</span><span data-line="67"><span class="n">RHS</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+</span><span data-line="68">
+</span><span data-line="69"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;LHS of identity is:&quot;</span><span class="p">)</span>
+</span><span data-line="70"><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">LHS</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</span><span data-line="71"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;RHS of identity is:&quot;</span><span class="p">)</span>
+</span><span data-line="72"><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">RHS</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</span></pre></div>
+</div>
+</div><div aria-labelledby="tab-3-UElDT1M=" class="sphinx-tabs-panel code-tab group-tab" hidden="true" id="panel-3-UElDT1M=" name="UElDT1M=" role="tabpanel" tabindex="0"><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="kn">import</span><span class="w"> </span><span class="nn">picos</span>
+</span><span data-line="4"><span class="kn">import</span><span class="w"> </span><span class="nn">qics</span>
+</span><span data-line="5">
+</span><span data-line="6"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span data-line="7">
+</span><span data-line="8"><span class="c1"># Generate problem data</span>
+</span><span data-line="9"><span class="n">n</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="10"><span class="n">m</span> <span class="o">=</span> <span class="mi">4</span>
+</span><span data-line="11"><span class="n">N</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">m</span>
+</span><span data-line="12"><span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.75</span>
+</span><span data-line="13">
+</span><span data-line="14"><span class="n">rhoAB</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">density_matrix</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">iscomplex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span data-line="15"><span class="n">rhoA</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+</span><span data-line="16">
+</span><span data-line="17"><span class="c1"># Define problem</span>
+</span><span data-line="18"><span class="n">P</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">Problem</span><span class="p">()</span>
+</span><span data-line="19"><span class="n">sigB</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">HermitianVariable</span><span class="p">(</span><span class="s2">&quot;sigB&quot;</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+</span><span data-line="20">
+</span><span data-line="21"><span class="n">obj</span> <span class="o">=</span> <span class="n">picos</span><span class="o">.</span><span class="n">sandquasientr</span><span class="p">(</span><span class="n">rhoAB</span><span class="p">,</span> <span class="n">rhoA</span> <span class="o">@</span> <span class="n">sigB</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+</span><span data-line="22"><span class="n">P</span><span class="o">.</span><span class="n">set_objective</span><span class="p">(</span><span class="s2">&quot;max&quot;</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+</span><span data-line="23"><span class="n">P</span><span class="o">.</span><span class="n">add_constraint</span><span class="p">(</span><span class="n">picos</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">sigB</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+</span><span data-line="24">
+</span><span data-line="25"><span class="c1"># Solve problem</span>
+</span><span data-line="26"><span class="n">P</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">solver</span><span class="o">=</span><span class="s2">&quot;qics&quot;</span><span class="p">)</span>
+</span><span data-line="27">
+</span><span data-line="28">
+</span><span data-line="29"><span class="c1"># Check if solution satisfies identity</span>
+</span><span data-line="30"><span class="k">def</span><span class="w"> </span><span class="nf">mpower</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+</span><span data-line="31">    <span class="n">D</span><span class="p">,</span> <span class="n">U</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+</span><span data-line="32">    <span class="k">return</span> <span class="p">(</span><span class="n">U</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">p</span><span class="p">))</span> <span class="o">@</span> <span class="n">U</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+</span><span data-line="33">
+</span><span data-line="34"><span class="n">LHS</span> <span class="o">=</span> <span class="n">sigB</span>
+</span><span data-line="35">
+</span><span data-line="36"><span class="n">temp</span> <span class="o">=</span> <span class="n">mpower</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">rhoA</span><span class="p">,</span> <span class="n">LHS</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">alpha</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">alpha</span><span class="p">))</span>
+</span><span data-line="37"><span class="n">temp</span> <span class="o">=</span> <span class="n">mpower</span><span class="p">(</span><span class="n">temp</span> <span class="o">@</span> <span class="n">rhoAB</span> <span class="o">@</span> <span class="n">temp</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+</span><span data-line="38"><span class="n">RHS</span> <span class="o">=</span> <span class="n">qics</span><span class="o">.</span><span class="n">quantum</span><span class="o">.</span><span class="n">p_tr</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+</span><span data-line="39">
+</span><span data-line="40"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;LHS of identity is:&quot;</span><span class="p">)</span>
+</span><span data-line="41"><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">LHS</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</span><span data-line="42"><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;RHS of identity is:&quot;</span><span class="p">)</span>
+</span><span data-line="43"><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">RHS</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</span></pre></div>
+</div>
+</div></div>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><span data-line="1">LHS of identity is:
+</span><span data-line="2">[[ 0.258+0.j     0.01 +0.019j -0.009-0.026j -0.007+0.023j]
+</span><span data-line="3"> [ 0.01 -0.019j  0.247+0.j    -0.018+0.046j -0.031+0.025j]
+</span><span data-line="4"> [-0.009+0.026j -0.018-0.046j  0.246+0.j    -0.008+0.013j]
+</span><span data-line="5"> [-0.007-0.023j -0.031-0.025j -0.008-0.013j  0.249+0.j   ]]
+</span><span data-line="6">RHS of identity is:
+</span><span data-line="7">[[ 0.258+0.j     0.01 +0.019j -0.009-0.026j -0.007+0.023j]
+</span><span data-line="8"> [ 0.01 -0.019j  0.247-0.j    -0.018+0.046j -0.031+0.025j]
+</span><span data-line="9"> [-0.009+0.026j -0.018-0.046j  0.246+0.j    -0.008+0.013j]
+</span><span data-line="10"> [-0.007-0.023j -0.031-0.025j -0.008-0.013j  0.249+0.j   ]]
+</span></pre></div>
+</div>
+<p>The advantage of optimizing the trace function is that <span class="math notranslate nohighlight">\(\hat{\Psi}_\alpha\)</span> is jointly
+concave for <span class="math notranslate nohighlight">\(\alpha\in[1/2, 1]\)</span>, and jointly convex for <span class="math notranslate nohighlight">\(\alpha\in[1, 2]\)</span>,
+whereas <span class="math notranslate nohighlight">\(D_\alpha\)</span> is jointly convex for <span class="math notranslate nohighlight">\(\alpha\in[1/2, 1)\)</span>, but is neither
+convex nor concave for <span class="math notranslate nohighlight">\(\alpha\in(1, 2]\)</span>. Therefore, QICS supports
+<span class="math notranslate nohighlight">\(\hat{\Psi}_\alpha\)</span> for a wider range of <span class="math notranslate nohighlight">\(\alpha\)</span>. However, sometimes it is
+not straightforward to reformulate an optimization problem involving the sandwiched
+Renyi entropy into an equivalent convex problem involving the trace function.</p>
+</section>
+<section id="references">
+<span id="renyi-refs"></span><h2>References<a class="headerlink" href="#references" title="Link to this heading">¶</a></h2>
+<blockquote>
+<div><p>1. M. Hayashi and M. Tomamichel, “Correlation detection and an operational
+interpretation of the Renyi mutual information,” Journal of Mathematical Physics,
+vol. 57, no. 10, 2016.</p>
+</div></blockquote>
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="opper.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">Noncommutative perspective</div></div>
+    </a>
+  </div><div class="navigation-next">
+    <a href="../../api/index.html">
+      <div class="page-info">
+        <span>Next</span>
+        <div class="title">API reference</div>
+      </div>
+      <i class="i-lucide chevron-right"></i>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2025, Kerry He, James Saunderson, and Hamza Fawzi</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials">
+<a href="https://github.com/kerry-he/qics" aria-label="GitHub">
+  <iconify-icon icon="simple-icons:github"></iconify-icon>
+</a></div>
+    </div>
+  </div>
+</footer>
+      <script src="../../_static/documentation_options.js?v=cb7bf70b"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=30646c52"></script>
+      <script src="../../_static/tabs.js?v=3030b3cb"></script>
+      <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+      <script src="../../_static/shibuya.js?v=c5fc9e80"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></body>
+</html>
